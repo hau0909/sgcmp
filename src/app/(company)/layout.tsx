@@ -14,6 +14,7 @@ import {
   Search,
   Bell,
   ArrowUpCircle,
+  Users,
 } from "lucide-react";
 
 export default function CompanyLayout({
@@ -36,6 +37,12 @@ export default function CompanyLayout({
       href: "/billing",
       icon: Package,
       active: pathname === "/billing",
+    },
+    {
+      name: "Quản lý điều phối viên",
+      href: "/coordinator",
+      icon: Users,
+      active: pathname === "/coordinator",
     },
   ];
 
