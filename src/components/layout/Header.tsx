@@ -3,6 +3,9 @@
 import Image from "next/image";
 import { useState } from "react";
 import { usePathname } from "next/navigation";
+import { useAuthContext } from "@/provider/authContext";
+import { UserCircle } from "lucide-react";
+import Link from "next/link";
 
 interface NavLink {
   label: string;
@@ -17,6 +20,8 @@ const navLinks: NavLink[] = [
 export default function Header() {
   const pathname = usePathname() || "/";
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const { loading, isAuthenticated } = useAuthContext();
 
   return (
     <>
@@ -62,18 +67,62 @@ export default function Header() {
 
           {/* Actions */}
           <div className="hidden md:flex items-center gap-4">
-            <a
-              className="text-[14px] text-primary font-semibold hover:text-primary/80 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-primary/5"
-              href="#"
-            >
-              Đăng nhập
-            </a>
-            <a
-              className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.03] text-[13px] h-9 flex items-center justify-center"
-              href="#"
-            >
-              Đăng kí ngay
-            </a>
+            {loading ? (
+              <div className="h-9 w-28 animate-pulse rounded-full bg-slate-200" />
+            ) : isAuthenticated ? (
+              <div className="relative flex items-center gap-4">
+                <button
+                  type="button"
+                  onClick={() => setUserDropdownOpen((prev) => !prev)}
+                  className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-primary transition-all duration-300 hover:bg-primary/10 hover:scale-[1.03]"
+                >
+                  <UserCircle className="h-6 w-6" />
+                </button>
+
+                <Link
+                  className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.03] text-[13px] h-9 flex items-center justify-center"
+                  href="/sign-up"
+                >
+                  Đăng kí ngay
+                </Link>
+
+                {userDropdownOpen && (
+                  <div className="absolute right-0 top-12 w-44 overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-lg z-50">
+                    <Link
+                      href="/profile"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                    >
+                      Xem hồ sơ
+                    </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      Đăng xuất
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <>
+                <Link
+                  className="text-[14px] text-primary font-semibold hover:text-primary/80 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-primary/5"
+                  href="/login"
+                >
+                  Đăng nhập
+                </Link>
+
+                <Link
+                  className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.03] text-[13px] h-9 flex items-center justify-center"
+                  href="/sign-up"
+                >
+                  Đăng kí ngay
+                </Link>
+              </>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
