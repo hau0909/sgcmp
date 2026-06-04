@@ -3,6 +3,21 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import {
+  Shield,
+  LayoutDashboard,
+  Building2,
+  ShieldCheck,
+  Users,
+  Settings,
+  HelpCircle,
+  Menu,
+  Search,
+  Bell,
+  History,
+  Grid,
+  X
+} from "lucide-react";
 
 export default function AdminLayout({
   children,
@@ -16,31 +31,31 @@ export default function AdminLayout({
     {
       name: "Bảng điều khiển",
       href: "#",
-      icon: "dashboard",
+      icon: LayoutDashboard,
       active: false,
     },
     {
       name: "Quản lý Doanh nghiệp",
       href: "/registrations",
-      icon: "corporate_fare",
+      icon: Building2,
       active: true, // Active state
     },
     {
       name: "Tuân thủ pháp lý",
       href: "#",
-      icon: "verified_user",
+      icon: ShieldCheck,
       active: false,
     },
     {
       name: "Quản lý Bảo vệ",
       href: "#",
-      icon: "security",
+      icon: Shield,
       active: false,
     },
     {
       name: "Người dùng Hệ thống",
       href: "#",
-      icon: "group",
+      icon: Users,
       active: false,
     },
   ];
@@ -65,13 +80,11 @@ export default function AdminLayout({
         <div className="flex items-center justify-between mb-6 px-2 mt-2">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-[#2c5ead] text-white flex items-center justify-center shrink-0">
-              <span className="material-symbols-outlined text-white" style={{ fontVariationSettings: "'FILL' 1" }}>
-                security
-              </span>
+              <Shield className="w-5 h-5 text-white" />
             </div>
             <div>
               <h1 className="font-headline text-lg font-bold text-[#0b1c30] leading-tight tracking-tight">
-                QUẢN TRỊ VIÊN
+                SecurityAdmin
               </h1>
               <p className="text-xs text-[#434751] font-medium font-body">Cổng Quản Trị</p>
             </div>
@@ -81,13 +94,14 @@ export default function AdminLayout({
             className="md:hidden text-[#434751] hover:text-[#024594] p-1 flex items-center justify-center"
             onClick={() => setMobileSidebarOpen(false)}
           >
-            <span className="material-symbols-outlined">close</span>
+            <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Navigation Section */}
         <nav className="flex-1 flex flex-col gap-1 overflow-y-auto">
           {sidebarLinks.map((link, idx) => {
+            const Icon = link.icon;
             return (
               <Link
                 key={idx}
@@ -100,12 +114,9 @@ export default function AdminLayout({
                       : "text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] transition-transform"
                   }`}
               >
-                <span
-                  className="material-symbols-outlined text-xl transition-colors"
-                  style={link.active ? { fontVariationSettings: "'FILL' 1" } : undefined}
-                >
-                  {link.icon}
-                </span>
+                <Icon
+                  className="w-5 h-5 transition-colors shrink-0"
+                />
                 <span>{link.name}</span>
               </Link>
             );
@@ -118,14 +129,14 @@ export default function AdminLayout({
             href="#"
             className="flex items-center gap-3 px-3 py-2 text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] rounded-lg font-body text-sm font-semibold transition-all"
           >
-            <span className="material-symbols-outlined text-xl">settings</span>
+            <Settings className="w-5 h-5 shrink-0" />
             <span>Cài đặt</span>
           </Link>
           <Link
             href="#"
             className="flex items-center gap-3 px-3 py-2 text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] rounded-lg font-body text-sm font-semibold transition-all"
           >
-            <span className="material-symbols-outlined text-xl">help_outline</span>
+            <HelpCircle className="w-5 h-5 shrink-0" />
             <span>Hỗ trợ</span>
           </Link>
 
@@ -153,32 +164,32 @@ export default function AdminLayout({
           {/* Mobile Menu Toggle & Breadcrumbs */}
           <div className="flex items-center gap-4 flex-1">
             <button
-              className="md:hidden text-on-surface-variant hover:text-primary p-1 rounded-full hover:bg-surface-container-low transition-colors flex items-center justify-center"
+              className="md:hidden text-[#434751] hover:text-[#024594] p-1 rounded-full hover:bg-surface-container-low transition-colors flex items-center justify-center"
               onClick={() => setMobileSidebarOpen(true)}
             >
-              <span className="material-symbols-outlined text-2xl">menu</span>
+              <Menu className="w-6 h-6" />
             </button>
-            <div className="hidden sm:flex items-center bg-surface-container-low rounded-full px-4 py-2 border border-outline-variant focus-within:border-secondary transition-colors w-full max-w-md">
-              <span className="material-symbols-outlined text-on-surface-variant text-xl mr-2">search</span>
+            <div className="hidden sm:flex items-center bg-[#eff4ff] rounded-full px-4 py-2 border border-[#c3c6d3] focus-within:border-secondary transition-colors w-full max-w-md">
+              <Search className="text-[#434751] w-5 h-5 mr-2 shrink-0" />
               <input
                 type="text"
                 placeholder="Tìm kiếm đăng ký, doanh nghiệp..."
-                className="bg-transparent border-none outline-none text-sm text-on-surface w-full placeholder-on-surface-variant"
+                className="bg-transparent border-none outline-none text-sm text-[#0b1c30] w-full placeholder-on-surface-variant"
               />
             </div>
           </div>
 
           {/* Right Utilities */}
           <div className="flex items-center gap-4">
-            <button className="text-on-surface-variant hover:text-primary transition-colors relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low">
-              <span className="material-symbols-outlined text-xl">notifications</span>
+            <button className="text-[#434751] hover:text-[#024594] transition-colors relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#dce9ff]/50">
+              <Bell className="w-5 h-5 shrink-0" />
               <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full" />
             </button>
-            <button className="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low">
-              <span className="material-symbols-outlined text-xl">history</span>
+            <button className="text-[#434751] hover:text-[#024594] transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#dce9ff]/50">
+              <History className="w-5 h-5 shrink-0" />
             </button>
-            <button className="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low">
-              <span className="material-symbols-outlined text-xl">apps</span>
+            <button className="text-[#434751] hover:text-[#024594] transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#dce9ff]/50">
+              <Grid className="w-5 h-5 shrink-0" />
             </button>
             <div className="h-6 w-[1px] bg-outline-variant mx-1"></div>
             <div className="w-8 h-8 rounded-full border border-outline-variant overflow-hidden cursor-pointer hover:border-primary transition-colors shrink-0">

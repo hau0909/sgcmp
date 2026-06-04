@@ -1,7 +1,30 @@
 "use client";
 
 import React from "react";
-import { CompanyRegistration } from "../types";
+import {
+  ChevronRight,
+  ChevronLeft,
+  Filter,
+  Download,
+  FileClock,
+  ShieldCheck,
+  Clock,
+  ShieldAlert,
+  ExternalLink,
+  Lightbulb,
+  ArrowRight
+} from "lucide-react";
+
+export interface CompanyRegistration {
+  id: string;
+  companyName: string;
+  sector: string;
+  businessType: string;
+  submissionDate: string;
+  status: "pending" | "action_required" | "approved";
+  logoShort: string;
+  errorDetail?: string;
+}
 
 export default function RegistrationTable() {
   const initialRegistrations: CompanyRegistration[] = [
@@ -58,7 +81,7 @@ export default function RegistrationTable() {
       {/* Breadcrumbs */}
       <nav className="flex items-center gap-2 text-on-surface-variant text-sm font-medium">
         <span className="hover:text-primary cursor-pointer transition-colors">Doanh nghiệp</span>
-        <span className="material-symbols-outlined text-sm text-on-surface-variant/70">chevron_right</span>
+        <ChevronRight className="w-4 h-4 text-on-surface-variant/70 shrink-0" />
         <span className="text-primary font-bold">Đăng ký doanh nghiệp</span>
       </nav>
 
@@ -74,11 +97,11 @@ export default function RegistrationTable() {
         </div>
         <div className="flex gap-2 w-full sm:w-auto">
           <button className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded text-sm font-medium hover:bg-surface-container-low transition-colors text-on-surface">
-            <span className="material-symbols-outlined text-on-surface-variant text-lg">filter_list</span>
+            <Filter className="text-on-surface-variant w-4 h-4" />
             <span>Bộ lọc</span>
           </button>
           <button className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/90 text-on-secondary rounded text-sm font-medium transition-colors">
-            <span className="material-symbols-outlined text-lg text-white">export_notes</span>
+            <Download className="w-4 h-4 text-white" />
             <span>Xuất báo cáo</span>
           </button>
         </div>
@@ -89,7 +112,7 @@ export default function RegistrationTable() {
         {/* Pending Card */}
         <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-2xl text-primary">pending_actions</span>
+            <FileClock className="w-6 h-6 text-primary" />
           </div>
           <div>
             <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
@@ -102,7 +125,7 @@ export default function RegistrationTable() {
         {/* Approved Card */}
         <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-lg bg-[#dcfce7] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-2xl text-[#166534]">verified</span>
+            <ShieldCheck className="w-6 h-6 text-[#166534]" />
           </div>
           <div>
             <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
@@ -115,7 +138,7 @@ export default function RegistrationTable() {
         {/* Avg Time Card */}
         <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-lg bg-[#fef3c7] flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-2xl text-[#b45309]">hourglass_empty</span>
+            <Clock className="w-6 h-6 text-[#b45309]" />
           </div>
           <div>
             <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
@@ -128,7 +151,7 @@ export default function RegistrationTable() {
         {/* Error Card */}
         <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
           <div className="w-12 h-12 rounded-lg bg-error-container flex items-center justify-center shrink-0">
-            <span className="material-symbols-outlined text-2xl text-error">report</span>
+            <ShieldAlert className="w-6 h-6 text-error" />
           </div>
           <div>
             <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
@@ -151,9 +174,7 @@ export default function RegistrationTable() {
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap min-w-[240px]">
                   Tên Công ty
                 </th>
-                <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[180px] whitespace-nowrap">
-                  Loại hình
-                </th>
+
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[110px] whitespace-nowrap">
                   Ngày gửi
                 </th>
@@ -206,7 +227,7 @@ export default function RegistrationTable() {
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-on-surface-variant whitespace-nowrap">{reg.businessType}</td>
+
                     <td className="px-6 py-4 font-mono text-on-surface-variant text-[13px] whitespace-nowrap">
                       {reg.submissionDate}
                     </td>
@@ -224,7 +245,7 @@ export default function RegistrationTable() {
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <button className="text-secondary font-semibold text-xs hover:text-primary inline-flex items-center gap-1 transition-colors whitespace-nowrap">
-                        Xem chi tiết <span className="material-symbols-outlined" style={{ fontSize: "14px" }}>open_in_new</span>
+                        Xem chi tiết <ExternalLink className="w-3.5 h-3.5" />
                       </button>
                     </td>
                   </tr>
@@ -242,7 +263,7 @@ export default function RegistrationTable() {
               className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high disabled:opacity-50 transition-colors"
               disabled
             >
-              <span className="material-symbols-outlined text-sm">chevron_left</span>
+              <ChevronLeft className="w-4 h-4" />
             </button>
             <button className="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white text-sm font-medium">
               1
@@ -254,7 +275,7 @@ export default function RegistrationTable() {
               3
             </button>
             <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high transition-colors">
-              <span className="material-symbols-outlined text-sm">chevron_right</span>
+              <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
@@ -265,9 +286,7 @@ export default function RegistrationTable() {
         {/* Asymmetric Left Card (2/3 width) */}
         <div className="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 relative overflow-hidden flex flex-col justify-center min-h-[160px] shadow-sm">
           <div className="absolute right-0 top-0 h-full w-1/3 opacity-5 flex items-center justify-center pointer-events-none overflow-visible">
-            <span className="material-symbols-outlined text-on-surface shrink-0" style={{ fontVariationSettings: "'wght' 200", fontSize: "200px" }}>
-              verified_user
-            </span>
+            <ShieldCheck className="text-on-surface shrink-0" strokeWidth={0.5} style={{ width: "200px", height: "200px" }} />
           </div>
           <div className="relative z-10 space-y-2">
             <h3 className="text-lg font-bold text-on-surface font-headline">
@@ -287,7 +306,7 @@ export default function RegistrationTable() {
         <div className="bg-primary rounded-xl p-6 text-white shadow-sm flex flex-col justify-between min-h-[160px] hover:bg-primary/95 transition-colors">
           <div>
             <div className="flex items-center gap-2 mb-3">
-              <span className="material-symbols-outlined text-base text-primary-fixed">lightbulb</span>
+              <Lightbulb className="w-4 h-4 text-primary-fixed" />
               <span className="text-[10px] font-bold uppercase tracking-wider text-primary-fixed">
                 Mẹo quản trị
               </span>
@@ -305,9 +324,7 @@ export default function RegistrationTable() {
               href="#"
             >
               <span>Tìm hiểu thêm</span>
-              <span className="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">
-                arrow_forward
-              </span>
+              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
             </a>
           </div>
         </div>
