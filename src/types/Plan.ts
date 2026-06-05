@@ -1,13 +1,13 @@
 export interface Plan {
-  planId: string;
-  planName: string;
+  plan_id: number;
+  plan_name: string;
   description: string | null;
   price: number;
-  durationDays: number;
-  maxCoordinators: number | null;
-  maxGuards: number | null;
-  features: Record<string, unknown> | null;
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date | null;
+  duration_days: number;
+  max_coordinators: number | null;
+  max_guards: number | null;
+  features: string[];
+  is_active: boolean;
+  created_at: string;
+  updated_at: string | null;
 }
