@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { Download } from "lucide-react";
 import CurrentPlanCard from "@/features/subscription/components/CurrentPlanCard";
 import ResourceUsage from "@/features/subscription/components/ResourceUsage";
@@ -7,13 +8,17 @@ import {
   requestGetAllPlans,
   requestGetCurrentPlan,
 } from "@/features/subscription/api/subscription.api";
+import { requestGetPaymentHistory } from "@/features/payment/api/payment.api";
 
-export default async function BillingPage() {
+async function BillingContent() {
   const plans = await requestGetAllPlans();
 
-  const currentPlan = await requestGetCurrentPlan(
-    "33333333-3333-3333-3333-333333333333",
-  );
+  const companyId = "33333333-3333-3333-3333-333333333333";
+
+  const currentPlan = await requestGetCurrentPlan(companyId);
+
+  const paymentsResponse = await requestGetPaymentHistory(companyId);
+  const payments = paymentsResponse.success ? paymentsResponse.data : [];
 
   return (
     <div className="flex-1 p-6 lg:p-8 max-w-360 mx-auto w-full space-y-8">
@@ -46,11 +51,25 @@ export default async function BillingPage() {
 
       {/* Transaction History Table */}
       <div className="pt-4">
-        <TransactionHistory />
+        <TransactionHistory payments={payments} plans={plans} />
       </div>
 
       {/* Footer spacing */}
       <div className="h-8" />
     </div>
+  );
+}
+
+export default function BillingPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex-1 p-6 lg:p-8 max-w-360 mx-auto w-full flex items-center justify-center min-h-[400px]">
+          <p className="text-sm text-on-surface-variant font-medium">Đang tải thông tin gói dịch vụ &amp; thanh toán...</p>
+        </div>
+      }
+    >
+      <BillingContent />
+    </Suspense>
   );
 }

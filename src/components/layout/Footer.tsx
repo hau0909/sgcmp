@@ -17,7 +17,7 @@ export default function Footer() {
             SGCMP
           </div>
           <p className="text-[13px] text-outline">
-            &copy; {new Date().getFullYear()} SGCMP. Bảo lưu mọi quyền.
+            &copy; 2026 SGCMP. Bảo lưu mọi quyền.
           </p>
         </div>
 
