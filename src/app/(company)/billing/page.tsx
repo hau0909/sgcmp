@@ -15,13 +15,19 @@ async function BillingContent() {
 
   const companyId = "33333333-3333-3333-3333-333333333333";
 
-  const currentPlan = await requestGetCurrentPlan(companyId);
+  let currentPlan = null;
+  try {
+    currentPlan = await requestGetCurrentPlan(companyId);
+  } catch (error) {
+    console.error("No active plan found for company:", companyId);
+  }
 
   const paymentsResponse = await requestGetPaymentHistory(companyId);
   const payments = paymentsResponse.success ? paymentsResponse.data : [];
 
   return (
     <div className="flex-1 p-6 lg:p-8 max-w-360 mx-auto w-full space-y-8">
+
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-outline-variant/60 pb-4">
         <div>
@@ -46,7 +52,7 @@ async function BillingContent() {
 
       {/* Upgrade Plans List */}
       <div className="pt-4">
-        <SubscriptionPlans plans={plans} currentPlan={currentPlan} />
+        <SubscriptionPlans plans={plans} currentPlan={currentPlan} companyId={companyId} />
       </div>
 
       {/* Transaction History Table */}

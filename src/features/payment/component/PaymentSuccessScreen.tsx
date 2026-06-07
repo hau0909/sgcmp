@@ -1,13 +1,14 @@
-import React from "react";
+"use client";
+
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowRight, ShieldCheck, CheckCircle2 } from "lucide-react";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
+import { ArrowRight, ShieldCheck, CheckCircle2, Loader2 } from "lucide-react";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { LANDING_PLANS } from "./plans-data";
-
-interface PaymentSuccessScreenProps {
-  planId: string;
-}
+import { Payment } from "@/types/Payment";
+import { requestGetPaymentById } from "@/features/payment/api/payment.api";
 
 const getSelectedPlan = (id: string) => {
   const normId = String(id).toLowerCase();
@@ -33,36 +34,77 @@ const getPlanNumericId = (id: string): number => {
   return 3;
 };
 
-export default function PaymentSuccessScreen({ planId }: PaymentSuccessScreenProps) {
+export default function PaymentSuccessScreen() {
+  const router = useRouter();
+  const params = useParams();
+  const searchParams = useSearchParams();
+
+  const planId = (params.planId as string) || "doanh-nghiep";
+  const paymentIdParam = searchParams.get("paymentId");
+
   const plan = getSelectedPlan(planId);
   const planNumericId = getPlanNumericId(planId);
 
-  // Format amount
-  const amountFormatted = new Intl.NumberFormat("vi-VN").format(plan.priceVal);
+  const [payment, setPayment] = useState<Payment | null>(null);
+  const [loading, setLoading] = useState(false);
 
-  // Mock data matching the public.payments table structure
-  const paymentId = "8f3b9c7a-d21e-4f3a-96c8-10b2a3d4e5f6";
-  const subscriptionId = "7e12f45a-c98b-4d7e-961d-8472bf62c301";
-  const companyId = "3d4e5f6a-7b8c-9d0e-1f2a-3b4c5d6e7f8g";
-  const transactionCode = `SGCMP ORD789${plan.id.toUpperCase()}`;
-  const paymentMethod = "Chuyen Khoan";
-  const paymentStatus = "PENDING";
+  useEffect(() => {
+    if (paymentIdParam) {
+      setLoading(true);
+      requestGetPaymentById(paymentIdParam)
+        .then((res) => {
+          if (res.success && res.data) {
+            if (res.data.payment_status !== "completed") {
+              router.replace("/billing");
+              return;
+            }
+            setPayment(res.data);
+          } else {
+            router.replace("/billing");
+          }
+        })
+        .catch((err) => {
+          console.error("Error loading success payment details:", err);
+          router.replace("/billing");
+        })
+        .finally(() => setLoading(false));
+    } else {
+      router.replace("/billing");
+    }
+  }, [paymentIdParam, router]);
 
-  // Render stable transaction time
-  const createdAtFormatted = new Date().toLocaleString("vi-VN", {
-    timeZone: "Asia/Ho_Chi_Minh",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  // Fallback / Mock Data if no payment from DB is loaded
+  const displayPaymentId = payment ? payment.payment_id : "8f3b9c7a-d21e-4f3a-96c8-10b2a3d4e5f6";
+  const displaySubscriptionId = payment ? payment.subscription_id : "7e12f45a-c98b-4d7e-961d-8472bf62c301";
+  const displayCompanyId = payment ? payment.company_id : "3d4e5f6a-7b8c-9d0e-1f2a-3b4c5d6e7f8g";
+  const displayTransactionCode = payment ? payment.transaction_code : `SGCMP ORD789${plan.id.toUpperCase()}`;
+  
+  const getPaymentMethodLabel = (method: string) => {
+    if (method === "bank_transfer") return "Chuyen Khoan";
+    if (method === "credit_card") return "The Tin Dung";
+    if (method === "e_wallet") return "Vi Dien Tu";
+    return method;
+  };
+  const displayPaymentMethod = payment ? getPaymentMethodLabel(payment.payment_method) : "Chuyen Khoan";
+  const displayPaymentStatus = payment ? payment.payment_status.toUpperCase() : "PENDING";
+  const displayAmount = payment ? payment.amount : plan.priceVal;
 
-  // Calculate subscription dates (1 month duration)
-  const today = new Date();
-  const nextMonth = new Date();
-  nextMonth.setMonth(today.getMonth() + 1);
+  // Formatting dates
+  const baseDate = payment
+    ? (payment.paid_at ? new Date(payment.paid_at) : new Date(payment.created_at))
+    : new Date();
+
+  const formatDateTime = (date: Date) => {
+    return date.toLocaleString("vi-VN", {
+      timeZone: "Asia/Ho_Chi_Minh",
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    });
+  };
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString("vi-VN", {
@@ -72,11 +114,38 @@ export default function PaymentSuccessScreen({ planId }: PaymentSuccessScreenPro
     });
   };
 
-  const startDateFormatted = formatDate(today);
-  const endDateFormatted = formatDate(nextMonth);
-  const subscriptionStatus = "PENDING";
+  const createdAtFormatted = payment
+    ? formatDateTime(new Date(payment.created_at))
+    : formatDateTime(new Date());
+
+  const paidAtFormatted = payment && payment.paid_at
+    ? formatDateTime(new Date(payment.paid_at))
+    : (payment ? "Chưa xác nhận" : "null (Đang chờ)");
+
+  const startDateFormatted = formatDate(baseDate);
+  
+  const endDate = new Date(baseDate);
+  endDate.setDate(baseDate.getDate() + 30);
+  const endDateFormatted = formatDate(endDate);
+
+  const subscriptionStatus = payment && payment.payment_status === "completed" ? "ACTIVE" : "PENDING";
   const autoRenew = "true";
-  const updatedAtFormatted = "null";
+  const updatedAtFormatted = payment && payment.paid_at
+    ? formatDate(new Date(payment.paid_at))
+    : "null";
+
+  const amountFormatted = new Intl.NumberFormat("vi-VN").format(displayAmount);
+
+  if (paymentIdParam && loading && !payment) {
+    return (
+      <div className="flex-1 max-w-[950px] w-full mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-[400px]">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-7 flex flex-col items-center justify-center shadow-lg w-full min-h-[350px]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
+          <p className="text-xs text-on-surface-variant font-medium font-body">Đang tải thông tin giao dịch thành công...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 max-w-[950px] w-full mx-auto px-4 py-4 md:py-8 flex flex-col items-center justify-center">
@@ -170,21 +239,21 @@ export default function PaymentSuccessScreen({ planId }: PaymentSuccessScreenPro
               <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-medium text-on-surface-variant/80">Mã thanh toán</span>
                 <span className="font-mono text-[10px] font-bold text-on-surface bg-surface-container-high px-1.5 py-0.5 rounded border border-outline-variant/30">
-                  {paymentId.slice(0, 8)}...{paymentId.slice(-8)}
+                  {displayPaymentId.slice(0, 8)}...{displayPaymentId.slice(-8)}
                 </span>
               </div>
 
               <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-medium text-on-surface-variant/80">Mã đăng ký</span>
                 <span className="font-mono text-[10px] font-bold text-on-surface bg-surface-container-high px-1.5 py-0.5 rounded border border-outline-variant/30">
-                  {subscriptionId.slice(0, 8)}...{subscriptionId.slice(-8)}
+                  {displaySubscriptionId.slice(0, 8)}...{displaySubscriptionId.slice(-8)}
                 </span>
               </div>
 
               <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-medium text-on-surface-variant/80">Mã doanh nghiệp</span>
                 <span className="font-mono text-[10px] font-bold text-on-surface bg-surface-container-high px-1.5 py-0.5 rounded border border-outline-variant/30">
-                  {companyId.slice(0, 8)}...{companyId.slice(-8)}
+                  {displayCompanyId.slice(0, 8)}...{displayCompanyId.slice(-8)}
                 </span>
               </div>
 
@@ -198,7 +267,7 @@ export default function PaymentSuccessScreen({ planId }: PaymentSuccessScreenPro
               <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-medium text-on-surface-variant/80">Phương thức</span>
                 <span className="font-semibold text-on-surface uppercase bg-surface-container-high px-1.5 py-0.5 rounded border border-outline-variant/30">
-                  {paymentMethod}
+                  {displayPaymentMethod}
                 </span>
               </div>
 
@@ -211,14 +280,14 @@ export default function PaymentSuccessScreen({ planId }: PaymentSuccessScreenPro
                 <span className="font-medium text-on-surface-variant/80">Trạng thái</span>
                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-700 border border-amber-500/20">
                   <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse" />
-                  {paymentStatus}
+                  {displayPaymentStatus}
                 </span>
               </div>
 
               <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-medium text-on-surface-variant/80">Mã đối soát</span>
                 <span className="font-mono font-bold text-on-surface bg-primary/5 text-primary border border-primary/20 px-2 py-0.5 rounded">
-                  {transactionCode}
+                  {displayTransactionCode}
                 </span>
               </div>
 
@@ -229,7 +298,7 @@ export default function PaymentSuccessScreen({ planId }: PaymentSuccessScreenPro
 
               <div className="flex justify-between items-center text-on-surface-variant">
                 <span className="font-medium text-on-surface-variant/80">Thanh toán lúc</span>
-                <span className="text-on-surface-variant/60 italic font-medium">null (Đang chờ)</span>
+                <span className="text-on-surface-variant/60 italic font-medium">{paidAtFormatted}</span>
               </div>
             </div>
           </div>

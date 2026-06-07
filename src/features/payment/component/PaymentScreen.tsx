@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams, useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   Copy,
@@ -11,10 +11,16 @@ import {
   ArrowLeft,
   QrCode,
   CreditCard,
+  Loader2,
 } from "lucide-react";
 import { formatPrice } from "@/utils/formatPrice";
 import { Button } from "@/components/ui/button";
 import { LANDING_PLANS } from "./plans-data";
+import { Payment } from "@/types/Payment";
+import {
+  requestUpdatePaymentStatus,
+  requestGetPaymentById,
+} from "@/features/payment/api/payment.api";
 
 interface MockPlan {
   id: string;
@@ -37,7 +43,7 @@ const getSelectedPlan = (id: string): MockPlan => {
         (normId === "1" && p.id === "co-ban") ||
         (normId === "2" && p.id === "chuyen-nghiep") ||
         (normId === "3" && p.id === "doanh-nghiep"),
-    ) || LANDING_PLANS[2]; // Default to Doanh nghiệp
+    ) || LANDING_PLANS[2]; // Default to Gói Doanh nghiệp
 
   return {
     id: found.id,
@@ -48,14 +54,47 @@ const getSelectedPlan = (id: string): MockPlan => {
   };
 };
 
-export default function PaymentScreen({ planId }: { planId: string }) {
+export default function PaymentScreen() {
   const router = useRouter();
+  const routeParams = useParams();
+  const searchParams = useSearchParams();
+
+  const planId = (routeParams.planId as string) || "doanh-nghiep";
+  const paymentId = searchParams.get("paymentId");
+
+  const [payment, setPayment] = useState<Payment | null>(null);
+  const [loadingPayment, setLoadingPayment] = useState(false);
 
   // Find plan by ID or default to Gói Doanh nghiệp
   const selectedPlan = getSelectedPlan(planId);
 
+  useEffect(() => {
+    if (paymentId) {
+      setLoadingPayment(true);
+      requestGetPaymentById(paymentId)
+        .then((res) => {
+          if (res.success && res.data) {
+            if (res.data.payment_status !== "pending") {
+              router.replace("/billing");
+              return;
+            }
+            setPayment(res.data);
+          } else {
+            router.replace("/billing");
+          }
+        })
+        .catch((err) => {
+          console.error("Error loading payment detail:", err);
+          router.replace("/billing");
+        })
+        .finally(() => setLoadingPayment(false));
+    } else {
+      router.replace("/billing");
+    }
+  }, [paymentId, router]);
+
   // Calculations
-  const basePrice = selectedPlan.price;
+  const basePrice = payment ? payment.amount : selectedPlan.price;
   const vat = 0;
   const discount = 0;
   const totalAmount = basePrice;
@@ -64,11 +103,15 @@ export default function PaymentScreen({ planId }: { planId: string }) {
   const bankId = "vietcombank";
   const accountNumber = "012345678910";
   const accountName = "CONG TY CO PHAN SGCMP VIET NAM";
-  const transactionCode = `SGCMP ORD789${selectedPlan.id}`;
+  const transactionCode = payment
+    ? (payment.transaction_code || "")
+    : `SGCMP ORD789${selectedPlan.id}`;
 
   // Copy states
   const [copiedAccount, setCopiedAccount] = useState(false);
   const [copiedContent, setCopiedContent] = useState(false);
+  const [isCompleting, setIsCompleting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const handleCopy = async (text: string, type: "account" | "content") => {
     try {
@@ -85,9 +128,49 @@ export default function PaymentScreen({ planId }: { planId: string }) {
     }
   };
 
+  const handleCompletePayment = async () => {
+    if (!payment) {
+      // Mock fallback: just navigate
+      router.push(`/billing/payment/${selectedPlan.id}/success`);
+      return;
+    }
+
+    try {
+      setIsCompleting(true);
+      setErrorMsg(null);
+      const res = await requestUpdatePaymentStatus(
+        payment.payment_id,
+        "completed",
+      );
+      if (res.success) {
+        router.push(
+          `/billing/payment/${selectedPlan.id}/success?paymentId=${payment.payment_id}`,
+        );
+      } else {
+        throw new Error("Không thể cập nhật trạng thái giao dịch");
+      }
+    } catch (err: any) {
+      console.error("Lỗi hoàn tất thanh toán:", err);
+      setErrorMsg(
+        err.message ||
+          "Đã xảy ra lỗi khi hoàn tất thanh toán. Vui lòng thử lại.",
+      );
+      setIsCompleting(false);
+    }
+  };
+
   // VietQR Image URL
   // Bank name: VCB, Template: compact2
   const qrCodeUrl = `https://img.vietqr.io/image/${bankId}-${accountNumber}-compact2.png?amount=${totalAmount}&addInfo=${encodeURIComponent(transactionCode)}&accountName=${encodeURIComponent(accountName)}`;
+
+  if (paymentId && loadingPayment && !payment) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8 text-xs text-on-surface-variant font-medium font-body min-h-[400px]">
+        <Loader2 className="w-5 h-5 animate-spin mr-2" />
+        <span>Đang tải thông tin giao dịch...</span>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 p-6 lg:p-8 max-w-360 mx-auto w-full flex flex-col gap-6">
@@ -287,23 +370,40 @@ export default function PaymentScreen({ planId }: { planId: string }) {
             </div>
 
             {/* Actions */}
-            <div className="border-t border-outline-variant/60 pt-4 flex flex-col sm:flex-row items-center justify-end gap-3 mt-1">
-              <Button
-                variant="outline"
-                onClick={() => router.push("/billing")}
-                className="w-full sm:w-auto font-bold text-xs h-8"
-              >
-                Hủy giao dịch
-              </Button>
-              <Button
-                onClick={() =>
-                  router.push(`/billing/payment/${selectedPlan.id}/success`)
-                }
-                className="bg-primary text-white cursor-pointer w-full sm:w-auto font-bold text-xs h-8 flex items-center justify-center gap-1.5"
-              >
-                <span>Đã hoàn tất thanh toán</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
+            <div className="border-t border-outline-variant/60 pt-4 flex flex-col gap-3 mt-1">
+              {errorMsg && (
+                <p className="text-xs font-semibold text-red-600 bg-red-50 px-3 py-1.5 rounded border border-red-200">
+                  {errorMsg}
+                </p>
+              )}
+
+              <div className="flex flex-col sm:flex-row items-center justify-end gap-3 w-full">
+                <Button
+                  variant="outline"
+                  onClick={() => router.push("/billing")}
+                  disabled={isCompleting}
+                  className="w-full sm:w-auto font-bold text-xs h-8"
+                >
+                  Hủy giao dịch
+                </Button>
+                <Button
+                  onClick={handleCompletePayment}
+                  disabled={isCompleting}
+                  className="bg-primary text-white cursor-pointer w-full sm:w-auto font-bold text-xs h-8 flex items-center justify-center gap-1.5 disabled:opacity-75"
+                >
+                  {isCompleting ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang xác nhận...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Đã hoàn tất thanh toán</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </>
+                  )}
+                </Button>
+              </div>
             </div>
           </div>
         </div>

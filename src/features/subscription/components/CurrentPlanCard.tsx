@@ -4,8 +4,10 @@ import { CurrentPlanWithSubscription } from "../types";
 export default function CurrentPlanCard({
   currentPlan,
 }: {
-  currentPlan: CurrentPlanWithSubscription;
+  currentPlan: CurrentPlanWithSubscription | null;
 }) {
+  const isActive = !!currentPlan;
+
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 relative overflow-hidden flex flex-col justify-between min-h-55 shadow-sm hover:border-outline transition-all">
       {/* Decorative bg pattern */}
@@ -17,13 +19,20 @@ export default function CurrentPlanCard({
             <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">
               Gói Hiện Tại
             </h3>
-            <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-              Đang hoạt động
-            </span>
+            {isActive ? (
+              <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
+                Đang hoạt động
+              </span>
+            ) : (
+              <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
+                <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
+                Chưa kích hoạt
+              </span>
+            )}
           </div>
           <h4 className="text-3xl font-bold text-primary mt-2 tracking-tight">
-            {currentPlan.plan.plan_name}
+            {isActive ? currentPlan.plan.plan_name : "Chưa có gói dịch vụ"}
           </h4>
         </div>
         <div className="text-right">
@@ -31,7 +40,7 @@ export default function CurrentPlanCard({
             Chu kỳ thanh toán
           </p>
           <p className="text-sm font-semibold text-on-surface mt-1">
-            Hàng tháng
+            {isActive ? "Hàng tháng" : "N/A"}
           </p>
         </div>
       </div>
@@ -39,15 +48,15 @@ export default function CurrentPlanCard({
       <div className="relative z-10 mt-6 pt-4 border-t border-outline-variant/60 flex justify-between items-end">
         <div>
           <p className="text-xs text-on-surface-variant font-medium">
-            Ngày hết hạn tiếp theo
+            {isActive ? "Ngày hết hạn tiếp theo" : "Thời hạn gói"}
           </p>
           <p className="text-sm font-bold text-on-surface font-mono mt-1">
-            {currentPlan.subscription.end_date}
+            {isActive ? currentPlan.subscription.end_date : "Chưa đăng ký"}
           </p>
         </div>
         <div className="text-right">
           <p className="text-2xl font-bold text-on-surface">
-            {formatPrice(currentPlan.plan.price)}{" "}
+            {isActive ? formatPrice(currentPlan.plan.price) : "0"}{" "}
             <span className="text-xs font-medium text-on-surface-variant">
               VNĐ/tháng
             </span>

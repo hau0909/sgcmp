@@ -1,6 +1,6 @@
 import { fetcher } from "@/lib/fetcher";
 import { Payment } from "@/types/Payment";
-import { PaymentStatus } from "@/types/Enum";
+import { PaymentMethod, PaymentStatus } from "@/types/Enum";
 
 export async function requestGetPaymentHistory(
   companyId: string,
@@ -16,6 +16,41 @@ export async function requestGetPaymentHistory(
   }
 
   return await fetcher(url, {
+    method: "GET",
+  });
+}
+
+export async function requestCreatePayment(
+  companyId: string,
+  planId: number,
+  paymentMethod: PaymentMethod,
+): Promise<{ success: boolean; data: Payment }> {
+  return await fetcher("/api/payments", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ companyId, planId, paymentMethod }),
+  });
+}
+
+export async function requestUpdatePaymentStatus(
+  paymentId: string,
+  status: PaymentStatus,
+): Promise<{ success: boolean; data: Payment }> {
+  return await fetcher(`/api/payments/${paymentId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+}
+
+export async function requestGetPaymentById(
+  paymentId: string,
+): Promise<{ success: boolean; data: Payment }> {
+  return await fetcher(`/api/payments/${paymentId}`, {
     method: "GET",
   });
 }
