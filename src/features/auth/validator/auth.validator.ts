@@ -53,8 +53,8 @@ export const checkPhoneNumberExists = async (phoneNumber: string) => {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("userid")
-    .eq("phonenumber", cleanedPhoneNumber)
+    .select("user_id")
+    .eq("phone_number", cleanedPhoneNumber)
     .maybeSingle();
 
   if (error) {
