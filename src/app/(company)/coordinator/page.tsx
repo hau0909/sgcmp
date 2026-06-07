@@ -1,6 +1,6 @@
 import React from 'react';
+import Link from 'next/link';
 import { Plus } from 'lucide-react';
-import { Button } from '@/components/ui/button';
 import { CoordinatorTable } from '@/features/coordinator/components/CoordinatorTable';
 
 export default function CoordinatorPage() {
@@ -12,13 +12,16 @@ export default function CoordinatorPage() {
             Quản lý Tài khoản Điều phối viên
           </h2>
           <p className="text-sm text-on-surface-variant mt-1 font-body">
-            Manage and monitor coordinator access across the enterprise.
+            Quản lý và theo dõi quyền truy cập của các điều phối viên trong doanh nghiệp.
           </p>
         </div>
-        <button className="bg-secondary hover:bg-secondary-container text-on-secondary hover:text-on-secondary-container font-bold py-2 px-4 rounded text-sm transition-colors flex items-center gap-2 w-fit shadow-sm active:scale-95 duration-100">
+        <Link
+          href="/coordinator/add"
+          className="bg-secondary hover:bg-primary text-on-secondary font-bold py-2 px-4 rounded text-sm transition-colors flex items-center gap-2 w-fit shadow-sm active:scale-95 duration-100"
+        >
           <Plus className="w-4 h-4" />
           <span>Tạo tài khoản mới</span>
-        </button>
+        </Link>
       </div>
       
       <CoordinatorTable />
