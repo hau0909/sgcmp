@@ -1,11 +1,15 @@
-import { registerAccountService } from "../service/auth.service";
+import {
+  registerAccountService,
+  loginAccountService,
+} from "../service/auth.service";
 import {
   emailExistError,
   validateRegisterInput,
+  validateLoginInput,
+  checkPhoneNumberExists,
 } from "../validator/auth.validator";
-import type { RegisterInput } from "../types";
+import type { RegisterInput, LoginInput } from "../types";
 import type { AuthError } from "@supabase/supabase-js";
-import { checkPhoneNumberExists } from "../validator/auth.validator";
 
 export const handleRegisterAccount = async ({
   email,
@@ -42,6 +46,7 @@ export const handleRegisterAccount = async ({
     const account = await registerAccountService({
       email,
       password,
+      confirmPassword,
       phoneNumber,
       fullName,
     });
@@ -56,6 +61,43 @@ export const handleRegisterAccount = async ({
     return {
       success: false,
       message: emailExistError(error as AuthError),
+    };
+  }
+};
+
+export const handleLoginAccount = async ({ email, password }: LoginInput) => {
+  const validateError = validateLoginInput({ email, password });
+
+  if (validateError) {
+    return {
+      success: false,
+      message: validateError,
+    };
+  }
+
+  try {
+    const loginResult = await loginAccountService({ email, password });
+
+    return {
+      success: true,
+      message: "Đăng nhập thành công.",
+      data: {
+        id: loginResult.id,
+        email: loginResult.email,
+        full_name: loginResult.full_name,
+        phone_number: loginResult.phone_number,
+        role: loginResult.role,
+        status: loginResult.status,
+        avatar_url: loginResult.avatar_url,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Đăng nhập thất bại. Vui lòng thử lại.",
     };
   }
 };

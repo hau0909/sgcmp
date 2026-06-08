@@ -1,5 +1,5 @@
 import type { AuthError } from "@supabase/supabase-js";
-import type { RegisterInput } from "../types";
+import type { RegisterInput, LoginInput } from "../types";
 import { supabase } from "@/lib/supabase";
 
 export const validateFullName = (fullName: string) => {
@@ -118,6 +118,16 @@ export const validateRegisterInput = ({
   );
 
   if (confirmPasswordError) return confirmPasswordError;
+
+  return null;
+};
+
+export const validateLoginInput = ({ email, password }: LoginInput) => {
+  const emailError = validateEmail(email);
+  if (emailError) return emailError;
+
+  const passwordError = validatePassword(password);
+  if (passwordError) return passwordError;
 
   return null;
 };
