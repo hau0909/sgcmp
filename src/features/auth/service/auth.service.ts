@@ -1,5 +1,5 @@
-import { RegisterInputService } from "../types";
-import { registerAccount } from "../repository/auth.repository";
+import { RegisterInputService, LoginInputService } from "../types";
+import { registerAccount, loginAccount } from "../repository/auth.repository";
 
 export const registerAccountService = async ({
   email,
@@ -10,8 +10,15 @@ export const registerAccountService = async ({
   return registerAccount({
     email,
     password,
-    fullName,
-    phoneNumber,
+    full_name: fullName,
+    phone_number: phoneNumber,
     isCoordinator: false,
   });
+};
+
+export const loginAccountService = async ({
+  email,
+  password,
+}: LoginInputService) => {
+  return loginAccount({ email, password });
 };

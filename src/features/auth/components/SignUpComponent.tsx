@@ -3,7 +3,6 @@
 import { useState } from "react";
 import Link from "next/link";
 import { requestRegisterAccount } from "../api/auth.api";
-import { useRouter } from "next/navigation";
 
 type FormErrors = {
   fullName?: string;
@@ -25,26 +24,28 @@ export default function SignUp() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
 
-  const router = useRouter();
-
   const validateForm = () => {
     const newErrors: FormErrors = {};
 
-    if (!fullName.trim()) {
+    const trimmedFullName = fullName.trim();
+    const trimmedEmail = email.trim();
+    const normalizedPhoneNumber = phoneNumber.replace(/\s/g, "");
+
+    if (!trimmedFullName) {
       newErrors.fullName = "Vui lòng nhập họ và tên";
-    } else if (fullName.trim().length < 2) {
+    } else if (trimmedFullName.length < 2) {
       newErrors.fullName = "Họ và tên phải có ít nhất 2 ký tự";
     }
 
-    if (!email.trim()) {
+    if (!trimmedEmail) {
       newErrors.email = "Vui lòng nhập email";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       newErrors.email = "Email không hợp lệ";
     }
 
-    if (!phoneNumber.trim()) {
+    if (!normalizedPhoneNumber) {
       newErrors.phone = "Vui lòng nhập số điện thoại";
-    } else if (!/^(0|\+84)[0-9]{9,10}$/.test(phoneNumber.replace(/\s/g, ""))) {
+    } else if (!/^(0|\+84)[0-9]{9,10}$/.test(normalizedPhoneNumber)) {
       newErrors.phone = "Số điện thoại không hợp lệ";
     }
 
@@ -69,6 +70,7 @@ export default function SignUp() {
     e.preventDefault();
 
     setSuccessMessage("");
+    setErrors({});
 
     const isValid = validateForm();
 
@@ -76,15 +78,25 @@ export default function SignUp() {
 
     try {
       setLoading(true);
-      setErrors({});
+
+      const trimmedFullName = fullName.trim();
+      const trimmedEmail = email.trim();
+      const normalizedPhoneNumber = phoneNumber.replace(/\s/g, "");
 
       const result = await requestRegisterAccount({
-        email,
+        email: trimmedEmail,
         password,
         confirmPassword,
-        fullName,
-        phoneNumber,
+        fullName: trimmedFullName,
+        phoneNumber: normalizedPhoneNumber,
       });
+
+      if (!result.success) {
+        setErrors({
+          general: result.message || "Đăng ký thất bại. Vui lòng thử lại.",
+        });
+        return;
+      }
 
       setSuccessMessage(result.message);
 
@@ -93,9 +105,6 @@ export default function SignUp() {
       setPhoneNumber("");
       setPassword("");
       setConfirmPassword("");
-
-      // Nếu muốn tự chuyển sang login sau 2 giây thì mở dòng này
-      // setTimeout(() => router.push("/login"), 2000);
     } catch (error: any) {
       setErrors({
         general: error?.message || "Đăng ký thất bại. Vui lòng thử lại.",

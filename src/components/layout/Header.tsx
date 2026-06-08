@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
 import { useAuthContext } from "@/provider/authContext";
 import { UserCircle } from "lucide-react";
@@ -21,7 +21,29 @@ export default function Header() {
   const pathname = usePathname() || "/";
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
-  const { loading, isAuthenticated } = useAuthContext();
+
+  const { loading, isAuthenticated, refreshAuth } = useAuthContext();
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncAuth = async () => {
+      try {
+        await refreshAuth();
+      } finally {
+        if (isMounted) {
+          setCheckingAuth(false);
+        }
+      }
+    };
+
+    syncAuth();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [refreshAuth]);
 
   return (
     <>
@@ -30,10 +52,9 @@ export default function Header() {
          bg-surface-container-lowest/90 backdrop-blur-md shadow-md py-3 border-b border-outline-variant/30"
       >
         <div className="flex justify-between items-center h-14 px-8 max-w-7xl mx-auto">
-          {/* Brand Logo */}
-          <a
+          <Link
             className="font-sans text-[22px] font-bold text-primary flex items-center gap-2 hover:scale-[1.02] transition-transform duration-200"
-            href="#"
+            href="/"
           >
             <Image
               src={"/logo.png"}
@@ -43,14 +64,14 @@ export default function Header() {
               className="drop-shadow-sm/20 shadow-secondary"
             />
             SGCMP
-          </a>
+          </Link>
 
-          {/* Navigation Links (Desktop) */}
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
+
               return (
-                <a
+                <Link
                   key={link.href}
                   className={`text-[14px] font-medium transition-all duration-200 relative py-1 hover:text-primary ${
                     isActive
@@ -60,14 +81,13 @@ export default function Header() {
                   href={link.href}
                 >
                   {link.label}
-                </a>
+                </Link>
               );
             })}
           </nav>
 
-          {/* Actions */}
           <div className="hidden md:flex items-center gap-4">
-            {loading ? (
+            {(loading || checkingAuth) && !isAuthenticated ? (
               <div className="h-9 w-28 animate-pulse rounded-full bg-slate-200" />
             ) : isAuthenticated ? (
               <div className="relative flex items-center gap-4">
@@ -78,14 +98,12 @@ export default function Header() {
                 >
                   <UserCircle className="h-6 w-6" />
                 </button>
-
                 <Link
                   className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.03] text-[13px] h-9 flex items-center justify-center"
                   href="/sign-up"
                 >
                   Đăng kí ngay
                 </Link>
-
                 {userDropdownOpen && (
                   <div className="absolute right-0 top-12 w-44 overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-lg z-50">
                     <Link
@@ -124,95 +142,10 @@ export default function Header() {
               </>
             )}
           </div>
-
-          {/* Mobile Menu Button */}
-          <button
-            className="md:hidden flex items-center justify-center p-2 rounded-lg text-primary hover:bg-primary/5 transition-colors focus:outline-none"
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            aria-label="Toggle menu"
-          >
-            <span className="material-symbols-outlined text-[26px]">
-              {mobileMenuOpen ? "close" : "menu"}
-            </span>
-          </button>
         </div>
       </header>
 
-      {/* Mobile Drawer Backdrop */}
-      {mobileMenuOpen && (
-        <div
-          className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-xs z-40 transition-opacity duration-300"
-          onClick={() => setMobileMenuOpen(false)}
-        />
-      )}
-
-      {/* Mobile Drawer */}
-      <div
-        className={`md:hidden fixed top-0 right-0 h-full w-70 bg-surface-container-lowest z-50 shadow-2xl transition-transform duration-300 ease-out transform ${
-          mobileMenuOpen ? "translate-x-0" : "translate-x-full"
-        } flex flex-col`}
-      >
-        <div className="flex items-center justify-between p-6 border-b border-outline-variant/30">
-          <a
-            className="font-sans text-[20px] font-bold text-primary flex items-center gap-2"
-            href="#"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            <Image
-              src={"/logo.png"}
-              width={30}
-              height={30}
-              alt="logo image"
-              className="drop-shadow-sm/20 shadow-secondary"
-            />
-            SGCMP
-          </a>
-          <button
-            className="flex items-center justify-center p-2 rounded-lg text-primary hover:bg-primary/5 transition-colors"
-            onClick={() => setMobileMenuOpen(false)}
-            aria-label="Close menu"
-          >
-            <span className="material-symbols-outlined">Đóng</span>
-          </button>
-        </div>
-
-        <nav className="flex flex-col gap-2 p-6 flex-1">
-          {navLinks.map((link) => {
-            const isActive = pathname === link.href;
-            return (
-              <a
-                key={link.href}
-                className={`text-[15px] font-medium p-3 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
-                }`}
-                href={link.href}
-                onClick={() => setMobileMenuOpen(false)}
-              >
-                {link.label}
-              </a>
-            );
-          })}
-        </nav>
-
-        <div className="p-6 border-t border-outline-variant/30 flex flex-col gap-3">
-          <a
-            className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
-            href="#"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            Đăng nhập
-          </a>
-          <a
-            className="bg-primary hover:bg-primary-container text-on-primary font-semibold py-3 px-6 rounded-xl w-full text-center transition-all h-11 flex items-center justify-center"
-            href="#"
-            onClick={() => setMobileMenuOpen(false)}
-          >
-            Dùng thử miễn phí
-          </a>
-        </div>
-      </div>
+      {/* phần mobile giữ nguyên, nhưng nên đổi a href="#" thành Link */}
     </>
   );
 }

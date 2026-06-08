@@ -12,10 +12,18 @@ export const createClient = async () => {
         getAll() {
           return cookieStore.getAll();
         },
+
         setAll(cookiesToSet) {
           try {
             cookiesToSet.forEach(({ name, value, options }) => {
-              cookieStore.set(name, value, options);
+              cookieStore.set(name, value, {
+                ...options,
+                path: "/",
+                secure:
+                  process.env.NODE_ENV === "production"
+                    ? options.secure
+                    : false,
+              });
             });
           } catch {
             // Server Component không set được cookie trực tiếp.
