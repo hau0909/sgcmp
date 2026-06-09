@@ -15,67 +15,89 @@ import {
   Lightbulb,
   ArrowRight
 } from "lucide-react";
+import { requestGetRegistrations } from "../api/registration.api";
+import { RegistrationWithCompany } from "../types";
 
-export interface CompanyRegistration {
-  id: string;
-  companyName: string;
-  sector: string;
-  businessType: string;
-  submissionDate: string;
-  status: "pending" | "action_required" | "approved";
-  logoShort: string;
-  errorDetail?: string;
-}
+const formatDate = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return dateStr;
+  }
+};
+
+const getLogoShort = (name: string) => {
+  if (!name) return "CO";
+  const parts = name.split(" ").filter(p => p && p[0] !== p[0].toLowerCase());
+  if (parts.length >= 2) {
+    return (parts[0][0] + parts[1][0]).toUpperCase();
+  }
+  return name.substring(0, 2).toUpperCase();
+};
 
 export default function RegistrationTable() {
-  const initialRegistrations: CompanyRegistration[] = [
-    {
-      id: "REG-2023-001",
-      companyName: "Công ty Cổ phần VinaGuard",
-      sector: "An ninh mạng",
-      businessType: "Doanh nghiệp tư nhân",
-      submissionDate: "20/10/2023",
-      status: "pending",
-      logoShort: "VN",
-    },
-    {
-      id: "REG-2023-014",
-      companyName: "SmartTech Solutions Ltd.",
-      sector: "Phần mềm doanh nghiệp",
-      businessType: "Trách nhiệm hữu hạn",
-      submissionDate: "21/10/2023",
-      status: "pending",
-      logoShort: "ST",
-    },
-    {
-      id: "REG-2023-018",
-      companyName: "Global Logistics & Partners",
-      sector: "Vận tải biển",
-      businessType: "Tập đoàn nước ngoài",
-      submissionDate: "22/10/2023",
-      status: "pending",
-      logoShort: "GP",
-    },
-    {
-      id: "REG-2023-022",
-      companyName: "Hệ thống Y tế Sunshine",
-      sector: "Y tế",
-      businessType: "Tổ chức phi lợi nhuận",
-      submissionDate: "23/10/2023",
-      status: "action_required",
-      logoShort: "HS",
-      errorDetail: "Thiếu chứng từ pháp lý",
-    },
-    {
-      id: "REG-2023-025",
-      companyName: "EcoView Construction",
-      sector: "Xây dựng xanh",
-      businessType: "Công ty hợp danh",
-      submissionDate: "23/10/2023",
-      status: "pending",
-      logoShort: "EV",
-    },
-  ];
+  const [registrations, setRegistrations] = React.useState<RegistrationWithCompany[]>([]);
+  const [loading, setLoading] = React.useState(true);
+  const [error, setError] = React.useState<string | null>(null);
+
+  React.useEffect(() => {
+    const fetchRegistrations = async () => {
+      try {
+        setLoading(true);
+        const res = await requestGetRegistrations();
+        setRegistrations(res.registrations || []);
+      } catch (err: any) {
+        console.error("Error fetching registrations:", err);
+        setError(err.message || "Không thể tải danh sách đăng ký");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchRegistrations();
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-center min-h-[400px] text-on-surface-variant font-medium">
+          Đang tải danh sách đăng ký...
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-center min-h-[400px] text-error font-medium">
+          Lỗi: {error}
+        </div>
+      </div>
+    );
+  }
+
+  // Calculate dynamic stats
+  const pendingCount = registrations.filter((r) => r.status === "pending").length;
+  const approvedCount = registrations.filter((r) => r.status === "approved").length;
+  const errorCount = registrations.filter((r) => r.status === "rejected" || r.status === "action_required").length;
+
+  const approvedList = registrations.filter((r) => r.status === "approved");
+  let avgDaysStr = "1.5d";
+  if (approvedList.length > 0) {
+    const totalDiff = approvedList.reduce((acc, r) => {
+      const created = new Date(r.created_at).getTime();
+      const updated = new Date(r.updated_at).getTime();
+      const diffDays = (updated - created) / (1000 * 60 * 60 * 24);
+      return acc + (diffDays > 0 ? diffDays : 0.5);
+    }, 0);
+    const avg = totalDiff / approvedList.length;
+    avgDaysStr = `${avg.toFixed(1)}d`;
+  }
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6">
@@ -119,7 +141,7 @@ export default function RegistrationTable() {
             <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
               Tổng chờ duyệt
             </p>
-            <p className="text-2xl font-bold text-on-surface mt-1">24</p>
+            <p className="text-2xl font-bold text-on-surface mt-1">{pendingCount}</p>
           </div>
         </div>
 
@@ -132,7 +154,7 @@ export default function RegistrationTable() {
             <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
               Đã duyệt (Tháng)
             </p>
-            <p className="text-2xl font-bold text-on-surface mt-1">156</p>
+            <p className="text-2xl font-bold text-on-surface mt-1">{approvedCount}</p>
           </div>
         </div>
 
@@ -145,7 +167,7 @@ export default function RegistrationTable() {
             <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
               Thời gian TB
             </p>
-            <p className="text-2xl font-bold text-on-surface mt-1">1.5d</p>
+            <p className="text-2xl font-bold text-on-surface mt-1">{avgDaysStr}</p>
           </div>
         </div>
 
@@ -158,7 +180,7 @@ export default function RegistrationTable() {
             <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
               Hồ sơ lỗi
             </p>
-            <p className="text-2xl font-bold text-on-surface mt-1">3</p>
+            <p className="text-2xl font-bold text-on-surface mt-1">{errorCount}</p>
           </div>
         </div>
       </div>
@@ -175,7 +197,6 @@ export default function RegistrationTable() {
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap min-w-[240px]">
                   Tên Công ty
                 </th>
-
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[110px] whitespace-nowrap">
                   Ngày gửi
                 </th>
@@ -188,11 +209,15 @@ export default function RegistrationTable() {
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-outline-variant bg-white">
-              {initialRegistrations.map((reg) => {
-                const isError = reg.status === "action_required";
+              {registrations.map((reg) => {
+                const isError = reg.status === "rejected" || reg.status === "action_required";
+                const companyName = reg.companies?.company_name || "N/A";
+                const logoShort = getLogoShort(companyName);
+                const desc = reg.companies?.description || "N/A";
+
                 return (
                   <tr
-                    key={reg.id}
+                    key={reg.registration_id}
                     className="hover:bg-surface-container transition-colors group"
                   >
                     <td
@@ -203,7 +228,7 @@ export default function RegistrationTable() {
                       {isError && (
                         <div className="absolute left-0 top-0 bottom-0 w-1 bg-error" />
                       )}
-                      {reg.id}
+                      {reg.registration_code}
                     </td>
                     <td className="px-6 py-4 min-w-[240px]">
                       <div className="flex items-center gap-3">
@@ -212,28 +237,28 @@ export default function RegistrationTable() {
                             isError ? "text-error" : "text-[#43474e]"
                           }`}
                         >
-                          {reg.logoShort}
+                          {logoShort}
                         </div>
                         <div>
                           <Link 
-                            href={`/registrations/${reg.id}`}
+                            href={`/registrations/${reg.registration_id}`}
                             className="font-semibold text-[#1f1f1f] hover:text-primary transition-colors cursor-pointer block"
                           >
-                            {reg.companyName}
+                            {companyName}
                           </Link>
                           <p
                             className={`text-[11px] mt-0.5 ${
                               isError ? "text-error font-medium" : "text-on-surface-variant"
                             }`}
                           >
-                            {isError ? reg.errorDetail : `Lĩnh vực: ${reg.sector}`}
+                            {isError ? "Hồ sơ có lỗi cần bổ sung" : `Lĩnh vực: ${desc}`}
                           </p>
                         </div>
                       </div>
                     </td>
 
                     <td className="px-6 py-4 font-mono text-on-surface-variant text-[13px] whitespace-nowrap">
-                      {reg.submissionDate}
+                      {formatDate(reg.created_at)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {reg.status === "pending" ? (
@@ -241,15 +266,26 @@ export default function RegistrationTable() {
                           <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] shrink-0"></span>
                           PENDING
                         </span>
+                      ) : reg.status === "approved" ? (
+                        <span className="inline-flex items-center gap-1.5 bg-[#dcfce7] text-[#166534] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] shrink-0"></span>
+                          APPROVED
+                        </span>
+                      ) : reg.status === "rejected" ? (
+                        <span className="inline-flex items-center gap-1.5 bg-[#fee2e2] text-[#991b1b] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] shrink-0"></span>
+                          REJECTED
+                        </span>
                       ) : (
-                        <span className="text-error text-[11px] font-bold uppercase tracking-wider whitespace-nowrap">
-                          YÊU CẦU BỔ SUNG
+                        <span className="inline-flex items-center gap-1.5 bg-[#f3f4f6] text-[#374151] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#9ca3af] shrink-0"></span>
+                          {reg.status.toUpperCase()}
                         </span>
                       )}
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
                       <Link 
-                        href={`/registrations/${reg.id}`}
+                        href={`/registrations/${reg.registration_id}`}
                         className="text-secondary font-semibold text-xs hover:text-primary inline-flex items-center gap-1 transition-colors whitespace-nowrap"
                       >
                         Xem chi tiết <ExternalLink className="w-3.5 h-3.5" />
@@ -264,7 +300,9 @@ export default function RegistrationTable() {
 
         {/* Pagination */}
         <div className="px-6 py-4 border-t border-outline-variant flex justify-between items-center bg-surface-container-low">
-          <p className="text-on-surface-variant text-sm">Hiển thị 1 - 5 trên 24 kết quả</p>
+          <p className="text-on-surface-variant text-sm">
+            Hiển thị 1 - {registrations.length} trên {registrations.length} kết quả
+          </p>
           <div className="flex gap-1">
             <button
               className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high disabled:opacity-50 transition-colors"
@@ -275,13 +313,13 @@ export default function RegistrationTable() {
             <button className="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white text-sm font-medium">
               1
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high text-sm transition-colors">
+            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high text-sm transition-colors" disabled>
               2
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high text-sm transition-colors">
+            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high text-sm transition-colors" disabled>
               3
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high transition-colors">
+            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high transition-colors" disabled>
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
