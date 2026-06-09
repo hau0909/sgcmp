@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import Link from "next/link";
 import {
   ChevronRight,
   ChevronLeft,
@@ -214,9 +215,12 @@ export default function RegistrationTable() {
                           {reg.logoShort}
                         </div>
                         <div>
-                          <p className="font-semibold text-[#1f1f1f] hover:text-primary transition-colors cursor-pointer">
+                          <Link 
+                            href={`/registrations/${reg.id}`}
+                            className="font-semibold text-[#1f1f1f] hover:text-primary transition-colors cursor-pointer block"
+                          >
                             {reg.companyName}
-                          </p>
+                          </Link>
                           <p
                             className={`text-[11px] mt-0.5 ${
                               isError ? "text-error font-medium" : "text-on-surface-variant"
@@ -244,9 +248,12 @@ export default function RegistrationTable() {
                       )}
                     </td>
                     <td className="px-6 py-4 text-right whitespace-nowrap">
-                      <button className="text-secondary font-semibold text-xs hover:text-primary inline-flex items-center gap-1 transition-colors whitespace-nowrap">
+                      <Link 
+                        href={`/registrations/${reg.id}`}
+                        className="text-secondary font-semibold text-xs hover:text-primary inline-flex items-center gap-1 transition-colors whitespace-nowrap"
+                      >
                         Xem chi tiết <ExternalLink className="w-3.5 h-3.5" />
-                      </button>
+                      </Link>
                     </td>
                   </tr>
                 );
