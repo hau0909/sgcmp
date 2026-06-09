@@ -39,5 +39,3 @@ export const handleGetPaymentById = async (
   const result = await getPaymentByIdService(paymentId);
   return result;
 };
-
-
