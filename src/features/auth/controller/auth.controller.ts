@@ -1,0 +1,103 @@
+import {
+  registerAccountService,
+  loginAccountService,
+} from "../service/auth.service";
+import {
+  emailExistError,
+  validateRegisterInput,
+  validateLoginInput,
+  checkPhoneNumberExists,
+} from "../validator/auth.validator";
+import type { RegisterInput, LoginInput } from "../types";
+import type { AuthError } from "@supabase/supabase-js";
+
+export const handleRegisterAccount = async ({
+  email,
+  password,
+  confirmPassword,
+  phoneNumber,
+  fullName,
+}: RegisterInput) => {
+  const validateError = validateRegisterInput({
+    email,
+    password,
+    confirmPassword,
+    phoneNumber,
+    fullName,
+  });
+
+  if (validateError) {
+    return {
+      success: false,
+      message: validateError,
+    };
+  }
+
+  const phoneExists = await checkPhoneNumberExists(phoneNumber);
+
+  if (phoneExists) {
+    return {
+      success: false,
+      message: "Số điện thoại này đã được đăng ký",
+    };
+  }
+
+  try {
+    const account = await registerAccountService({
+      email,
+      password,
+      confirmPassword,
+      phoneNumber,
+      fullName,
+    });
+
+    return {
+      success: true,
+      message:
+        "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.",
+      account,
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message: emailExistError(error as AuthError),
+    };
+  }
+};
+
+export const handleLoginAccount = async ({ email, password }: LoginInput) => {
+  const validateError = validateLoginInput({ email, password });
+
+  if (validateError) {
+    return {
+      success: false,
+      message: validateError,
+    };
+  }
+
+  try {
+    const loginResult = await loginAccountService({ email, password });
+
+    return {
+      success: true,
+      message: "Đăng nhập thành công.",
+      data: {
+        id: loginResult.id,
+        email: loginResult.email,
+        full_name: loginResult.full_name,
+        phone_number: loginResult.phone_number,
+        role: loginResult.role,
+        status: loginResult.status,
+        avatar_url: loginResult.avatar_url,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Đăng nhập thất bại. Vui lòng thử lại.",
+    };
+  }
+};

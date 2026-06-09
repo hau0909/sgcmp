@@ -2,6 +2,7 @@
 /* eslint-disable jsx-a11y/alt-text */
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import { LANDING_PLANS } from "@/features/payment/component/plans-data";
 import {
   ArrowRight,
   ChartColumn,
@@ -51,7 +52,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row gap-4 pt-2">
                   <a
                     className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] text-[15px] h-12"
-                    href="/onboarding/basic-info"
+                    href="#"
                   >
                     Bắt đầu miễn phí
                     <ArrowRight />
@@ -338,142 +339,74 @@ export default function Home() {
 
             {/* Pricing Cards Grid Layout */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch pt-8">
-              {/* Card 1: Basic Plan */}
-              <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl p-8 md:p-10 flex flex-col hover:shadow-soft transition-all duration-300 justify-between text-left">
-                <div>
-                  <h3 className="font-sans text-[22px] font-bold text-on-surface mb-2">
-                    Cơ bản
-                  </h3>
-                  <p className="font-sans text-[13px] text-on-surface-variant mb-8 h-10 leading-relaxed">
-                    Hoàn hảo cho các tổ chức nhỏ quản lý dưới 20 nhân sự.
-                  </p>
+              {LANDING_PLANS.map((plan) => {
+                return (
+                  <div
+                    key={plan.id}
+                    className={`bg-surface-container-lowest border rounded-3xl p-8 md:p-10 flex flex-col justify-between text-left transition-all duration-300
+                      ${
+                        plan.isPopular
+                          ? "border-2 border-primary shadow-xl transform md:-translate-y-4 relative"
+                          : "border-outline-variant/40 hover:shadow-soft"
+                      }`}
+                  >
+                    {plan.isPopular && (
+                      /* Popular Badge */
+                      <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-linear-to-r from-primary to-secondary text-white px-6 py-1.5 rounded-full font-sans text-[11px] font-bold uppercase tracking-widest shadow-md">
+                        Phổ biến nhất
+                      </div>
+                    )}
 
-                  <div className="mb-8 flex items-baseline gap-1">
-                    <span className="font-sans text-[36px] md:text-[40px] font-extrabold text-on-surface tracking-tight transition-all duration-300">
-                      250.000
-                    </span>
-                    <span className="font-sans text-[13px] font-medium text-on-surface-variant">
-                      /tháng
-                    </span>
+                    <div>
+                      <h3
+                        className={`font-sans text-[22px] font-bold mb-2
+                          ${plan.isPopular ? "text-primary mt-2" : "text-on-surface"}`}
+                      >
+                        {plan.name}
+                      </h3>
+                      <p className="font-sans text-[13px] text-on-surface-variant mb-8 h-10 leading-relaxed">
+                        {plan.description}
+                      </p>
+
+                      <div className="mb-8 flex items-baseline gap-1">
+                        <span className="font-sans text-[36px] md:text-[40px] font-extrabold text-on-surface tracking-tight transition-all duration-300">
+                          {plan.price}
+                        </span>
+                        {plan.period && (
+                          <span className="font-sans text-[13px] font-medium text-on-surface-variant">
+                            {plan.period}
+                          </span>
+                        )}
+                      </div>
+
+                      <ul className="flex flex-col gap-4 mb-10">
+                        {plan.features.map((feature, idx) => (
+                          <li
+                            key={idx}
+                            className={`flex items-center gap-3 text-[14px] text-on-surface
+                              ${plan.isPopular && idx === 0 ? "font-semibold" : ""}`}
+                          >
+                            <CheckCircle2 className="text-primary text-[20px]" />
+                            {feature}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+
+                    <a
+                      className={`w-full font-semibold py-3 px-6 rounded-xl transition-all duration-300 text-[14px] h-12 flex items-center justify-center
+                        ${
+                          plan.isPopular
+                            ? "bg-primary hover:bg-primary-container text-on-primary shadow-md hover:shadow-lg hover:scale-[1.02]"
+                            : "border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low"
+                        }`}
+                      href={plan.href}
+                    >
+                      {plan.actionText}
+                    </a>
                   </div>
-
-                  <ul className="flex flex-col gap-4 mb-10">
-                    <li className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Quản lý tối đa 20 bảo vệ.
-                    </li>
-                    <li className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Lên lịch trực ca cơ bản
-                    </li>
-                    <li className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Check-in/Check-out ca làm
-                    </li>
-                  </ul>
-                </div>
-
-                <a
-                  className="w-full border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low font-semibold py-3 px-6 rounded-xl transition-all duration-300 text-[14px] h-12 flex items-center justify-center"
-                  href="#"
-                >
-                  Chọn gói Cơ bản
-                </a>
-              </div>
-
-              {/* Card 2: Professional Plan (Highlighted) */}
-              <div className="bg-surface-container-lowest border-2 border-primary rounded-3xl p-8 md:p-10 flex flex-col relative shadow-xl transform md:-translate-y-4 transition-all duration-300 justify-between text-left">
-                {/* Popular Badge */}
-                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-linear-to-r from-primary to-secondary text-white px-6 py-1.5 rounded-full font-sans text-[11px] font-bold uppercase tracking-widest shadow-md">
-                  Phổ biến nhất
-                </div>
-
-                <div>
-                  <h3 className="font-sans text-[22px] font-bold text-primary mb-2 mt-2">
-                    Chuyên nghiệp
-                  </h3>
-                  <p className="font-sans text-[13px] text-on-surface-variant mb-8 h-10 leading-relaxed">
-                    Giải pháp vận hành an ninh toàn diện cho các công ty quy mô
-                    tầm trung.
-                  </p>
-
-                  <div className="mb-8 flex items-baseline gap-1">
-                    <span className="font-sans text-[42px] md:text-[48px] font-extrabold text-on-surface tracking-tight transition-all duration-300">
-                      500.000
-                    </span>
-                    <span className="font-sans text-[13px] font-medium text-on-surface-variant">
-                      /tháng
-                    </span>
-                  </div>
-
-                  <ul className="flex flex-col gap-4 mb-10">
-                    <li className="flex items-center gap-3 text-[14px] font-semibold text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Tất cả tính năng trong gói Cơ bản
-                    </li>
-                    <li className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Quản lý không giới hạn mục tiêu
-                    </li>
-                    <li className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Báo cáo phân tích chuyên sâu tự động
-                    </li>
-                    <li className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Hệ thống trao đổi với Khách hàng
-                    </li>
-                  </ul>
-                </div>
-
-                <a
-                  className="w-full bg-primary hover:bg-primary-container text-on-primary font-semibold py-3 px-6 rounded-xl transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] text-[14px] h-12 flex items-center justify-center"
-                  href="#"
-                >
-                  Bắt đầu dùng thử
-                </a>
-              </div>
-
-              {/* Card 3: Enterprise Plan */}
-              <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl p-8 md:p-10 flex flex-col hover:shadow-soft transition-all duration-300 justify-between text-left">
-                <div>
-                  <h3 className="font-sans text-[22px] font-bold text-on-surface mb-2">
-                    Doanh nghiệp
-                  </h3>
-                  <p className="font-sans text-[13px] text-on-surface-variant mb-8 h-10 leading-relaxed">
-                    Khả năng tùy chỉnh chuyên sâu và hạ tầng chuyên biệt cho quy
-                    mô lớn.
-                  </p>
-
-                  <div className="mb-8 flex items-baseline gap-1">
-                    <span className="font-sans text-[36px] md:text-[40px] font-extrabold text-on-surface tracking-tight">
-                      Tùy chỉnh
-                    </span>
-                  </div>
-
-                  <ul className="flex flex-col gap-4 mb-10">
-                    <li className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Máy chủ đám mây độc lập, bảo mật cao
-                    </li>
-                    <li className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Tích hợp API kết nối hệ thống nội bộ ERP
-                    </li>
-                    <li className="flex items-center gap-3 text-[14px] text-on-surface">
-                      <CheckCircle2 className="text-primary text-[20px]" />
-                      Hỗ trợ kỹ thuật 24/7 trực tiếp chuyên biệt
-                    </li>
-                  </ul>
-                </div>
-
-                <a
-                  className="w-full border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low font-semibold py-3 px-6 rounded-xl transition-all duration-300 text-[14px] h-12 flex items-center justify-center"
-                  href="#"
-                >
-                  Liên hệ tư vấn
-                </a>
-              </div>
+                );
+              })}
             </div>
           </div>
         </section>
