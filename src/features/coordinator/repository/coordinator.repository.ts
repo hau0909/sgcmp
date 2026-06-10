@@ -1,5 +1,6 @@
-import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { CoordinatorWithUser } from "../types";
+import { supabase } from "@/lib/supabase";
 
 export const getCoordinators = async (
   companyId: string,
@@ -9,10 +10,11 @@ export const getCoordinators = async (
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  let query = supabase
+  const { data, error, count } = await supabase
     .from("coordinators")
     .select("*, profiles!inner(*)", { count: "exact" })
-  const { data, error, count } = await query;
+    .eq("company_id", companyId)
+    .range(from, to);
 
   if (error) throw error;
 
@@ -20,9 +22,22 @@ export const getCoordinators = async (
     return { data: [], total: 0 };
   }
 
-  // Khỏi cần map, data trả về đã match chính xác snake_case của CoordinatorWithUser
   return {
     data: data as unknown as CoordinatorWithUser[],
     total: count || 0,
   };
+};
+
+export const insertCoordinatorRecord = async (
+  userId: string,
+  companyId: string
+): Promise<void> => {
+  const supabaseServer = await createClient();
+
+  const { error } = await supabaseServer.from("coordinators").insert({
+    user_id: userId,
+    company_id: companyId,
+  });
+
+  if (error) throw error;
 };

@@ -9,7 +9,7 @@ export async function GET(req: NextRequest) {
 
   if (!companyId) {
     return NextResponse.json(
-      { error: "Company ID is required" },
+      { message: "Company ID is required" },
       { status: 400 }
     );
   }
@@ -20,7 +20,32 @@ export async function GET(req: NextRequest) {
   } catch (error: any) {
     console.error("[GET /api/coordinators] Error:", error);
     return NextResponse.json(
-      { error: error?.message || JSON.stringify(error) || "Internal Server Error" },
+      { message: error?.message || "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+import { handleCreateCoordinator } from "@/features/coordinator/controller/coordinator.controller";
+
+export async function POST(req: NextRequest) {
+  try {
+    const body = await req.json();
+
+    const result = await handleCreateCoordinator(body);
+
+    if (!result.success) {
+      return NextResponse.json(
+        { message: result.message },
+        { status: 400 }
+      );
+    }
+
+    return NextResponse.json(result, { status: 201 });
+  } catch (error: any) {
+    console.error("[POST /api/coordinators] Error:", error);
+    return NextResponse.json(
+      { message: error?.message || "Internal Server Error" },
       { status: 500 }
     );
   }
