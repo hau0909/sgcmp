@@ -9,88 +9,158 @@ import { ContractServiceInfo } from "./ContractServiceInfo";
 import { ContractPaymentInfo } from "./ContractPaymentInfo";
 import { ContractDocuments } from "./ContractDocuments";
 import { ContractHistoryLog } from "./ContractHistoryLog";
-import { Contract } from "../types";
+import { Contract } from "@/types/Contract";
 
-// Re-importing sample contracts to lookup items
+// Re-importing sample contracts using snake_case properties to match global Contract type
 const SAMPLE_CONTRACTS: Contract[] = [
   {
-    id: "1",
-    contractCode: "HD-2026-001",
-    customerName: "Công ty A",
-    serviceName: "Cho thuê bảo vệ sự kiện",
-    createdAt: "08/06/2026",
-    status: "pending_hardcopy",
+    contract_id: "1",
+    booking_id: "b1",
+    contract_file_url: null,
+    customer_agreed: false,
+    company_agreed: false,
+    start_date: "2026-07-01",
+    end_date: "2026-12-31",
+    contract_code: "HD-2026-001",
+    customer_name: "Công ty A",
+    service_name: "Cho thuê bảo vệ sự kiện",
+    created_at: "2026-06-08T00:00:00Z",
+    updated_at: "2026-06-08T00:00:00Z",
+    status: "pending_signatures",
   },
   {
-    id: "2",
-    contractCode: "HD-2026-002",
-    customerName: "Nguyễn Văn B",
-    serviceName: "Bảo vệ mục tiêu cố định",
-    createdAt: "05/06/2026",
-    status: "pending_consent",
+    contract_id: "2",
+    booking_id: "b2",
+    contract_file_url: null,
+    customer_agreed: false,
+    company_agreed: false,
+    start_date: "2026-06-15",
+    end_date: "2026-12-15",
+    contract_code: "HD-2026-002",
+    customer_name: "Nguyễn Văn B",
+    service_name: "Bảo vệ mục tiêu cố định",
+    created_at: "2026-06-05T00:00:00Z",
+    updated_at: "2026-06-05T00:00:00Z",
+    status: "active",
   },
   {
-    id: "3",
-    contractCode: "HD-2026-003",
-    customerName: "Công ty C",
-    serviceName: "Áp tải tiền",
-    createdAt: "01/06/2026",
+    contract_id: "3",
+    booking_id: "b3",
+    contract_file_url: null,
+    customer_agreed: true,
+    company_agreed: true,
+    start_date: "2026-06-01",
+    end_date: "2027-06-01",
+    contract_code: "HD-2026-003",
+    customer_name: "Công ty C",
+    service_name: "Áp tải tiền",
+    created_at: "2026-06-01T00:00:00Z",
+    updated_at: "2026-06-01T00:00:00Z",
     status: "completed",
   },
   {
-    id: "4",
-    contractCode: "HD-2026-004",
-    customerName: "Công ty TNHH Thương mại D",
-    serviceName: "Bảo vệ yếu nhân (VIP)",
-    createdAt: "30/05/2026",
+    contract_id: "4",
+    booking_id: "b4",
+    contract_file_url: null,
+    customer_agreed: true,
+    company_agreed: true,
+    start_date: "2026-05-30",
+    end_date: "2026-11-30",
+    contract_code: "HD-2026-004",
+    customer_name: "Công ty TNHH Thương mại D",
+    service_name: "Bảo vệ yếu nhân (VIP)",
+    created_at: "2026-05-30T00:00:00Z",
+    updated_at: "2026-05-30T00:00:00Z",
     status: "completed",
   },
   {
-    id: "5",
-    contractCode: "HD-2026-005",
-    customerName: "Nguyễn Văn E",
-    serviceName: "Tuần tra canh gác ban đêm",
-    createdAt: "28/05/2026",
-    status: "pending_hardcopy",
+    contract_id: "5",
+    booking_id: "b5",
+    contract_file_url: null,
+    customer_agreed: false,
+    company_agreed: false,
+    start_date: "2026-05-28",
+    end_date: "2026-11-28",
+    contract_code: "HD-2026-005",
+    customer_name: "Nguyễn Văn E",
+    service_name: "Tuần tra canh gác ban đêm",
+    created_at: "2026-05-28T00:00:00Z",
+    updated_at: "2026-05-28T00:00:00Z",
+    status: "pending_signatures",
   },
   {
-    id: "6",
-    contractCode: "HD-2026-006",
-    customerName: "Công ty Cổ phần F",
-    serviceName: "Cho thuê bảo vệ hội chợ triễn lãm",
-    createdAt: "25/05/2026",
-    status: "pending_consent",
+    contract_id: "6",
+    booking_id: "b6",
+    contract_file_url: null,
+    customer_agreed: false,
+    company_agreed: false,
+    start_date: "2026-05-25",
+    end_date: "2026-11-25",
+    contract_code: "HD-2026-006",
+    customer_name: "Công ty Cổ phần F",
+    service_name: "Cho thuê bảo vệ hội chợ triễn lãm",
+    created_at: "2026-05-25T00:00:00Z",
+    updated_at: "2026-05-25T00:00:00Z",
+    status: "active",
   },
   {
-    id: "7",
-    contractCode: "HD-2026-007",
-    customerName: "Công ty Xây dựng G",
-    serviceName: "Bảo vệ công trường xây dựng",
-    createdAt: "20/05/2026",
+    contract_id: "7",
+    booking_id: "b7",
+    contract_file_url: null,
+    customer_agreed: true,
+    company_agreed: true,
+    start_date: "2026-05-20",
+    end_date: "2026-11-20",
+    contract_code: "HD-2026-007",
+    customer_name: "Công ty Xây dựng G",
+    service_name: "Bảo vệ công trường xây dựng",
+    created_at: "2026-05-20T00:00:00Z",
+    updated_at: "2026-05-20T00:00:00Z",
     status: "completed",
   },
   {
-    id: "8",
-    contractCode: "HD-2026-008",
-    customerName: "Trần Thị H",
-    serviceName: "Bảo vệ biệt thự nhà riêng",
-    createdAt: "15/05/2026",
+    contract_id: "8",
+    booking_id: "b8",
+    contract_file_url: null,
+    customer_agreed: true,
+    company_agreed: true,
+    start_date: "2026-05-15",
+    end_date: "2026-11-15",
+    contract_code: "HD-2026-008",
+    customer_name: "Trần Thị H",
+    service_name: "Bảo vệ biệt thự nhà riêng",
+    created_at: "2026-05-15T00:00:00Z",
+    updated_at: "2026-05-15T00:00:00Z",
     status: "completed",
   },
   {
-    id: "9",
-    contractCode: "HD-2026-009",
-    customerName: "Tập đoàn Bán lẻ I",
-    serviceName: "Dịch vụ phản ứng nhanh & Giám sát an ninh",
-    createdAt: "10/05/2026",
-    status: "pending_hardcopy",
+    contract_id: "9",
+    booking_id: "b9",
+    contract_file_url: null,
+    customer_agreed: false,
+    company_agreed: false,
+    start_date: "2026-05-10",
+    end_date: "2026-11-10",
+    contract_code: "HD-2026-009",
+    customer_name: "Tập đoàn Bán lẻ I",
+    service_name: "Dịch vụ phản ứng nhanh & Giám sát an ninh",
+    created_at: "2026-05-10T00:00:00Z",
+    updated_at: "2026-05-10T00:00:00Z",
+    status: "pending_signatures",
   },
   {
-    id: "10",
-    contractCode: "HD-2026-010",
-    customerName: "Nguyễn Văn K",
-    serviceName: "Áp tải tài liệu mật vận chuyển",
-    createdAt: "05/05/2026",
+    contract_id: "10",
+    booking_id: "b10",
+    contract_file_url: null,
+    customer_agreed: true,
+    company_agreed: true,
+    start_date: "2026-05-05",
+    end_date: "2026-11-05",
+    contract_code: "HD-2026-010",
+    customer_name: "Nguyễn Văn K",
+    service_name: "Áp tải tài liệu mật vận chuyển",
+    created_at: "2026-05-05T00:00:00Z",
+    updated_at: "2026-05-05T00:00:00Z",
     status: "completed",
   },
 ];
@@ -101,7 +171,7 @@ interface ContractDetailContainerProps {
 
 export function ContractDetailContainer({ contractId }: ContractDetailContainerProps) {
   // Find base contract from sample list
-  const baseContract = SAMPLE_CONTRACTS.find((c) => c.id === contractId);
+  const baseContract = SAMPLE_CONTRACTS.find((c) => c.contract_id === contractId);
 
   if (!baseContract) {
     return (
@@ -133,13 +203,18 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     let email = "contact@vinaguard.vn";
     let address = "Tòa nhà Landmark 81, Bình Thạnh, TP. HCM";
     let quantity = 10;
-    let duration = `${contract.createdAt} - 31/12/2026`;
+    
+    // Format created date
+    const formattedCreatedDate = contract.created_at
+      ? new Date(contract.created_at).toLocaleDateString("vi-VN")
+      : "";
+    let duration = `${formattedCreatedDate} - 31/12/2026`;
     let location = "KCN Tân Bình, Tân Phú, TP. HCM";
     let totalValue = "450,000,000 VND";
     let paymentMethod = "Chuyển khoản ngân hàng";
     let docs = [
       {
-        name: `HD_${contract.contractCode.replace(/-/g, "_")}_Signed.pdf`,
+        name: `HD_${(contract.contract_code || "").replace(/-/g, "_")}_Signed.pdf`,
         size: "2.4 MB",
         uploadedTime: "Đã tải lên 2 giờ trước",
       },
@@ -148,10 +223,10 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
       {
         time: "Hôm nay, 14:30",
         title:
-          contract.status === "pending_hardcopy"
-            ? "Chờ bản cứng"
-            : contract.status === "pending_consent"
-            ? "Chờ xác nhận đồng thuận"
+          contract.status === "pending_signatures"
+            ? "Chờ chữ ký"
+            : contract.status === "active"
+            ? "Đang hoạt động"
             : "Đã hoàn thành",
         description: "Trạng thái được cập nhật bởi Hệ thống",
         isLatest: true,
@@ -174,7 +249,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     ];
 
     // Specific overrides for first few IDs to match details perfectly
-    if (contract.id === "1") {
+    if (contract.contract_id === "1") {
       phone = "0901 234 567";
       email = "contact@vinaguard.vn";
       address = "Tòa nhà Landmark 81, TP. HCM";
@@ -183,7 +258,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
       location = "KCN Tân Bình";
       totalValue = "450,000,000 VND";
       paymentMethod = "Chuyển khoản ngân hàng";
-    } else if (contract.id === "2") {
+    } else if (contract.contract_id === "2") {
       phone = "0912 345 678";
       email = "nguyenvanb@gmail.com";
       address = "Biệt thự Mỹ Thái, Phú Mỹ Hưng, Quận 7, TP. HCM";
@@ -194,12 +269,12 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
       paymentMethod = "Thanh toán qua cổng thẻ (Visa/Mastercard)";
       docs = [
         {
-          name: `HD_${contract.contractCode.replace(/-/g, "_")}_Draft.pdf`,
+          name: `HD_${(contract.contract_code || "").replace(/-/g, "_")}_Draft.pdf`,
           size: "1.8 MB",
           uploadedTime: "Đã tải lên 1 ngày trước",
         },
       ];
-    } else if (contract.id === "3") {
+    } else if (contract.contract_id === "3") {
       phone = "028 3930 1234";
       email = "security@techcom.com.vn";
       address = "Tòa nhà Techcom Tower, Quận 1, TP. HCM";
@@ -210,7 +285,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
       paymentMethod = "Chuyển khoản ngân hàng";
       docs = [
         {
-          name: `HD_${contract.contractCode.replace(/-/g, "_")}_Final.pdf`,
+          name: `HD_${(contract.contract_code || "").replace(/-/g, "_")}_Final.pdf`,
           size: "3.1 MB",
           uploadedTime: "Đã tải lên 5 ngày trước",
         },
@@ -237,7 +312,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     <div className="flex-1 max-w-7xl mx-auto w-full space-y-6">
       {/* Contract Page Header */}
       <ContractDetailHeader
-        contractCode={baseContract.contractCode}
+        contractCode={baseContract.contract_code || ""}
         status={baseContract.status}
       />
 
@@ -247,7 +322,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
         <div className="xl:col-span-2 flex flex-col gap-6">
           {/* Partner Info */}
           <ContractPartnerInfo
-            customerName={baseContract.customerName}
+            customerName={baseContract.customer_name || ""}
             phone={detailedData.phone}
             email={detailedData.email}
             address={detailedData.address}
@@ -256,7 +331,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
           {/* Service & Payment Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ContractServiceInfo
-              serviceName={baseContract.serviceName}
+              serviceName={baseContract.service_name || ""}
               quantity={detailedData.quantity}
               duration={detailedData.duration}
               location={detailedData.location}

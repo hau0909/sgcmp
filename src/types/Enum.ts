@@ -10,3 +10,6 @@ export type GeneralStatus = "active" | "unactive";
 export type PaymentMethod = "bank_transfer" | "credit_card" | "e_wallet";
 
 export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
+
+export type ContractStatus = "pending_signatures" | "active" | "completed" | "cancelled";
+

@@ -56,9 +56,10 @@ export function ContractFilters({
               className="w-full pl-3 pr-8 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer"
             >
               <option value="">Tất cả trạng thái</option>
-              <option value="pending_hardcopy">Chờ tải lên bản cứng</option>
-              <option value="pending_consent">Chờ xác nhận đồng thuận</option>
+              <option value="pending_signatures">Chờ chữ ký</option>
+              <option value="active">Đang hoạt động</option>
               <option value="completed">Đã hoàn thành</option>
+              <option value="cancelled">Đã hủy</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-on-surface-variant">
               <svg
