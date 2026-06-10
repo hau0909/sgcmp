@@ -18,7 +18,7 @@ export type UserRole =
   | "admin"
   | "company-admin"
   | "guard"
-  | "coordinator";
+  | "Coordinator";
 
 export type GeneralStatus = "active" | "inactive" | "pending" | "blocked";
 
@@ -87,7 +87,7 @@ const normalizeRole = (role: string | null | undefined): UserRole => {
   if (normalizedRole === "admin") return "admin";
   if (normalizedRole === "company-admin") return "company-admin";
   if (normalizedRole === "guard") return "guard";
-  if (normalizedRole === "coordinator") return "coordinator";
+  if (normalizedRole === "coordinator") return "Coordinator";
 
   return "customer";
 };

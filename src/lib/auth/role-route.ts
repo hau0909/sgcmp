@@ -3,19 +3,14 @@ export type UserRole =
   | "admin"
   | "company-admin"
   | "guard"
-  | "coordinator";
+  | "Coordinator";
 
 export const roleHomePath: Record<UserRole, string> = {
   customer: "/",
   admin: "/registrations",
   "company-admin": "/dashboard",
   guard: "/guard",
-
-  /**
-   * Nếu bạn có trang riêng cho coordinator thì đổi lại path này.
-   * Ví dụ: "/coordinator-dashboard"
-   */
-  coordinator: "/coordinator",
+  Coordinator: "/contracts",
 };
 
 export const protectedRoutes: Record<string, UserRole[]> = {
@@ -26,12 +21,18 @@ export const protectedRoutes: Record<string, UserRole[]> = {
 
   /**
    * Company admin routes
-   * Vì trong company layout của bạn /coordinator là
-   * "Quản lý điều phối viên", nên đang để company-admin.
    */
   "/dashboard": ["company-admin"],
   "/billing": ["company-admin"],
   "/coordinator": ["company-admin"],
+
+  /**
+   * Coordinator routes
+   * Folder (Coordinator) không nằm trong URL.
+   * URL thật là /contracts và /guards.
+   */
+  "/contracts": ["Coordinator"],
+  "/guards": ["Coordinator"],
 
   /**
    * Guard routes
@@ -41,7 +42,7 @@ export const protectedRoutes: Record<string, UserRole[]> = {
   /**
    * Profile cho tất cả user đã login
    */
-  "/profile": ["customer", "company-admin", "coordinator", "guard", "admin"],
+  "/profile": ["customer", "company-admin", "Coordinator", "guard", "admin"],
 };
 
 export function getRedirectPathByRole(role: UserRole) {

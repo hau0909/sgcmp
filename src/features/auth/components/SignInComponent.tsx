@@ -115,7 +115,12 @@ export default function SignInComponent() {
         email: trimmedEmail,
         password,
       });
-
+      console.log("LOGIN API RESULT:", result);
+      console.log("LOGIN API ROLE:", result.data?.role);
+      console.log(
+        "REDIRECT PATH:",
+        getRedirectPathByRole(result.data?.role ?? null),
+      );
       if (!result?.success) {
         setErrors({
           general: getErrorMessage(result?.message),
