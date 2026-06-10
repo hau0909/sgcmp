@@ -6,13 +6,18 @@ export const registerAccountService = async ({
   password,
   fullName,
   phoneNumber,
+  isCoordinator,
+  tempPass,
+  tempPasswordExpiresAt,
 }: RegisterInputService) => {
   return registerAccount({
     email,
     password,
     full_name: fullName,
     phone_number: phoneNumber,
-    isCoordinator: false,
+    isCoordinator,
+    tempPass,
+    tempPasswordExpiresAt,
   });
 };
 

@@ -2,6 +2,10 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { requestCreateCoordinator } from "@/features/coordinator/api/coordinator.api";
+import { requestUpdateProfile } from "@/features/profile/api/profile.api";
+import { requestCreateIdentity } from "@/features/identity/api/identity.api";
+import { useAuthContext } from "@/provider/authContext";
 import {
   User,
   Phone,
@@ -162,6 +166,7 @@ function SelectInput({
 
 export function AddCoordinatorForm() {
   const router = useRouter();
+  const { companyId } = useAuthContext();
   const [form, setForm] = useState<AddCoordinatorFormData>(INITIAL);
   const [submitting, setSubmitting] = useState(false);
 
@@ -180,11 +185,60 @@ export function AddCoordinatorForm() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      // TODO: wire up API call, e.g. requestCreateCoordinator(companyId, form)
-      console.log("Submit payload:", form);
-      router.back();
-    } catch (err) {
+      // TODO: Thay bằng companyId dynamic khi Auth context sẵn sàng
+      const companyId = "11111111-aaaa-bbbb-cccc-dddddddddddd";
+
+      const result = await requestCreateCoordinator({
+        email: form.email,
+        fullName: form.full_name,
+        phoneNumber: form.phone_number,
+        companyId,
+        identityId: form.id_number,
+        issueDate: form.issue_date,
+        issuePlace: form.issue_place,
+      });
+
+      if (!result.success || !result.userId) {
+        alert("❌ " + result.message);
+        setSubmitting(false);
+        return;
+      }
+
+      const { userId } = result;
+
+      // 2. Cập nhật Profile
+      const profileResult = await requestUpdateProfile({
+        userId,
+        fullName: form.full_name,
+        phoneNumber: form.phone_number,
+        gender: form.gender,
+        dateOfBirth: form.date_of_birth,
+        address: form.address,
+      });
+
+      if (!profileResult.success) {
+        alert("❌ Tạo tài khoản thành công nhưng cập nhật hồ sơ thất bại: " + profileResult.message);
+      }
+
+      // 3. Khai báo định danh
+      const identityResult = await requestCreateIdentity({
+        userId,
+        identityId: form.id_number,
+        issueDate: form.issue_date,
+        issuePlace: form.issue_place,
+      });
+
+      if (!identityResult.success) {
+        alert("❌ Lỗi lưu thông tin CCCD: " + identityResult.message);
+      }
+
+      if (result.success && profileResult.success && identityResult.success) {
+        alert("✅ Tạo tài khoản Điều phối viên thành công!");
+        router.back();
+      } 
+    } catch (err: any) {
       console.error("Lỗi tạo điều phối viên:", err);
+      alert("❌ " + (err.message || "Đã có lỗi không xác định xảy ra."));
     } finally {
       setSubmitting(false);
     }
@@ -233,9 +287,9 @@ export function AddCoordinatorForm() {
               onChange={handleChange}
               placeholder="Chọn giới tính"
               options={[
-                { label: "Nam", value: "male" },
-                { label: "Nữ", value: "female" },
-                { label: "Khác", value: "other" },
+                { label: "Nam", value: "Nam" },
+                { label: "Nữ", value: "Nữ" },
+                { label: "Khác", value: "Khác" },
               ]}
             />
           </div>
