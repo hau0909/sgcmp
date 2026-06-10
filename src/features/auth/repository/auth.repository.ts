@@ -70,7 +70,8 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
     .select("user_id, email, full_name, phone_number, role, status, avatar_url")
     .eq("user_id", userId)
     .single();
-
+  console.log("LOGIN PROFILE:", userProfile);
+  console.log("LOGIN ROLE:", userProfile?.role);
   if (profileError || !userProfile) {
     throw new Error("Không tìm thấy vai trò của tài khoản");
   }

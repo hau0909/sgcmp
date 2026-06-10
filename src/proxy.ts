@@ -1,6 +1,27 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient } from "@supabase/ssr";
-import { getAllowedRolesByPath, type UserRole } from "./lib/auth/role-route";
+import { getAllowedRolesByPath } from "./lib/auth/role-route";
+
+const publicRoutes = ["/", "/login", "/register", "/verify", "/unauthorized"];
+
+function isPublicRoute(pathname: string) {
+  return publicRoutes.some((route) => {
+    if (route === "/") {
+      return pathname === "/";
+    }
+
+    return pathname.startsWith(route);
+  });
+}
+
+function shouldSkipProxy(pathname: string) {
+  return (
+    pathname.startsWith("/api") ||
+    pathname.startsWith("/_next") ||
+    pathname.startsWith("/favicon.ico") ||
+    pathname.match(/\.(svg|png|jpg|jpeg|gif|webp|ico|css|js)$/)
+  );
+}
 
 function getPreviousPath(request: NextRequest) {
   const referer = request.headers.get("referer");
@@ -40,6 +61,16 @@ function getPreviousPath(request: NextRequest) {
   }
 }
 
+function redirectToLogin(request: NextRequest) {
+  const loginUrl = request.nextUrl.clone();
+
+  loginUrl.pathname = "/login";
+  loginUrl.search = "";
+  loginUrl.searchParams.set("redirectTo", request.nextUrl.pathname);
+
+  return NextResponse.redirect(loginUrl);
+}
+
 function redirectToUnauthorized(request: NextRequest) {
   const returnTo = getPreviousPath(request);
 
@@ -52,8 +83,26 @@ function redirectToUnauthorized(request: NextRequest) {
   return NextResponse.redirect(unauthorizedUrl);
 }
 
+function isRoleAllowed(
+  role: string | null | undefined,
+  allowedRoles: string[],
+) {
+  if (!role) return false;
+
+  return allowedRoles.some(
+    (allowedRole) => allowedRole.toLowerCase() === role.toLowerCase(),
+  );
+}
+
 export async function proxy(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+
+  /**
+   * Bỏ qua API, Next assets, image/static files.
+   */
+  if (shouldSkipProxy(pathname)) {
+    return NextResponse.next();
+  }
 
   let response = NextResponse.next({
     request,
@@ -85,10 +134,18 @@ export async function proxy(request: NextRequest) {
     },
   );
 
+  /**
+   * Route public thì cho đi qua.
+   * Ví dụ: /, /login, /register, /verify, /unauthorized
+   */
+  if (isPublicRoute(pathname)) {
+    return response;
+  }
+
   const allowedRoles = getAllowedRolesByPath(pathname);
 
   /**
-   * Route không cần protect.
+   * Route không nằm trong protectedRoutes thì cho qua.
    */
   if (!allowedRoles) {
     return response;
@@ -108,18 +165,15 @@ export async function proxy(request: NextRequest) {
         response.cookies.delete(cookie.name);
       }
     });
+
+    return redirectToLogin(request);
   }
 
   /**
    * Chưa login thật sự thì về login.
    */
   if (!user || error) {
-    const loginUrl = request.nextUrl.clone();
-
-    loginUrl.pathname = "/login";
-    loginUrl.searchParams.set("redirectTo", pathname);
-
-    return NextResponse.redirect(loginUrl);
+    return redirectToLogin(request);
   }
 
   const { data: profile, error: profileError } = await supabase
@@ -128,29 +182,27 @@ export async function proxy(request: NextRequest) {
     .eq("user_id", user.id)
     .maybeSingle();
 
+  /**
+   * Có user auth nhưng không có profile thì về login.
+   */
   if (profileError || !profile) {
-    const loginUrl = request.nextUrl.clone();
-
-    loginUrl.pathname = "/login";
-
-    return NextResponse.redirect(loginUrl);
+    return redirectToLogin(request);
   }
 
   /**
-   * Account không active thì qua unauthorized,
-   * kèm returnTo là trang trước đó.
+   * Account không active thì qua unauthorized.
    */
   if (profile.status !== "active") {
     return redirectToUnauthorized(request);
   }
 
-  const role = String(profile.role).toLowerCase() as UserRole;
+  const role = String(profile.role);
 
   /**
-   * Sai role thì qua unauthorized,
-   * kèm returnTo là trang trước đó.
+   * Check role không phân biệt hoa thường.
+   * Ví dụ: Coordinator và coordinator đều pass.
    */
-  if (!allowedRoles.includes(role)) {
+  if (!isRoleAllowed(role, allowedRoles)) {
     return redirectToUnauthorized(request);
   }
 
@@ -159,6 +211,6 @@ export async function proxy(request: NextRequest) {
 
 export const config = {
   matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
   ],
 };

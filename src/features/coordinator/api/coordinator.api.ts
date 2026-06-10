@@ -19,3 +19,14 @@ export async function requestGetCoordinators(
 
   return { coordinators: result.coordinators, total: result.total };
 }
+
+import { CreateCoordinatorPayload } from "../types";
+
+export async function requestCreateCoordinator(
+  payload: CreateCoordinatorPayload
+): Promise<{ success: boolean; message: string; userId?: string }> {
+  return await fetcher("/api/coordinators", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
