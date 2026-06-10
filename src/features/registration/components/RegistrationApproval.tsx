@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import {
@@ -15,11 +15,48 @@ import {
   X,
   FileWarning
 } from "lucide-react";
+import {
+  requestGetRegistrationDetail,
+  requestUpdateRegistrationStatus,
+} from "../api/registration.api";
+import { RegistrationDetail } from "../types";
+
+const formatDate = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return dateStr;
+  }
+};
+
+const formatDateTime = (dateStr: string) => {
+  try {
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return dateStr;
+    const day = String(d.getDate()).padStart(2, '0');
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const year = d.getFullYear();
+    const hours = String(d.getHours()).padStart(2, '0');
+    const minutes = String(d.getMinutes()).padStart(2, '0');
+    return `${day}/${month}/${year} ${hours}:${minutes}`;
+  } catch {
+    return dateStr;
+  }
+};
 
 export default function RegistrationApproval() {
   const params = useParams();
   const router = useRouter();
-  const registrationId = params?.id as string || "REG-2023-001";
+  const registrationId = params?.id as string;
+
+  const [registration, setRegistration] = useState<RegistrationDetail | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   // State for Rejection Modal
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
@@ -27,8 +64,6 @@ export default function RegistrationApproval() {
   // State for Approval Modal
   const [approveModalOpen, setApproveModalOpen] = useState(false);
 
-  // Status of the registration (simulated state)
-  const [status, setStatus] = useState<"pending" | "approved" | "rejected">("pending");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   const showToast = (message: string) => {
@@ -38,17 +73,97 @@ export default function RegistrationApproval() {
     }, 4000);
   };
 
-  const handleApprove = () => {
-    setStatus("approved");
-    setApproveModalOpen(false);
-    showToast("Phê duyệt hồ sơ đăng ký doanh nghiệp thành công!");
+  useEffect(() => {
+    const fetchDetail = async () => {
+      if (!registrationId) return;
+      try {
+        setLoading(true);
+        const res = await requestGetRegistrationDetail(registrationId);
+        setRegistration(res.registration);
+      } catch (err: any) {
+        console.error("Error fetching registration detail:", err);
+        setError(err.message || "Không thể tải chi tiết hồ sơ");
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchDetail();
+  }, [registrationId]);
+
+  const handleApprove = async () => {
+    if (!registrationId) return;
+    try {
+      await requestUpdateRegistrationStatus(registrationId, "approved");
+      if (registration) {
+        setRegistration({
+          ...registration,
+          status: "approved",
+        });
+      }
+      setApproveModalOpen(false);
+      showToast("Phê duyệt hồ sơ đăng ký doanh nghiệp thành công!");
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Không thể phê duyệt hồ sơ");
+    }
   };
 
-  const handleReject = () => {
-    setStatus("rejected");
-    setRejectModalOpen(false);
-    showToast("Đã từ chối hồ sơ đăng ký doanh nghiệp thành công!");
+  const handleReject = async () => {
+    if (!registrationId) return;
+    try {
+      await requestUpdateRegistrationStatus(registrationId, "rejected");
+      if (registration) {
+        setRegistration({
+          ...registration,
+          status: "rejected",
+        });
+      }
+      setRejectModalOpen(false);
+      showToast("Đã từ chối hồ sơ đăng ký doanh nghiệp thành công!");
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Không thể từ chối hồ sơ");
+    }
   };
+
+  if (loading) {
+    return (
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        <div className="flex items-center justify-center min-h-[400px] text-on-surface-variant font-medium">
+          Đang tải chi tiết hồ sơ đăng ký...
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !registration) {
+    return (
+      <div className="max-w-7xl mx-auto p-6 space-y-6">
+        <div className="flex flex-col items-center justify-center min-h-[400px] gap-4">
+          <p className="text-error font-medium">
+            Lỗi: {error || "Không tìm thấy hồ sơ đăng ký"}
+          </p>
+          <Link href="/registrations" className="text-primary hover:underline font-semibold text-sm">
+            Quay lại danh sách
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  const companyName = registration.companies?.company_name || "N/A";
+  const desc = registration.companies?.description || "N/A";
+  const licenseNo = registration.companies?.business_license_no || "N/A";
+  const officeAddress = registration.companies?.address || "N/A";
+
+  const repName = registration.companies?.profiles?.full_name || "N/A";
+  const repGender = registration.companies?.profiles?.gender || "N/A";
+  const repDob = registration.companies?.profiles?.date_of_birth
+    ? formatDate(registration.companies.profiles.date_of_birth)
+    : "N/A";
+  const repPhone = registration.companies?.profiles?.phone_number || "N/A";
+  const repEmail = registration.companies?.profiles?.email || "N/A";
+  const repAddress = registration.companies?.profiles?.address || "N/A";
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6 relative">
@@ -82,19 +197,19 @@ export default function RegistrationApproval() {
             <h2 className="text-2xl font-bold text-[#0b1c30] tracking-tight font-headline">
               Phê duyệt Đăng ký Doanh nghiệp
             </h2>
-            {status === "approved" && (
+            {registration.status === "approved" && (
               <span className="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 text-xs font-bold px-2.5 py-1 rounded-full border border-emerald-200">
                 <CheckCircle className="w-3.5 h-3.5" />
                 ĐÃ PHÊ DUYỆT
               </span>
             )}
-            {status === "rejected" && (
+            {registration.status === "rejected" && (
               <span className="inline-flex items-center gap-1 bg-red-50 text-red-700 text-xs font-bold px-2.5 py-1 rounded-full border border-red-200">
                 <X className="w-3.5 h-3.5" />
                 ĐÃ TỪ CHỐI
               </span>
             )}
-            {status === "pending" && (
+            {registration.status === "pending" && (
               <span className="inline-flex items-center gap-1.5 bg-[#fef3c7] text-[#b45309] text-xs font-bold px-2.5 py-1 rounded-full border border-[#fde68a]">
                 <Clock className="w-3.5 h-3.5" />
                 ĐANG CHỜ DUYỆT
@@ -102,11 +217,11 @@ export default function RegistrationApproval() {
             )}
           </div>
           <p className="text-sm text-on-surface-variant mt-1 font-body">
-            Hồ sơ mã số: <span className="font-mono font-semibold">{registrationId}</span>
+            Hồ sơ mã số: <span className="font-mono font-semibold">{registration.registration_code}</span>
           </p>
         </div>
 
-        {status === "pending" && (
+        {registration.status === "pending" && (
           <div className="flex items-center gap-3 w-full md:w-auto">
             <button
               onClick={() => setRejectModalOpen(true)}
@@ -148,7 +263,7 @@ export default function RegistrationApproval() {
                     Tên doanh nghiệp
                   </label>
                   <p className="text-sm font-bold text-[#0b1c30] mt-1">
-                    Công ty TNHH Giải pháp An ninh Thăng Long
+                    {companyName}
                   </p>
                 </div>
 
@@ -157,7 +272,7 @@ export default function RegistrationApproval() {
                     Mô tả về công ty
                   </label>
                   <p className="text-sm text-slate-600 mt-1 leading-relaxed bg-[#f8fafc] p-3 rounded-lg border border-slate-100 italic">
-                    "Chuyên cung cấp các giải pháp an ninh tích hợp hệ thống, giám sát camera thông minh và thiết bị báo cháy tự động cho doanh nghiệp."
+                    "{desc}"
                   </p>
                 </div>
 
@@ -166,7 +281,7 @@ export default function RegistrationApproval() {
                     Mã số thuế
                   </label>
                   <p className="text-sm font-mono font-semibold text-[#0b1c30] mt-1">
-                    0102938475-001
+                    {licenseNo}
                   </p>
                 </div>
 
@@ -175,7 +290,7 @@ export default function RegistrationApproval() {
                     Địa chỉ trụ sở
                   </label>
                   <p className="text-sm text-[#0b1c30] mt-1 leading-relaxed">
-                    Toà nhà Landmark 81, 720A Điện Biên Phủ, Phường 22, Quận Bình Thạnh, TP. HCM
+                    {officeAddress}
                   </p>
                 </div>
               </div>
@@ -194,7 +309,7 @@ export default function RegistrationApproval() {
                     Họ và tên
                   </label>
                   <p className="text-sm font-bold text-[#0b1c30] mt-1">
-                    Nguyễn Văn An
+                    {repName}
                   </p>
                 </div>
 
@@ -203,7 +318,7 @@ export default function RegistrationApproval() {
                     Giới tính
                   </label>
                   <p className="text-sm font-semibold text-[#0b1c30] mt-1">
-                    Nam
+                    {repGender}
                   </p>
                 </div>
 
@@ -212,7 +327,7 @@ export default function RegistrationApproval() {
                     Ngày sinh
                   </label>
                   <p className="text-sm font-mono font-semibold text-[#0b1c30] mt-1">
-                    18/09/1985
+                    {repDob}
                   </p>
                 </div>
 
@@ -221,7 +336,7 @@ export default function RegistrationApproval() {
                     Số điện thoại
                   </label>
                   <p className="text-sm font-semibold text-[#0b1c30] mt-1 font-mono">
-                    0903 123 456
+                    {repPhone}
                   </p>
                 </div>
 
@@ -230,7 +345,7 @@ export default function RegistrationApproval() {
                     Email liên hệ
                   </label>
                   <p className="text-sm font-semibold text-[#0b1c30] mt-1">
-                    an.nguyen@thanglongsecurity.com.vn
+                    {repEmail}
                   </p>
                 </div>
 
@@ -239,7 +354,7 @@ export default function RegistrationApproval() {
                     Địa chỉ liên hệ
                   </label>
                   <p className="text-sm text-[#0b1c30] mt-1 leading-relaxed">
-                    123 Đường số 4, Phường Tân Hưng, Quận 7, TP. HCM
+                    {repAddress}
                   </p>
                 </div>
               </div>
@@ -250,7 +365,9 @@ export default function RegistrationApproval() {
               <div className="flex items-center gap-2 text-on-surface-variant self-start">
                 <Calendar className="w-4 h-4 text-[#024594]" />
                 <span className="text-xs">Ngày gửi hồ sơ:</span>
-                <span className="text-xs font-mono font-semibold text-[#0b1c30]">14/10/2023 09:45</span>
+                <span className="text-xs font-mono font-semibold text-[#0b1c30]">
+                  {formatDateTime(registration.created_at)}
+                </span>
               </div>
 
               <button className="self-start sm:self-auto text-xs font-bold text-[#024594] hover:text-[#023b7e] flex items-center gap-1.5 transition-colors border border-[#024594]/30 hover:border-[#024594] bg-white px-3 py-1.5 rounded shadow-sm">
@@ -277,7 +394,7 @@ export default function RegistrationApproval() {
             </div>
             <div className="p-6 space-y-3">
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                Bạn có chắc chắn muốn từ chối hồ sơ đăng ký doanh nghiệp của <span className="font-bold text-[#0b1c30]">Công ty TNHH Giải pháp An ninh Thăng Long</span> không?
+                Bạn có chắc chắn muốn từ chối hồ sơ đăng ký doanh nghiệp của <span className="font-bold text-[#0b1c30]">{companyName}</span> không?
               </p>
               <p className="text-xs text-[#b91c1c] bg-[#fef2f2] border border-[#fca5a5] p-3 rounded-lg leading-normal flex gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444] mt-0.5" />
@@ -317,7 +434,7 @@ export default function RegistrationApproval() {
             </div>
             <div className="p-6 space-y-3">
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                Bạn có chắc chắn muốn phê duyệt hồ sơ đăng ký doanh nghiệp của <span className="font-bold text-[#0b1c30]">Công ty TNHH Giải pháp An ninh Thăng Long</span> không?
+                Bạn có chắc chắn muốn phê duyệt hồ sơ đăng ký doanh nghiệp của <span className="font-bold text-[#0b1c30]">{companyName}</span> không?
               </p>
               <p className="text-xs text-[#b45309] bg-[#fffbeb] border border-[#fde68a] p-3 rounded-lg leading-normal flex gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-[#d97706] mt-0.5" />
