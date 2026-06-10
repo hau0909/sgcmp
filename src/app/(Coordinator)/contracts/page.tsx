@@ -1,101 +1,12 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { Contract } from "@/features/contract/types";
+import { Contract } from "@/types/Contract";
 import { ContractHeader } from "@/features/contract/components/ContractHeader";
 import { ContractFilters } from "@/features/contract/components/ContractFilters";
 import { ContractTable } from "@/features/contract/components/ContractTable";
-
-// Rich sample data representing security service contracts
-const SAMPLE_CONTRACTS: Contract[] = [
-  {
-    id: "1",
-    contractCode: "HD-2026-001",
-    customerName: "Công ty A",
-    serviceName: "Cho thuê bảo vệ sự kiện",
-    createdAt: "08/06/2026",
-    status: "pending_hardcopy",
-  },
-  {
-    id: "2",
-    contractCode: "HD-2026-002",
-    customerName: "Nguyễn Văn B",
-    serviceName: "Bảo vệ mục tiêu cố định",
-    createdAt: "05/06/2026",
-    status: "pending_consent",
-  },
-  {
-    id: "3",
-    contractCode: "HD-2026-003",
-    customerName: "Công ty C",
-    serviceName: "Áp tải tiền",
-    createdAt: "01/06/2026",
-    status: "completed",
-  },
-  {
-    id: "4",
-    contractCode: "HD-2026-004",
-    customerName: "Công ty TNHH Thương mại D",
-    serviceName: "Bảo vệ yếu nhân (VIP)",
-    createdAt: "30/05/2026",
-    status: "completed",
-  },
-  {
-    id: "5",
-    contractCode: "HD-2026-005",
-    customerName: "Nguyễn Văn E",
-    serviceName: "Tuần tra canh gác ban đêm",
-    createdAt: "28/05/2026",
-    status: "pending_hardcopy",
-  },
-  {
-    id: "6",
-    contractCode: "HD-2026-006",
-    customerName: "Công ty Cổ phần F",
-    serviceName: "Cho thuê bảo vệ hội chợ triễn lãm",
-    createdAt: "25/05/2026",
-    status: "pending_consent",
-  },
-  {
-    id: "7",
-    contractCode: "HD-2026-007",
-    customerName: "Công ty Xây dựng G",
-    serviceName: "Bảo vệ công trường xây dựng",
-    createdAt: "20/05/2026",
-    status: "completed",
-  },
-  {
-    id: "8",
-    contractCode: "HD-2026-008",
-    customerName: "Trần Thị H",
-    serviceName: "Bảo vệ biệt thự nhà riêng",
-    createdAt: "15/05/2026",
-    status: "completed",
-  },
-  {
-    id: "9",
-    contractCode: "HD-2026-009",
-    customerName: "Tập đoàn Bán lẻ I",
-    serviceName: "Dịch vụ phản ứng nhanh & Giám sát an ninh",
-    createdAt: "10/05/2026",
-    status: "pending_hardcopy",
-  },
-  {
-    id: "10",
-    contractCode: "HD-2026-010",
-    customerName: "Nguyễn Văn K",
-    serviceName: "Áp tải tài liệu mật vận chuyển",
-    createdAt: "05/05/2026",
-    status: "completed",
-  },
-];
-
-// Helper to convert "DD/MM/YYYY" into a comparable Date object
-function parseDateString(dateStr: string): Date {
-  const [day, month, year] = dateStr.split("/").map(Number);
-  return new Date(year, month - 1, day);
-}
+import { requestGetContracts } from "@/features/contract/api/contract.api";
 
 export default function ContractsPage() {
   const router = useRouter();
@@ -106,51 +17,49 @@ export default function ContractsPage() {
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
+  // Data state
+  const [contracts, setContracts] = useState<Contract[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
+
   // Pagination state
   const [page, setPage] = useState(1);
-  const limit = 5; // Set to 5 so we can showcase page switches on 10 sample items
+  const limit = 5; // Page size of 5 matching the design spec
 
-  // Client-side filtering logic
-  const filteredContracts = useMemo(() => {
-    return SAMPLE_CONTRACTS.filter((contract) => {
-      // 1. Search term match
-      if (search.trim() !== "") {
-        const query = search.toLowerCase();
-        const codeMatch = contract.contractCode.toLowerCase().includes(query);
-        const customerMatch = contract.customerName.toLowerCase().includes(query);
-        const serviceMatch = contract.serviceName.toLowerCase().includes(query);
-        if (!codeMatch && !customerMatch && !serviceMatch) {
-          return false;
+  // Fetch contracts from API
+  useEffect(() => {
+    let active = true;
+    const fetchContracts = async () => {
+      setIsLoading(true);
+      try {
+        const result = await requestGetContracts({
+          page,
+          limit,
+          search: search.trim() || undefined,
+          status: status || undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        });
+        
+        if (active) {
+          setContracts(result.contracts || []);
+          setTotalCount(result.totalCount || 0);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải danh sách hợp đồng:", error);
+      } finally {
+        if (active) {
+          setIsLoading(false);
         }
       }
+    };
 
-      // 2. Status match
-      if (status !== "" && contract.status !== status) {
-        return false;
-      }
+    fetchContracts();
 
-      // 3. Date bounds match
-      const contractDate = parseDateString(contract.createdAt);
-
-      if (startDate !== "") {
-        const start = new Date(startDate);
-        start.setHours(0, 0, 0, 0);
-        if (contractDate < start) {
-          return false;
-        }
-      }
-
-      if (endDate !== "") {
-        const end = new Date(endDate);
-        end.setHours(23, 59, 59, 999);
-        if (contractDate > end) {
-          return false;
-        }
-      }
-
-      return true;
-    });
-  }, [search, status, startDate, endDate]);
+    return () => {
+      active = false;
+    };
+  }, [page, search, status, startDate, endDate]);
 
   // Handle page resets when filters change
   const handleSearchChange = (val: string) => {
@@ -173,16 +82,10 @@ export default function ContractsPage() {
     setPage(1);
   };
 
-  // Slice filtered contracts for the current page
-  const paginatedContracts = useMemo(() => {
-    const start = (page - 1) * limit;
-    return filteredContracts.slice(start, start + limit);
-  }, [filteredContracts, page, limit]);
-
   // Export handler
   const handleExport = () => {
     const jsonStr = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(filteredContracts, null, 2)
+      JSON.stringify(contracts, null, 2)
     )}`;
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", jsonStr);
@@ -215,14 +118,22 @@ export default function ContractsPage() {
       />
 
       {/* Data Table */}
-      <ContractTable
-        contracts={paginatedContracts}
-        totalCount={filteredContracts.length}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onViewDetails={handleViewDetails}
-      />
+      {isLoading ? (
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-12 text-center shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+          <p className="text-xs text-on-surface-variant/80 font-medium">Đang tải danh sách hợp đồng...</p>
+        </div>
+      ) : (
+        <ContractTable
+          contracts={contracts}
+          totalCount={totalCount}
+          page={page}
+          limit={limit}
+          onPageChange={setPage}
+          onViewDetails={handleViewDetails}
+        />
+      )}
     </div>
   );
 }
+
