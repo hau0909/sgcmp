@@ -2,15 +2,26 @@
 
 import Image from "next/image";
 import { useEffect, useState } from "react";
-import { usePathname } from "next/navigation";
-import { useAuthContext } from "@/provider/authContext";
+import { usePathname, useRouter } from "next/navigation";
 import { UserCircle } from "lucide-react";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/client";
+import { requestGetUserProfile } from "@/features/auth/api/auth.api";
 
 interface NavLink {
   label: string;
   href: string;
 }
+
+type UserProfile = {
+  id: string;
+  email: string | null;
+  full_name: string | null;
+  phone_number: string | null;
+  role: string;
+  status: string;
+  avatar_url: string | null;
+};
 
 const navLinks: NavLink[] = [
   { label: "Giới thiệu", href: "/" },
@@ -19,18 +30,36 @@ const navLinks: NavLink[] = [
 
 export default function Header() {
   const pathname = usePathname() || "/";
+  const router = useRouter();
+
   const [mobileMenuOpen, setMobileMenuOpen] = useState<boolean>(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
-  const { loading, isAuthenticated, refreshAuth } = useAuthContext();
+  const [profile, setProfile] = useState<UserProfile | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+
+  const isAuthenticated = !!profile;
 
   useEffect(() => {
     let isMounted = true;
 
-    const syncAuth = async () => {
+    const checkAuth = async () => {
       try {
-        await refreshAuth();
+        setCheckingAuth(true);
+
+        const result = await requestGetUserProfile();
+
+        if (!isMounted) return;
+
+        if (result?.success && result?.data) {
+          setProfile(result.data);
+        } else {
+          setProfile(null);
+        }
+      } catch (error) {
+        if (isMounted) {
+          setProfile(null);
+        }
       } finally {
         if (isMounted) {
           setCheckingAuth(false);
@@ -38,12 +67,25 @@ export default function Header() {
       }
     };
 
-    syncAuth();
+    checkAuth();
 
     return () => {
       isMounted = false;
     };
-  }, [refreshAuth]);
+  }, [pathname]);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+
+    await supabase.auth.signOut();
+
+    setProfile(null);
+    setUserDropdownOpen(false);
+    setMobileMenuOpen(false);
+
+    router.refresh();
+    router.push("/");
+  };
 
   return (
     <>
@@ -57,7 +99,7 @@ export default function Header() {
             href="/"
           >
             <Image
-              src={"/logo.png"}
+              src="/logo.png"
               width={30}
               height={30}
               alt="logo image"
@@ -66,6 +108,7 @@ export default function Header() {
             SGCMP
           </Link>
 
+          {/* Navigation Links Desktop */}
           <nav className="hidden md:flex items-center gap-8">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -86,8 +129,9 @@ export default function Header() {
             })}
           </nav>
 
+          {/* Actions Desktop */}
           <div className="hidden md:flex items-center gap-4">
-            {(loading || checkingAuth) && !isAuthenticated ? (
+            {checkingAuth ? (
               <div className="h-9 w-28 animate-pulse rounded-full bg-slate-200" />
             ) : isAuthenticated ? (
               <div className="relative flex items-center gap-4">
@@ -96,8 +140,19 @@ export default function Header() {
                   onClick={() => setUserDropdownOpen((prev) => !prev)}
                   className="flex h-10 w-10 cursor-pointer items-center justify-center rounded-full border border-primary/20 bg-primary/5 text-primary transition-all duration-300 hover:bg-primary/10 hover:scale-[1.03]"
                 >
-                  <UserCircle className="h-6 w-6" />
+                  {profile.avatar_url ? (
+                    <Image
+                      src={profile.avatar_url}
+                      width={40}
+                      height={40}
+                      alt="avatar"
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                  ) : (
+                    <UserCircle className="h-6 w-6" />
+                  )}
                 </button>
+
                 <Link
                   className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.03] text-[13px] h-9 flex items-center justify-center"
                   href="/sign-up"
@@ -116,7 +171,7 @@ export default function Header() {
 
                     <button
                       type="button"
-                      onClick={() => setUserDropdownOpen(false)}
+                      onClick={handleLogout}
                       className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                     >
                       Đăng xuất
@@ -142,10 +197,125 @@ export default function Header() {
               </>
             )}
           </div>
+
+          {/* Mobile Menu Button */}
+          <button
+            type="button"
+            className="md:hidden flex items-center justify-center p-2 rounded-lg text-primary hover:bg-primary/5 transition-colors focus:outline-none"
+            onClick={() => setMobileMenuOpen((prev) => !prev)}
+            aria-label="Toggle menu"
+          >
+            <span className="material-symbols-outlined text-[26px]">
+              {mobileMenuOpen ? "close" : "menu"}
+            </span>
+          </button>
         </div>
       </header>
 
-      {/* phần mobile giữ nguyên, nhưng nên đổi a href="#" thành Link */}
+      {/* Mobile Drawer Backdrop */}
+      {mobileMenuOpen && (
+        <div
+          className="md:hidden fixed inset-0 bg-black/30 backdrop-blur-xs z-40 transition-opacity duration-300"
+          onClick={() => setMobileMenuOpen(false)}
+        />
+      )}
+
+      {/* Mobile Drawer */}
+      <div
+        className={`md:hidden fixed top-0 right-0 h-full w-70 bg-surface-container-lowest z-50 shadow-2xl transition-transform duration-300 ease-out transform ${
+          mobileMenuOpen ? "translate-x-0" : "translate-x-full"
+        } flex flex-col`}
+      >
+        <div className="flex items-center justify-between p-6 border-b border-outline-variant/30">
+          <Link
+            className="font-sans text-[20px] font-bold text-primary flex items-center gap-2"
+            href="/"
+            onClick={() => setMobileMenuOpen(false)}
+          >
+            <Image
+              src="/logo.png"
+              width={30}
+              height={30}
+              alt="logo image"
+              className="drop-shadow-sm/20 shadow-secondary"
+            />
+            SGCMP
+          </Link>
+
+          <button
+            type="button"
+            className="flex items-center justify-center p-2 rounded-lg text-primary hover:bg-primary/5 transition-colors"
+            onClick={() => setMobileMenuOpen(false)}
+            aria-label="Close menu"
+          >
+            <span className="material-symbols-outlined">close</span>
+          </button>
+        </div>
+
+        <nav className="flex flex-col gap-2 p-6 flex-1">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+
+            return (
+              <Link
+                key={link.href}
+                className={`text-[15px] font-medium p-3 rounded-xl transition-all duration-200 ${
+                  isActive
+                    ? "bg-primary/10 text-primary font-semibold"
+                    : "text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
+                }`}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                {link.label}
+              </Link>
+            );
+          })}
+        </nav>
+
+        {/* Mobile Auth Actions */}
+        <div className="p-6 border-t border-outline-variant/30 flex flex-col gap-3">
+          {checkingAuth ? (
+            <div className="h-11 w-full animate-pulse rounded-xl bg-slate-200" />
+          ) : isAuthenticated ? (
+            <>
+              <Link
+                className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                href="/profile"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Xem hồ sơ
+              </Link>
+
+              <button
+                type="button"
+                className="text-[15px] text-red-600 font-semibold text-center py-3 rounded-xl hover:bg-red-50 transition-colors"
+                onClick={handleLogout}
+              >
+                Đăng xuất
+              </button>
+            </>
+          ) : (
+            <>
+              <Link
+                className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                href="/login"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Đăng nhập
+              </Link>
+
+              <Link
+                className="bg-primary hover:bg-primary-container text-on-primary font-semibold py-3 px-6 rounded-xl w-full text-center transition-all h-11 flex items-center justify-center"
+                href="/sign-up"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Đăng kí ngay
+              </Link>
+            </>
+          )}
+        </div>
+      </div>
     </>
   );
 }

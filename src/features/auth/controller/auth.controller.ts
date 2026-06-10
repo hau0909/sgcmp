@@ -1,6 +1,7 @@
 import {
   registerAccountService,
   loginAccountService,
+  getUserProfileService,
 } from "../service/auth.service";
 import {
   emailExistError,
@@ -82,7 +83,7 @@ export const handleLoginAccount = async ({ email, password }: LoginInput) => {
       success: true,
       message: "Đăng nhập thành công.",
       data: {
-        id: loginResult.id,
+        id: loginResult.user_id,
         email: loginResult.email,
         full_name: loginResult.full_name,
         phone_number: loginResult.phone_number,
@@ -98,6 +99,48 @@ export const handleLoginAccount = async ({ email, password }: LoginInput) => {
         error instanceof Error
           ? error.message
           : "Đăng nhập thất bại. Vui lòng thử lại.",
+    };
+  }
+};
+
+export const handleGetUserProfile = async (userId: string) => {
+  if (!userId) {
+    return {
+      success: false,
+      message: "Không tìm thấy tài khoản!",
+      data: null,
+    };
+  }
+
+  try {
+    const userProfile = await getUserProfileService(userId);
+
+    return {
+      success: true,
+      message: "lấy thông tin tài khoảng thành công",
+      data: {
+        id: userProfile.user_id,
+        email: userProfile.email,
+        full_name: userProfile.full_name,
+        phone_number: userProfile.phone_number,
+        gender: userProfile.gender,
+        date_of_birth: userProfile.date_of_birth,
+        address: userProfile.address,
+        role: userProfile.role,
+        avatar_url: userProfile.avatar_url,
+        status: userProfile.status,
+        created_at: userProfile.created_at,
+        updated_at: userProfile.updated_at,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Lấy thông tin người dùng thất bại. Vui lòng thử lại.",
+      data: null,
     };
   }
 };

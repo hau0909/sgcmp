@@ -1,3 +1,4 @@
+import { GET } from "./../../../app/api/auth/user/route";
 import { fetcher } from "@/lib/fetcher";
 import { RegisterPayload, LoginPayload } from "../types";
 
@@ -16,5 +17,12 @@ export const requestLoginAccount = async (payload: LoginPayload) => {
     body: JSON.stringify(payload),
   });
 
+  return result;
+};
+
+export const requestGetUserProfile = async () => {
+  const result = await fetcher("/api/auth/user", {
+    method: "GET",
+  });
   return result;
 };

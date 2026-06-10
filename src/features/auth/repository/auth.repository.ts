@@ -65,24 +65,87 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
     throw new Error("Không tìm thấy thông tin tài khoản");
   }
 
-  const { data: userProfile, error: profileError } = await supabase
-    .from("profiles")
-    .select("user_id, email, full_name, phone_number, role, status, avatar_url")
-    .eq("user_id", userId)
-    .single();
-  console.log("LOGIN PROFILE:", userProfile);
-  console.log("LOGIN ROLE:", userProfile?.role);
-  if (profileError || !userProfile) {
-    throw new Error("Không tìm thấy vai trò của tài khoản");
+  const userProfile = await getUserProfile(userId);
+
+  let company = null;
+
+  if (userProfile.role === "company-admin") {
+    const { data: companyData, error: companyError } = await supabase
+      .from("companies")
+      .select(
+        `
+        company_id,
+        owner_id,
+        company_name,
+        business_license_no,
+        license_file_url,
+        address,
+        description,
+        rating_average,
+        status,
+        created_at
+        `,
+      )
+      .eq("owner_id", userId)
+      .single();
+
+    if (companyError || !companyData) {
+      throw new Error("Không tìm thấy thông tin công ty của tài khoản");
+    }
+
+    company = companyData;
   }
 
   return {
-    id: userProfile.user_id,
+    ...userProfile,
+    company,
+  };
+};
+
+export const getUserProfile = async (userId: string) => {
+  const supabase = await createClient();
+
+  if (!userId) {
+    throw new Error("Không tìm thấy user id");
+  }
+
+  const { data: userProfile, error: profileError } = await supabase
+    .from("profiles")
+    .select(
+      `
+      user_id,
+      email,
+      full_name,
+      phone_number,
+      gender,
+      date_of_birth,
+      address,
+      role,
+      avatar_url,
+      status,
+      created_at,
+      updated_at
+      `,
+    )
+    .eq("user_id", userId)
+    .single();
+
+  if (profileError || !userProfile) {
+    throw new Error("Không tìm thấy thông tin người dùng");
+  }
+
+  return {
+    user_id: userProfile.user_id,
     email: userProfile.email,
     full_name: userProfile.full_name,
     phone_number: userProfile.phone_number,
+    gender: userProfile.gender,
+    date_of_birth: userProfile.date_of_birth,
+    address: userProfile.address,
     role: userProfile.role,
-    status: userProfile.status,
     avatar_url: userProfile.avatar_url,
+    status: userProfile.status,
+    created_at: userProfile.created_at,
+    updated_at: userProfile.updated_at,
   };
 };
