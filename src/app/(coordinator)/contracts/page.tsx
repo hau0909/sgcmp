@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { Contract } from "@/features/contract/types";
 import { ContractHeader } from "@/features/contract/components/ContractHeader";
 import { ContractFilters } from "@/features/contract/components/ContractFilters";
@@ -97,6 +98,8 @@ function parseDateString(dateStr: string): Date {
 }
 
 export default function ContractsPage() {
+  const router = useRouter();
+
   // Filters state
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
@@ -191,12 +194,7 @@ export default function ContractsPage() {
 
   // View detail handler
   const handleViewDetails = (id: string) => {
-    const contract = SAMPLE_CONTRACTS.find((c) => c.id === id);
-    if (contract) {
-      alert(
-        `[Xem chi tiết]\nMã hợp đồng: ${contract.contractCode}\nKhách hàng: ${contract.customerName}\nDịch vụ: ${contract.serviceName}\nNgày tạo: ${contract.createdAt}\nTrạng thái: ${contract.status}`
-      );
-    }
+    router.push(`/contracts/${id}`);
   };
 
   return (
