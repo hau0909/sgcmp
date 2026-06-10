@@ -1,13 +1,13 @@
 import { GeneralStatus } from "./Enum";
 
 export interface Subscription {
-  subscriptionId: string;
-  companyId: string;
-  planId: string;
-  startDate: string;
-  endDate: string;
+  subscription_id: string;
+  company_id: string;
+  plan_id: number;
+  start_date: string;
+  end_date: string;
   status: GeneralStatus;
-  autoRenew: boolean;
-  createdAt: Date;
-  updatedAt: Date | null;
+  auto_renew: boolean;
+  created_at: string;
+  updated_at: string | null;
 }

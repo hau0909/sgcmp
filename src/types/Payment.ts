@@ -1,14 +1,17 @@
 import { PaymentMethod, PaymentStatus } from "./Enum";
 
 export interface Payment {
-  paymentId: string;
-  subscriptionId: string;
-  companyId: string;
-  planId: string;
+  payment_id: string;
+  subscription_id: string;
+  company_id: string;
+  plan_id: number;
   amount: number;
-  paymentMethod: PaymentMethod;
-  paymentStatus: PaymentStatus;
-  transactionCode: string | null;
-  paidAt: Date | null;
-  createdAt: Date;
+  payment_method: PaymentMethod;
+  payment_status: PaymentStatus;
+  transaction_code: string | null;
+  paid_at: string | null;
+  created_at: string;
 }
+
+
+
