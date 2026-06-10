@@ -1,6 +1,6 @@
 import type { UserRole } from "@/provider/authContext";
 
-export const getRedirectPathByRole = (role: UserRole | null) => {
+export const getRedirectPathByRole = (role: UserRole | string | null) => {
   switch (role?.toLowerCase()) {
     case "customer":
       return "/";
@@ -9,7 +9,7 @@ export const getRedirectPathByRole = (role: UserRole | null) => {
       return "/dashboard";
 
     case "admin":
-      return "/admin";
+      return "/registrations";
 
     case "guard":
       return "/guard";
