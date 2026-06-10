@@ -114,7 +114,7 @@ export default function GuardListScreen() {
         <button
           type="button"
           onClick={() => router.push("/guards/add")}
-          className="flex h-10 items-center gap-2 bg-blue-800 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900"
+          className="cursor-pointer flex h-10 items-center gap-2 bg-blue-800 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900"
         >
           <Plus className="h-4 w-4" />
           Thêm bảo vệ
