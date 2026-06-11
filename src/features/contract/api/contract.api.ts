@@ -20,3 +20,35 @@ export async function requestGetContracts(params: {
     method: "GET",
   });
 }
+
+export async function requestGetContractDetail(id: string) {
+  return await fetcher(`/api/contracts/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function requestSignContractCompany(id: string) {
+  return await fetcher(`/api/contracts/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ action: "sign" }),
+  });
+}
+
+export async function requestUploadContractFile(id: string, file: File) {
+  const formData = new FormData();
+  formData.append("file", file);
+
+  return await fetcher(`/api/contracts/${id}/upload`, {
+    method: "POST",
+    body: formData,
+  });
+}
+
+export async function requestDeleteContractFile(id: string) {
+  return await fetcher(`/api/contracts/${id}/upload`, {
+    method: "DELETE",
+  });
+}

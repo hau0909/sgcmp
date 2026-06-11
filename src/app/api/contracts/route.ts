@@ -21,10 +21,11 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.json(result, { status: 200 });
-  } catch (error: any) {
-    console.error("[GET /api/contracts] Error:", error);
+  } catch (error) {
+    const err = error as Error;
+    console.error("[GET /api/contracts] Error:", err);
     return NextResponse.json(
-      { error: error?.message || "Internal Server Error" },
+      { error: err?.message || "Internal Server Error" },
       { status: 500 }
     );
   }

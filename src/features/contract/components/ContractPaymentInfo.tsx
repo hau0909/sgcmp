@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { CreditCard, DollarSign } from "lucide-react";
+import { CreditCard } from "lucide-react";
 
 interface ContractPaymentInfoProps {
   totalValue: string;
@@ -25,7 +25,6 @@ export function ContractPaymentInfo({
             Tổng giá trị
           </span>
           <span className="text-2xl font-black text-primary font-mono tracking-tight flex items-center gap-0.5">
-            <DollarSign className="w-6 h-6 self-center text-primary/80" />
             {totalValue}
           </span>
         </div>

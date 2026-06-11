@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { ContractStatus } from "@/types/Enum";
 
 export const getContracts = async (
@@ -8,6 +9,7 @@ export const getContracts = async (
   status?: ContractStatus,
   startDate?: string,
   endDate?: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ data: any[]; count: number }> => {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -72,4 +74,74 @@ export const getContracts = async (
     data: data || [],
     count: count || 0,
   };
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const getContractDetail = async (id: string): Promise<any | null> => {
+  const supabaseServer = await createClient();
+  const { data, error } = await supabaseServer
+    .from("contracts")
+    .select(`
+      contract_id,
+      booking_id,
+      contract_file_url,
+      customer_agreed,
+      company_agreed,
+      start_date,
+      end_date,
+      status,
+      created_at,
+      updated_at,
+      bookings!inner (
+        booking_id,
+        address,
+        description,
+        guards_per_slot,
+        time_slots,
+        start_date,
+        end_date,
+        quoted_price,
+        status,
+        created_at,
+        updated_at,
+        profiles!inner (
+          user_id,
+          full_name,
+          phone_number,
+          email,
+          address
+        ),
+        services!inner (
+          service_id,
+          name,
+          description
+        )
+      )
+    `)
+    .eq("contract_id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+  return data;
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const updateContract = async (id: string, payload: any): Promise<any> => {
+  const supabaseServer = await createClient();
+  const { data, error } = await supabaseServer
+    .from("contracts")
+    .update({
+      ...payload,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("contract_id", id)
+    .select()
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+  return data;
 };
