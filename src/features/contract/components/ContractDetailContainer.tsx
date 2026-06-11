@@ -1,189 +1,192 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileQuestion } from "lucide-react";
+import { ArrowLeft, FileQuestion, CheckCircle, X, AlertTriangle, PenTool } from "lucide-react";
 import { ContractDetailHeader } from "./ContractDetailHeader";
 import { ContractPartnerInfo } from "./ContractPartnerInfo";
 import { ContractServiceInfo } from "./ContractServiceInfo";
 import { ContractPaymentInfo } from "./ContractPaymentInfo";
 import { ContractDocuments } from "./ContractDocuments";
 import { ContractHistoryLog } from "./ContractHistoryLog";
-import { Contract } from "@/types/Contract";
 
-// Re-importing sample contracts using snake_case properties to match global Contract type
-const SAMPLE_CONTRACTS: Contract[] = [
-  {
-    contract_id: "1",
-    booking_id: "b1",
-    contract_file_url: null,
-    customer_agreed: false,
-    company_agreed: false,
-    start_date: "2026-07-01",
-    end_date: "2026-12-31",
-    contract_code: "HD-2026-001",
-    customer_name: "Công ty A",
-    service_name: "Cho thuê bảo vệ sự kiện",
-    created_at: "2026-06-08T00:00:00Z",
-    updated_at: "2026-06-08T00:00:00Z",
-    status: "pending_signatures",
-  },
-  {
-    contract_id: "2",
-    booking_id: "b2",
-    contract_file_url: null,
-    customer_agreed: false,
-    company_agreed: false,
-    start_date: "2026-06-15",
-    end_date: "2026-12-15",
-    contract_code: "HD-2026-002",
-    customer_name: "Nguyễn Văn B",
-    service_name: "Bảo vệ mục tiêu cố định",
-    created_at: "2026-06-05T00:00:00Z",
-    updated_at: "2026-06-05T00:00:00Z",
-    status: "active",
-  },
-  {
-    contract_id: "3",
-    booking_id: "b3",
-    contract_file_url: null,
-    customer_agreed: true,
-    company_agreed: true,
-    start_date: "2026-06-01",
-    end_date: "2027-06-01",
-    contract_code: "HD-2026-003",
-    customer_name: "Công ty C",
-    service_name: "Áp tải tiền",
-    created_at: "2026-06-01T00:00:00Z",
-    updated_at: "2026-06-01T00:00:00Z",
-    status: "completed",
-  },
-  {
-    contract_id: "4",
-    booking_id: "b4",
-    contract_file_url: null,
-    customer_agreed: true,
-    company_agreed: true,
-    start_date: "2026-05-30",
-    end_date: "2026-11-30",
-    contract_code: "HD-2026-004",
-    customer_name: "Công ty TNHH Thương mại D",
-    service_name: "Bảo vệ yếu nhân (VIP)",
-    created_at: "2026-05-30T00:00:00Z",
-    updated_at: "2026-05-30T00:00:00Z",
-    status: "completed",
-  },
-  {
-    contract_id: "5",
-    booking_id: "b5",
-    contract_file_url: null,
-    customer_agreed: false,
-    company_agreed: false,
-    start_date: "2026-05-28",
-    end_date: "2026-11-28",
-    contract_code: "HD-2026-005",
-    customer_name: "Nguyễn Văn E",
-    service_name: "Tuần tra canh gác ban đêm",
-    created_at: "2026-05-28T00:00:00Z",
-    updated_at: "2026-05-28T00:00:00Z",
-    status: "pending_signatures",
-  },
-  {
-    contract_id: "6",
-    booking_id: "b6",
-    contract_file_url: null,
-    customer_agreed: false,
-    company_agreed: false,
-    start_date: "2026-05-25",
-    end_date: "2026-11-25",
-    contract_code: "HD-2026-006",
-    customer_name: "Công ty Cổ phần F",
-    service_name: "Cho thuê bảo vệ hội chợ triễn lãm",
-    created_at: "2026-05-25T00:00:00Z",
-    updated_at: "2026-05-25T00:00:00Z",
-    status: "active",
-  },
-  {
-    contract_id: "7",
-    booking_id: "b7",
-    contract_file_url: null,
-    customer_agreed: true,
-    company_agreed: true,
-    start_date: "2026-05-20",
-    end_date: "2026-11-20",
-    contract_code: "HD-2026-007",
-    customer_name: "Công ty Xây dựng G",
-    service_name: "Bảo vệ công trường xây dựng",
-    created_at: "2026-05-20T00:00:00Z",
-    updated_at: "2026-05-20T00:00:00Z",
-    status: "completed",
-  },
-  {
-    contract_id: "8",
-    booking_id: "b8",
-    contract_file_url: null,
-    customer_agreed: true,
-    company_agreed: true,
-    start_date: "2026-05-15",
-    end_date: "2026-11-15",
-    contract_code: "HD-2026-008",
-    customer_name: "Trần Thị H",
-    service_name: "Bảo vệ biệt thự nhà riêng",
-    created_at: "2026-05-15T00:00:00Z",
-    updated_at: "2026-05-15T00:00:00Z",
-    status: "completed",
-  },
-  {
-    contract_id: "9",
-    booking_id: "b9",
-    contract_file_url: null,
-    customer_agreed: false,
-    company_agreed: false,
-    start_date: "2026-05-10",
-    end_date: "2026-11-10",
-    contract_code: "HD-2026-009",
-    customer_name: "Tập đoàn Bán lẻ I",
-    service_name: "Dịch vụ phản ứng nhanh & Giám sát an ninh",
-    created_at: "2026-05-10T00:00:00Z",
-    updated_at: "2026-05-10T00:00:00Z",
-    status: "pending_signatures",
-  },
-  {
-    contract_id: "10",
-    booking_id: "b10",
-    contract_file_url: null,
-    customer_agreed: true,
-    company_agreed: true,
-    start_date: "2026-05-05",
-    end_date: "2026-11-05",
-    contract_code: "HD-2026-010",
-    customer_name: "Nguyễn Văn K",
-    service_name: "Áp tải tài liệu mật vận chuyển",
-    created_at: "2026-05-05T00:00:00Z",
-    updated_at: "2026-05-05T00:00:00Z",
-    status: "completed",
-  },
-];
+import {
+  requestGetContractDetail,
+  requestSignContractCompany,
+  requestUploadContractFile,
+  requestDeleteContractFile,
+} from "../api/contract.api";
 
 interface ContractDetailContainerProps {
   contractId: string;
 }
 
 export function ContractDetailContainer({ contractId }: ContractDetailContainerProps) {
-  // Find base contract from sample list
-  const baseContract = SAMPLE_CONTRACTS.find((c) => c.contract_id === contractId);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [contract, setContract] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  if (!baseContract) {
+  const fetchDetail = React.useCallback(async (showLoading = true) => {
+    try {
+      await Promise.resolve(); // Yield control to the microtask queue to avoid synchronous state updates inside useEffect
+      if (showLoading) {
+        setIsLoading(true);
+      }
+      setError(null);
+      const res = await requestGetContractDetail(contractId);
+      if (res && res.contract) {
+        setContract(res.contract);
+      } else {
+        setError("Không tìm thấy thông tin hợp đồng.");
+      }
+    } catch (err) {
+      const errorObj = err as Error & { message?: string };
+      console.error("Lỗi khi tải chi tiết hợp đồng:", errorObj);
+      setError(errorObj?.message || "Lỗi kết nối máy chủ");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [contractId]);
+
+  useEffect(() => {
+    if (contractId) {
+      const timer = setTimeout(() => {
+        fetchDetail(false);
+      }, 0);
+      return () => clearTimeout(timer);
+    }
+  }, [contractId, fetchDetail]);
+
+  // Handle coordinator signing on behalf of company
+  const handleSignCompany = async () => {
+    try {
+      setIsSignModalOpen(false);
+      const res = await requestSignContractCompany(contractId);
+      if (res && res.success) {
+        setToastMessage("Ký duyệt hợp đồng với tư cách Công ty thành công!");
+        await fetchDetail();
+      } else {
+        setToastMessage("Ký duyệt hợp đồng thất bại.");
+      }
+    } catch (err) {
+      const errorObj = err as Error & { message?: string };
+      console.error(errorObj);
+      setToastMessage(errorObj?.message || "Có lỗi xảy ra khi ký hợp đồng.");
+    } finally {
+      setTimeout(() => {
+        setToastMessage(null);
+      }, 4500);
+    }
+  };
+
+  // Generate detailed parameters based on contract details from DB
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getDetailedData = (currentContract: any) => {
+    const booking = currentContract.booking;
+    const customerProfile = booking?.profiles;
+
+    const phone = customerProfile?.phone_number || "Chưa cập nhật";
+    const email = customerProfile?.email || "Chưa cập nhật";
+    const address = customerProfile?.address || "Chưa cập nhật";
+    const quantity = booking?.guards_per_slot || 1;
+    
+    // Format duration
+    const formattedStartDate = currentContract.start_date
+      ? new Date(currentContract.start_date).toLocaleDateString("vi-VN")
+      : (booking?.start_date ? new Date(booking.start_date).toLocaleDateString("vi-VN") : "");
+    const formattedEndDate = currentContract.end_date
+      ? new Date(currentContract.end_date).toLocaleDateString("vi-VN")
+      : (booking?.end_date ? new Date(booking.end_date).toLocaleDateString("vi-VN") : "");
+    const duration = `${formattedStartDate} - ${formattedEndDate}`;
+    
+    const location = booking?.address || "Chưa cập nhật";
+    const totalValue = booking?.formatted_price || "Chưa báo giá";
+    const paymentMethod = "Chuyển khoản ngân hàng";
+    const timeSlots = booking?.time_slots || [];
+    const description = booking?.description || null;
+    const contractFileUrl = currentContract.contract_file_url;
+
+    // Generate dynamic history log based on signatures
+    const historyList = [];
+    
+    if (currentContract.status === "active") {
+      historyList.push({
+        time: currentContract.updated_at ? new Date(currentContract.updated_at).toLocaleString("vi-VN") : "Vừa xong",
+        title: "Hợp đồng kích hoạt",
+        description: "Hợp đồng chuyển sang trạng thái Đang hoạt động sau khi hoàn tất ký kết.",
+        isLatest: true,
+      });
+    }
+
+    if (currentContract.company_agreed) {
+      historyList.push({
+        time: currentContract.updated_at ? new Date(currentContract.updated_at).toLocaleString("vi-VN") : "Vừa xong",
+        title: "Công ty đã ký duyệt",
+        description: "Người thực hiện: Điều phối viên (Coordinator)",
+        isLatest: currentContract.status !== "active",
+      });
+    }
+
+    if (currentContract.customer_agreed) {
+      historyList.push({
+        time: "Trước đó",
+        title: "Khách hàng đã ký duyệt",
+        description: `Người thực hiện: Khách hàng (${currentContract.customer_name})`,
+      });
+    }
+
+    historyList.push(
+      {
+        time: new Date(currentContract.created_at).toLocaleString("vi-VN"),
+        title: "Chờ chữ ký",
+        description: "Báo giá được chấp nhận, hệ thống chuyển sang trạng thái chờ ký kết",
+      },
+      {
+        time: new Date(currentContract.created_at).toLocaleString("vi-VN"),
+        title: "Dự thảo hợp đồng được tạo",
+        description: "Tài liệu hợp đồng nháp được tạo tự động bởi hệ thống",
+      }
+    );
+
+    return {
+      phone,
+      email,
+      address,
+      quantity,
+      duration,
+      location,
+      totalValue,
+      paymentMethod,
+      timeSlots,
+      description,
+      contractFileUrl,
+      historyList,
+    };
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-12 text-center h-[70vh]">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
+        <p className="text-sm text-on-surface-variant font-medium">Đang tải chi tiết hợp đồng...</p>
+      </div>
+    );
+  }
+
+  if (error || !contract) {
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-12 text-center h-[70vh]">
         <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 flex items-center justify-center mb-4 border border-red-100 dark:border-red-900/40">
           <FileQuestion className="w-8 h-8" />
         </div>
         <h3 className="text-lg font-bold text-on-surface mb-2 font-headline">
-          Hợp đồng không tồn tại
+          Lỗi tải hợp đồng
         </h3>
         <p className="text-sm text-on-surface-variant max-w-xs mb-6 font-body">
-          Rất tiếc, chúng tôi không tìm thấy thông tin hợp đồng với mã định danh được yêu cầu.
+          {error || "Rất tiếc, chúng tôi không tìm thấy thông tin hợp đồng được yêu cầu."}
         </p>
         <Link
           href="/contracts"
@@ -196,124 +199,29 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     );
   }
 
-  // Generate detailed parameters based on contract ID
-  const getDetailedData = (contract: Contract) => {
-    // Shared defaults
-    let phone = "0901 234 567";
-    let email = "contact@vinaguard.vn";
-    let address = "Tòa nhà Landmark 81, Bình Thạnh, TP. HCM";
-    let quantity = 10;
-    
-    // Format created date
-    const formattedCreatedDate = contract.created_at
-      ? new Date(contract.created_at).toLocaleDateString("vi-VN")
-      : "";
-    let duration = `${formattedCreatedDate} - 31/12/2026`;
-    let location = "KCN Tân Bình, Tân Phú, TP. HCM";
-    let totalValue = "450,000,000 VND";
-    let paymentMethod = "Chuyển khoản ngân hàng";
-    let docs = [
-      {
-        name: `HD_${(contract.contract_code || "").replace(/-/g, "_")}_Signed.pdf`,
-        size: "2.4 MB",
-        uploadedTime: "Đã tải lên 2 giờ trước",
-      },
-    ];
-    let historyList = [
-      {
-        time: "Hôm nay, 14:30",
-        title:
-          contract.status === "pending_signatures"
-            ? "Chờ chữ ký"
-            : contract.status === "active"
-            ? "Đang hoạt động"
-            : "Đã hoàn thành",
-        description: "Trạng thái được cập nhật bởi Hệ thống",
-        isLatest: true,
-      },
-      {
-        time: "Hôm nay, 10:15",
-        title: "Hợp đồng đã tải lên",
-        description: "Người thực hiện: Nguyễn Văn A",
-      },
-      {
-        time: "Hôm qua, 16:45",
-        title: "Báo giá đã gửi",
-        description: `Gửi tới ${email}`,
-      },
-      {
-        time: "12/06/2026, 09:00",
-        title: "Khảo sát hoàn tất",
-        description: "Biên bản khảo sát đã được duyệt",
-      },
-    ];
-
-    // Specific overrides for first few IDs to match details perfectly
-    if (contract.contract_id === "1") {
-      phone = "0901 234 567";
-      email = "contact@vinaguard.vn";
-      address = "Tòa nhà Landmark 81, TP. HCM";
-      quantity = 12;
-      duration = "01/07/2026 - 31/12/2026";
-      location = "KCN Tân Bình";
-      totalValue = "450,000,000 VND";
-      paymentMethod = "Chuyển khoản ngân hàng";
-    } else if (contract.contract_id === "2") {
-      phone = "0912 345 678";
-      email = "nguyenvanb@gmail.com";
-      address = "Biệt thự Mỹ Thái, Phú Mỹ Hưng, Quận 7, TP. HCM";
-      quantity = 4;
-      duration = "15/06/2026 - 15/12/2026";
-      location = "Khu đô thị Phú Mỹ Hưng, Quận 7";
-      totalValue = "180,000,000 VND";
-      paymentMethod = "Thanh toán qua cổng thẻ (Visa/Mastercard)";
-      docs = [
-        {
-          name: `HD_${(contract.contract_code || "").replace(/-/g, "_")}_Draft.pdf`,
-          size: "1.8 MB",
-          uploadedTime: "Đã tải lên 1 ngày trước",
-        },
-      ];
-    } else if (contract.contract_id === "3") {
-      phone = "028 3930 1234";
-      email = "security@techcom.com.vn";
-      address = "Tòa nhà Techcom Tower, Quận 1, TP. HCM";
-      quantity = 8;
-      duration = "01/06/2026 - 01/06/2027";
-      location = "Các chi nhánh Techcombank tại TP. HCM";
-      totalValue = "920,000,000 VND";
-      paymentMethod = "Chuyển khoản ngân hàng";
-      docs = [
-        {
-          name: `HD_${(contract.contract_code || "").replace(/-/g, "_")}_Final.pdf`,
-          size: "3.1 MB",
-          uploadedTime: "Đã tải lên 5 ngày trước",
-        },
-      ];
-    }
-
-    return {
-      phone,
-      email,
-      address,
-      quantity,
-      duration,
-      location,
-      totalValue,
-      paymentMethod,
-      docs,
-      historyList,
-    };
-  };
-
-  const detailedData = getDetailedData(baseContract);
+  const detailedData = getDetailedData(contract);
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full space-y-6">
+    <div className="flex-1 max-w-7xl mx-auto w-full space-y-6 relative">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-50 animate-in fade-in slide-in-from-bottom-5">
+          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+          <span className="text-sm font-medium">{toastMessage}</span>
+          <button onClick={() => setToastMessage(null)} className="text-white/60 hover:text-white ml-2">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* Contract Page Header */}
       <ContractDetailHeader
-        contractCode={baseContract.contract_code || ""}
-        status={baseContract.status}
+        contractCode={contract.contract_code || ""}
+        status={contract.status}
+        customerAgreed={contract.customer_agreed}
+        companyAgreed={contract.company_agreed}
+        hasContractFile={!!detailedData.contractFileUrl}
+        onSignCompany={() => setIsSignModalOpen(true)}
       />
 
       {/* Bento Grid Layout */}
@@ -322,7 +230,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
         <div className="xl:col-span-2 flex flex-col gap-6">
           {/* Partner Info */}
           <ContractPartnerInfo
-            customerName={baseContract.customer_name || ""}
+            customerName={contract.customer_name || ""}
             phone={detailedData.phone}
             email={detailedData.email}
             address={detailedData.address}
@@ -331,10 +239,12 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
           {/* Service & Payment Info Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <ContractServiceInfo
-              serviceName={baseContract.service_name || ""}
+              serviceName={contract.service_name || ""}
               quantity={detailedData.quantity}
               duration={detailedData.duration}
               location={detailedData.location}
+              timeSlots={detailedData.timeSlots}
+              description={detailedData.description}
             />
 
             <ContractPaymentInfo
@@ -344,7 +254,49 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
           </div>
 
           {/* Contract Documents */}
-          <ContractDocuments documents={detailedData.docs} />
+          <ContractDocuments
+            contractFileUrl={detailedData.contractFileUrl}
+            contractCode={contract.contract_code || ""}
+            isReadOnly={contract.customer_agreed}
+            onUpload={async (file) => {
+              try {
+                const res = await requestUploadContractFile(contractId, file);
+                if (res && res.success) {
+                  setToastMessage("Tải lên tệp hợp đồng thành công!");
+                  await fetchDetail();
+                } else {
+                  setToastMessage("Tải lên tệp hợp đồng thất bại.");
+                }
+              } catch (err) {
+                const errorObj = err as Error & { message?: string };
+                console.error(errorObj);
+                setToastMessage(errorObj?.message || "Có lỗi xảy ra khi tải lên.");
+              } finally {
+                setTimeout(() => {
+                  setToastMessage(null);
+                }, 4000);
+              }
+            }}
+            onDeleteFile={async () => {
+              try {
+                const res = await requestDeleteContractFile(contractId);
+                if (res && res.success) {
+                  setToastMessage("Đã xóa tệp hợp đồng đính kèm!");
+                  await fetchDetail();
+                } else {
+                  setToastMessage("Xóa tệp hợp đồng thất bại.");
+                }
+              } catch (err) {
+                const errorObj = err as Error & { message?: string };
+                console.error(errorObj);
+                setToastMessage(errorObj?.message || "Có lỗi xảy ra khi xóa tệp.");
+              } finally {
+                setTimeout(() => {
+                  setToastMessage(null);
+                }, 4000);
+              }
+            }}
+          />
         </div>
 
         {/* Right Column (Change History Log) */}
@@ -352,6 +304,47 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
           <ContractHistoryLog history={detailedData.historyList} />
         </div>
       </div>
+
+      {/* SIGN CONFIRMATION MODAL */}
+      {isSignModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white rounded-xl border border-[#c3c6d3] max-w-md w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-[#eff4ff] border-b border-[#acc7ff] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#024594]">
+                <PenTool className="w-5 h-5 shrink-0" />
+                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">Ký duyệt Hợp đồng</h3>
+              </div>
+              <button onClick={() => setIsSignModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3 font-body">
+              <p className="text-sm text-on-surface-variant leading-relaxed">
+                Bạn có chắc chắn muốn đại diện Công ty ký duyệt hợp đồng <span className="font-bold text-[#0b1c30]">#{contract.contract_code}</span> không?
+              </p>
+              <p className="text-xs text-[#b45309] bg-[#fffbeb] border border-[#fde68a] p-3 rounded-lg leading-normal flex gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-[#d97706] mt-0.5" />
+                Lưu ý: Hành động này thể hiện sự đồng ý ký kết chính thức của công ty đối với các điều khoản trong hợp đồng P2P này.
+              </p>
+            </div>
+            <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setIsSignModalOpen(false)}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded text-sm font-semibold text-slate-700 cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleSignCompany}
+                className="px-4 py-2 bg-[#024594] hover:bg-[#023b7e] active:scale-95 text-white transition-all rounded text-sm font-bold shadow-md cursor-pointer"
+              >
+                Đồng ý ký kết
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+
