@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { requestCreateCoordinator } from "@/features/coordinator/api/coordinator.api";
 import { requestUpdateProfile } from "@/features/profile/api/profile.api";
 import { requestCreateIdentity } from "@/features/identity/api/identity.api";
-import { useAuthContext } from "@/provider/authContext";
 import {
   User,
   Phone,
@@ -166,7 +165,6 @@ function SelectInput({
 
 export function AddCoordinatorForm() {
   const router = useRouter();
-  const { companyId } = useAuthContext();
   const [form, setForm] = useState<AddCoordinatorFormData>(INITIAL);
   const [submitting, setSubmitting] = useState(false);
 
