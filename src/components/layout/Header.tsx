@@ -169,6 +169,14 @@ export default function Header() {
                       Xem hồ sơ
                     </Link>
 
+                    <Link
+                      href="/my-contracts"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                    >
+                      Quản lý hợp đồng
+                    </Link>
+
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -285,6 +293,14 @@ export default function Header() {
                 onClick={() => setMobileMenuOpen(false)}
               >
                 Xem hồ sơ
+              </Link>
+
+              <Link
+                className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                href="/my-contracts"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                Xem hợp đồng
               </Link>
 
               <button
