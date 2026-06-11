@@ -1,121 +1,110 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { useAuthContext } from "@/provider/authContext";
-import type { UserRole } from "@/provider/authContext";
+import type { UserRole } from "@/lib/auth/role-route";
+import { requestGetUserProfile } from "@/features/auth/api/auth.api";
 
-type RoleGuardProps = {
+type RouteGuardProps = {
   allowedRoles: UserRole[];
   children: ReactNode;
 };
 
-export default function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
-  console.log("ROLE GUARD MOUNTED", { allowedRoles });
+type Profile = {
+  role?: string | null;
+  status?: string | null;
+};
 
+type ApiResponse = {
+  success: boolean;
+  data?:
+    | {
+        user?: unknown;
+        profile?: Profile | null;
+        role?: string | null;
+      }
+    | Profile
+    | null;
+  message?: string;
+};
+
+const isRoleAllowed = (
+  role: string | null | undefined,
+  allowedRoles: UserRole[],
+) => {
+  if (!role) return false;
+
+  return allowedRoles.some(
+    (allowedRole) => allowedRole.toLowerCase() === role.toLowerCase(),
+  );
+};
+
+const getProfileFromResponse = (data: ApiResponse["data"]) => {
+  if (!data) return null;
+
+  if ("profile" in data) {
+    return data.profile ?? null;
+  }
+
+  return data as Profile;
+};
+
+export default function RouteGuard({
+  allowedRoles,
+  children,
+}: RouteGuardProps) {
   const router = useRouter();
-  const { loading, user, profile, refreshAuth } = useAuthContext();
 
-  const hasCheckedRef = useRef(false);
   const [checking, setChecking] = useState(true);
+  const [allowed, setAllowed] = useState(false);
 
   const allowedRoleKey = useMemo(() => {
-    return allowedRoles.join("|");
+    return allowedRoles.map((role) => role.toLowerCase()).join("|");
   }, [allowedRoles]);
 
-  const isRoleAllowed = (role?: string | null) => {
-    if (!role) return false;
-
-    return allowedRoles.some(
-      (allowedRole) => allowedRole.toLowerCase() === role.toLowerCase(),
-    );
-  };
-
   useEffect(() => {
-    hasCheckedRef.current = false;
-  }, [allowedRoleKey]);
-
-  useEffect(() => {
-    console.log("ROLE GUARD EFFECT START:", {
-      loading,
-      user: user?.email,
-      profile,
-      profileRole: profile?.role,
-      allowedRoles,
-    });
-
-    if (loading) return;
-
     const checkPermission = async () => {
-      if (hasCheckedRef.current) return;
-
       setChecking(true);
+      setAllowed(false);
 
-      let currentUser = user;
-      let currentProfile = profile;
+      try {
+        const result = (await requestGetUserProfile()) as ApiResponse;
 
-      if (!currentUser || !currentProfile) {
-        console.log("ROLE GUARD REFRESH AUTH...");
+        if (!result?.success) {
+          router.replace("/login");
+          return;
+        }
 
-        const result = await refreshAuth();
+        const profile = getProfileFromResponse(result.data);
 
-        console.log("ROLE GUARD REFRESH RESULT:", {
-          user: result.user?.email,
-          profile: result.profile,
-          role: result.role,
-        });
+        if (!profile) {
+          router.replace("/login");
+          return;
+        }
 
-        currentUser = result.user;
-        currentProfile = result.profile;
-      }
+        if (profile.status !== "active") {
+          router.replace("/unauthorized");
+          return;
+        }
 
-      if (!currentUser) {
-        console.log("ROLE GUARD NO USER -> LOGIN");
+        if (!isRoleAllowed(profile.role, allowedRoles)) {
+          router.replace("/unauthorized");
+          return;
+        }
 
-        hasCheckedRef.current = true;
-        setChecking(false);
+        setAllowed(true);
+      } catch (error) {
+        console.error("ROUTE GUARD ERROR:", error);
         router.replace("/login");
-        return;
-      }
-
-      if (!currentProfile) {
-        console.log("ROLE GUARD NO PROFILE");
-
-        hasCheckedRef.current = true;
+      } finally {
         setChecking(false);
-        router.replace("/login");
-        return;
-      }
-
-      const allowed = isRoleAllowed(currentProfile.role);
-
-      console.log("ROLE GUARD CHECK:", {
-        user: currentUser.email,
-        profileRole: currentProfile.role,
-        allowedRoles,
-        isAllowed: allowed,
-      });
-
-      hasCheckedRef.current = true;
-      setChecking(false);
-
-      if (!allowed) {
-        router.replace("/");
       }
     };
 
     checkPermission();
-  }, [
-    loading,
-    user,
-    profile,
-    refreshAuth,
-    router,
-    allowedRoles,
-    allowedRoleKey,
-  ]);
+  }, [router, allowedRoleKey]);
 
-  if (loading || checking) {
+  if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         Đang kiểm tra quyền truy cập...
@@ -123,16 +112,7 @@ export default function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
     );
   }
 
-  if (!user || !profile) {
-    return null;
-  }
-
-  if (!isRoleAllowed(profile.role)) {
-    console.log("ROLE GUARD BLOCKED:", {
-      profileRole: profile.role,
-      allowedRoles,
-    });
-
+  if (!allowed) {
     return null;
   }
 

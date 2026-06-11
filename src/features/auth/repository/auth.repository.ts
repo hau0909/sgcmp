@@ -89,10 +89,6 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
       .eq("owner_id", userId)
       .single();
 
-    if (companyError || !companyData) {
-      throw new Error("Không tìm thấy thông tin công ty của tài khoản");
-    }
-
     company = companyData;
   }
 

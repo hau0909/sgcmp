@@ -1,7 +1,6 @@
 import type { Metadata } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
-import { AuthProvider } from "@/provider/authContext";
 import AuthRedirect from "@/components/auth/authRedirect";
 
 const robotoSans = Roboto({
@@ -34,10 +33,8 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col">
         {" "}
-        <AuthProvider>
-          <AuthRedirect />
-          {children}
-        </AuthProvider>
+        <AuthRedirect />
+        {children}
       </body>
     </html>
   );

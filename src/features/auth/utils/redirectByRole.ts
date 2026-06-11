@@ -1,6 +1,8 @@
-import type { UserRole } from "@/provider/authContext";
+import { UserRole } from "@/types/Enum";
 
-export const getRedirectPathByRole = (role: UserRole | string | null) => {
+export const getRedirectPathByRole = (
+  role: UserRole | string | null | undefined,
+) => {
   switch (role?.toLowerCase()) {
     case "customer":
       return "/";
