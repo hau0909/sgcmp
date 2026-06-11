@@ -25,7 +25,7 @@ type UserProfile = {
 
 const navLinks: NavLink[] = [
   { label: "Giới thiệu", href: "/" },
-  { label: "Thuê bảo vệ", href: "/rent" },
+  { label: "Thuê bảo vệ", href: "/companies" },
 ];
 
 export default function Header() {
