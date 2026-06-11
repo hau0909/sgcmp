@@ -4,7 +4,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { requestLoginAccount } from "../api/auth.api";
-import { useAuthContext } from "@/provider/authContext";
 import { getRedirectPathByRole } from "../utils/redirectByRole";
 
 type FormErrors = {
@@ -70,7 +69,6 @@ export default function SignInComponent() {
   const [password, setPassword] = useState("");
 
   const router = useRouter();
-  const { refreshAuth } = useAuthContext();
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -115,12 +113,14 @@ export default function SignInComponent() {
         email: trimmedEmail,
         password,
       });
+
       console.log("LOGIN API RESULT:", result);
       console.log("LOGIN API ROLE:", result.data?.role);
       console.log(
         "REDIRECT PATH:",
         getRedirectPathByRole(result.data?.role ?? null),
       );
+
       if (!result?.success) {
         setErrors({
           general: getErrorMessage(result?.message),
@@ -137,22 +137,10 @@ export default function SignInComponent() {
 
       setSuccessMessage("Đăng nhập thành công. Đang chuyển hướng...");
 
-      /**
-       * Quan trọng:
-       * Phải await refreshAuth để AuthContext cập nhật user/profile trước.
-       */
-      const authResult = await refreshAuth();
-
-      /**
-       * Ưu tiên role từ refreshAuth nếu có,
-       * nếu chưa kịp có thì dùng role từ API login trả về.
-       */
-      const currentRole = authResult.role || result.data.role;
-
-      const redirectPath = getRedirectPathByRole(currentRole);
+      const redirectPath = getRedirectPathByRole(result.data.role);
 
       router.replace(redirectPath);
-      router.refresh();
+      // router.refresh();
     } catch (error: unknown) {
       setErrors({
         general: getErrorMessage(error),

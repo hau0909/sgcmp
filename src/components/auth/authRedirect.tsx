@@ -1,63 +1,76 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { useAuthContext } from "@/provider/authContext";
-import { getRedirectPathByRole } from "@/lib/auth/role-route";
+import { getRedirectPathByRole } from "@/features/auth/utils/redirectByRole";
+import { requestGetUserProfile } from "@/features/auth/api/auth.api";
+
+type Profile = {
+  role?: string | null;
+  status?: string | null;
+};
+
+type ApiResponse = {
+  success: boolean;
+  data?:
+    | {
+        user?: unknown;
+        profile?: Profile | null;
+        role?: string | null;
+        status?: string | null;
+      }
+    | Profile
+    | null;
+  message?: string;
+};
+
+const getProfileFromResponse = (data: ApiResponse["data"]) => {
+  if (!data) return null;
+
+  if ("profile" in data) {
+    return data.profile ?? null;
+  }
+
+  return data as Profile;
+};
 
 export default function AuthRedirect() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const { loading, user, profile, refreshAuth } = useAuthContext();
-
-  const hasCheckedRef = useRef(false);
-
   useEffect(() => {
-    if (loading) return;
-    if (hasCheckedRef.current) return;
-
     const checkSessionAndRedirect = async () => {
-      hasCheckedRef.current = true;
-
-      /**
-       * Chỉ auto redirect ở các trang public.
-       * Không can thiệp khi đang ở dashboard/profile/admin...
-       */
       const publicPaths = ["/", "/login", "/register", "/sign-up"];
       const isPublicPath = publicPaths.includes(pathname);
 
-      if (!isPublicPath) {
-        return;
-      }
+      if (!isPublicPath) return;
 
-      let currentUser = user;
-      let currentProfile = profile;
+      try {
+        const result = (await requestGetUserProfile()) as ApiResponse;
 
-      /**
-       * Khi mở lại web, AuthContext có thể chưa có profile.
-       * Nên refreshAuth để đọc session từ cookie.
-       */
-      if (!currentUser || !currentProfile) {
-        const result = await refreshAuth();
+        if (!result?.success) return;
 
-        currentUser = result.user;
-        currentProfile = result.profile;
-      }
+        const profile = getProfileFromResponse(result.data);
 
-      if (!currentUser || !currentProfile) {
-        return;
-      }
+        if (!profile?.role) return;
 
-      const redirectPath = getRedirectPathByRole(currentProfile.role);
+        if (profile.status && profile.status !== "active") {
+          router.replace("/unauthorized");
+          return;
+        }
 
-      if (pathname !== redirectPath) {
-        router.replace(redirectPath);
+        const redirectPath = getRedirectPathByRole(profile.role);
+
+        if (pathname !== redirectPath) {
+          router.replace(redirectPath);
+        }
+      } catch (error) {
+        console.error("AUTH REDIRECT ERROR:", error);
       }
     };
 
     checkSessionAndRedirect();
-  }, [loading, pathname, user, profile, refreshAuth, router]);
+  }, [pathname, router]);
 
   return null;
 }
