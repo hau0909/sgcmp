@@ -6,19 +6,13 @@ export const registerAccount = async ({
   password,
   phone_number,
   full_name,
-  isCoordinator = false,
+  role,
   tempPass,
   tempPasswordExpiresAt,
 }: RegisterParams) => {
   const supabase = await createClient();
 
-  console.log("REGISTER PARAMS:", {
-    email,
-    password,
-    phone_number,
-    full_name,
-    isCoordinator,
-  });
+  const isTemporaryAccount = role === "guard" || role === "Coordinator";
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -28,13 +22,12 @@ export const registerAccount = async ({
       data: {
         full_name,
         phone_number,
-        role: isCoordinator ? "coordinator" : "customer",
-        is_coordinator: isCoordinator,
-        must_change_password: isCoordinator,
-        temp_password: isCoordinator ? tempPass : undefined,
-        temp_password_expires_at: isCoordinator
+        role,
+        must_change_password: isTemporaryAccount,
+        temp_password: isTemporaryAccount ? tempPass : null,
+        temp_password_expires_at: isTemporaryAccount
           ? tempPasswordExpiresAt
-          : undefined,
+          : null,
       },
     },
   });
@@ -51,7 +44,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
 
   const { data: loginData, error: loginError } =
     await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim().toLowerCase(),
       password,
     });
 
@@ -62,7 +55,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
   const userId = loginData.user?.id;
 
   if (!userId) {
-    throw new Error("Không tìm thấy thông tin tài khoản");
+    throw new Error("Không tìm thấy thông tin tài khoản.");
   }
 
   const userProfile = await getUserProfile(userId);
@@ -70,7 +63,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
   let company = null;
 
   if (userProfile.role === "company-admin") {
-    const { data: companyData, error: companyError } = await supabase
+    const { data, error } = await supabase
       .from("companies")
       .select(
         `
@@ -84,12 +77,16 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
         rating_average,
         status,
         created_at
-        `,
+      `,
       )
       .eq("owner_id", userId)
       .single();
 
-    company = companyData;
+    if (error) {
+      throw new Error(`Không thể lấy thông tin công ty: ${error.message}`);
+    }
+
+    company = data;
   }
 
   return {
@@ -144,4 +141,19 @@ export const getUserProfile = async (userId: string) => {
     created_at: userProfile.created_at,
     updated_at: userProfile.updated_at,
   };
+};
+
+export const getCurrentUser = async () => {
+  const supabase = await createClient();
+
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser();
+
+  if (error) {
+    throw error;
+  }
+
+  return user;
 };

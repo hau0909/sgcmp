@@ -1,3 +1,5 @@
+import { UserRole } from "@/types/Enum";
+
 export type RegisterInput = {
   email: string;
   password: string;
@@ -38,7 +40,7 @@ export type RegisterInputService = {
   confirmPassword?: string;
   phoneNumber: string;
   fullName: string;
-  isCoordinator?: boolean;
+  role: UserRole;
   tempPass?: string;
   tempPasswordExpiresAt?: string;
 };
@@ -57,7 +59,7 @@ export type RegisterParams = {
   password: string;
   phone_number: string;
   full_name: string;
-  isCoordinator?: boolean;
+  role?: UserRole;
   tempPass?: string;
   tempPasswordExpiresAt?: string;
 };
