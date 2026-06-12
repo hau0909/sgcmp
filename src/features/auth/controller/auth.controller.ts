@@ -48,6 +48,7 @@ export const handleRegisterAccount = async ({
       email,
       password,
       confirmPassword,
+      role: "customer",
       phoneNumber,
       fullName,
     });
