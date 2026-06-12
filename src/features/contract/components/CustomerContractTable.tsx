@@ -5,9 +5,10 @@ import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
 import Link from "next/link";
+import { CustomerContract } from "../types";
 
 interface CustomerContractTableProps {
-  contracts: Contract[];
+  contracts: CustomerContract[];
   totalCount: number;
   page: number;
   limit: number;
@@ -72,6 +73,9 @@ export function CustomerContractTable({
                 Dịch Vụ
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
+                Công Ty
+              </th>
+              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
                 Ngày Tạo
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
@@ -88,7 +92,7 @@ export function CustomerContractTable({
           <tbody className="text-xs text-on-surface">
             {contracts.length === 0 ? (
               <tr>
-                <td colSpan={7} className="py-16 text-center text-on-surface-variant/80 bg-surface-bright">
+                <td colSpan={8} className="py-16 text-center text-on-surface-variant/80 bg-surface-bright">
                   <div className="flex flex-col items-center justify-center gap-3">
                     <div className="w-14 h-14 rounded-full bg-surface-container flex items-center justify-center">
                       <FileText className="w-7 h-7 text-outline-variant" />
@@ -114,6 +118,9 @@ export function CustomerContractTable({
                   </td>
                   <td className="px-4 py-1.5 whitespace-nowrap text-on-surface font-medium">
                     {contract.service_name || "—"}
+                  </td>
+                  <td className="px-4 py-1.5 whitespace-nowrap text-on-surface-variant">
+                    {contract.company_name || "—"}
                   </td>
                   <td className="px-4 py-1.5 whitespace-nowrap font-mono text-on-surface-variant">
                     {contract.created_at ? new Date(contract.created_at).toLocaleDateString("vi-VN") : "—"}

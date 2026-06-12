@@ -5,56 +5,9 @@ import { useRouter } from "next/navigation";
 import { Contract } from "@/types/Contract";
 import { CustomerContractTable } from "@/features/contract/components/CustomerContractTable";
 import { CustomerContractFilters } from "@/features/contract/components/CustomerContractFilters";
-import { requestGetContracts } from "@/features/contract/api/contract.api";
+import { requestGetCustomerContracts } from "@/features/contract/api/contract.api";
 import { FileText } from "lucide-react";
 
-const MOCK_CONTRACTS: Contract[] = [
-  {
-    contract_id: "mock-1",
-    booking_id: "book-1",
-    contract_code: "HD-2026-001",
-    customer_name: "Bạn",
-    service_name: "Bảo vệ Mục tiêu cố định",
-    status: "active" as any,
-    start_date: "2026-01-01T00:00:00Z",
-    end_date: "2026-12-31T00:00:00Z",
-    created_at: "2026-01-01T00:00:00Z",
-    updated_at: "2026-01-01T00:00:00Z",
-    contract_file_url: null,
-    customer_agreed: true,
-    company_agreed: true,
-  },
-  {
-    contract_id: "mock-2",
-    booking_id: "book-2",
-    contract_code: "HD-2026-002",
-    customer_name: "Bạn",
-    service_name: "Bảo vệ Sự kiện",
-    status: "pending_signatures" as any,
-    start_date: "2026-06-15T00:00:00Z",
-    end_date: "2026-06-20T00:00:00Z",
-    created_at: "2026-06-01T00:00:00Z",
-    updated_at: "2026-06-01T00:00:00Z",
-    contract_file_url: null,
-    customer_agreed: false,
-    company_agreed: true,
-  },
-  {
-    contract_id: "mock-3",
-    booking_id: "book-3",
-    contract_code: "HD-2025-099",
-    customer_name: "Bạn",
-    service_name: "Bảo vệ Áp tải hàng hóa",
-    status: "completed" as any,
-    start_date: "2025-01-01T00:00:00Z",
-    end_date: "2025-12-31T00:00:00Z",
-    created_at: "2024-12-20T00:00:00Z",
-    updated_at: "2025-12-31T00:00:00Z",
-    contract_file_url: null,
-    customer_agreed: true,
-    company_agreed: true,
-  }
-];
 
 export default function CustomerContractsPage() {
   const router = useRouter();
@@ -74,41 +27,39 @@ export default function CustomerContractsPage() {
   const [page, setPage] = useState(1);
   const limit = 10;
 
-  // Fetch contracts from mock data
+  // Fetch contracts from API
   useEffect(() => {
     let active = true;
-    
-    // Giả lập network delay
-    setIsLoading(true);
-    const timer = setTimeout(() => {
-      if (!active) return;
-      
-      let filtered = [...MOCK_CONTRACTS];
-      
-      if (search.trim()) {
-        const s = search.toLowerCase();
-        filtered = filtered.filter(c => 
-          c.contract_code?.toLowerCase().includes(s) || 
-          c.service_name?.toLowerCase().includes(s)
-        );
-      }
-      
-      if (status && status !== "ALL") {
-        filtered = filtered.filter(c => c.status === status);
-      }
-      
-      // Pagination logic (giả lập đơn giản)
-      const startIdx = (page - 1) * limit;
-      const paginated = filtered.slice(startIdx, startIdx + limit);
-      
-      setContracts(paginated);
-      setTotalCount(filtered.length);
-      setIsLoading(false);
-    }, 600);
 
-    return () => { 
-      active = false; 
-      clearTimeout(timer);
+    async function fetchData() {
+      try {
+        setIsLoading(true);
+        const result = await requestGetCustomerContracts({
+          page,
+          limit,
+          search: search.trim() || undefined,
+          status: status && status !== "ALL" ? status : undefined,
+          startDate: startDate || undefined,
+          endDate: endDate || undefined,
+        });
+
+        if (active) {
+          setContracts(result.contracts || []);
+          setTotalCount(result.totalCount || 0);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải danh sách hợp đồng:", error);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    fetchData();
+
+    return () => {
+      active = false;
     };
   }, [page, search, status, startDate, endDate]);
 

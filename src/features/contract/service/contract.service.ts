@@ -1,6 +1,7 @@
 import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
-import { getContracts, getContractDetail, updateContract } from "../repository/contract.repository";
+import { CustomerContract } from "../types";
+import { getContracts, getContractDetail, updateContract, getCustomerContracts } from "../repository/contract.repository";
 import { createClient } from "@/lib/supabase/server";
 
 export const getContractsService = async (
@@ -210,4 +211,58 @@ export const deleteContractFileService = async (id: string): Promise<void> => {
   await updateContract(id, {
     contract_file_url: null,
   });
+};
+
+export const getCustomerContractsService = async (
+  customerId: string,
+  page: number,
+  limit: number,
+  search?: string,
+  status?: ContractStatus,
+  startDate?: string,
+  endDate?: string
+): Promise<{ contracts: CustomerContract[]; totalCount: number }> => {
+  const { data, count } = await getCustomerContracts(
+    customerId,
+    page,
+    limit,
+    search,
+    status,
+    startDate,
+    endDate
+  );
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const formattedContracts: CustomerContract[] = data.map((item: any) => {
+    const booking = item.bookings;
+    const service = booking?.services;
+    const company = booking?.companies;
+    const serviceName = service?.name || "Dịch vụ chưa xác định";
+    const companyName = company?.company_name || "Công ty chưa xác định";
+
+    return {
+      contract_id: item.contract_id,
+      status: item.status,
+      created_at: item.created_at,
+      start_date: item.start_date || null,
+      end_date: item.end_date || null,
+      
+      // Secondary fields: provided as defaults per Contract interface but excluded from DB query
+      booking_id: "", 
+      contract_file_url: null,
+      customer_agreed: false,
+      company_agreed: false,
+      updated_at: item.created_at, 
+      
+      // UI specific virtual fields
+      contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
+      service_name: serviceName,
+      company_name: companyName,
+    };
+  });
+
+  return {
+    contracts: formattedContracts,
+    totalCount: count,
+  };
 };
