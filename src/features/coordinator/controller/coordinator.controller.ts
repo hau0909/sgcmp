@@ -1,19 +1,27 @@
-import { getCoordinatorsService, addCoordinatorToCompanyService } from "../service/coordinator.service";
+import {
+  getCoordinatorsService,
+  addCoordinatorToCompanyService,
+} from "../service/coordinator.service";
 import { registerAccountService } from "@/features/auth/service/auth.service";
-import { validateEmail, validateFullName, validatePhoneNumber, checkPhoneNumberExists } from "@/features/auth/validator/auth.validator";
+import {
+  validateEmail,
+  validateFullName,
+  validatePhoneNumber,
+  checkPhoneNumberExists,
+} from "@/features/auth/validator/auth.validator";
 import { validateIdentityExists } from "@/features/identity/validator/identity.validator";
 import { CoordinatorWithUser, CreateCoordinatorPayload } from "../types";
 
 export const handleGetCoordinators = async (
   companyId: string,
   page = 1,
-  limit = 10
+  limit = 10,
 ): Promise<{ data: CoordinatorWithUser[]; total: number }> => {
   return await getCoordinatorsService(companyId, page, limit);
 };
 
 export const handleCreateCoordinator = async (
-  payload: CreateCoordinatorPayload
+  payload: CreateCoordinatorPayload,
 ): Promise<{ success: boolean; message: string; userId?: string }> => {
   // Validate cơ bản
   const emailError = validateEmail(payload.email);
@@ -30,22 +38,32 @@ export const handleCreateCoordinator = async (
   }
 
   if (!payload.issueDate || !payload.issuePlace) {
-    return { success: false, message: "Vui lòng nhập đầy đủ ngày và nơi cấp của CMND/CCCD" };
+    return {
+      success: false,
+      message: "Vui lòng nhập đầy đủ ngày và nơi cấp của CMND/CCCD",
+    };
   }
 
   try {
     const isPhoneTaken = await checkPhoneNumberExists(payload.phoneNumber);
     if (isPhoneTaken) {
-      return { success: false, message: "Số điện thoại này đã được đăng ký bởi một người dùng khác." };
+      return {
+        success: false,
+        message: "Số điện thoại này đã được đăng ký bởi một người dùng khác.",
+      };
     }
 
     const isIdentityTaken = await validateIdentityExists(payload.identityId);
     if (isIdentityTaken) {
-      return { success: false, message: "Số CMND/CCCD này đã tồn tại trong hệ thống." };
+      return {
+        success: false,
+        message: "Số CMND/CCCD này đã tồn tại trong hệ thống.",
+      };
     }
 
     // Tạo mật khẩu tạm ngẫu nhiên nếu không có (ví dụ: Qw3!sdf2)
-    const tempPass = payload.password || Math.random().toString(36).slice(-8) + "A1@";
+    const tempPass =
+      payload.password || Math.random().toString(36).slice(-8) + "A1@";
 
     // Đặt hạn chót 24h
     const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000);
@@ -57,7 +75,7 @@ export const handleCreateCoordinator = async (
       password: tempPass,
       fullName: payload.fullName,
       phoneNumber: payload.phoneNumber,
-      isCoordinator: true,
+      role: "Coordinator",
       tempPass,
       tempPasswordExpiresAt,
     });
@@ -70,13 +88,31 @@ export const handleCreateCoordinator = async (
     // 2. Gắn coordinator vào công ty (vẫn làm ở đây vì thuộc về Coordinator resource)
     await addCoordinatorToCompanyService(userId, payload.companyId);
 
-    return { success: true, message: "Tạo tài khoản Điều phối viên thành công", userId };
+    return {
+      success: true,
+      message: "Tạo tài khoản Điều phối viên thành công",
+      userId,
+    };
   } catch (error: any) {
-    console.error("[Coordinator Controller] Error creating coordinator:", error);
-    const msg = ((error?.message || "") + " " + (error?.details || "")).toLowerCase();
-    
-    if (msg.includes("already registered") || msg.includes("already exists") || msg.includes("user already")) {
-      return { success: false, message: "Email này đã được sử dụng trên hệ thống." };
+    console.error(
+      "[Coordinator Controller] Error creating coordinator:",
+      error,
+    );
+    const msg = (
+      (error?.message || "") +
+      " " +
+      (error?.details || "")
+    ).toLowerCase();
+
+    if (
+      msg.includes("already registered") ||
+      msg.includes("already exists") ||
+      msg.includes("user already")
+    ) {
+      return {
+        success: false,
+        message: "Email này đã được sử dụng trên hệ thống.",
+      };
     }
 
     return {
