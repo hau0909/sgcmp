@@ -6,7 +6,9 @@ import {
   signContractCompanyService,
   uploadContractFileService,
   deleteContractFileService,
+  getCustomerContractsService,
 } from "../service/contract.service";
+import { CustomerContract } from "../types";
 
 export const handleGetContracts = async (params: {
   page: number;
@@ -46,4 +48,30 @@ export const handleUploadContractFile = async (id: string, file: File): Promise<
 
 export const handleDeleteContractFile = async (id: string): Promise<void> => {
   await deleteContractFileService(id);
+};
+
+export const handleGetCustomerContracts = async (
+  customerId: string,
+  params: {
+    page: number;
+    limit: number;
+    search?: string;
+    status?: string;
+    startDate?: string;
+    endDate?: string;
+  }
+): Promise<{ contracts: CustomerContract[]; totalCount: number }> => {
+  const validStatus = (params.status && params.status !== "")
+    ? (params.status as ContractStatus)
+    : undefined;
+
+  return await getCustomerContractsService(
+    customerId,
+    params.page,
+    params.limit,
+    params.search,
+    validStatus,
+    params.startDate,
+    params.endDate
+  );
 };
