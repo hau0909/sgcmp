@@ -4,9 +4,11 @@ import {
   getContractsService,
   getContractDetailService,
   signContractCompanyService,
+  signContractCustomerService,
   uploadContractFileService,
   deleteContractFileService,
   getCustomerContractsService,
+  getCustomerContractDetailService,
 } from "../service/contract.service";
 import { CustomerContract } from "../types";
 
@@ -38,8 +40,18 @@ export const handleGetContractDetail = async (id: string): Promise<any | null> =
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const handleGetCustomerContractDetail = async (id: string, customerId: string): Promise<any | null> => {
+  return await getCustomerContractDetailService(id, customerId);
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handleSignContractCompany = async (id: string): Promise<any> => {
   return await signContractCompanyService(id);
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const handleSignContractCustomer = async (id: string, customerId: string): Promise<any> => {
+  return await signContractCustomerService(id, customerId);
 };
 
 export const handleUploadContractFile = async (id: string, file: File): Promise<string> => {

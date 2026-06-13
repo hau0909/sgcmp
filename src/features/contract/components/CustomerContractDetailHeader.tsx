@@ -106,6 +106,15 @@ export function CustomerContractDetailHeader({
         <SignatureChip label="Bạn" agreed={customerAgreed} />
         <SignatureChip label="Công ty" agreed={companyAgreed} />
 
+        {status !== "pending_signatures" && (
+          <Badge
+            variant="outline"
+            className={`px-3 py-1 text-xs font-semibold rounded-full border ${statusInfo.className}`}
+          >
+            {statusInfo.label}
+          </Badge>
+        )}
+
         {/* Customer sign CTA */}
         {status === "pending_signatures" && !customerAgreed && (
           <div className="relative group/tip flex items-center">
