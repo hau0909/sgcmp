@@ -4,6 +4,8 @@ import type {
   InsertGuardInformationParams,
   UploadGuardAvatarRepositoryParams,
   UploadGuardAvatarResult,
+  GuardListItem,
+  GuardDetailDatabase,
 } from "../type";
 
 export const insertGuardInformation = async ({
@@ -117,4 +119,87 @@ export const uploadGuardAvatar = async ({
     file_path: upload_data.path,
     public_url,
   };
+};
+
+export const getAllGuards = async (
+  company_id: string,
+): Promise<GuardListItem[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("guards")
+    .select(
+      `
+      guard_id,
+      profiles!guards_user_id_fkey (
+        full_name,
+        phone_number,
+        avatar_url
+      )
+    `,
+    )
+    .eq("company_id", company_id)
+    .order("created_at", {
+      ascending: false,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as unknown as GuardListItem[];
+};
+
+export const getCompanyByOwnerId = async (
+  owner_id: string,
+): Promise<string> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("companies")
+    .select("company_id")
+    .eq("owner_id", owner_id)
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data.company_id;
+};
+
+export const getGuardDetail = async (
+  guard_id: string,
+  company_id: string,
+): Promise<GuardDetailDatabase | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("guards")
+    .select(
+      `
+      guard_id,
+      user_id,
+      company_id,
+
+      profiles!guards_user_id_fkey (
+        full_name,
+        phone_number,
+        email,
+        gender,
+        date_of_birth,
+        address,
+        avatar_url
+      )
+    `,
+    )
+    .eq("guard_id", guard_id)
+    .eq("company_id", company_id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as unknown as GuardDetailDatabase | null;
 };

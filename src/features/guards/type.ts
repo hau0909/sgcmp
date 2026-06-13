@@ -1,3 +1,5 @@
+import { IdentityDetail } from "../identity/type";
+
 export type gender = "male" | "female";
 
 export type createGuardAccountFormInput = {
@@ -108,4 +110,54 @@ export type UploadGuardAvatarResponse = {
   success: boolean;
   message: string;
   data?: UploadGuardAvatarResult;
+};
+
+export type GuardProfileItem = {
+  full_name: string | null;
+  phone_number: string | null;
+  avatar_url: string | null;
+};
+
+export type GuardListItem = {
+  guard_id: string;
+  profiles: GuardProfileItem | GuardProfileItem[] | null;
+};
+
+export type GetAllGuardsResponse = {
+  success: boolean;
+  message: string;
+  data: GuardListItem[];
+};
+
+export type GuardIdentityDetail = {
+  identity_id: string;
+  issue_date: string;
+  issue_place: string;
+};
+
+export type GuardDetailProfile = {
+  full_name: string | null;
+  phone_number: string | null;
+  email: string | null;
+  gender: string | null;
+  date_of_birth: string | null;
+  address: string | null;
+  avatar_url: string | null;
+};
+
+export type GuardDetailDatabase = {
+  guard_id: string;
+  user_id: string;
+  company_id: string;
+  profiles: GuardDetailProfile | GuardDetailProfile[] | null;
+};
+
+export type GuardDetail = GuardDetailDatabase & {
+  identity: IdentityDetail | null;
+};
+
+export type GetGuardDetailResponse = {
+  success: boolean;
+  message: string;
+  data: GuardDetail | null;
 };

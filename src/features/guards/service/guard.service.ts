@@ -1,7 +1,15 @@
-import { insertGuardInformation } from "../repository/guard.repository";
+import {
+  insertGuardInformation,
+  getCoordinatorCompanyId,
+  getAllGuards,
+  getCompanyByOwnerId,
+  getGuardDetail,
+} from "../repository/guard.repository";
 import type {
   InsertGuardInformationRepositoryParams,
   UploadGuardAvatarRepositoryParams,
+  GuardDetail,
+  GuardDetailDatabase,
 } from "../type";
 import { uploadGuardAvatar } from "../repository/guard.repository";
 
@@ -13,6 +21,14 @@ export const insertGuardInformationService = async (
   input: InsertGuardInformationRepositoryParams,
 ) => {
   return insertGuardInformation(input);
+};
+
+export const getCoordinatorByCompanyIdService = async (user_id: string) => {
+  return getCoordinatorCompanyId(user_id);
+};
+
+export const getAllGuardService = async (company_id: string) => {
+  return getAllGuards(company_id);
 };
 
 export const uploadGuardAvatarService = async ({
@@ -45,4 +61,17 @@ export const uploadGuardAvatarService = async ({
     user_id: normalizedUserId,
     file,
   });
+};
+
+export const getCompanyByOwnerIdService = async (
+  owner_id: string,
+): Promise<string> => {
+  return getCompanyByOwnerId(owner_id);
+};
+
+export const getGuardDetailService = async (
+  guard_id: string,
+  company_id: string,
+): Promise<GuardDetailDatabase | null> => {
+  return getGuardDetail(guard_id, company_id);
 };

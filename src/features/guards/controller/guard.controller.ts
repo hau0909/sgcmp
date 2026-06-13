@@ -4,11 +4,16 @@ import {
 } from "@/features/auth/service/auth.service";
 import { createIdentityService } from "@/features/identity/service/identity.service";
 import { validateIdentityExists } from "@/features/identity/validator/identity.validator";
-import { getCoordinatorCompanyId } from "../repository/guard.repository";
 import {
   insertGuardInformationService,
   uploadGuardAvatarService,
+  getCoordinatorByCompanyIdService,
+  getAllGuardService,
+  getCompanyByOwnerIdService,
+  getGuardDetailService,
 } from "../service/guard.service";
+
+import { getIdentityByUserIdService } from "@/features/identity/service/identity.service";
 
 import {
   validateCreateGuardAccount,
@@ -22,6 +27,9 @@ import type {
   gender,
   InsertGuardInformationBody,
   InsertGuardInformationInput,
+  GetAllGuardsResponse,
+  GetGuardDetailResponse,
+  GuardDetail,
 } from "../type";
 
 const generateTemporaryPassword = (): string => {
@@ -177,7 +185,9 @@ export const handleInsertGuardInformation = async (
   try {
     const current_profile = await checkCoordinatorPermission();
 
-    const company_id = await getCoordinatorCompanyId(current_profile.user_id);
+    const company_id = await getCoordinatorByCompanyIdService(
+      current_profile.user_id,
+    );
 
     if (!company_id) {
       return {
@@ -262,6 +272,171 @@ export const handleInsertGuardInformation = async (
         error instanceof Error
           ? error.message
           : "Không thể thêm thông tin bảo vệ.",
+    };
+  }
+};
+
+export const handleGetAllGuards = async (): Promise<GetAllGuardsResponse> => {
+  try {
+    const profile = await getCurrentUserProfileService();
+
+    if (!profile) {
+      return {
+        success: false,
+        message: "Bạn chưa đăng nhập",
+        data: [],
+      };
+    }
+
+    const normalizedRole = profile.role?.trim().toLowerCase();
+
+    let companyId: string;
+
+    if (normalizedRole === "company-admin") {
+      const companyIdResult = await getCompanyByOwnerIdService(profile.user_id);
+
+      if (!companyIdResult) {
+        return {
+          success: false,
+          message: "Không tìm thấy công ty của tài khoản",
+          data: [],
+        };
+      }
+
+      companyId = companyIdResult;
+    } else if (normalizedRole === "coordinator") {
+      const coordinatorCompanyId = await getCoordinatorByCompanyIdService(
+        profile.user_id,
+      );
+
+      if (!coordinatorCompanyId) {
+        return {
+          success: false,
+          message: "Điều phối viên chưa được liên kết với công ty",
+          data: [],
+        };
+      }
+
+      companyId = coordinatorCompanyId;
+    } else {
+      return {
+        success: false,
+        message: "Bạn không có quyền xem danh sách bảo vệ",
+        data: [],
+      };
+    }
+
+    const guards = await getAllGuardService(companyId);
+
+    return {
+      success: true,
+      message: "Lấy danh sách bảo vệ thành công",
+      data: guards,
+    };
+  } catch (error: unknown) {
+    console.error("handleGetAllGuards error:", error);
+
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Lấy danh sách bảo vệ thất bại",
+      data: [],
+    };
+  }
+};
+
+export const handleGetGuardDetail = async (
+  guard_id: string,
+): Promise<GetGuardDetailResponse> => {
+  try {
+    if (!guard_id.trim()) {
+      return {
+        success: false,
+        message: "Không tìm thấy mã bảo vệ",
+        data: null,
+      };
+    }
+
+    const profile = await getCurrentUserProfileService();
+
+    if (!profile) {
+      return {
+        success: false,
+        message: "Bạn chưa đăng nhập",
+        data: null,
+      };
+    }
+
+    let companyId: string;
+
+    if (profile.role === "company-admin") {
+      const companyIdResult = await getCompanyByOwnerIdService(profile.user_id);
+
+      if (!companyIdResult) {
+        return {
+          success: false,
+          message: "Không tìm thấy công ty của tài khoản",
+          data: null,
+        };
+      }
+
+      companyId = companyIdResult;
+    } else if (profile.role === "Coordinator") {
+      const coordinatorCompanyId = await getCoordinatorByCompanyIdService(
+        profile.user_id,
+      );
+
+      if (!coordinatorCompanyId) {
+        return {
+          success: false,
+          message: "Điều phối viên chưa được liên kết với công ty",
+          data: null,
+        };
+      }
+
+      companyId = coordinatorCompanyId;
+    } else {
+      return {
+        success: false,
+        message: "Bạn không có quyền xem thông tin bảo vệ",
+        data: null,
+      };
+    }
+
+    const guard = await getGuardDetailService(guard_id, companyId);
+
+    if (!guard) {
+      return {
+        success: false,
+        message: "Không tìm thấy hồ sơ bảo vệ",
+        data: null,
+      };
+    }
+
+    const identity = await getIdentityByUserIdService(guard.user_id);
+
+    const guardDetail: GuardDetail = {
+      ...guard,
+      identity,
+    };
+
+    return {
+      success: true,
+      message: "Lấy thông tin bảo vệ thành công",
+      data: guardDetail,
+    };
+  } catch (error: unknown) {
+    console.error("handleGetGuardDetail error:", error);
+
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Không thể lấy thông tin bảo vệ",
+      data: null,
     };
   }
 };
