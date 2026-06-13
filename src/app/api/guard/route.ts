@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { handleInsertGuardInformation } from "@/features/guards/controller/guard.controller";
+import {
+  handleInsertGuardInformation,
+  handleGetAllGuards,
+} from "@/features/guards/controller/guard.controller";
 import type { InsertGuardInformationBody } from "@/features/guards/type";
 
 export const POST = async (request: Request) => {
@@ -23,6 +26,28 @@ export const POST = async (request: Request) => {
           error instanceof Error
             ? error.message
             : "Không thể thêm thông tin bảo vệ.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+};
+
+export const GET = async () => {
+  try {
+    const result = await handleGetAllGuards();
+
+    return NextResponse.json(result, {
+      status: result.success ? 200 : 400,
+    });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Đã xảy ra lỗi hệ thống",
+        data: [],
       },
       {
         status: 500,

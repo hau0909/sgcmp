@@ -4,6 +4,8 @@ import type {
   CreateGuardAccountInput,
   CreateGuardAccountResponse,
   UploadGuardAvatarResponse,
+  GetAllGuardsResponse,
+  GetGuardDetailResponse,
 } from "../type";
 
 export const requestInsertGuardInformation = async (
@@ -52,4 +54,18 @@ export const requestUploadGuardAvatar = async (
   }
 
   return data;
+};
+
+export const requestGetAllGuards = async (): Promise<GetAllGuardsResponse> => {
+  return fetcher("/api/guard", {
+    method: "GET",
+  });
+};
+
+export const requestGetGuardDetail = async (
+  guard_id: string,
+): Promise<GetGuardDetailResponse> => {
+  return fetcher(`/api/guard/${encodeURIComponent(guard_id)}`, {
+    method: "GET",
+  });
 };

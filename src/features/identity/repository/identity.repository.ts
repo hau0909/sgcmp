@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
+import { IdentityDetail } from "../type";
 
 export const createIdentity = async (
   userId: string,
   identityId: string,
   issueDate: string,
-  issuePlace: string
+  issuePlace: string,
 ): Promise<void> => {
   const supabase = await createClient();
 
@@ -19,7 +20,7 @@ export const createIdentity = async (
 };
 
 export const checkIdentityExists = async (
-  identityId: string
+  identityId: string,
 ): Promise<boolean> => {
   const supabase = await createClient();
 
@@ -32,4 +33,28 @@ export const checkIdentityExists = async (
   if (error) throw error;
 
   return !!data;
+};
+
+export const getIdentityByUserId = async (
+  user_id: string,
+): Promise<IdentityDetail | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("identities")
+    .select(
+      `
+      identity_id,
+      issue_date,
+      issue_place
+    `,
+    )
+    .eq("user_id", user_id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
 };
