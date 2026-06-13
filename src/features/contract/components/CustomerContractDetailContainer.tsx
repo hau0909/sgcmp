@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
   ArrowLeft,
@@ -15,58 +15,10 @@ import { CustomerServiceInfo } from "./CustomerServiceInfo";
 import { CustomerPaymentInfo } from "./CustomerPaymentInfo";
 import { CustomerContractDocument } from "./CustomerContractDocument";
 import { CustomerHistoryLog } from "./CustomerHistoryLog";
-
-type ContractStatus = "pending_signatures" | "active" | "completed" | "cancelled";
-
-// ─── Mock Data ────────────────────────────────────────────────────────────────
-const MOCK_CONTRACT = {
-  contract_id: "mock-001",
-  contract_code: "HD-A1B2C3D4",
-  status: "pending_signatures" as ContractStatus,
-  customer_agreed: false,
-  company_agreed: true,
-  created_at: "2026-06-10T09:00:00Z",
-  updated_at: "2026-06-11T14:30:00Z",
-  start_date: "2026-07-01",
-  end_date: "2026-12-31",
-  contract_file_url: "https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf", // Mock PDF url to display file ui
-
-  // Company info
-  company: {
-    name: "Công ty TNHH Bảo vệ An Toàn Việt",
-    phone: "028 3823 4567",
-    email: "contact@antoanviet.vn",
-    address: "123 Nguyễn Huệ, Quận 1, TP. Hồ Chí Minh",
-  },
-
-  // Service info
-  service_name: "Bảo vệ chuyên nghiệp 24/7",
-  guards_per_slot: 3,
-  duration: "01/07/2026 - 31/12/2026",
-  location: "456 Lê Lợi, Quận 3, TP. Hồ Chí Minh",
-  time_slots: ["06:00 - 14:00", "14:00 - 22:00", "22:00 - 06:00"],
-  description: "Yêu cầu bảo vệ mặc đồng phục, xuất trình thẻ nhân viên khi nhận ca. Liên hệ trưởng ca trước 30 phút.",
-  formatted_price: "180.000.000 ₫",
-};
-
-const MOCK_HISTORY = [
-  {
-    time: "12/06/2026 09:45",
-    title: "Công ty đã ký duyệt",
-    description: "Người thực hiện: Đại diện công ty cung cấp dịch vụ",
-    isLatest: true,
-  },
-  {
-    time: "11/06/2026 16:00",
-    title: "Chờ chữ ký",
-    description: "Báo giá được chấp nhận, hệ thống chuyển sang trạng thái chờ ký kết",
-  },
-  {
-    time: "10/06/2026 09:00",
-    title: "Dự thảo hợp đồng được tạo",
-    description: "Tài liệu hợp đồng nháp được tạo tự động bởi hệ thống",
-  },
-];
+import {
+  requestGetCustomerContractDetail,
+  requestSignContractCustomer,
+} from "../api/contract.api";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 interface CustomerContractDetailContainerProps {
@@ -74,47 +26,143 @@ interface CustomerContractDetailContainerProps {
 }
 
 export function CustomerContractDetailContainer({
-  contractId: _contractId,
+  contractId,
 }: CustomerContractDetailContainerProps) {
-  const [contract, setContract] = useState(MOCK_CONTRACT);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [contract, setContract] = useState<any | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [history, setHistory] = useState(MOCK_HISTORY);
 
   const showToast = (msg: string) => {
     setToast(msg);
     setTimeout(() => setToast(null), 4500);
   };
 
-  const handleSignCustomer = () => {
-    setIsSignModalOpen(false);
+  const fetchDetail = useCallback(async (showLoading = true) => {
+    try {
+      await Promise.resolve();
+      if (showLoading) setIsLoading(true);
+      setError(null);
+      const res = await requestGetCustomerContractDetail(contractId);
+      if (res && res.contract) {
+        setContract(res.contract);
+      } else {
+        setError("Không tìm thấy thông tin hợp đồng.");
+      }
+    } catch (err) {
+      const errorObj = err as Error & { message?: string };
+      console.error("Lỗi khi tải chi tiết hợp đồng:", errorObj);
+      setError(errorObj?.message || "Lỗi kết nối máy chủ");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [contractId]);
 
-    const now = new Date().toLocaleString("vi-VN");
-    const newStatus =
-      contract.company_agreed ? "active" : contract.status;
+  useEffect(() => {
+    if (contractId) {
+      fetchDetail();
+    }
+  }, [contractId, fetchDetail]);
 
-    setContract((prev) => ({
-      ...prev,
-      customer_agreed: true,
-      status: newStatus,
-    }));
-
-    setHistory((prev) => [
-      {
-        time: now,
-        title: "Bạn đã ký xác nhận",
-        description: "Người thực hiện: Khách hàng (bạn)",
-        isLatest: true,
-      },
-      ...prev.map((h) => ({ ...h, isLatest: false })),
-    ]);
-
-    showToast(
-      newStatus === "active"
-        ? "Ký xác nhận thành công! Hợp đồng đã chính thức có hiệu lực."
-        : "Ký xác nhận thành công! Đang chờ công ty hoàn tất ký kết."
-    );
+  const handleSignCustomer = async () => {
+    try {
+      setIsSignModalOpen(false);
+      const res = await requestSignContractCustomer(contractId);
+      if (res && res.success) {
+        showToast("Ký xác nhận hợp đồng thành công!");
+        await fetchDetail(false);
+      } else {
+        showToast("Ký xác nhận hợp đồng thất bại.");
+      }
+    } catch (err) {
+      const errorObj = err as Error & { message?: string };
+      console.error(errorObj);
+      showToast(errorObj?.message || "Có lỗi xảy ra khi ký hợp đồng.");
+    }
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 max-w-7xl mx-auto w-full flex items-center justify-center p-12">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-10 h-10 border-4 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+          <p className="text-secondary font-semibold animate-pulse">Đang tải chi tiết hợp đồng...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !contract) {
+    return (
+      <div className="flex-1 max-w-7xl mx-auto w-full flex items-center justify-center p-12">
+        <div className="flex flex-col items-center gap-4 bg-red-50 p-8 rounded-2xl border border-red-100 max-w-md text-center">
+          <AlertTriangle className="w-12 h-12 text-red-500 mb-2" />
+          <h3 className="font-bold text-red-800 text-lg">Không thể tải dữ liệu</h3>
+          <p className="text-sm text-red-600 mb-4">{error || "Hợp đồng không tồn tại hoặc bạn không có quyền truy cập."}</p>
+          <Link href="/my-contracts" className="px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white rounded-lg font-semibold shadow-sm transition-colors cursor-pointer">
+            Quay lại danh sách
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
+  // --- Map history dynamically based on state ---
+  const history = [];
+  
+  // Note: time formatting assumes we have proper ISO strings or similar
+  const formatTime = (dateStr: string) => {
+    if (!dateStr) return "N/A";
+    const d = new Date(dateStr);
+    return `${d.toLocaleDateString("vi-VN")} ${d.toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}`;
+  };
+
+  if (contract.status === "active") {
+    history.push({
+      time: formatTime(contract.updated_at),
+      title: "Hợp đồng chính thức có hiệu lực",
+      description: "Tất cả các bên đã hoàn tất ký kết. Hợp đồng chuyển sang trạng thái đang hoạt động.",
+      isLatest: true,
+    });
+  }
+
+  if (contract.customer_agreed) {
+    history.push({
+      time: formatTime(contract.updated_at), // rough estimation
+      title: "Bạn đã ký xác nhận",
+      description: "Người thực hiện: Khách hàng (bạn)",
+      isLatest: history.length === 0,
+    });
+  }
+
+  if (contract.company_agreed) {
+    history.push({
+      time: formatTime(contract.updated_at), // rough estimation
+      title: "Công ty đã ký duyệt",
+      description: "Người thực hiện: Đại diện công ty cung cấp dịch vụ",
+      isLatest: history.length === 0,
+    });
+  }
+
+  if (contract.contract_file_url) {
+    history.push({
+      time: formatTime(contract.updated_at),
+      title: "Tệp hợp đồng đã được tải lên",
+      description: "Tài liệu hợp đồng PDF đã sẵn sàng để kiểm tra và ký kết",
+      isLatest: history.length === 0,
+    });
+  }
+
+  history.push({
+    time: formatTime(contract.created_at),
+    title: "Dự thảo hợp đồng được tạo",
+    description: "Hệ thống ghi nhận phiên bản dự thảo đầu tiên",
+    isLatest: history.length === 0,
+  });
+
 
   const isPendingAndCustomerNotSigned =
     contract.status === "pending_signatures" && !contract.customer_agreed;
@@ -126,7 +174,7 @@ export function CustomerContractDetailContainer({
         <div className="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-50 animate-in fade-in slide-in-from-bottom-5">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-sm font-medium">{toast}</span>
-          <button onClick={() => setToast(null)} className="text-white/60 hover:text-white ml-2">
+          <button onClick={() => setToast(null)} className="text-white/60 hover:text-white ml-2 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -163,10 +211,10 @@ export function CustomerContractDetailContainer({
         <div className="xl:col-span-2 flex flex-col gap-6">
           {/* Company info */}
           <CustomerCompanyInfo
-            companyName={contract.company.name}
-            phone={contract.company.phone}
-            email={contract.company.email}
-            address={contract.company.address}
+            companyName={contract.company?.name || "Chưa cập nhật"}
+            phone={contract.company?.phone || "Chưa cập nhật"}
+            email={contract.company?.email || "Chưa cập nhật"}
+            address={contract.company?.address || "Chưa cập nhật"}
           />
 
           {/* Service + Payment */}

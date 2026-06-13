@@ -214,3 +214,53 @@ export const getCustomerContracts = async (
     count: count || 0,
   };
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const getCustomerContractDetail = async (id: string, customerId: string): Promise<any | null> => {
+  const supabaseServer = await createClient();
+  const { data, error } = await supabaseServer
+    .from("contracts")
+    .select(`
+      contract_id,
+      booking_id,
+      contract_file_url,
+      customer_agreed,
+      company_agreed,
+      start_date,
+      end_date,
+      status,
+      created_at,
+      updated_at,
+      bookings!inner (
+        booking_id,
+        customer_id,
+        address,
+        description,
+        guards_per_slot,
+        time_slots,
+        start_date,
+        end_date,
+        quoted_price,
+        status,
+        created_at,
+        updated_at,
+        companies!inner (
+          company_name,
+          address
+        ),
+        services!inner (
+          service_id,
+          name,
+          description
+        )
+      )
+    `)
+    .eq("contract_id", id)
+    .eq("bookings.customer_id", customerId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+  return data;
+};

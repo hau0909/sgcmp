@@ -1,7 +1,7 @@
 import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
 import { CustomerContract } from "../types";
-import { getContracts, getContractDetail, updateContract, getCustomerContracts } from "../repository/contract.repository";
+import { getContracts, getContractDetail, updateContract, getCustomerContracts, getCustomerContractDetail } from "../repository/contract.repository";
 import { createClient } from "@/lib/supabase/server";
 
 export const getContractsService = async (
@@ -264,5 +264,80 @@ export const getCustomerContractsService = async (
   return {
     contracts: formattedContracts,
     totalCount: count,
+  };
+};
+
+export const signContractCustomerService = async (id: string, customerId: string): Promise<any> => {
+  const contract = await getCustomerContractDetail(id, customerId);
+  if (!contract) {
+    throw new Error("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập");
+  }
+
+  if (contract.customer_agreed) {
+    throw new Error("Bạn đã ký xác nhận hợp đồng này rồi");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload: any = {
+    customer_agreed: true,
+  };
+
+  if (contract.company_agreed) {
+    if (contract.status === "pending_signatures") {
+      payload.status = "active";
+    }
+  }
+
+  return await updateContract(id, payload);
+};
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const getCustomerContractDetailService = async (id: string, customerId: string): Promise<any | null> => {
+  const item = await getCustomerContractDetail(id, customerId);
+  if (!item) return null;
+
+  const booking = item.bookings;
+  const service = booking?.services;
+  const company = booking?.companies;
+  const serviceName = service?.name || "Dịch vụ chưa xác định";
+  const companyName = company?.company_name || "Công ty chưa xác định";
+
+  // Format price to VND currency string
+  let formattedPrice = "";
+  if (booking?.quoted_price !== undefined && booking?.quoted_price !== null) {
+    formattedPrice = new Intl.NumberFormat("vi-VN", {
+      style: "currency",
+      currency: "VND",
+    }).format(Number(booking.quoted_price));
+  }
+
+  return {
+    contract_id: item.contract_id,
+    contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
+    status: item.status,
+    customer_agreed: item.customer_agreed || false,
+    company_agreed: item.company_agreed || false,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
+    start_date: item.start_date || null,
+    end_date: item.end_date || null,
+    contract_file_url: item.contract_file_url || null,
+    
+    // UI specific virtual fields
+    service_name: serviceName,
+    company_name: companyName,
+    guards_per_slot: booking?.guards_per_slot || 1,
+    duration: `${item.start_date ? new Date(item.start_date).toLocaleDateString("vi-VN") : "..."} - ${item.end_date ? new Date(item.end_date).toLocaleDateString("vi-VN") : "..."}`,
+    location: booking?.address || "Chưa cập nhật địa chỉ",
+    time_slots: booking?.time_slots || [],
+    description: booking?.description || null,
+    formatted_price: formattedPrice || "Chưa báo giá",
+    
+    company: {
+      name: companyName,
+      phone: "Chưa cập nhật", 
+      email: "Chưa cập nhật", 
+      address: company?.address || "Chưa cập nhật địa chỉ",
+    }
   };
 };

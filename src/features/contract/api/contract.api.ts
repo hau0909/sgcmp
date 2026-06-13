@@ -72,3 +72,19 @@ export async function requestGetCustomerContracts(params: {
     method: "GET",
   });
 }
+
+export async function requestGetCustomerContractDetail(id: string) {
+  return await fetcher(`/api/my-contracts/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function requestSignContractCustomer(id: string) {
+  return await fetcher(`/api/my-contracts/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ action: "sign" }),
+  });
+}
