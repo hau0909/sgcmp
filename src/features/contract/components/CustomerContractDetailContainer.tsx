@@ -15,6 +15,7 @@ import { CustomerServiceInfo } from "./CustomerServiceInfo";
 import { CustomerPaymentInfo } from "./CustomerPaymentInfo";
 import { CustomerContractDocument } from "./CustomerContractDocument";
 import { CustomerHistoryLog } from "./CustomerHistoryLog";
+import { CustomerQualityReviewModal } from "../../review/components/CustomerQualityReviewModal";
 import {
   requestGetCustomerContractDetail,
   requestSignContractCustomer,
@@ -34,6 +35,7 @@ export function CustomerContractDetailContainer({
   const [error, setError] = useState<string | null>(null);
   
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+  const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   const showToast = (msg: string) => {
@@ -188,6 +190,7 @@ export function CustomerContractDetailContainer({
         companyAgreed={contract.company_agreed}
         contractFileUrl={contract.contract_file_url}
         onSignCustomer={() => setIsSignModalOpen(true)}
+        onReviewCustomer={() => setIsReviewModalOpen(true)}
       />
 
       {/* Pending banner */}
@@ -297,6 +300,22 @@ export function CustomerContractDetailContainer({
             </div>
           </div>
         </div>
+      )}
+
+      {/* Review Modal */}
+      {isReviewModalOpen && (
+        <CustomerQualityReviewModal
+          contractCode={contract.contract_code}
+          companyName={contract.company?.name}
+          startDate={contract.start_date}
+          endDate={contract.end_date}
+          onClose={() => setIsReviewModalOpen(false)}
+          onSubmit={(data) => {
+            console.log("Review data submitted:", data);
+            setIsReviewModalOpen(false);
+            showToast("Đánh giá của bạn đã được ghi nhận. Cảm ơn sự phản hồi của bạn!");
+          }}
+        />
       )}
     </div>
   );
