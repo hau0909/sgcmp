@@ -19,6 +19,7 @@ import {
   BookOpen,
   FileSignature,
   ShieldUser,
+  CalendarDays,
 } from "lucide-react";
 
 export default function CoordinatorLayout({
@@ -60,6 +61,12 @@ export default function CoordinatorLayout({
       href: "#",
       icon: ShieldAlert,
       active: false,
+    },
+    {
+      name: "Ca trực",
+      href: "/schedules",
+      icon: CalendarDays,
+      active: pathname === "/schedules",
     },
     {
       name: "Bảo vệ",

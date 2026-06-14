@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { handleGetGuardDetail } from "@/features/guards/controller/guard.controller";
-
-type RouteContext = {
-  params: Promise<{
-    guardId: string;
-  }>;
-};
+import { RouteContext } from "@/features/guards/type";
 
 export const GET = async (_request: Request, context: RouteContext) => {
   try {
