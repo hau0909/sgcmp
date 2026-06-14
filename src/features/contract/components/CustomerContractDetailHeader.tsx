@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, CheckCircle2, PenLine, Eye } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, PenLine, Eye, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -15,6 +15,7 @@ interface CustomerContractDetailHeaderProps {
   companyAgreed: boolean;
   contractFileUrl?: string | null;
   onSignCustomer?: () => void;
+  onReviewCustomer?: () => void;
 }
 
 const STATUS_MAP: Record<ContractStatus, { label: string; className: string }> = {
@@ -43,6 +44,7 @@ export function CustomerContractDetailHeader({
   companyAgreed,
   contractFileUrl,
   onSignCustomer,
+  onReviewCustomer,
 }: CustomerContractDetailHeaderProps) {
   const statusInfo = STATUS_MAP[status] ?? {
     label: "Không xác định",
@@ -137,6 +139,17 @@ export function CustomerContractDetailHeader({
               </div>
             )}
           </div>
+        )}
+
+        {/* Customer Review CTA */}
+        {status === "completed" && (
+          <Button
+            onClick={onReviewCustomer}
+            className="cursor-pointer bg-primary hover:bg-primary/90 text-on-primary font-bold shadow-md px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 active:scale-95 border border-primary/20"
+          >
+            <Star className="w-4 h-4 fill-on-primary" />
+            Đánh giá
+          </Button>
         )}
       </div>
     </div>
