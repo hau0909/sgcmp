@@ -1,7 +1,14 @@
 "use client";
 
 import React from "react";
-import { Briefcase, Calendar, Users, MapPin, Clock, FileText } from "lucide-react";
+import {
+  Briefcase,
+  Calendar,
+  Users,
+  MapPin,
+  Clock,
+  FileText,
+} from "lucide-react";
 
 interface ContractServiceInfoProps {
   serviceName: string;
@@ -46,7 +53,7 @@ export function ContractServiceInfo({
           </span>
           <span className="text-sm font-semibold text-on-surface font-mono flex items-center gap-1.5">
             <Users className="w-4 h-4 text-outline-variant" />
-            {quantity} nhân sự / ca
+            {quantity} nhân sự
           </span>
         </div>
 
@@ -73,11 +80,14 @@ export function ContractServiceInfo({
         {timeSlots && timeSlots.length > 0 && (
           <div className="flex flex-col pt-1">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
-              Ca trực trong ngày (Time Slots)
+              KHUNG GIỜ YÊU CẦU BẢO VỆ
             </span>
             <div className="flex flex-wrap gap-2">
               {timeSlots.map((slot, idx) => (
-                <span key={idx} className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-container-low border border-outline-variant/60 rounded-md text-xs font-semibold text-secondary font-mono">
+                <span
+                  key={idx}
+                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-surface-container-low border border-outline-variant/60 rounded-md text-xs font-semibold text-secondary font-mono"
+                >
                   <Clock className="w-3 h-3 text-outline-variant" />
                   {slot}
                 </span>

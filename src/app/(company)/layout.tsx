@@ -15,6 +15,7 @@ import {
   Bell,
   ArrowUpCircle,
   Users,
+  FileText,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
@@ -32,6 +33,12 @@ export default function CompanyLayout({
       href: "/dashboard",
       icon: LayoutDashboard,
       active: pathname === "/dashboard",
+    },
+    {
+      name: "Quản lý hợp đồng",
+      href: "/contracts",
+      icon: FileText,
+      active: pathname === "/contracts" || pathname.startsWith("/contracts/"),
     },
     {
       name: "Quản lý gói dịch vụ",

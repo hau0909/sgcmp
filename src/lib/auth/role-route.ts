@@ -10,7 +10,7 @@ export const roleHomePath: Record<UserRole, string> = {
   admin: "/registrations",
   "company-admin": "/dashboard",
   guard: "/guard",
-  Coordinator: "/contracts",
+  Coordinator: "/guards",
 };
 
 export function getRedirectPathByRole(role: UserRole) {

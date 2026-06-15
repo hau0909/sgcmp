@@ -6,18 +6,12 @@ import { usePathname } from "next/navigation";
 import RoleGuard from "@/components/auth/RoleGuard";
 import {
   Shield,
-  FileText,
   HelpCircle,
   Menu,
   X,
   Search,
   Bell,
-  Plus,
-  Archive,
-  Copy,
-  ShieldAlert,
   BookOpen,
-  FileSignature,
   ShieldUser,
   CalendarDays,
 } from "lucide-react";
@@ -33,46 +27,10 @@ export default function CoordinatorLayout({
   // Sidebar Items in Vietnamese
   const sidebarLinks = [
     {
-      name: "Tất cả hợp đồng",
-      href: "/contracts",
-      icon: FileText,
-      active: pathname === "/contracts",
-    },
-    {
-      name: "Đang duyệt",
-      href: "#",
-      icon: FileSignature,
-      active: false,
-    },
-    {
-      name: "Lưu trữ",
-      href: "#",
-      icon: Archive,
-      active: false,
-    },
-    {
-      name: "Mẫu hợp đồng",
-      href: "#",
-      icon: Copy,
-      active: false,
-    },
-    {
-      name: "Kho pháp lý",
-      href: "#",
-      icon: ShieldAlert,
-      active: false,
-    },
-    {
-      name: "Ca trực",
-      href: "/schedules",
-      icon: CalendarDays,
-      active: pathname === "/schedules",
-    },
-    {
       name: "Bảo vệ",
       href: "/guards",
       icon: ShieldUser,
-      active: pathname === "/guards",
+      active: pathname === "/guards" || pathname.startsWith("/guards/"),
     },
   ];
 
@@ -114,14 +72,6 @@ export default function CoordinatorLayout({
               onClick={() => setMobileSidebarOpen(false)}
             >
               <X className="w-5 h-5" />
-            </button>
-          </div>
-
-          {/* Action Button */}
-          <div className="mb-4 px-2 shrink-0">
-            <button className="w-full bg-primary hover:bg-primary/95 text-on-primary font-medium py-2 rounded shadow-sm transition-colors flex items-center justify-center gap-2 cursor-pointer">
-              <Plus className="w-4 h-4" />
-              <span>Tạo hợp đồng mới</span>
             </button>
           </div>
 
