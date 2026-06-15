@@ -1,0 +1,22 @@
+export type BookingStatus = "pending" | "quoted" | "accepted" | "rejected";
+
+export interface Booking {
+  booking_id: string;
+  customer_id: string;
+  company_id: string;
+  service_id: string;
+  address: string;
+  description?: string | null;
+  guards_per_slot: number;
+  time_slots: string[];
+  start_date: string;
+  end_date: string;
+  quoted_price: number | null;
+  status: BookingStatus;
+  created_at: string;
+  updated_at: string;
+
+  // Virtual fields for UI rendering
+  customer_name?: string;
+  service_name?: string;
+}
