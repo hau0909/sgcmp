@@ -1,5 +1,5 @@
-export type ActivityType = "Chi nhánh" | "Kho bãi" | "Showroom" | "Văn phòng" | "Trung tâm điều phối";
 
+export type ActivityType = "Chi nhánh" | "Kho bãi" | "Showroom" | "Văn phòng" | "Trung tâm điều phối";
 export interface CompanyComponent {
   id: string;
   name: string;

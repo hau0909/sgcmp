@@ -1,5 +1,5 @@
 import type { AuthError } from "@supabase/supabase-js";
-import type { RegisterInput } from "../types";
+import type { RegisterInput, LoginInput } from "../types";
 import { supabase } from "@/lib/supabase";
 
 export const validateFullName = (fullName: string) => {
@@ -53,8 +53,8 @@ export const checkPhoneNumberExists = async (phoneNumber: string) => {
 
   const { data, error } = await supabase
     .from("profiles")
-    .select("userid")
-    .eq("phonenumber", cleanedPhoneNumber)
+    .select("user_id")
+    .eq("phone_number", cleanedPhoneNumber)
     .maybeSingle();
 
   if (error) {
@@ -118,6 +118,16 @@ export const validateRegisterInput = ({
   );
 
   if (confirmPasswordError) return confirmPasswordError;
+
+  return null;
+};
+
+export const validateLoginInput = ({ email, password }: LoginInput) => {
+  const emailError = validateEmail(email);
+  if (emailError) return emailError;
+
+  const passwordError = validatePassword(password);
+  if (passwordError) return passwordError;
 
   return null;
 };

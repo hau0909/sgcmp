@@ -1,14 +1,14 @@
 import { GeneralStatus } from "./Enum";
 
 export interface Company {
-  companyId: string;
-  ownerId: string;
-  companyName: string;
-  businessLicenseNo: string;
-  licenseFileUrl: string | null;
+  company_id: string;
+  owner_id: string;
+  company_name: string;
+  business_license_no: string;
+  license_file_url: string | null;
   address: string;
   description: string | null;
-  ratingAverage: number | null;
+  rating_average: number | null;
   status: GeneralStatus;
-  createdAt: Date;
+  created_at: string;
 }

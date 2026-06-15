@@ -1,4 +1,3 @@
-import React from "react";
 import { Database } from "lucide-react";
 
 export default function ResourceUsage() {
@@ -20,13 +19,16 @@ export default function ResourceUsage() {
             </span>
           </div>
           <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden border border-outline-variant/10">
-            <div className="h-full bg-secondary rounded-full" style={{ width: "85%" }} />
+            <div
+              className="h-full bg-secondary rounded-full"
+              style={{ width: "85%" }}
+            />
           </div>
           <p className="text-[10px] text-on-surface-variant/80 mt-1.5 text-right font-medium">
             Đã sử dụng 85%
           </p>
         </div>
-        
+
         {/* Progress 2 */}
         <div>
           <div className="flex justify-between items-end mb-2">
@@ -38,7 +40,10 @@ export default function ResourceUsage() {
             </span>
           </div>
           <div className="w-full h-2 bg-surface-container rounded-full overflow-hidden border border-outline-variant/10">
-            <div className="h-full bg-primary rounded-full" style={{ width: "60%" }} />
+            <div
+              className="h-full bg-primary rounded-full"
+              style={{ width: "60%" }}
+            />
           </div>
           <p className="text-[10px] text-on-surface-variant/80 mt-1.5 text-right font-medium">
             Đã sử dụng 60%

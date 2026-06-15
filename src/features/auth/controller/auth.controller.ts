@@ -1,11 +1,16 @@
-import { registerAccountService } from "../service/auth.service";
+import {
+  registerAccountService,
+  loginAccountService,
+  getUserProfileService,
+} from "../service/auth.service";
 import {
   emailExistError,
   validateRegisterInput,
+  validateLoginInput,
+  checkPhoneNumberExists,
 } from "../validator/auth.validator";
-import type { RegisterInput } from "../types";
+import type { RegisterInput, LoginInput } from "../types";
 import type { AuthError } from "@supabase/supabase-js";
-import { checkPhoneNumberExists } from "../validator/auth.validator";
 
 export const handleRegisterAccount = async ({
   email,
@@ -42,6 +47,8 @@ export const handleRegisterAccount = async ({
     const account = await registerAccountService({
       email,
       password,
+      confirmPassword,
+      role: "customer",
       phoneNumber,
       fullName,
     });
@@ -56,6 +63,85 @@ export const handleRegisterAccount = async ({
     return {
       success: false,
       message: emailExistError(error as AuthError),
+    };
+  }
+};
+
+export const handleLoginAccount = async ({ email, password }: LoginInput) => {
+  const validateError = validateLoginInput({ email, password });
+
+  if (validateError) {
+    return {
+      success: false,
+      message: validateError,
+    };
+  }
+
+  try {
+    const loginResult = await loginAccountService({ email, password });
+
+    return {
+      success: true,
+      message: "Đăng nhập thành công.",
+      data: {
+        id: loginResult.user_id,
+        email: loginResult.email,
+        full_name: loginResult.full_name,
+        phone_number: loginResult.phone_number,
+        role: loginResult.role,
+        status: loginResult.status,
+        avatar_url: loginResult.avatar_url,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Đăng nhập thất bại. Vui lòng thử lại.",
+    };
+  }
+};
+
+export const handleGetUserProfile = async (userId: string) => {
+  if (!userId) {
+    return {
+      success: false,
+      message: "Không tìm thấy tài khoản!",
+      data: null,
+    };
+  }
+
+  try {
+    const userProfile = await getUserProfileService(userId);
+
+    return {
+      success: true,
+      message: "lấy thông tin tài khoảng thành công",
+      data: {
+        id: userProfile.user_id,
+        email: userProfile.email,
+        full_name: userProfile.full_name,
+        phone_number: userProfile.phone_number,
+        gender: userProfile.gender,
+        date_of_birth: userProfile.date_of_birth,
+        address: userProfile.address,
+        role: userProfile.role,
+        avatar_url: userProfile.avatar_url,
+        status: userProfile.status,
+        created_at: userProfile.created_at,
+        updated_at: userProfile.updated_at,
+      },
+    };
+  } catch (error) {
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Lấy thông tin người dùng thất bại. Vui lòng thử lại.",
+      data: null,
     };
   }
 };
