@@ -101,7 +101,7 @@ export default function ContractsPage() {
   };
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full space-y-6">
+    <div className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6">
       {/* Page Header */}
       <ContractHeader onExport={handleExport} />
 
@@ -136,4 +136,3 @@ export default function ContractsPage() {
     </div>
   );
 }
-

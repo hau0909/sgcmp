@@ -60,7 +60,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     }
   }, [contractId, fetchDetail]);
 
-  // Handle coordinator signing on behalf of company
+  // Handle company admin signing on behalf of company
   const handleSignCompany = async () => {
     try {
       setIsSignModalOpen(false);
@@ -125,7 +125,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
       historyList.push({
         time: currentContract.updated_at ? new Date(currentContract.updated_at).toLocaleString("vi-VN") : "Vừa xong",
         title: "Công ty đã ký duyệt",
-        description: "Người thực hiện: Điều phối viên (Coordinator)",
+        description: "Người thực hiện: Quản lý doanh nghiệp (Company Admin)",
         isLatest: currentContract.status !== "active",
       });
     }
@@ -202,7 +202,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
   const detailedData = getDetailedData(contract);
 
   return (
-    <div className="flex-1 max-w-7xl mx-auto w-full space-y-6 relative">
+    <div className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 relative">
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-50 animate-in fade-in slide-in-from-bottom-5">
