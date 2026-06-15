@@ -1,5 +1,5 @@
 import React, { Suspense } from "react";
-import { RegistrationTable } from "@/features/registration";
+import { RegistrationTable } from "@/features/onboarding";
 
 export const unstable_instant = { prefetch: "static" };
 

@@ -51,7 +51,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row gap-4 pt-2">
                   <a
                     className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] text-[15px] h-12"
-                    href="#"
+                    href="/onboarding/basic-info"
                   >
                     Bắt đầu miễn phí
                     <ArrowRight />
