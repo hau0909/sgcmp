@@ -17,25 +17,25 @@ function getStatusBadge(status: BookingStatus) {
   switch (status) {
     case "pending":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-primary-fixed text-on-primary-fixed-variant uppercase tracking-wider">
+        <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200">
           Mới
         </span>
       );
     case "quoted":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-surface-variant text-on-surface uppercase tracking-wider">
+        <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200">
           Đã báo giá
         </span>
       );
     case "accepted":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-tertiary-fixed text-on-tertiary-fixed-variant uppercase tracking-wider">
+        <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border-emerald-200">
           Đã duyệt
         </span>
       );
     case "rejected":
       return (
-        <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-semibold bg-error-container text-on-error-container uppercase tracking-wider">
+        <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-700 border-red-200">
           Từ chối
         </span>
       );
@@ -72,6 +72,9 @@ export function BookingTable({
                 Khách hàng
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
+                Dịch vụ
+              </th>
+              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
                 Bảo vệ
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
@@ -89,7 +92,7 @@ export function BookingTable({
             {bookings.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={8}
                   className="py-8 text-center text-on-surface-variant/80 font-medium bg-surface-bright"
                 >
                   Không tìm thấy yêu cầu dịch vụ nào.
@@ -118,6 +121,9 @@ export function BookingTable({
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap font-semibold text-on-surface">
                       {booking.customer_name || "Khách hàng doanh nghiệp"}
+                    </td>
+                    <td className="px-4 py-1.5 whitespace-nowrap font-medium text-on-surface-variant">
+                      {booking.service_name || "Dịch vụ chưa xác định"}
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap font-mono font-medium text-on-surface-variant">
                       {booking.guards_per_slot} Nhân sự
