@@ -1,11 +1,14 @@
 import type { ShiftWithAssignments, TimeSlot } from "../type";
 import { getShiftCellKey, getSlotIdByShift } from "../utils/shift.utils";
 import { ShiftCard } from "./ShiftCard";
+import { ShiftWeekScheduleTable } from "./ShiftWeekScheduleTable";
 
 type ShiftScheduleTableProps = {
-  timeSlots: TimeSlot[];
+  viewMode?: "day" | "week";
   locations: string[];
   shifts: ShiftWithAssignments[];
+  selectedLocation?: string;
+  weekStartDate?: string;
 };
 
 type ShiftSegment = {
@@ -17,9 +20,57 @@ type ShiftSegment = {
 
 const LOCATION_COLUMN_WIDTH = 220;
 const TIME_SLOT_COLUMN_WIDTH = 220;
+const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
 
 const getDateTimeValue = (date: string) => {
   return new Date(date).getTime();
+};
+
+const getShiftContractAddress = (shift: ShiftWithAssignments) => {
+  return shift.contract_address || "Chưa cập nhật địa điểm";
+};
+
+const formatVietnamTime = (date: string) => {
+  return new Intl.DateTimeFormat("vi-VN", {
+    timeZone: VIETNAM_TIME_ZONE,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(new Date(date));
+};
+
+const getMinutesFromTime = (time: string) => {
+  const [hour, minute] = time.split(":").map(Number);
+
+  return hour * 60 + minute;
+};
+
+const createTimeSlotFromShift = (shift: ShiftWithAssignments): TimeSlot => {
+  const start = formatVietnamTime(shift.start_time);
+  const end = formatVietnamTime(shift.end_time);
+
+  return {
+    id: getSlotIdByShift(shift),
+    label: `${start} - ${end}`,
+    start,
+    end,
+  };
+};
+
+const getDisplayTimeSlots = (shifts: ShiftWithAssignments[]) => {
+  const slotMap = new Map<string, TimeSlot>();
+
+  shifts.forEach((shift) => {
+    const slotId = getSlotIdByShift(shift);
+
+    if (!slotMap.has(slotId)) {
+      slotMap.set(slotId, createTimeSlotFromShift(shift));
+    }
+  });
+
+  return Array.from(slotMap.values()).sort(
+    (a, b) => getMinutesFromTime(a.start) - getMinutesFromTime(b.start),
+  );
 };
 
 const isContinuousShift = (
@@ -35,12 +86,23 @@ const isContinuousShift = (
 
   const isSameGuard =
     previousAssignment.guard_id === currentAssignment.guard_id;
-  const isSameLocation = previousShift.location === currentShift.location;
+
+  const isSameContractAddress =
+    getShiftContractAddress(previousShift) ===
+    getShiftContractAddress(currentShift);
+
+  const isSameSpecificLocation =
+    previousShift.location === currentShift.location;
 
   const previousEndTime = getDateTimeValue(previousShift.end_time);
   const currentStartTime = getDateTimeValue(currentShift.start_time);
 
-  return isSameGuard && isSameLocation && previousEndTime === currentStartTime;
+  return (
+    isSameGuard &&
+    isSameContractAddress &&
+    isSameSpecificLocation &&
+    previousEndTime === currentStartTime
+  );
 };
 
 const createMergedShift = (
@@ -48,7 +110,25 @@ const createMergedShift = (
 ): ShiftWithAssignments => {
   const firstShift = shifts[0];
   const lastShift = shifts[shifts.length - 1];
-  const firstAssignment = firstShift.assignments[0];
+
+  const assignmentMap = new Map<
+    string,
+    ShiftWithAssignments["assignments"][0]
+  >();
+
+  shifts.forEach((shift) => {
+    shift.assignments.forEach((assignment) => {
+      if (!assignmentMap.has(assignment.guard_id)) {
+        assignmentMap.set(assignment.guard_id, {
+          ...assignment,
+          note:
+            shifts.length > 1
+              ? `${shifts.length} ca liên tục`
+              : assignment.note,
+        });
+      }
+    });
+  });
 
   return {
     ...firstShift,
@@ -56,26 +136,39 @@ const createMergedShift = (
     shift_name: shifts.map((shift) => shift.shift_name).join(" + "),
     start_time: firstShift.start_time,
     end_time: lastShift.end_time,
-    required_guards: 1,
-    assignments: [
-      {
-        ...firstAssignment,
-        note:
-          shifts.length > 1
-            ? `${shifts.length} ca liên tục`
-            : firstAssignment.note,
-      },
-    ],
+    required_guards: firstShift.required_guards,
+    assignments: Array.from(assignmentMap.values()),
+  };
+};
+
+const createSegment = (
+  groupedShifts: ShiftWithAssignments[],
+  timeSlots: TimeSlot[],
+): ShiftSegment | null => {
+  const firstShift = groupedShifts[0];
+
+  const startSlotId = getSlotIdByShift(firstShift);
+  const startIndex = timeSlots.findIndex((slot) => slot.id === startSlotId);
+
+  if (startIndex === -1) {
+    return null;
+  }
+
+  return {
+    id: groupedShifts.map((shift) => shift.shift_id).join("-"),
+    startIndex,
+    span: groupedShifts.length,
+    shift: createMergedShift(groupedShifts),
   };
 };
 
 const buildShiftSegments = (
-  location: string,
+  contractAddress: string,
   shifts: ShiftWithAssignments[],
   timeSlots: TimeSlot[],
 ): ShiftSegment[] => {
   const locationShifts = shifts
-    .filter((shift) => shift.location === location)
+    .filter((shift) => getShiftContractAddress(shift) === contractAddress)
     .filter((shift) => shift.assignments.length >= shift.required_guards)
     .sort(
       (a, b) => getDateTimeValue(a.start_time) - getDateTimeValue(b.start_time),
@@ -117,48 +210,61 @@ const buildShiftSegments = (
   return segments;
 };
 
-const createSegment = (
-  groupedShifts: ShiftWithAssignments[],
-  timeSlots: TimeSlot[],
-): ShiftSegment | null => {
-  const firstShift = groupedShifts[0];
-
-  const startSlotId = getSlotIdByShift(firstShift);
-  const startIndex = timeSlots.findIndex((slot) => slot.id === startSlotId);
-
-  if (startIndex === -1) {
-    return null;
-  }
-
-  return {
-    id: groupedShifts.map((shift) => shift.shift_id).join("-"),
-    startIndex,
-    span: groupedShifts.length,
-    shift: createMergedShift(groupedShifts),
-  };
-};
-
 export function ShiftScheduleTable({
-  timeSlots,
+  viewMode = "day",
   locations,
   shifts,
+  selectedLocation = "all",
+  weekStartDate,
 }: ShiftScheduleTableProps) {
-  const tableWidth =
-    LOCATION_COLUMN_WIDTH + timeSlots.length * TIME_SLOT_COLUMN_WIDTH;
+  if (viewMode === "week") {
+    return (
+      <ShiftWeekScheduleTable
+        shifts={shifts}
+        selectedLocation={selectedLocation}
+        weekStartDate={weekStartDate}
+      />
+    );
+  }
 
-  const gridTemplateColumns = `${LOCATION_COLUMN_WIDTH}px repeat(${timeSlots.length}, ${TIME_SLOT_COLUMN_WIDTH}px)`;
+  const displayLocations =
+    selectedLocation === "all"
+      ? locations
+      : locations.filter((location) => location === selectedLocation);
+
+  const visibleShifts = shifts.filter((shift) =>
+    displayLocations.includes(getShiftContractAddress(shift)),
+  );
+
+  const displayTimeSlots = getDisplayTimeSlots(visibleShifts);
+
+  if (visibleShifts.length === 0 || displayTimeSlots.length === 0) {
+    return (
+      <div className="rounded-sm border border-slate-300 bg-white p-10 text-center">
+        <p className="text-sm font-medium text-slate-500">
+          Không có ca trực trong ngày này.
+        </p>
+      </div>
+    );
+  }
+
+  const tableWidth =
+    LOCATION_COLUMN_WIDTH + displayTimeSlots.length * TIME_SLOT_COLUMN_WIDTH;
+
+  const gridTemplateColumns = `${LOCATION_COLUMN_WIDTH}px repeat(${displayTimeSlots.length}, ${TIME_SLOT_COLUMN_WIDTH}px)`;
 
   const emptyShiftMap = new Map<string, ShiftWithAssignments>();
 
-  shifts.forEach((shift) => {
+  visibleShifts.forEach((shift) => {
     const isEmpty = shift.assignments.length < shift.required_guards;
 
     if (!isEmpty) {
       return;
     }
 
+    const contractAddress = getShiftContractAddress(shift);
     const slotId = getSlotIdByShift(shift);
-    const key = getShiftCellKey(shift.location, slotId);
+    const key = getShiftCellKey(contractAddress, slotId);
 
     emptyShiftMap.set(key, shift);
   });
@@ -173,10 +279,10 @@ export function ShiftScheduleTable({
           }}
         >
           <div className="sticky left-0 z-30 border-r border-slate-300 bg-blue-100 p-4 font-bold text-slate-900">
-            MỤC TIÊU / VỊ TRÍ
+            ĐỊA ĐIỂM / VỊ TRÍ
           </div>
 
-          {timeSlots.map((slot) => (
+          {displayTimeSlots.map((slot) => (
             <div
               key={slot.id}
               className="border-r border-slate-300 p-4 text-center font-bold text-slate-900 last:border-r-0"
@@ -186,12 +292,16 @@ export function ShiftScheduleTable({
           ))}
         </div>
 
-        {locations.map((location) => {
-          const segments = buildShiftSegments(location, shifts, timeSlots);
+        {displayLocations.map((contractAddress) => {
+          const segments = buildShiftSegments(
+            contractAddress,
+            visibleShifts,
+            displayTimeSlots,
+          );
 
           return (
             <div
-              key={location}
+              key={contractAddress}
               className="grid border-t border-slate-300"
               style={{
                 gridTemplateColumns,
@@ -204,12 +314,14 @@ export function ShiftScheduleTable({
                   gridRow: 1,
                 }}
               >
-                <p className="font-semibold text-slate-900">{location}</p>
-                <p className="mt-1 text-sm text-slate-500">Vị trí trực</p>
+                <p className="font-semibold text-slate-900">
+                  {contractAddress}
+                </p>
+                <p className="mt-1 text-sm text-slate-500">Địa điểm hợp đồng</p>
               </div>
 
-              {timeSlots.map((slot, index) => {
-                const key = getShiftCellKey(location, slot.id);
+              {displayTimeSlots.map((slot, index) => {
+                const key = getShiftCellKey(contractAddress, slot.id);
                 const emptyShift = emptyShiftMap.get(key);
 
                 return (

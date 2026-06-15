@@ -42,3 +42,7 @@ export const getCurrentUserProfileService = async () => {
 
   return getUserProfileService(currentUser.id);
 };
+
+export const getUser = async () => {
+  return getCurrentUser();
+};
