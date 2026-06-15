@@ -161,3 +161,9 @@ export type GetGuardDetailResponse = {
   message: string;
   data: GuardDetail | null;
 };
+
+export type RouteContext = {
+  params: Promise<{
+    guardId: string;
+  }>;
+};

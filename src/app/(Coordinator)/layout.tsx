@@ -13,6 +13,7 @@ import {
   Bell,
   BookOpen,
   ShieldUser,
+  CalendarDays,
 } from "lucide-react";
 
 export default function CoordinatorLayout({
