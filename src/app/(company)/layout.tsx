@@ -16,6 +16,7 @@ import {
   ArrowUpCircle,
   Users,
   FileText,
+  Calendar,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
@@ -33,6 +34,12 @@ export default function CompanyLayout({
       href: "/dashboard",
       icon: LayoutDashboard,
       active: pathname === "/dashboard",
+    },
+    {
+      name: "Yêu cầu dịch vụ",
+      href: "/requests",
+      icon: Calendar,
+      active: pathname === "/requests" || pathname.startsWith("/requests/"),
     },
     {
       name: "Quản lý hợp đồng",
