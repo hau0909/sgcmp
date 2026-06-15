@@ -1,0 +1,215 @@
+import {
+  getAllActiveCompanies,
+  DbCompany,
+  getCities,
+  getWards,
+  getServices
+} from "../repository/company.repository";
+import { MarketplaceCompany, City, Ward, Service } from "../types";
+
+export interface CompanyFilterParams {
+  search?: string;
+  location?: string;
+  tags?: string[];
+  sortBy?: string;
+  page?: number;
+  limit?: number;
+}
+
+export interface PaginatedCompaniesResponse {
+  companies: MarketplaceCompany[];
+  totalCount: number;
+  totalPages: number;
+  currentPage: number;
+}
+
+export interface CompanyFiltersDataResponse {
+  cities: City[];
+  wards: Ward[];
+  services: Service[];
+  companies?: MarketplaceCompany[];
+  totalCount?: number;
+  totalPages?: number;
+  currentPage?: number;
+}
+
+function normalizeText(text: string): string {
+  return text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[đĐ]/g, "d")
+    .trim();
+}
+
+export const mapDbCompanyToMarketplace = (dbCompany: DbCompany): MarketplaceCompany => {
+  const name = dbCompany.company_name;
+
+  // Extract tags from services name
+  const tags = dbCompany.company_services
+    ? dbCompany.company_services
+        .map((cs) => cs.services?.name)
+        .filter((n): n is string => !!n)
+    : [];
+
+  // Find minimum price among services, default to 0 if none
+  let pricePerHour = 0;
+  if (dbCompany.company_services && dbCompany.company_services.length > 0) {
+    const prices = dbCompany.company_services
+      .map((cs) => cs.price)
+      .filter((p) => typeof p === "number");
+    if (prices.length > 0) {
+      pricePerHour = Math.min(...prices);
+    }
+  }
+
+  // Calculate initials from name
+  const cleanName = name
+    .replace(/^(Công ty|TNHH|Cổ phần|Dịch vụ|Bảo vệ|TNHH Dịch vụ Bảo vệ)\s+/gi, "")
+    .replace(/\s+(Cổ phần|TNHH)\s*/gi, "")
+    .trim();
+  const words = cleanName.split(/\s+/).filter(Boolean);
+  let initials = "CO";
+  if (words.length >= 2) {
+    initials = (words[0][0] + words[1][0]).toUpperCase();
+  } else if (words.length === 1) {
+    initials = words[0].substring(0, 2).toUpperCase();
+  }
+
+  return {
+    id: dbCompany.company_id,
+    name: dbCompany.company_name,
+    logoUrl: undefined,
+    initials,
+    rating: dbCompany.rating_average,
+    location: dbCompany.address,
+    tags,
+    pricePerHour,
+    description: dbCompany.description || undefined,
+  };
+};
+
+export const getCompaniesService = async (
+  params: CompanyFilterParams = {}
+): Promise<PaginatedCompaniesResponse> => {
+  const dbCompanies = await getAllActiveCompanies();
+  
+  // 1. Map to MarketplaceCompany schema
+  let companies = dbCompanies.map(mapDbCompanyToMarketplace);
+
+  // 2. Search query filter (search by name, description or tags)
+  if (params.search && params.search.trim()) {
+    const q = params.search.toLowerCase().trim();
+    companies = companies.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.description && c.description.toLowerCase().includes(q)) ||
+        c.tags.some((tag) => tag.toLowerCase().includes(q))
+    );
+  }
+
+  // 3. Location filter (comparing against cities and wards tables)
+  if (params.location && params.location.trim()) {
+    const loc = params.location.toLowerCase().trim();
+    const normalizedLoc = normalizeText(loc);
+
+    const [cities, wards] = await Promise.all([getCities(), getWards()]);
+
+    const matchedLocations = new Set<string>();
+    // Match cities
+    cities.forEach((c) => {
+      if (normalizeText(c.city_name).includes(normalizedLoc)) {
+        matchedLocations.add(c.city_name.toLowerCase());
+      }
+    });
+
+    // Match wards
+    wards.forEach((w) => {
+      if (normalizeText(w.ward_name).includes(normalizedLoc)) {
+        matchedLocations.add(w.ward_name.toLowerCase());
+        const parentCity = cities.find((c) => c.city_id === w.city_id);
+        if (parentCity) {
+          matchedLocations.add(parentCity.city_name.toLowerCase());
+        }
+      }
+    });
+
+    companies = companies.filter((c) => {
+      const normAddr = normalizeText(c.location);
+      if (normAddr.includes(normalizedLoc)) return true;
+      for (const matchedLoc of matchedLocations) {
+        if (normAddr.includes(normalizeText(matchedLoc))) {
+          return true;
+        }
+      }
+      return false;
+    });
+  }
+
+  // 4. Tags filter
+  if (params.tags && params.tags.length > 0) {
+    companies = companies.filter((c) =>
+      params.tags!.every((selectedTag) =>
+        c.tags.some((tag) => tag.toLowerCase() === selectedTag.toLowerCase())
+      )
+    );
+  }
+
+  // 5. Sort operations
+  const sortBy = params.sortBy || "Đề xuất";
+  if (sortBy === "Đánh giá cao nhất") {
+    companies.sort((a, b) => {
+      if (a.rating === null) return 1;
+      if (b.rating === null) return -1;
+      return b.rating - a.rating;
+    });
+  } else if (sortBy === "Giá thấp nhất") {
+    companies.sort((a, b) => a.pricePerHour - b.pricePerHour);
+  } else {
+    // "Đề xuất" (Recommended - rating descending, then price ascending)
+    companies.sort((a, b) => {
+      const ratingA = a.rating ?? 0;
+      const ratingB = b.rating ?? 0;
+      if (ratingA !== ratingB) return ratingB - ratingA;
+      return a.pricePerHour - b.pricePerHour;
+    });
+  }
+
+  // 6. Pagination
+  const totalCount = companies.length;
+  const page = params.page || 1;
+  const limit = params.limit || 6;
+  const totalPages = Math.ceil(totalCount / limit) || 1;
+  
+  const startIndex = (page - 1) * limit;
+  const paginatedCompanies = companies.slice(startIndex, startIndex + limit);
+
+  return {
+    companies: paginatedCompanies,
+    totalCount,
+    totalPages,
+    currentPage: page,
+  };
+};
+
+export const getCompanyFiltersService = async (
+  params: CompanyFilterParams = {}
+): Promise<CompanyFiltersDataResponse> => {
+  const [cities, wards, services] = await Promise.all([
+    getCities(),
+    getWards(),
+    getServices(),
+  ]);
+  
+  const companiesResult = await getCompaniesService(params);
+  
+  return {
+    cities,
+    wards,
+    services,
+    companies: companiesResult.companies,
+    totalCount: companiesResult.totalCount,
+    totalPages: companiesResult.totalPages,
+    currentPage: companiesResult.currentPage,
+  };
+};
