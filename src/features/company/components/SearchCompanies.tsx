@@ -1,163 +1,40 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import FilterSidebar from "./FilterSidebar";
 import CompanyCard from "./CompanyCard";
-import { MarketplaceCompany } from "../types";
+import { MarketplaceCompany, City, Ward, Service } from "../types";
+import { requestGetCompanies, requestGetCompanyFilters } from "../api/company.api";
 
-const MOCK_COMPANIES: MarketplaceCompany[] = [
-  {
-    id: "1",
-    name: "Tập đoàn Bảo vệ Aegis",
-    logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBrVw3DeiFc28mZDp1wh-qXLSQEz5ZuiC1lWDWCKEguwUbgFpDQrK-WdlouEzFEdoxIfqjCTbJgL6KQfkbscNNnAxSGdPM1Xs_0gsfMef3bdu9E_7hBuWia-KBSv4CDT3mwbj2ECzma_NLFwtam33gO2Mp4mLMkYF_lUOGG908Or3SV7vg8_-Tvjjsx1gVJnVtGRWezy_uOnNHSxBe8GIpgQjIXwpMTvO89H0PP2eCtaIQKYkeUNY5CzQZvCm1Rru4Zhkz_Xe6Iu1U1",
-    initials: "AG",
-    rating: 4.9,
-    location: "New York, NY",
-    tags: ["Vũ trang", "Không vũ trang", "Sự kiện"],
-    pricePerHour: 35,
-    description: "Cung cấp dịch vụ bảo vệ chuyên nghiệp với hơn 10 năm kinh nghiệm."
-  },
-  {
-    id: "2",
-    name: "Đội Tiền Phong",
-    initials: "SV",
-    rating: 4.7,
-    location: "Newark, NJ",
-    tags: ["Doanh nghiệp", "Không vũ trang"],
-    pricePerHour: 28,
-    description: "Đội ngũ bảo vệ trẻ trung, năng động, phản ứng nhanh."
-  },
-  {
-    id: "3",
-    name: "Hậu cần Thép",
-    logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuDXw4rtEEFnQTuJLAmJ83m3AFwNgYMteDTAYOCYy22csBQ2vTVKyTVwVR1HtC4ccyx7RoukGTTsLyXORyBMmS76oozUAHpvS_6aFUwz1Hb7pS7IcBNEZzdOyV5BfXhckfTgZty8UNy2kc36iS9kyPY0hp9ov7_6I26g2FexYMgdKPnIYPDhhUnwna0qaWaxpWYdJNgUJxCkwWtI279wMKY9b0fpYkK8a9dfK3KkLu35EwYGvuzD7T9R4eUgWvSr_BI8n5CF83m5o0VH",
-    initials: "HC",
-    rating: 4.9,
-    location: "Brooklyn, NY",
-    tags: ["Vũ trang", "Vận tải", "VIP"],
-    pricePerHour: 55,
-    description: "Bảo vệ các chuyến hàng giá trị và yếu nhân chuyên nghiệp."
-  },
-  {
-    id: "4",
-    name: "Gác Đêm Sec",
-    initials: "NS",
-    rating: null,
-    location: "Queens, NY",
-    tags: ["Tuần tra", "Khu dân cư"],
-    pricePerHour: 25,
-    description: "Dịch vụ tuần tra ban đêm bảo vệ trật tự an ninh khu dân cư."
-  },
-  {
-    id: "5",
-    name: "Giám Sát Đỉnh Cao",
-    logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuCNvGdFc09qyUa-LqSj9F36x6cLuwEqwI9LTU39Lb8Bi30PxL9FANNnIgj8muV-PWV5yfECO7jB0EDS6So705UWeGxUXnie-9fLKSjujYTkAIaBZXaaXrFg7r-ImzNkmMYrKp-ICiiK-E_jp9Urjkg19HiqS6qo4SraVg2MhKqYY5TeNDob9nGpLptkuiI_SYUkoKxySeB4IA_3aZx9a1OM018Q95WTeeYp4njgr_qTTbzKtEfo6Ku23UJLyeubawn1LwvgfsZ2Brtt",
-    initials: "GS",
-    rating: 4.8,
-    location: "Manhattan, NY",
-    tags: ["Không gian mạng", "Doanh nghiệp"],
-    pricePerHour: 80,
-    description: "Giải pháp an ninh kỹ thuật số kết hợp tuần tra thực địa."
-  },
-  {
-    id: "6",
-    name: "Chiến Thuật Toàn Cầu",
-    initials: "GT",
-    rating: 4.6,
-    location: "Jersey City, NJ",
-    tags: ["Vũ trang", "Vận chuyển"],
-    pricePerHour: 45,
-    description: "Hoạt động tác chiến và hỗ trợ vận tải an ninh."
-  },
-  {
-    id: "7",
-    name: "Bảo vệ Thiết Giáp",
-    initials: "TG",
-    rating: 4.8,
-    location: "Brooklyn, NY",
-    tags: ["Vũ trang", "VIP", "Vận tải"],
-    pricePerHour: 60,
-    description: "Bảo vệ yếu nhân có vũ trang và xe chở tiền chuyên dụng."
-  },
-  {
-    id: "8",
-    name: "Phòng thủ Sentinel",
-    initials: "SE",
-    rating: 4.5,
-    location: "New York, NY",
-    tags: ["Không vũ trang", "Tuần tra", "Khu dân cư"],
-    pricePerHour: 30,
-    description: "Dịch vụ bảo vệ khu phố và tuần tra kiểm soát ra vào."
-  },
-  {
-    id: "9",
-    name: "An ninh Đỉnh Phong",
-    initials: "DP",
-    rating: null,
-    location: "Queens, NY",
-    tags: ["Sự kiện", "Doanh nghiệp"],
-    pricePerHour: 32,
-    description: "Nhà cung cấp mới nổi với dịch vụ an ninh sự kiện chất lượng cao."
-  },
-  {
-    id: "10",
-    name: "Bảo vệ Khiên Vàng",
-    initials: "KV",
-    rating: 4.4,
-    location: "Newark, NJ",
-    tags: ["Tuần tra", "Khu dân cư"],
-    pricePerHour: 22,
-    description: "Phương án bảo vệ tiết kiệm chi phí cho các khu dân sinh."
-  },
-  {
-    id: "11",
-    name: "Thiên Thần Hộ Vệ",
-    initials: "TT",
-    rating: 4.9,
-    location: "Manhattan, NY",
-    tags: ["VIP", "Vũ trang", "Sự kiện"],
-    pricePerHour: 75,
-    description: "Vệ sĩ VIP đẳng cấp quốc tế cho doanh nhân và nghệ sĩ."
-  },
-  {
-    id: "12",
-    name: "Bảo vệ Chân Trời",
-    initials: "CT",
-    rating: 4.3,
-    location: "Jersey City, NJ",
-    tags: ["Không gian mạng", "Doanh nghiệp"],
-    pricePerHour: 40,
-    description: "Đơn vị bảo vệ tích hợp công nghệ AI giám sát camera."
-  },
-  {
-    id: "13",
-    name: "An Ninh Sao Mai",
-    initials: "SM",
-    rating: 4.7,
-    location: "Brooklyn, NY",
-    tags: ["Không vũ trang", "Sự kiện"],
-    pricePerHour: 29,
-    description: "Cung cấp nhân sự sự kiện chuyên nghiệp và lịch sự."
-  },
-  {
-    id: "14",
-    name: "Bảo vệ Cảng Đông",
-    initials: "CD",
-    rating: 4.5,
-    location: "New York, NY",
-    tags: ["Vận tải", "Doanh nghiệp"],
-    pricePerHour: 34,
-    description: "Đơn vị bảo vệ kho bãi và giám sát cảng vận chuyển hàng hải."
-  }
-];
-
-const TAG_MAPPING: Record<string, string> = {
-  "Bảo vệ có vũ trang": "Vũ trang",
-  "Tuần tra không vũ trang": "Không vũ trang",
-  "Bảo vệ sự kiện": "Sự kiện",
-  "An ninh mạng": "Không gian mạng",
-};
+function CompanyCardSkeleton() {
+  return (
+    <div className="bg-surface-container-lowest border border-outline-variant rounded p-4 flex flex-col gap-3 animate-pulse">
+      <div className="flex gap-3">
+        <div className="w-14 h-14 rounded bg-surface-container-high border border-outline-variant flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <div className="flex justify-between items-start gap-2">
+            <div className="h-4 bg-surface-container-high rounded w-3/4" />
+            <div className="h-4 bg-surface-container-high rounded w-8" />
+          </div>
+          <div className="h-3 bg-surface-container-high rounded w-1/2 mt-2" />
+        </div>
+      </div>
+      <div className="flex gap-1.5 mt-2">
+        <div className="h-5 bg-surface-container-high rounded w-16" />
+        <div className="h-5 bg-surface-container-high rounded w-20" />
+        <div className="h-5 bg-surface-container-high rounded w-14" />
+      </div>
+      <div className="flex justify-between items-end mt-4 pt-3 border-t border-outline-variant/50">
+        <div>
+          <div className="h-2 bg-surface-container-high rounded w-12 mb-1" />
+          <div className="h-4 bg-surface-container-high rounded w-16" />
+        </div>
+        <div className="h-8 bg-surface-container-high rounded w-20" />
+      </div>
+    </div>
+  );
+}
 
 const ITEMS_PER_PAGE = 6;
 
@@ -166,106 +43,113 @@ export default function SearchCompanies() {
   const [searchQuery, setSearchQuery] = useState("");
   const [location, setLocation] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
-  const [minPrice, setMinPrice] = useState("");
-  const [maxPrice, setMaxPrice] = useState("");
-  const [minRating, setMinRating] = useState<number | "any">("any");
   const [sortBy, setSortBy] = useState("Đề xuất");
   const [currentPage, setCurrentPage] = useState(1);
 
+  // Available filter options from database
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
+  const [availableCities, setAvailableCities] = useState<City[]>([]);
+  const [availableWards, setAvailableWards] = useState<Ward[]>([]);
+
+  // Fetching states
+  const [companies, setCompanies] = useState<MarketplaceCompany[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPagesState, setTotalPagesState] = useState(1);
+  const [isLoading, setIsLoading] = useState(true);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(searchQuery);
+
   // Mobile filter drawer state
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+
+  // Load available filters on mount
+  useEffect(() => {
+    async function loadFilters() {
+      try {
+        const filters = await requestGetCompanyFilters();
+        setAvailableServices(filters.services || []);
+        setAvailableCities(filters.cities || []);
+        setAvailableWards(filters.wards || []);
+      } catch (error) {
+        console.error("Failed to load company filters:", error);
+      }
+    }
+    loadFilters();
+  }, []);
 
   // Clear all filters
   const handleClearAll = () => {
     setSearchQuery("");
     setLocation("");
     setSelectedTags([]);
-    setMinPrice("");
-    setMaxPrice("");
-    setMinRating("any");
     setCurrentPage(1);
   };
 
-  // Filtered & Sorted list
-  const filteredCompanies = useMemo(() => {
-    let result = [...MOCK_COMPANIES];
+  // Debounce search query
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1);
+    }, 400);
 
-    // 1. Search query (name or tags)
-    if (searchQuery.trim()) {
-      const q = searchQuery.toLowerCase().trim();
-      result = result.filter(
-        (c) =>
-          c.name.toLowerCase().includes(q) ||
-          c.tags.some((tag) => tag.toLowerCase().includes(q))
-      );
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [searchQuery]);
+
+  // Fetch companies from backend
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchCompanies() {
+      setIsLoading(true);
+      try {
+        const hasFilters =
+          debouncedSearchQuery.trim() !== "" ||
+          location.trim() !== "" ||
+          selectedTags.length > 0 ||
+          sortBy !== "Đề xuất";
+
+        const response = hasFilters
+          ? await requestGetCompanyFilters({
+              search: debouncedSearchQuery,
+              location: location,
+              tags: selectedTags,
+              sortBy,
+              page: currentPage,
+              limit: ITEMS_PER_PAGE,
+            })
+          : await requestGetCompanies({
+              page: currentPage,
+              limit: ITEMS_PER_PAGE,
+            });
+
+        if (isMounted && response) {
+          setCompanies(response.companies || []);
+          setTotalCount(response.totalCount || 0);
+          setTotalPagesState(response.totalPages || 1);
+        }
+      } catch (error) {
+        console.error("Failed to fetch companies:", error);
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
     }
 
-    // 2. Location filter
-    if (location.trim()) {
-      const loc = location.toLowerCase().trim();
-      result = result.filter((c) => c.location.toLowerCase().includes(loc));
-    }
+    fetchCompanies();
 
-    // 3. Service tags filter (ALL selected tags must match)
-    if (selectedTags.length > 0) {
-      result = result.filter((c) =>
-        selectedTags.every((selectedTag) => {
-          const mappedTag = TAG_MAPPING[selectedTag] || selectedTag;
-          return c.tags.includes(mappedTag);
-        })
-      );
-    }
-
-    // 4. Price range filter
-    if (minPrice) {
-      result = result.filter((c) => c.pricePerHour >= Number(minPrice));
-    }
-    if (maxPrice) {
-      result = result.filter((c) => c.pricePerHour <= Number(maxPrice));
-    }
-
-    // 5. Rating filter
-    if (minRating !== "any") {
-      result = result.filter(
-        (c) => c.rating !== null && c.rating >= minRating
-      );
-    }
-
-    // Sort operations
-    if (sortBy === "Đánh giá cao nhất") {
-      result.sort((a, b) => {
-        if (a.rating === null) return 1;
-        if (b.rating === null) return -1;
-        return b.rating - a.rating;
-      });
-    } else if (sortBy === "Giá thấp nhất") {
-      result.sort((a, b) => a.pricePerHour - b.pricePerHour);
-    } else {
-      // "Đề xuất" (Recommended - rating descending, then price descending)
-      result.sort((a, b) => {
-        const ratingA = a.rating ?? 0;
-        const ratingB = b.rating ?? 0;
-        if (ratingA !== ratingB) return ratingB - ratingA;
-        return a.pricePerHour - b.pricePerHour;
-      });
-    }
-
-    return result;
-  }, [searchQuery, location, selectedTags, minPrice, maxPrice, minRating, sortBy]);
-
-  // Pagination bounds
-  const totalPages = Math.ceil(filteredCompanies.length / ITEMS_PER_PAGE) || 1;
-  const paginatedCompanies = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredCompanies.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredCompanies, currentPage]);
+    return () => {
+      isMounted = false;
+    };
+  }, [debouncedSearchQuery, location, selectedTags, sortBy, currentPage]);
 
   const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, filteredCompanies.length);
+  const endIndex = Math.min(startIndex + ITEMS_PER_PAGE, totalCount);
 
   // Handle page changes
   const handlePageChange = (page: number) => {
-    if (page >= 1 && page <= totalPages) {
+    if (page >= 1 && page <= totalPagesState) {
       setCurrentPage(page);
       // Scroll to top of listings smoothly
       window.scrollTo({ top: 0, behavior: "smooth" });
@@ -281,13 +165,8 @@ export default function SearchCompanies() {
         setLocation={setLocation}
         selectedTags={selectedTags}
         setSelectedTags={setSelectedTags}
-        minPrice={minPrice}
-        setMinPrice={setMinPrice}
-        maxPrice={maxPrice}
-        setMaxPrice={setMaxPrice}
-        minRating={minRating}
-        setMinRating={setMinRating}
         onClearAll={handleClearAll}
+        availableServices={availableServices}
       />
 
       {/* 2. Mobile Filter Overlay Drawer */}
@@ -323,7 +202,7 @@ export default function SearchCompanies() {
                     setCurrentPage(1);
                   }}
                   className="w-full h-9 px-3 bg-surface-container-low border border-outline-variant rounded text-sm outline-none focus:border-primary"
-                  placeholder="Thành phố hoặc Zip"
+                  placeholder="Thành phố hoặc Quận/Huyện"
                   type="text"
                 />
               </div>
@@ -334,93 +213,27 @@ export default function SearchCompanies() {
                   Loại dịch vụ
                 </label>
                 <div className="flex flex-col gap-2">
-                  {[
-                    "Bảo vệ có vũ trang",
-                    "Tuần tra không vũ trang",
-                    "Bảo vệ sự kiện",
-                    "An ninh mạng",
-                    "Doanh nghiệp",
-                    "Vận tải",
-                    "VIP",
-                    "Tuần tra",
-                    "Khu dân cư",
-                    "Vận chuyển",
-                  ].map((tag) => {
-                    const isChecked = selectedTags.includes(tag);
+                  {availableServices.map((service) => {
+                    const isChecked = selectedTags.includes(service.name);
                     return (
-                      <label key={tag} className="flex items-center gap-2 cursor-pointer">
+                      <label key={service.service_id} className="flex items-center gap-2 cursor-pointer">
                         <input
                           type="checkbox"
                           checked={isChecked}
                           onChange={(e) => {
                             if (e.target.checked) {
-                              setSelectedTags([...selectedTags, tag]);
+                              setSelectedTags([...selectedTags, service.name]);
                             } else {
-                              setSelectedTags(selectedTags.filter((t) => t !== tag));
+                              setSelectedTags(selectedTags.filter((t) => t !== service.name));
                             }
                             setCurrentPage(1);
                           }}
                           className="w-4 h-4 text-primary rounded bg-surface-container-low cursor-pointer accent-primary"
                         />
-                        <span className="text-sm text-on-surface">{tag}</span>
+                        <span className="text-sm text-on-surface">{service.name}</span>
                       </label>
                     );
                   })}
-                </div>
-              </div>
-
-              {/* Price */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                  Giá mỗi giờ ($)
-                </label>
-                <div className="flex items-center gap-2">
-                  <input
-                    value={minPrice}
-                    onChange={(e) => {
-                      setMinPrice(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-full h-9 px-2 bg-surface-container-low border border-outline-variant rounded text-sm text-center outline-none"
-                    placeholder="Tối thiểu"
-                    type="number"
-                  />
-                  <span className="text-outline-variant">-</span>
-                  <input
-                    value={maxPrice}
-                    onChange={(e) => {
-                      setMaxPrice(e.target.value);
-                      setCurrentPage(1);
-                    }}
-                    className="w-full h-9 px-2 bg-surface-container-low border border-outline-variant rounded text-sm text-center outline-none"
-                    placeholder="Tối đa"
-                    type="number"
-                  />
-                </div>
-              </div>
-
-              {/* Rating */}
-              <div className="flex flex-col gap-2">
-                <label className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
-                  Đánh giá tối thiểu
-                </label>
-                <div className="flex gap-1">
-                  {[4, 3, "any"].map((r) => (
-                    <button
-                      key={r}
-                      onClick={() => {
-                        setMinRating(r as number | "any");
-                        setCurrentPage(1);
-                      }}
-                      className={`flex-1 h-9 border rounded text-xs font-semibold ${
-                        minRating === r
-                          ? "border-primary bg-primary-fixed text-primary"
-                          : "border-outline-variant bg-surface-container-low text-on-surface-variant"
-                      }`}
-                    >
-                      {r === "any" ? "Bất kỳ" : `${r}+`}
-                    </button>
-                  ))}
                 </div>
               </div>
 
@@ -466,10 +279,12 @@ export default function SearchCompanies() {
           <div>
             <h1 className="text-xl font-bold text-on-surface">Các công ty bảo vệ</h1>
             <p className="text-xs text-on-surface-variant mt-1.5 font-medium">
-              {filteredCompanies.length > 0 ? (
+              {isLoading ? (
+                <span>Đang tải danh sách nhà cung cấp...</span>
+              ) : totalCount > 0 ? (
                 <>
                   Đang hiển thị {startIndex + 1}-{endIndex} trong số{" "}
-                  <span className="text-primary font-bold">{filteredCompanies.length}</span> nhà cung cấp đã được xác minh trong khu vực của bạn.
+                  <span className="text-primary font-bold">{totalCount}</span> nhà cung cấp đã được xác minh trong khu vực của bạn.
                 </>
               ) : (
                 "Không tìm thấy nhà cung cấp nào phù hợp với bộ lọc."
@@ -506,9 +321,15 @@ export default function SearchCompanies() {
         </div>
 
         {/* Dense Grid of Cards */}
-        {filteredCompanies.length > 0 ? (
+        {isLoading ? (
           <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-            {paginatedCompanies.map((company) => (
+            <CompanyCardSkeleton />
+            <CompanyCardSkeleton />
+            <CompanyCardSkeleton />
+          </div>
+        ) : companies.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+            {companies.map((company) => (
               <CompanyCard key={company.id} company={company} />
             ))}
           </div>
@@ -533,7 +354,7 @@ export default function SearchCompanies() {
         )}
 
         {/* Pagination Section */}
-        {totalPages > 1 && (
+        {!isLoading && totalPagesState > 1 && (
           <div className="flex justify-between items-center mt-6 pt-4 border-t border-outline-variant">
             <button
               onClick={() => handlePageChange(currentPage - 1)}
@@ -548,7 +369,7 @@ export default function SearchCompanies() {
             </button>
 
             <div className="flex gap-1">
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+              {Array.from({ length: totalPagesState }, (_, i) => i + 1).map((page) => (
                 <button
                   key={page}
                   onClick={() => handlePageChange(page)}
@@ -565,9 +386,9 @@ export default function SearchCompanies() {
 
             <button
               onClick={() => handlePageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
+              disabled={currentPage === totalPagesState}
               className={`px-3 py-1.5 border border-outline-variant rounded-lg text-xs font-semibold bg-surface-container-lowest shadow-sm transition-all ${
-                currentPage === totalPages
+                currentPage === totalPagesState
                   ? "opacity-40 cursor-not-allowed"
                   : "text-on-surface hover:bg-surface cursor-pointer active:scale-95"
               }`}
