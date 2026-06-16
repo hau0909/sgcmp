@@ -241,6 +241,10 @@ export const getCustomerContractDetail = async (
       status,
       created_at,
       updated_at,
+      reviews (
+        rating,
+        comment
+      ),
       bookings!inner (
         booking_id,
         customer_id,
@@ -255,6 +259,7 @@ export const getCustomerContractDetail = async (
         created_at,
         updated_at,
         companies!inner (
+          company_id,
           company_name,
           address
         ),

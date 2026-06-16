@@ -83,7 +83,17 @@ export default function CompanyCard({ company }: CompanyCardProps) {
             Bắt đầu từ
           </p>
           <p className="text-sm font-extrabold text-on-surface mt-0.5">
-            ${company.pricePerHour} <span className="text-xs font-normal text-on-surface-variant">/ giờ</span>
+            {company.pricePerHour === 0 ? (
+              "Liên hệ"
+            ) : company.pricePerHour > 1000 ? (
+              <>
+                {company.pricePerHour.toLocaleString("vi-VN")} <span className="text-xs font-normal text-on-surface-variant">đ/giờ</span>
+              </>
+            ) : (
+              <>
+                ${company.pricePerHour} <span className="text-xs font-normal text-on-surface-variant">/ giờ</span>
+              </>
+            )}
           </p>
         </div>
 

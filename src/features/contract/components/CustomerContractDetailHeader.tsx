@@ -16,6 +16,7 @@ interface CustomerContractDetailHeaderProps {
   contractFileUrl?: string | null;
   onSignCustomer?: () => void;
   onReviewCustomer?: () => void;
+  hasReviewed?: boolean;
 }
 
 const STATUS_MAP: Record<ContractStatus, { label: string; className: string }> = {
@@ -45,6 +46,7 @@ export function CustomerContractDetailHeader({
   contractFileUrl,
   onSignCustomer,
   onReviewCustomer,
+  hasReviewed = false,
 }: CustomerContractDetailHeaderProps) {
   const statusInfo = STATUS_MAP[status] ?? {
     label: "Không xác định",
@@ -145,10 +147,14 @@ export function CustomerContractDetailHeader({
         {status === "completed" && (
           <Button
             onClick={onReviewCustomer}
-            className="cursor-pointer bg-primary hover:bg-primary/90 text-on-primary font-bold shadow-md px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 active:scale-95 border border-primary/20"
+            className={`cursor-pointer font-bold shadow-md px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 active:scale-95 ${
+              hasReviewed
+                ? "bg-transparent border border-primary text-primary hover:bg-primary/10"
+                : "bg-primary hover:bg-primary/90 text-on-primary border border-primary/20"
+            }`}
           >
-            <Star className="w-4 h-4 fill-on-primary" />
-            Đánh giá
+            <Star className={`w-4 h-4 ${hasReviewed ? '' : 'fill-on-primary'}`} />
+            {hasReviewed ? "Xem đánh giá" : "Đánh giá"}
           </Button>
         )}
       </div>
