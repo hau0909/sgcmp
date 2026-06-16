@@ -9,7 +9,10 @@ interface CustomerQualityReviewModalProps {
   startDate?: string | null;
   endDate?: string | null;
   onClose: () => void;
-  onSubmit: (data: any) => void;
+  onSubmit: (data: any) => Promise<void> | void;
+  isReadOnly?: boolean;
+  initialRating?: number;
+  initialFeedback?: string;
 }
 
 export function CustomerQualityReviewModal({
@@ -19,6 +22,9 @@ export function CustomerQualityReviewModal({
   endDate,
   onClose,
   onSubmit,
+  isReadOnly = false,
+  initialRating = 0,
+  initialFeedback = "",
 }: CustomerQualityReviewModalProps) {
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return "N/A";
@@ -29,18 +35,19 @@ export function CustomerQualityReviewModal({
     });
   };
   const dateRange = `${formatDate(startDate)} – ${formatDate(endDate)}`;
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState(initialRating);
   const [hover, setHover] = useState(0);
 
-  const [feedback, setFeedback] = useState("");
+  const [feedback, setFeedback] = useState(initialFeedback);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubmit = async () => {
     setIsSubmitting(true);
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 600));
-    onSubmit({ rating, feedback });
-    setIsSubmitting(false);
+    try {
+      await onSubmit({ rating, feedback });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const StarRating = ({
@@ -73,13 +80,13 @@ export function CustomerQualityReviewModal({
           {[1, 2, 3, 4, 5].map((star) => (
             <Star
               key={star}
-              onMouseEnter={() => onHoverChange(star)}
-              onMouseLeave={() => onHoverChange(0)}
-              onClick={() => onValueChange(star)}
-              className={`cursor-pointer transition-all duration-200 w-12 h-12 ${
+              onMouseEnter={() => !isReadOnly && onHoverChange(star)}
+              onMouseLeave={() => !isReadOnly && onHoverChange(0)}
+              onClick={() => !isReadOnly && onValueChange(value === star ? 0 : star)}
+              className={`transition-all duration-200 w-12 h-12 ${!isReadOnly ? 'cursor-pointer hover:scale-110' : ''} ${
                 (hoverValue || value) >= star
-                  ? "text-amber-500 fill-amber-500 hover:scale-110"
-                  : "text-outline-variant hover:text-amber-300"
+                  ? "text-amber-500 fill-amber-500"
+                  : "text-outline-variant"
               }`}
             />
           ))}
@@ -136,8 +143,9 @@ export function CustomerQualityReviewModal({
               <textarea
                 value={feedback}
                 onChange={(e) => setFeedback(e.target.value)}
-                className="w-full min-h-[120px] rounded border border-outline-variant bg-surface-bright p-3 text-[14px] text-on-surface placeholder:text-outline focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-colors resize-y"
-                placeholder="Chia sẻ thêm trải nghiệm của bạn về dịch vụ hoặc những điểm chúng tôi có thể cải thiện..."
+                readOnly={isReadOnly}
+                className="w-full min-h-[120px] rounded border border-outline-variant bg-surface-bright p-3 text-[14px] text-on-surface placeholder:text-outline focus:border-secondary focus:ring-1 focus:ring-secondary outline-none transition-colors resize-y disabled:opacity-70 disabled:cursor-not-allowed read-only:bg-surface-container-low read-only:cursor-default read-only:focus:ring-0 read-only:focus:border-outline-variant"
+                placeholder={isReadOnly ? "Không có đánh giá chi tiết." : "Chia sẻ thêm trải nghiệm của bạn về dịch vụ hoặc những điểm chúng tôi có thể cải thiện..."}
               ></textarea>
             </div>
           </div>
@@ -145,30 +153,41 @@ export function CustomerQualityReviewModal({
 
         {/* Action Buttons */}
         <div className="bg-surface-container-low border-t border-outline-variant p-6 flex items-center justify-end gap-3">
-          <button
-            onClick={onClose}
-            disabled={isSubmitting}
-            className="px-4 py-2 rounded font-body text-[14px] font-medium text-secondary border border-secondary hover:bg-surface-dim transition-colors"
-          >
-            Bỏ qua
-          </button>
-          <button
-            onClick={handleSubmit}
-            disabled={isSubmitting || rating === 0}
-            className="px-6 py-2 rounded font-body text-[14px] font-medium text-on-primary bg-primary hover:bg-primary-container disabled:opacity-70 transition-colors shadow-sm flex items-center gap-2"
-          >
-            {isSubmitting ? (
-              <>
-                <div className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin"></div>
-                Đang gửi...
-              </>
-            ) : (
-              <>
-                <Send className="w-[18px] h-[18px]" />
-                Gửi đánh giá
-              </>
-            )}
-          </button>
+          {isReadOnly ? (
+            <button
+              onClick={onClose}
+              className="px-6 py-2 rounded font-body text-[14px] font-medium text-on-primary bg-primary hover:bg-primary-container transition-colors shadow-sm"
+            >
+              Đóng
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={onClose}
+                disabled={isSubmitting}
+                className="px-4 py-2 rounded font-body text-[14px] font-medium text-secondary border border-secondary hover:bg-surface-dim transition-colors"
+              >
+                Đóng
+              </button>
+              <button
+                onClick={handleSubmit}
+                disabled={isSubmitting || rating === 0}
+                className="px-6 py-2 rounded font-body text-[14px] font-medium text-on-primary bg-primary hover:bg-primary-container disabled:opacity-70 transition-colors shadow-sm flex items-center gap-2"
+              >
+                {isSubmitting ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin"></div>
+                    Đang gửi...
+                  </>
+                ) : (
+                  <>
+                    <Send className="w-[18px] h-[18px]" />
+                    Gửi đánh giá
+                  </>
+                )}
+              </button>
+            </>
+          )}
         </div>
 
       </div>

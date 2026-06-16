@@ -16,6 +16,7 @@ import { CustomerPaymentInfo } from "./CustomerPaymentInfo";
 import { CustomerContractDocument } from "./CustomerContractDocument";
 import { CustomerHistoryLog } from "./CustomerHistoryLog";
 import { CustomerQualityReviewModal } from "../../review/components/CustomerQualityReviewModal";
+import { requestCreateReview } from "../../review/api/review.api";
 import {
   requestGetCustomerContractDetail,
   requestSignContractCustomer,
@@ -191,6 +192,7 @@ export function CustomerContractDetailContainer({
         contractFileUrl={contract.contract_file_url}
         onSignCustomer={() => setIsSignModalOpen(true)}
         onReviewCustomer={() => setIsReviewModalOpen(true)}
+        hasReviewed={contract.has_reviewed}
       />
 
       {/* Pending banner */}
@@ -310,11 +312,31 @@ export function CustomerContractDetailContainer({
           startDate={contract.start_date}
           endDate={contract.end_date}
           onClose={() => setIsReviewModalOpen(false)}
-          onSubmit={(data) => {
-            console.log("Review data submitted:", data);
-            setIsReviewModalOpen(false);
-            showToast("Đánh giá của bạn đã được ghi nhận. Cảm ơn sự phản hồi của bạn!");
+          onSubmit={async (data) => {
+            try {
+              await requestCreateReview({
+                contract_id: contractId,
+                customer_id: contract.customer_id,
+                company_id: contract.company_id,
+                rating: data.rating,
+                comment: data.feedback,
+              });
+              setIsReviewModalOpen(false);
+              // Cập nhật state ngay lập tức, không cần reload
+              setContract((prev: any) => ({
+                ...prev,
+                has_reviewed: true,
+                review_rating: data.rating,
+                review_comment: data.feedback,
+              }));
+              showToast("Đánh giá của bạn đã được ghi nhận. Cảm ơn sự phản hồi của bạn!");
+            } catch (error: any) {
+              showToast(error.message || "Đã có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại sau.");
+            }
           }}
+          isReadOnly={contract.has_reviewed}
+          initialRating={contract.review_rating}
+          initialFeedback={contract.review_comment}
         />
       )}
     </div>

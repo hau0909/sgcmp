@@ -13,3 +13,4 @@ export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
 
 export type ContractStatus = "pending_signatures" | "active" | "completed" | "cancelled";
 
+export type BookingStatus = "pending" | "quoted" | "accepted" | "rejected";

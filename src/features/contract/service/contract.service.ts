@@ -336,6 +336,8 @@ export const getCustomerContractDetailService = async (
   const company = booking?.companies;
   const serviceName = service?.name || "Dịch vụ chưa xác định";
   const companyName = company?.company_name || "Công ty chưa xác định";
+  
+  const reviewData = item.reviews?.[0] || null;
 
   // Format price to VND currency string
   let formattedPrice = "";
@@ -348,6 +350,8 @@ export const getCustomerContractDetailService = async (
 
   return {
     contract_id: item.contract_id,
+    customer_id: booking?.customer_id,
+    company_id: company?.company_id,
     contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
     status: item.status,
     customer_agreed: item.customer_agreed || false,
@@ -357,6 +361,11 @@ export const getCustomerContractDetailService = async (
     start_date: item.start_date || null,
     end_date: item.end_date || null,
     contract_file_url: item.contract_file_url || null,
+    
+    // Review specific virtual fields
+    has_reviewed: !!reviewData,
+    review_rating: reviewData?.rating || 0,
+    review_comment: reviewData?.comment || "",
 
     // UI specific virtual fields
     service_name: serviceName,
