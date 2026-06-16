@@ -60,6 +60,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
 
   const userProfile = await getUserProfile(userId);
 
+  let companyId: string | null = null;
   let company = null;
 
   if (userProfile.role === "company-admin") {
@@ -87,10 +88,43 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
     }
 
     company = data;
+    companyId = data.company_id;
+  }
+
+  if (userProfile.role === "Coordinator") {
+    const { data, error } = await supabase
+      .from("coordinators")
+      .select("company_id")
+      .eq("user_id", userId)
+      .single();
+
+    if (error) {
+      throw new Error(
+        `Không thể lấy thông tin điều phối viên: ${error.message}`,
+      );
+    }
+
+    companyId = data.company_id;
+  }
+
+  if (userProfile.role === "guard") {
+    const { data, error } = await supabase
+      .from("guards")
+      .select("company_id")
+      .eq("user_id", userId)
+      .single();
+
+    if (error) {
+      throw new Error(`Không thể lấy thông tin bảo vệ: ${error.message}`);
+    }
+
+    companyId = data.company_id;
   }
 
   return {
     ...userProfile,
+    user_id: userId,
+    company_id: companyId,
     company,
   };
 };

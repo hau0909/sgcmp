@@ -10,13 +10,16 @@ export const POST = async (req: Request) => {
     const result = await handleLoginAccount({ email, password });
 
     return NextResponse.json(result, {
-      status: 200,
+      status: result.success ? 200 : 400,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const message =
+      error instanceof Error ? error.message : "Đăng nhập thất bại";
+
     return NextResponse.json(
       {
         success: false,
-        message: error?.message || "Đăng nhập thất bại",
+        message,
       },
       { status: 500 },
     );
