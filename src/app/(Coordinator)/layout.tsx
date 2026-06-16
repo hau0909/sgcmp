@@ -14,6 +14,11 @@ import {
   BookOpen,
   ShieldUser,
   CalendarDays,
+  FileText,
+  FileSignature,
+  Archive,
+  Copy,
+  ShieldAlert,
 } from "lucide-react";
 
 export default function CoordinatorLayout({
@@ -26,6 +31,12 @@ export default function CoordinatorLayout({
 
   // Sidebar Items in Vietnamese
   const sidebarLinks = [
+    {
+      name: "Ca trực",
+      href: "/schedules",
+      icon: CalendarDays,
+      active: pathname === "/schedules",
+    },
     {
       name: "Bảo vệ",
       href: "/guards",

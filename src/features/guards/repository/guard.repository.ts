@@ -132,9 +132,11 @@ export const getAllGuards = async (
       `
       guard_id,
       profiles!guards_user_id_fkey (
+        user_id,
         full_name,
         phone_number,
-        avatar_url
+        avatar_url,
+        email
       )
     `,
     )

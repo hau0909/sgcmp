@@ -1,6 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
 import { ContractStatus } from "@/types/Enum";
+import type { CompanyContractQuery } from "@/features/shift/type";
 
 export const getContracts = async (
   page: number,
@@ -8,38 +9,40 @@ export const getContracts = async (
   search?: string,
   status?: ContractStatus,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
 ): Promise<{ data: any[]; count: number }> => {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  let query = supabase
-    .from("contracts")
-    .select(
-      `
-        contract_id,
-        status,
-        contract_file_url,
-        created_at,
-        customer_agreed,
-        company_agreed,
-        start_date,
-        end_date,
-        updated_at,
-        booking_id,
-        bookings!inner (
-          booking_id,
-          profiles!inner (
-            full_name
-          ),
-          services!inner (
-            name
-          )
-        )
-      `,
-      { count: "exact" }
-    );
+  let query = supabase.from("contracts").select(
+    `
+    contract_id,
+    status,
+    contract_file_url,
+    created_at,
+    customer_agreed,
+    company_agreed,
+    start_date,
+    end_date,
+    updated_at,
+    booking_id,
+    bookings!inner (
+      booking_id,
+      address,
+      profiles!inner (
+        full_name
+      ),
+      companies!inner (
+        company_name
+      ),
+      services!inner (
+        name
+      )
+    )
+  `,
+    { count: "exact" },
+  );
 
   if (status) {
     query = query.eq("status", status);
@@ -57,7 +60,7 @@ export const getContracts = async (
   if (search) {
     const searchLower = `%${search.toLowerCase()}%`;
     query = query.or(
-      `bookings.profiles.full_name.ilike.${searchLower},bookings.services.name.ilike.${searchLower}`
+      `bookings.profiles.full_name.ilike.${searchLower},bookings.services.name.ilike.${searchLower}`,
     );
   }
 
@@ -81,7 +84,8 @@ export const getContractDetail = async (id: string): Promise<any | null> => {
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("contracts")
-    .select(`
+    .select(
+      `
       contract_id,
       booking_id,
       contract_file_url,
@@ -117,7 +121,8 @@ export const getContractDetail = async (id: string): Promise<any | null> => {
           description
         )
       )
-    `)
+    `,
+    )
     .eq("contract_id", id)
     .maybeSingle();
 
@@ -128,7 +133,10 @@ export const getContractDetail = async (id: string): Promise<any | null> => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const updateContract = async (id: string, payload: any): Promise<any> => {
+export const updateContract = async (
+  id: string,
+  payload: any,
+): Promise<any> => {
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("contracts")
@@ -152,7 +160,7 @@ export const getCustomerContracts = async (
   search?: string,
   status?: ContractStatus,
   startDate?: string,
-  endDate?: string
+  endDate?: string,
 ): Promise<{ data: any[]; count: number }> => {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -176,7 +184,7 @@ export const getCustomerContracts = async (
           )
         )
       `,
-      { count: "exact" }
+      { count: "exact" },
     )
     .eq("bookings.customer_id", customerId);
 
@@ -195,9 +203,7 @@ export const getCustomerContracts = async (
 
   if (search) {
     const searchLower = `%${search.toLowerCase()}%`;
-    query = query.or(
-      `bookings.services.name.ilike.${searchLower}`
-    );
+    query = query.or(`bookings.services.name.ilike.${searchLower}`);
   }
 
   query = query.order("created_at", { ascending: false });
@@ -216,11 +222,15 @@ export const getCustomerContracts = async (
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getCustomerContractDetail = async (id: string, customerId: string): Promise<any | null> => {
+export const getCustomerContractDetail = async (
+  id: string,
+  customerId: string,
+): Promise<any | null> => {
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("contracts")
-    .select(`
+    .select(
+      `
       contract_id,
       booking_id,
       contract_file_url,
@@ -231,6 +241,10 @@ export const getCustomerContractDetail = async (id: string, customerId: string):
       status,
       created_at,
       updated_at,
+      reviews (
+        rating,
+        comment
+      ),
       bookings!inner (
         booking_id,
         customer_id,
@@ -245,6 +259,7 @@ export const getCustomerContractDetail = async (id: string, customerId: string):
         created_at,
         updated_at,
         companies!inner (
+          company_id,
           company_name,
           address
         ),
@@ -254,7 +269,8 @@ export const getCustomerContractDetail = async (id: string, customerId: string):
           description
         )
       )
-    `)
+    `,
+    )
     .eq("contract_id", id)
     .eq("bookings.customer_id", customerId)
     .maybeSingle();
@@ -263,4 +279,38 @@ export const getCustomerContractDetail = async (id: string, customerId: string):
     throw error;
   }
   return data;
+};
+
+export const getContractIdsByCompany = async (
+  companyId: string,
+  location?: string,
+): Promise<string[]> => {
+  const supabase = await createClient();
+
+  let query = supabase
+    .from("contracts")
+    .select(
+      `
+        contract_id,
+        bookings!inner (
+          company_id,
+          address
+        )
+      `,
+    )
+    .eq("bookings.company_id", companyId);
+
+  if (location && location !== "all") {
+    query = query.eq("bookings.address", location);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as CompanyContractQuery[]).map(
+    (contract) => contract.contract_id,
+  );
 };
