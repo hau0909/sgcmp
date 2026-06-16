@@ -1,12 +1,14 @@
 "use client";
 
-import React, { useState } from "react";
-import { CheckCircle, X, Loader2 } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import Link from "next/link";
+import { CheckCircle, X, Loader2, ArrowLeft, FileQuestion } from "lucide-react";
 import { BookingDetailHeader } from "./BookingDetailHeader";
 import { BookingCustomerInfo } from "./BookingCustomerInfo";
 import { BookingServiceSpec } from "./BookingServiceSpec";
 import { BookingQuotationPanel } from "./BookingQuotationPanel";
 import { BookingStatus } from "../types";
+import { requestGetBookingDetail } from "../api/booking.api";
 
 interface BookingDetailContainerProps {
   bookingId: string;
@@ -15,44 +17,87 @@ interface BookingDetailContainerProps {
 export function BookingDetailContainer({
   bookingId,
 }: BookingDetailContainerProps) {
-  // Rich mock data simulating a request fetched from Supabase
-  const [booking, setBooking] = useState({
-    booking_id: bookingId,
-    customer_name: "Công ty TNHH Giải pháp Công nghệ ABC",
-    contact_person: "Trần Thị B (Giám đốc nhân sự)",
-    phone: "090 123 4567",
-    email: "contact@abctech.vn",
-    address: "Tòa nhà Innovation, 123 Đường Công Nghệ, Quận 7, TP. Hồ Chí Minh",
-    service_name: "Bảo vệ sự kiện (Event Security)",
-    guards_count: 15,
-    start_date: "2023-11-15T00:00:00Z",
-    end_date: "2023-11-17T23:59:59Z",
-    time_slots: ["08:00 - 22:00"],
-    special_instructions: [
-      "Yêu cầu 3 nhân sự thông thạo tiếng Anh để đón khách VIP.",
-      "Trang phục bảo vệ sự kiện chuẩn (Vest đen, cà vạt).",
-      "Cần có 1 đội trưởng quản lý chung tại hiện trường.",
-      "Thời gian ca trực từ 08:00 đến 22:00 mỗi ngày.",
-    ],
-    quoted_price: null as number | null,
-    status: "pending" as BookingStatus,
-    created_at: "2023-10-24T10:45:00Z",
-  });
+  const [booking, setBooking] = useState<{
+    booking_id: string;
+    customer_name: string;
+    contact_person: string;
+    phone: string;
+    email: string;
+    address: string;
+    service_name: string;
+    guards_count: number;
+    start_date: string;
+    end_date: string;
+    time_slots: string[];
+    special_instructions: string | string[] | null;
+    quoted_price: number | null;
+    status: BookingStatus;
+    created_at: string;
+  } | null>(null);
 
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [isSimulating, setIsSimulating] = useState(false);
+
+  const fetchDetail = React.useCallback(async (showLoading = true) => {
+    try {
+      if (showLoading) {
+        setIsLoading(true);
+      }
+      setError(null);
+      const res = await requestGetBookingDetail(bookingId);
+      if (res && res.booking) {
+        const b = res.booking;
+        setBooking({
+          booking_id: b.booking_id,
+          customer_name: b.customer_name,
+          contact_person: b.contact_person,
+          phone: b.phone,
+          email: b.email,
+          address: b.address,
+          service_name: b.service_name,
+          guards_count: b.guards_per_slot || 1,
+          start_date: b.start_date,
+          end_date: b.end_date,
+          time_slots: b.time_slots || [],
+          special_instructions: b.description || null,
+          quoted_price: b.quoted_price,
+          status: b.status,
+          created_at: b.created_at,
+        });
+      } else {
+        setError("Không tìm thấy thông tin yêu cầu đặt lịch.");
+      }
+    } catch (err) {
+      const errorObj = err as Error & { message?: string };
+      console.error("Lỗi khi tải chi tiết yêu cầu đặt lịch:", errorObj);
+      setError(errorObj?.message || "Lỗi kết nối máy chủ");
+    } finally {
+      setIsLoading(false);
+    }
+  }, [bookingId]);
+
+  useEffect(() => {
+    if (bookingId) {
+      fetchDetail();
+    }
+  }, [bookingId, fetchDetail]);
 
   // Trigger local state updates to simulate sending a quote to customer
   const handleQuote = (price: number, notes: string) => {
     setIsSimulating(true);
     // Simulate slight network delay for a high-end feel
     setTimeout(() => {
-      setBooking((prev) => ({
-        ...prev,
-        status: "quoted",
-        quoted_price: price,
-      }));
+      setBooking((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: "quoted",
+          quoted_price: price,
+        };
+      });
       setToastType("success");
       setToastMessage(
         `Đã cập nhật báo giá ${price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`
@@ -65,10 +110,13 @@ export function BookingDetailContainer({
   const handleReject = () => {
     setIsSimulating(true);
     setTimeout(() => {
-      setBooking((prev) => ({
-        ...prev,
-        status: "rejected",
-      }));
+      setBooking((prev) => {
+        if (!prev) return null;
+        return {
+          ...prev,
+          status: "rejected",
+        };
+      });
       setToastType("success");
       setToastMessage("Yêu cầu đặt lịch đã bị từ chối thành công.");
       setIsSimulating(false);
@@ -76,7 +124,7 @@ export function BookingDetailContainer({
   };
 
   // Clear toast notifications after 4 seconds
-  React.useEffect(() => {
+  useEffect(() => {
     if (toastMessage) {
       const timer = setTimeout(() => {
         setToastMessage(null);
@@ -84,6 +132,41 @@ export function BookingDetailContainer({
       return () => clearTimeout(timer);
     }
   }, [toastMessage]);
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-12 text-center h-[70vh]">
+        <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
+        <p className="text-sm text-on-surface-variant font-medium">
+          Đang tải chi tiết yêu cầu...
+        </p>
+      </div>
+    );
+  }
+
+  if (error || !booking) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-12 text-center h-[70vh]">
+        <div className="w-16 h-16 rounded-full bg-red-50 dark:bg-red-950/20 text-red-500 flex items-center justify-center mb-4 border border-red-100 dark:border-red-900/40">
+          <FileQuestion className="w-8 h-8" />
+        </div>
+        <h3 className="text-lg font-bold text-on-surface mb-2 font-headline">
+          Lỗi tải yêu cầu
+        </h3>
+        <p className="text-sm text-on-surface-variant max-w-xs mb-6 font-body">
+          {error || "Rất tiếc, chúng tôi không tìm thấy thông tin yêu cầu được yêu cầu."}
+        </p>
+        <Link
+          href="/requests"
+          className="bg-primary hover:bg-primary/95 text-on-primary font-semibold px-4 py-2 rounded-lg text-sm transition-transform active:scale-95 duration-100 flex items-center gap-1.5 shadow-sm cursor-pointer"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>Quay lại danh sách</span>
+        </Link>
+      </div>
+    );
+  }
+
 
   return (
     <div className="flex-1 p-6 lg:p-8 max-w-7xl mx-auto w-full space-y-6 relative">
