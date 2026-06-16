@@ -32,7 +32,7 @@ export const getContractsService = async (
       status: item.status,
       created_at: item.created_at,
       updated_at: item.updated_at,
-      
+
       // Virtual/mapped fields for UI rendering
       contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
       customer_name: profile?.full_name || "Khách hàng không tên",
@@ -76,7 +76,7 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
     status: item.status,
     created_at: item.created_at,
     updated_at: item.updated_at,
-    
+
     // Virtual/mapped fields for UI rendering
     contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
     customer_name: profile?.full_name || "Khách hàng không tên",
@@ -246,14 +246,14 @@ export const getCustomerContractsService = async (
       created_at: item.created_at,
       start_date: item.start_date || null,
       end_date: item.end_date || null,
-      
+
       // Secondary fields: provided as defaults per Contract interface but excluded from DB query
-      booking_id: "", 
+      booking_id: "",
       contract_file_url: null,
       customer_agreed: false,
       company_agreed: false,
-      updated_at: item.created_at, 
-      
+      updated_at: item.created_at,
+
       // UI specific virtual fields
       contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
       service_name: serviceName,
@@ -301,6 +301,8 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
   const company = booking?.companies;
   const serviceName = service?.name || "Dịch vụ chưa xác định";
   const companyName = company?.company_name || "Công ty chưa xác định";
+  
+  const reviewData = item.reviews?.[0] || null;
 
   // Format price to VND currency string
   let formattedPrice = "";
@@ -313,6 +315,8 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
 
   return {
     contract_id: item.contract_id,
+    customer_id: booking?.customer_id,
+    company_id: company?.company_id,
     contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
     status: item.status,
     customer_agreed: item.customer_agreed || false,
@@ -323,6 +327,11 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
     end_date: item.end_date || null,
     contract_file_url: item.contract_file_url || null,
     
+    // Review specific virtual fields
+    has_reviewed: !!reviewData,
+    review_rating: reviewData?.rating || 0,
+    review_comment: reviewData?.comment || "",
+
     // UI specific virtual fields
     service_name: serviceName,
     company_name: companyName,
@@ -332,11 +341,11 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
     time_slots: booking?.time_slots || [],
     description: booking?.description || null,
     formatted_price: formattedPrice || "Chưa báo giá",
-    
+
     company: {
       name: companyName,
-      phone: "Chưa cập nhật", 
-      email: "Chưa cập nhật", 
+      phone: "Chưa cập nhật",
+      email: "Chưa cập nhật",
       address: company?.address || "Chưa cập nhật địa chỉ",
     }
   };
