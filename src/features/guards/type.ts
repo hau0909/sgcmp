@@ -113,9 +113,11 @@ export type UploadGuardAvatarResponse = {
 };
 
 export type GuardProfileItem = {
+  user_id: string;
   full_name: string | null;
   phone_number: string | null;
   avatar_url: string | null;
+  email: string | null;
 };
 
 export type GuardListItem = {
