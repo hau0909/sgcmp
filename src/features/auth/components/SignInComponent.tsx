@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { requestLoginAccount } from "../api/auth.api";
 import { getRedirectPathByRole } from "../utils/redirectByRole";
+import { useAuthStore } from "@/store/auth.store";
 
 type FormErrors = {
   email?: string;
@@ -73,6 +74,7 @@ export default function SignInComponent() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
+  const setAuth = useAuthStore((state) => state.setAuth);
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -114,13 +116,6 @@ export default function SignInComponent() {
         password,
       });
 
-      console.log("LOGIN API RESULT:", result);
-      console.log("LOGIN API ROLE:", result.data?.role);
-      console.log(
-        "REDIRECT PATH:",
-        getRedirectPathByRole(result.data?.role ?? null),
-      );
-
       if (!result?.success) {
         setErrors({
           general: getErrorMessage(result?.message),
@@ -134,6 +129,12 @@ export default function SignInComponent() {
         });
         return;
       }
+
+      setAuth({
+        user_id: result.data.user_id,
+        role: result.data.role,
+        company_id: result.data.company_id,
+      });
 
       setSuccessMessage("Đăng nhập thành công. Đang chuyển hướng...");
 

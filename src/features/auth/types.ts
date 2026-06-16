@@ -68,3 +68,15 @@ export type LoginParams = {
   email: string;
   password: string;
 };
+
+export type LoginResponseData = {
+  user_id: string;
+  email: string;
+  full_name: string;
+  phone_number: string | null;
+  role: UserRole;
+  status: string;
+  avatar_url: string | null;
+  company_id: string | null;
+  company: unknown | null;
+};
