@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { BookingHeader } from "@/features/booking/components/BookingHeader";
 import { BookingFilters } from "@/features/booking/components/BookingFilters";
 import { BookingTable } from "@/features/booking/components/BookingTable";
@@ -8,6 +9,7 @@ import { Booking } from "@/features/booking/types";
 import { requestGetBookings } from "@/features/booking/api/booking.api";
 
 export default function BookingsPage() {
+  const router = useRouter();
   // Bookings list state
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -124,7 +126,7 @@ export default function BookingsPage() {
           page={page}
           limit={limit}
           onPageChange={setPage}
-          onViewDetails={() => {}}
+          onViewDetails={(id) => router.push(`/requests/${id}`)}
         />
       )}
     </div>

@@ -1,5 +1,5 @@
 import { Booking } from "../types";
-import { getBookingsService } from "../service/booking.service";
+import { getBookingsService, getBookingDetailService } from "../service/booking.service";
 
 export const handleGetBookings = async (
   companyId: string,
@@ -9,3 +9,8 @@ export const handleGetBookings = async (
   const result = await getBookingsService(companyId, page, limit);
   return result;
 };
+
+export const handleGetBookingDetail = async (id: string): Promise<any | null> => {
+  return await getBookingDetailService(id);
+};
+
