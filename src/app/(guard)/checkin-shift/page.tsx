@@ -1,203 +1,160 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useMemo } from "react";
+import { useSearchParams } from "next/navigation";
+import { MapPin, Clock3, CalendarDays, Building2 } from "lucide-react";
+import type { ShiftItem } from "@/features/guards/components/ShiftCard";
 import {
-  MapPin,
-  Clock3,
-  Crosshair,
-  MoreHorizontal,
-  Camera,
-  UserCheck,
-  Info,
-  CheckCircle2,
-  Loader2,
-} from "lucide-react";
+  createGuardMockShifts,
+  formatGuardShiftDateKey,
+} from "@/features/guards/data/shift-mock";
+
+const startOfWeekMonday = (date: Date) => {
+  const result = new Date(date);
+  const day = result.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+
+  result.setDate(result.getDate() + diff);
+  result.setHours(0, 0, 0, 0);
+
+  return result;
+};
+
+const parseDateKey = (dateKey: string | null) => {
+  if (!dateKey) {
+    return new Date();
+  }
+
+  const parsedDate = new Date(`${dateKey}T00:00:00`);
+
+  if (Number.isNaN(parsedDate.getTime())) {
+    return new Date();
+  }
+
+  return parsedDate;
+};
+
+const formatDateTitle = (date: Date) => {
+  return date.toLocaleDateString("vi-VN", {
+    weekday: "long",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+const getStatusLabel = (status: ShiftItem["status"]) => {
+  if (status === "assigned") {
+    return "PHÂN CÔNG";
+  }
+
+  if (status === "completed") {
+    return "HOÀN THÀNH";
+  }
+
+  return "VẮNG MẶT";
+};
+
+const getStatusStyle = (status: ShiftItem["status"]) => {
+  if (status === "assigned") {
+    return "bg-[#0754a6] text-white";
+  }
+
+  if (status === "completed") {
+    return "bg-green-600 text-white";
+  }
+
+  return "bg-red-600 text-white";
+};
 
 export default function GuardShiftPage() {
-  const [gpsVerified, setGpsVerified] = useState(false);
-  const [idVerified, setIdVerified] = useState(false);
-  const [gpsLoading, setGpsLoading] = useState(false);
+  const searchParams = useSearchParams();
 
-  const canCheckIn = gpsVerified && idVerified;
+  const selectedDate = useMemo(() => {
+    return parseDateKey(searchParams.get("date"));
+  }, [searchParams]);
 
-  const handleGetLocation = () => {
-    setGpsLoading(true);
+  const weekStart = useMemo(() => {
+    return startOfWeekMonday(selectedDate);
+  }, [selectedDate]);
 
-    setTimeout(() => {
-      setGpsVerified(true);
-      setGpsLoading(false);
-    }, 800);
-  };
+  const shifts = useMemo(() => {
+    const dateKey = formatGuardShiftDateKey(selectedDate);
+    const mockShifts = createGuardMockShifts(weekStart);
 
-  const handleVerifyId = () => {
-    setIdVerified(true);
-  };
+    return mockShifts[dateKey] ?? [];
+  }, [selectedDate, weekStart]);
 
   return (
     <div className="space-y-4">
-      {/* Upcoming Shift Card */}
-      <section className="rounded-md border border-slate-300 bg-white p-4 shadow-sm">
-        <div className="mb-5 flex items-start justify-between gap-3">
-          <h2 className="text-[22px] font-extrabold text-slate-800">
-            Ca trực sắp tới
-          </h2>
+      {/* Header */}
+      <section>
+        <h1 className="text-2xl font-extrabold text-slate-950">
+          Ca trực trong ngày
+        </h1>
 
-          <span className="rounded-sm bg-[#0754a6] px-3 py-1.5 text-xs font-extrabold tracking-wide text-white">
-            CHỜ DUYỆT
-          </span>
-        </div>
-
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <div className="mb-1 flex items-center gap-1.5 text-sm font-bold text-slate-500">
-              <MapPin className="h-4 w-4" />
-              <span>Vị trí</span>
-            </div>
-            <p className="text-base font-extrabold text-slate-800">
-              Tech Campus HQ
-            </p>
-          </div>
-
-          <div>
-            <div className="mb-1 flex items-center gap-1.5 text-sm font-bold text-slate-500">
-              <Clock3 className="h-4 w-4" />
-              <span>Thời lượng</span>
-            </div>
-            <p className="text-base font-extrabold text-slate-800">
-              08:00 - 16:00 (8h)
-            </p>
-          </div>
+        <div className="mt-2 flex items-center gap-2 text-sm font-bold capitalize text-slate-600">
+          <CalendarDays className="h-4 w-4 text-[#0754a6]" />
+          <span>{formatDateTitle(selectedDate)}</span>
         </div>
       </section>
 
-      {/* GPS Verification */}
-      <section className="overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm">
-        <div className="flex h-12 items-center justify-between border-b border-slate-300 bg-[#f8f9fc] px-4">
-          <div className="flex items-center gap-2">
-            {gpsVerified ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <Crosshair className="h-5 w-5 text-[#0754a6]" />
-            )}
-
-            <span className="text-sm font-extrabold tracking-wide text-slate-800">
-              Xác thực GPS
-            </span>
-          </div>
-
-          <button
-            type="button"
-            className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-red-500 text-red-500"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
-        </div>
-
-        <div className="relative h-[365px] overflow-hidden bg-slate-400">
-          {/* Fake map background */}
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,#d9d9d9_0%,#9d9d9d_35%,#888_70%)]" />
-
-          <div className="absolute inset-0 bg-slate-500/35 backdrop-blur-[1.5px]" />
-
-          <div className="absolute inset-0 opacity-20">
-            <div className="absolute left-[-40px] top-[70px] h-[1px] w-[520px] rotate-12 bg-white" />
-            <div className="absolute left-[-30px] top-[180px] h-[1px] w-[520px] -rotate-12 bg-white" />
-            <div className="absolute left-[60px] top-[-20px] h-[520px] w-[1px] rotate-12 bg-white" />
-            <div className="absolute left-[230px] top-[-20px] h-[520px] w-[1px] -rotate-12 bg-white" />
-          </div>
-
-          <div className="absolute inset-0 flex items-center justify-center">
-            <button
-              type="button"
-              onClick={handleGetLocation}
-              disabled={gpsLoading || gpsVerified}
-              className={`flex items-center gap-2 rounded-md px-5 py-3 text-sm font-extrabold text-white shadow-md transition-all ${
-                gpsVerified ? "bg-green-600" : "bg-[#0754a6] hover:bg-[#06498f]"
-              }`}
-            >
-              {gpsLoading ? (
-                <>
-                  <Loader2 className="h-5 w-5 animate-spin" />
-                  Đang lấy...
-                </>
-              ) : gpsVerified ? (
-                <>
-                  <CheckCircle2 className="h-5 w-5" />
-                  Đã xác thực
-                </>
-              ) : (
-                <>
-                  <Crosshair className="h-5 w-5" />
-                  Lấy vị trí
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </section>
-
-      {/* ID Verification */}
-      <section className="overflow-hidden rounded-md border border-slate-300 bg-white shadow-sm">
-        <div className="flex h-12 items-center justify-between border-b border-slate-300 bg-[#f8f9fc] px-4">
-          <div className="flex items-center gap-2">
-            {idVerified ? (
-              <CheckCircle2 className="h-5 w-5 text-green-600" />
-            ) : (
-              <UserCheck className="h-5 w-5 text-[#0754a6]" />
-            )}
-
-            <span className="text-sm font-extrabold tracking-wide text-slate-800">
-              Xác thực ID
-            </span>
-          </div>
-
-          <button
-            type="button"
-            className="flex h-7 w-7 items-center justify-center rounded-full border-2 border-red-500 text-red-500"
-          >
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
-        </div>
-
-        <button
-          type="button"
-          onClick={handleVerifyId}
-          className={`flex h-[92px] w-full items-center justify-center transition-all ${
-            idVerified
-              ? "bg-green-50 text-green-600"
-              : "bg-[#24282b] text-slate-400 hover:bg-[#1f2326]"
-          }`}
-        >
-          {idVerified ? (
-            <div className="flex items-center gap-2 font-extrabold">
-              <CheckCircle2 className="h-9 w-9" />
-              <span>Đã xác thực ID</span>
-            </div>
-          ) : (
-            <Camera className="h-11 w-11" />
-          )}
-        </button>
-      </section>
-
-      {/* Check In Button */}
+      {/* Shift List */}
       <section className="space-y-3">
-        <button
-          type="button"
-          disabled={!canCheckIn}
-          className={`flex h-14 w-full items-center justify-center gap-2 rounded-lg text-xl font-extrabold tracking-wide transition-all ${
-            canCheckIn
-              ? "bg-[#0754a6] text-white hover:bg-[#06498f]"
-              : "bg-slate-200 text-slate-400"
-          }`}
-        >
-          <UserCheck className="h-6 w-6" />
-          ĐIỂM DANH
-        </button>
+        {shifts.length > 0 ? (
+          shifts.map((shift) => {
+            return (
+              <article
+                key={shift.id}
+                className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm"
+              >
+                <div className="mb-4 flex items-start justify-between gap-3">
+                  <div>
+                    <h2 className="text-lg font-extrabold text-slate-800">
+                      Ca trực
+                    </h2>
 
-        <div className="flex items-center justify-center gap-1.5 text-xs font-bold text-slate-500">
-          <Info className="h-4 w-4" />
-          <span>Hoàn tất các bước xác thực để tiếp tục</span>
-        </div>
+                    <p className="mt-1 text-xs font-bold text-slate-500">
+                      Thông tin ca trực được phân công
+                    </p>
+                  </div>
+
+                  <span
+                    className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold ${getStatusStyle(
+                      shift.status,
+                    )}`}
+                  >
+                    {getStatusLabel(shift.status)}
+                  </span>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex items-start gap-2 text-slate-700">
+                    <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+                    <span className="text-sm font-extrabold">{shift.time}</span>
+                  </div>
+
+                  <div className="flex items-start gap-2 text-slate-700">
+                    <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+                    <span className="text-sm font-bold">{shift.location}</span>
+                  </div>
+
+                  <div className="flex items-start gap-2 text-slate-700">
+                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+                    <span className="text-sm font-bold">{shift.company}</span>
+                  </div>
+                </div>
+              </article>
+            );
+          })
+        ) : (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center">
+            <CalendarDays className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+            <p className="text-sm font-bold text-slate-500">
+              Không có ca trực trong ngày này.
+            </p>
+          </div>
+        )}
       </section>
     </div>
   );
