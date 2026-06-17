@@ -28,6 +28,10 @@ export default function CompanyLayout({
   const pathname = usePathname();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
+  if (pathname.startsWith("/onboarding")) {
+    return <>{children}</>;
+  }
+
   const sidebarLinks = [
     {
       name: "Tổng quan",
