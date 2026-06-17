@@ -84,13 +84,15 @@ export const handleLoginAccount = async ({ email, password }: LoginInput) => {
       success: true,
       message: "Đăng nhập thành công.",
       data: {
-        id: loginResult.user_id,
+        user_id: loginResult.user_id,
         email: loginResult.email,
         full_name: loginResult.full_name,
         phone_number: loginResult.phone_number,
         role: loginResult.role,
         status: loginResult.status,
         avatar_url: loginResult.avatar_url,
+        company_id: loginResult.company_id,
+        company: loginResult.company,
       },
     };
   } catch (error) {

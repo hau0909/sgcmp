@@ -13,3 +13,10 @@ export async function requestGetBookings(
     }
   );
 }
+
+export async function requestGetBookingDetail(id: string) {
+  return await fetcher(`/api/bookings/${id}`, {
+    method: "GET",
+  });
+}
+

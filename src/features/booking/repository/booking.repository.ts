@@ -47,3 +47,46 @@ export const getBookings = async (
     count: count || 0,
   };
 };
+
+export const getBookingDetail = async (id: string): Promise<any | null> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(`
+      booking_id,
+      customer_id,
+      company_id,
+      service_id,
+      address,
+      description,
+      guards_per_slot,
+      time_slots,
+      start_date,
+      end_date,
+      quoted_price,
+      status,
+      created_at,
+      updated_at,
+      profiles (
+        user_id,
+        full_name,
+        phone_number,
+        email,
+        address
+      ),
+      services (
+        service_id,
+        name,
+        description
+      )
+    `)
+    .eq("booking_id", id)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
