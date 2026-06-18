@@ -2,7 +2,12 @@ import type {
   ContractOption,
   CreateShiftInput,
   GetShiftDateRangeParams,
+  GetGuardShiftsResult,
+  GetGuardShiftsServiceParams,
 } from "../type";
+
+import { groupShiftsByDate } from "../utils/shift.utils";
+
 import {
   getShiftContractsByCompanyId,
   createShiftAssignments,
@@ -12,6 +17,7 @@ import {
   getContractShiftRule,
   getOverlappingGuardShifts,
   getAllShiftsByDateRange,
+  getGuardShiftsByRange,
 } from "../repository/shift.repository";
 
 export const getShiftContractOptionsService = async (
@@ -76,4 +82,27 @@ export const getAllShiftsByDateRangeService = async (
   params: GetShiftDateRangeParams,
 ) => {
   return getAllShiftsByDateRange(params);
+};
+
+export const getGuardShiftsService = async ({
+  guard_id,
+  start_date,
+  end_date,
+  start_time,
+  end_time,
+}: GetGuardShiftsServiceParams): Promise<GetGuardShiftsResult> => {
+  const shifts = await getGuardShiftsByRange({
+    guard_id,
+    start_time,
+    end_time,
+  });
+
+  return {
+    range: {
+      start_date,
+      end_date,
+    },
+    shifts,
+    grouped_by_date: groupShiftsByDate(shifts),
+  };
 };

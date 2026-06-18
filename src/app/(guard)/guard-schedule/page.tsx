@@ -1,16 +1,14 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { requestGetGuardShiftsByWeek } from "@/features/shift/api/shift.api";
+import type { GuardShiftItem } from "@/features/shift/type";
 import {
-  ShiftCard,
   type ShiftItem,
-} from "@/features/guards/components/ShiftCard";
-import {
-  createGuardMockShifts,
-  formatGuardShiftDateKey,
-} from "@/features/guards/data/shift-mock";
+  ShiftCard,
+} from "@/features/shift/components/ShiftCardGuard";
 
 type DaySchedule = {
   date: Date;
@@ -34,6 +32,14 @@ const startOfWeekMonday = (date: Date) => {
   result.setHours(0, 0, 0, 0);
 
   return result;
+};
+
+const formatGuardShiftDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
 };
 
 const formatMonthYear = (weekDays: Date[]) => {
@@ -70,18 +76,101 @@ const isSameDate = (first: Date, second: Date) => {
   );
 };
 
+const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
+  return {
+    id: shift.id,
+    time: shift.time,
+    location: shift.location,
+    address: shift.address,
+    status: shift.status,
+  };
+};
+
+const ShiftCardSkeleton = () => {
+  return (
+    <div className="animate-pulse rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="mb-4 h-5 w-24 rounded-full bg-slate-200" />
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 shrink-0 rounded-full bg-slate-200" />
+          <div className="h-4 w-32 rounded bg-slate-200" />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 shrink-0 rounded-full bg-slate-200" />
+          <div className="h-4 w-52 rounded bg-slate-200" />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 shrink-0 rounded-full bg-slate-200" />
+          <div className="h-4 w-40 rounded bg-slate-200" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EmptyScheduleSkeleton = () => {
+  return (
+    <div className="flex h-full min-h-[128px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4">
+      <div className="w-full animate-pulse space-y-3">
+        <div className="mx-auto h-4 w-32 rounded bg-slate-200" />
+        <div className="mx-auto h-4 w-48 rounded bg-slate-200" />
+        <div className="mx-auto h-4 w-24 rounded bg-slate-200" />
+      </div>
+    </div>
+  );
+};
+
 export default function GuardSchedulePage() {
   const today = useMemo(() => new Date(), []);
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(today));
   const [selectedDate, setSelectedDate] = useState(today);
+  const [shiftsByDate, setShiftsByDate] = useState<Record<string, ShiftItem[]>>(
+    {},
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
   const router = useRouter();
 
   const weekDays = useMemo(() => {
     return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
   }, [weekStart]);
 
-  const mockShifts = useMemo(() => {
-    return createGuardMockShifts(weekStart);
+  useEffect(() => {
+    const fetchGuardShiftsByWeek = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await requestGetGuardShiftsByWeek({
+          date: formatGuardShiftDateKey(weekStart),
+        });
+
+        const groupedShifts = response.data.grouped_by_date;
+        const mappedShiftsByDate: Record<string, ShiftItem[]> = {};
+
+        Object.entries(groupedShifts).forEach(([dateKey, shifts]) => {
+          mappedShiftsByDate[dateKey] = shifts.map(mapGuardShiftToShiftItem);
+        });
+
+        setShiftsByDate(mappedShiftsByDate);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Không thể lấy lịch trực theo tuần.";
+
+        setError(message);
+        setShiftsByDate({});
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGuardShiftsByWeek();
   }, [weekStart]);
 
   const weekSchedules: DaySchedule[] = useMemo(() => {
@@ -90,10 +179,10 @@ export default function GuardSchedulePage() {
 
       return {
         date,
-        shifts: mockShifts[dateKey] ?? [],
+        shifts: shiftsByDate[dateKey] ?? [],
       };
     });
-  }, [weekDays, mockShifts]);
+  }, [weekDays, shiftsByDate]);
 
   const formatDayMonth = (date: Date) => {
     return `${date.getDate()}/${date.getMonth() + 1}`;
@@ -156,7 +245,8 @@ export default function GuardSchedulePage() {
           <button
             type="button"
             onClick={handlePreviousWeek}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-all hover:bg-blue-100 hover:text-[#0b4f9c]"
+            disabled={loading}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-all hover:bg-blue-100 hover:text-[#0b4f9c] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronLeft size={30} />
           </button>
@@ -164,7 +254,8 @@ export default function GuardSchedulePage() {
           <button
             type="button"
             onClick={handleCurrentWeek}
-            className="rounded-xl px-4 py-2 text-center transition-all hover:bg-blue-50"
+            disabled={loading}
+            className="rounded-xl px-4 py-2 text-center transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <h2 className="text-lg font-black capitalize text-[#0b4f9c]">
               {formatMonthYear(weekDays)}
@@ -174,7 +265,8 @@ export default function GuardSchedulePage() {
           <button
             type="button"
             onClick={handleNextWeek}
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-all hover:bg-blue-100 hover:text-[#0b4f9c]"
+            disabled={loading}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-all hover:bg-blue-100 hover:text-[#0b4f9c] disabled:cursor-not-allowed disabled:opacity-50"
           >
             <ChevronRight size={30} />
           </button>
@@ -185,14 +277,15 @@ export default function GuardSchedulePage() {
           {weekDays.map((date) => {
             const dateKey = formatGuardShiftDateKey(date);
             const isToday = isSameDate(date, today);
-            const hasShift = !!mockShifts[dateKey]?.length;
+            const hasShift = !!shiftsByDate[dateKey]?.length;
 
             return (
               <button
                 key={dateKey}
                 type="button"
                 onClick={() => handleOpenCheckinByDate(date)}
-                className={`relative mx-1 flex min-h-[74px] flex-col items-center justify-center rounded-2xl transition-all ${
+                disabled={loading}
+                className={`relative mx-1 flex min-h-[74px] flex-col items-center justify-center rounded-2xl transition-all disabled:cursor-not-allowed ${
                   isToday
                     ? "bg-blue-200 text-[#0b4f9c]"
                     : "bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-[#0b4f9c]"
@@ -218,13 +311,25 @@ export default function GuardSchedulePage() {
                   {date.getDate()}
                 </span>
 
-                {hasShift && (
+                {hasShift && !loading && (
                   <span className="absolute bottom-2 h-2 w-2 rounded-full bg-[#0b4f9c]" />
+                )}
+
+                {loading && (
+                  <span className="absolute bottom-2 h-2 w-2 animate-pulse rounded-full bg-slate-300" />
                 )}
               </button>
             );
           })}
         </div>
+
+        {error && (
+          <div className="border-b border-red-100 bg-red-50 px-4 py-3">
+            <p className="text-center text-sm font-bold text-red-600">
+              {error}
+            </p>
+          </div>
+        )}
 
         {/* Vertical Calendar List */}
         <div className="divide-y divide-slate-200">
@@ -245,7 +350,8 @@ export default function GuardSchedulePage() {
                 <button
                   type="button"
                   onClick={() => handleOpenCheckinByDate(day.date)}
-                  className={`flex min-h-[160px] flex-col items-center justify-center border-r border-slate-200 px-2 py-6 ${
+                  disabled={loading}
+                  className={`flex min-h-[160px] flex-col items-center justify-center border-r border-slate-200 px-2 py-6 disabled:cursor-not-allowed ${
                     isToday ? "bg-blue-50" : "bg-slate-50"
                   }`}
                 >
@@ -273,9 +379,21 @@ export default function GuardSchedulePage() {
                 {/* Shift Cell */}
                 <div
                   className="min-h-[160px] cursor-pointer p-4"
-                  onClick={() => handleOpenCheckinByDate(day.date)}
+                  onClick={() => {
+                    if (!loading) {
+                      handleOpenCheckinByDate(day.date);
+                    }
+                  }}
                 >
-                  {hasShift ? (
+                  {loading ? (
+                    <div className="space-y-4">
+                      {isToday ? (
+                        <ShiftCardSkeleton />
+                      ) : (
+                        <EmptyScheduleSkeleton />
+                      )}
+                    </div>
+                  ) : hasShift ? (
                     <div className="space-y-4">
                       {day.shifts.map((shift) => (
                         <ShiftCard key={shift.id} shift={shift} />

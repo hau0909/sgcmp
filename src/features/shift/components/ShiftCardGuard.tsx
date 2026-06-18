@@ -9,7 +9,7 @@ export type ShiftItem = {
   id: string;
   time: string;
   location: string;
-  company: string;
+  address: string;
   status: ShiftStatus;
 };
 
@@ -68,14 +68,14 @@ export function ShiftCard({ shift }: ShiftCardProps) {
 
         <div className="flex items-start gap-2 text-slate-700">
           <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0b4f9c]" />
-          <span className="text-xs font-medium leading-5">
-            {shift.location}
-          </span>
+          <span className="text-xs font-medium leading-5">{shift.address}</span>
         </div>
 
         <div className="flex items-start gap-2 text-slate-700">
           <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0b4f9c]" />
-          <span className="text-xs font-medium leading-5">{shift.company}</span>
+          <span className="text-xs font-medium leading-5">
+            {shift.location}
+          </span>
         </div>
       </div>
     </div>

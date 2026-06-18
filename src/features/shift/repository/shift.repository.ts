@@ -1,3 +1,4 @@
+import { formatDateKey, formatTimes } from "./../utils/shift.utils";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ContractOption,
@@ -14,6 +15,8 @@ import type {
   ShiftWithAssignments,
   ShiftAssignmentQuery,
   ShiftQuery,
+  GuardShiftItem,
+  ShiftRow,
 } from "../type";
 
 const getSingleRelation = <T>(value: T | T[] | null | undefined): T | null => {
@@ -389,4 +392,139 @@ export const getAllShiftsByDateRange = async ({
   }
 
   return ((data ?? []) as unknown as ShiftQuery[]).map(mapShiftWithAssignments);
+};
+
+const getFirstItem = <T>(value: T | T[] | null | undefined): T | null => {
+  if (!value) {
+    return null;
+  }
+
+  if (Array.isArray(value)) {
+    return value[0] ?? null;
+  }
+
+  return value;
+};
+
+const mapShiftRowToItem = (row: ShiftRow): GuardShiftItem | null => {
+  const shift = getFirstItem(row.shifts);
+
+  if (!shift) {
+    return null;
+  }
+
+  const contract = getFirstItem(shift.contracts);
+  const booking = getFirstItem(contract?.bookings);
+
+  const startTime = formatTimes(shift.start_time);
+  const endTime = formatTimes(shift.end_time);
+
+  return {
+    id: row.assignment_id,
+    assignment_id: row.assignment_id,
+    shift_id: shift.shift_id,
+    contract_id: shift.contract_id,
+
+    date: formatDateKey(shift.start_time),
+    time: `${startTime} - ${endTime}`,
+
+    start_time: shift.start_time,
+    end_time: shift.end_time,
+
+    location: shift.location ?? "Chưa cập nhật vị trí",
+    address: booking?.address ?? "Chưa cập nhật địa chỉ",
+
+    status: row.status,
+  };
+};
+
+export const getGuardIdByUserId = async (
+  user_id: string,
+): Promise<string | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("guards")
+    .select("guard_id")
+    .eq("user_id", user_id)
+    .single();
+
+  if (error || !data) {
+    return null;
+  }
+
+  return data.guard_id;
+};
+
+export const getGuardShiftsByRange = async ({
+  guard_id,
+  start_time,
+  end_time,
+}: {
+  guard_id: string;
+  start_time: string;
+  end_time: string;
+}): Promise<GuardShiftItem[]> => {
+  const supabase = await createClient();
+
+  const { data: guardData, error: guardError } = await supabase
+    .from("guards")
+    .select("user_id")
+    .eq("guard_id", guard_id)
+    .maybeSingle();
+
+  if (guardError) {
+    console.error("Get Guard User ID Error:", guardError);
+    throw new Error(guardError.message);
+  }
+
+  const assignmentGuardId = guardData?.user_id ?? guard_id;
+
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select(
+      `
+      assignment_id,
+      shift_id,
+      guard_id,
+      assigned_by,
+      status,
+      created_at,
+      updated_at,
+      shifts!inner (
+        shift_id,
+        contract_id,
+        shift_name,
+        start_time,
+        end_time,
+        required_guards,
+        location,
+        contracts!inner (
+          contract_id,
+          bookings!inner (
+            booking_id,
+            address
+          )
+        )
+      )
+    `,
+    )
+    .eq("guard_id", assignmentGuardId)
+    .lt("shifts.start_time", end_time)
+    .gt("shifts.end_time", start_time);
+
+  if (error) {
+    console.error("Get Guard Shifts Error:", error);
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as ShiftRow[])
+    .map(mapShiftRowToItem)
+    .filter((shift): shift is GuardShiftItem => Boolean(shift))
+    .sort((first, second) => {
+      return (
+        new Date(first.start_time).getTime() -
+        new Date(second.start_time).getTime()
+      );
+    });
 };
