@@ -297,3 +297,131 @@ export type ShiftQuery = {
   contracts: ShiftContractQuery | ShiftContractQuery[] | null;
   shift_assignments: ShiftAssignmentQuery[] | null;
 };
+
+export type GuardShiftItem = {
+  id: string;
+  assignment_id: string;
+  shift_id: string;
+  contract_id: string | null;
+
+  date: string;
+  time: string;
+
+  start_time: string;
+  end_time: string;
+
+  location: string;
+  address: string;
+
+  status: ShiftAssignmentStatus;
+};
+
+export type GuardShiftGroupedByDate = Record<string, GuardShiftItem[]>;
+
+export type GetGuardShiftsResult = {
+  range: {
+    start_date: string;
+    end_date: string;
+  };
+  shifts: GuardShiftItem[];
+  grouped_by_date: GuardShiftGroupedByDate;
+};
+
+export type ShiftRow = {
+  assignment_id: string;
+  shift_id: string;
+  guard_id: string;
+  assigned_by: string | null;
+  status: ShiftAssignmentStatus;
+  created_at: string;
+  updated_at: string;
+  shifts:
+    | {
+        shift_id: string;
+        contract_id: string | null;
+        shift_name: string | null;
+        start_time: string;
+        end_time: string;
+        required_guards: number;
+        location: string | null;
+        contracts:
+          | {
+              contract_id: string;
+              bookings:
+                | {
+                    booking_id: string;
+                    address: string | null;
+                  }
+                | {
+                    booking_id: string;
+                    address: string | null;
+                  }[]
+                | null;
+            }
+          | {
+              contract_id: string;
+              bookings:
+                | {
+                    booking_id: string;
+                    address: string | null;
+                  }
+                | {
+                    booking_id: string;
+                    address: string | null;
+                  }[]
+                | null;
+            }[]
+          | null;
+      }
+    | {
+        shift_id: string;
+        contract_id: string | null;
+        shift_name: string | null;
+        start_time: string;
+        end_time: string;
+        required_guards: number;
+        location: string | null;
+        contracts:
+          | {
+              contract_id: string;
+              bookings:
+                | {
+                    booking_id: string;
+                    address: string | null;
+                  }
+                | {
+                    booking_id: string;
+                    address: string | null;
+                  }[]
+                | null;
+            }
+          | {
+              contract_id: string;
+              bookings:
+                | {
+                    booking_id: string;
+                    address: string | null;
+                  }
+                | {
+                    booking_id: string;
+                    address: string | null;
+                  }[]
+                | null;
+            }[]
+          | null;
+      }[]
+    | null;
+};
+
+export type GetGuardShiftsServiceParams = {
+  guard_id: string;
+  start_date: string;
+  end_date: string;
+  start_time: string;
+  end_time: string;
+};
+
+export type GetGuardShiftsResponse = {
+  message: string;
+  data: GetGuardShiftsResult;
+};

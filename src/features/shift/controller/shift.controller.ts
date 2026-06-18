@@ -23,6 +23,12 @@ import {
   isValidDateKey,
 } from "@/utils/calcDate";
 
+import { getGuardShiftQueryParams } from "../utils/shift-server.utils";
+import { resolveGuardIdForShift } from "../utils/shift-server.utils";
+import { addDaysToDateKey } from "@/utils/calcDate";
+import { getGuardShiftsService } from "../service/shift.service";
+import { startOfWeekMondayDateKey } from "../utils/shift.utils";
+
 export const handleGetShiftContracts = async () => {
   const user = await getUser();
 
@@ -412,5 +418,100 @@ export const handleGetAllShiftsByWeek = async (request: Request) => {
         : "Lấy danh sách ca trực theo tuần thất bại";
 
     return Response.json({ message }, { status: 400 });
+  }
+};
+
+export const handleGetGuardShiftsByDay = async (request: Request) => {
+  try {
+    const { date } = getGuardShiftQueryParams(request);
+
+    const guardResult = await resolveGuardIdForShift();
+
+    if ("response" in guardResult) {
+      return guardResult.response;
+    }
+
+    const { startTime, endTime } = getDayDateRange(date);
+
+    const result = await getGuardShiftsService({
+      guard_id: guardResult.guardId,
+      start_date: date,
+      end_date: addDaysToDateKey(date, 1),
+      start_time: startTime,
+      end_time: endTime,
+    });
+
+    return Response.json(
+      {
+        message: "Lấy ca trực trong ngày thành công",
+        data: result,
+      },
+      {
+        status: 200,
+      },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Lấy ca trực trong ngày thất bại";
+
+    return Response.json(
+      {
+        message,
+      },
+      {
+        status: 400,
+      },
+    );
+  }
+};
+
+export const handleGetGuardShiftsByWeek = async (request: Request) => {
+  try {
+    const { date } = getGuardShiftQueryParams(request);
+
+    const guardResult = await resolveGuardIdForShift();
+
+    if ("response" in guardResult) {
+      return guardResult.response;
+    }
+
+    const weekStartDate = startOfWeekMondayDateKey(date);
+    const weekEndDate = addDaysToDateKey(weekStartDate, 7);
+
+    const { startTime, endTime } = getWeekDateRange(date);
+
+    const result = await getGuardShiftsService({
+      guard_id: guardResult.guardId,
+      start_date: weekStartDate,
+      end_date: weekEndDate,
+      start_time: startTime,
+      end_time: endTime,
+    });
+
+    return Response.json(
+      {
+        message: "Lấy lịch trực theo tuần thành công",
+        data: result,
+      },
+      {
+        status: 200,
+      },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Lấy lịch trực theo tuần thất bại";
+
+    return Response.json(
+      {
+        message,
+      },
+      {
+        status: 400,
+      },
+    );
   }
 };

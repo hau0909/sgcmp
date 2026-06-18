@@ -248,3 +248,22 @@ export const getGuardDetail = async (
 
   return data as unknown as GuardDetailDatabase | null;
 };
+
+export const getGuardIdByUserId = async (
+  userId: string,
+): Promise<string | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("guards")
+    .select("guard_id")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Get Guard ID By User ID Error:", error);
+    throw new Error(error.message);
+  }
+
+  return data?.guard_id ?? null;
+};
