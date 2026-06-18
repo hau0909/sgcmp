@@ -1,108 +1,25 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import { BookingHeader } from "@/features/booking/components/BookingHeader";
 import { BookingTable } from "@/features/booking/components/BookingTable";
 import { Booking } from "@/features/booking/types";
-
-// Mock data for Coordinator Bookings view (Accepted status with active contracts only)
-const MOCK_BOOKINGS: Booking[] = [
-  {
-    booking_id: "bkg-1",
-    customer_id: "cust-1",
-    company_id: "9b9da580-1a8b-4394-87c4-ebcba555ffe5",
-    service_id: "svc-1",
-    address: "120 Xa Lộ Hà Nội, Thảo Điền, Quận 2, TP. HCM",
-    description: "Cần bảo vệ tuần tra đêm, tuần tra xung quanh khu văn phòng vào mỗi giờ từ 22h tối đến 6h sáng.",
-    guards_per_slot: 3,
-    time_slots: ["22:00-06:00"],
-    start_date: "2026-06-20",
-    end_date: "2026-06-30",
-    quoted_price: 15000000,
-    status: "accepted",
-    created_at: "2026-06-17T08:00:00Z",
-    updated_at: "2026-06-17T08:00:00Z",
-    customer_name: "Công ty TNHH Vận Tải Đông Á",
-    service_name: "Tuần tra ban đêm"
-  },
-  {
-    booking_id: "bkg-2",
-    customer_id: "cust-2",
-    company_id: "9b9da580-1a8b-4394-87c4-ebcba555ffe5",
-    service_id: "svc-2",
-    address: "45 Nguyễn Huệ, Bến Nghé, Quận 1, TP. HCM",
-    description: "Bảo vệ sảnh chính tòa nhà văn phòng ngân hàng. Yêu cầu ngoại hình lịch sự, biết tiếng Anh cơ bản.",
-    guards_per_slot: 2,
-    time_slots: ["07:30-17:30"],
-    start_date: "2026-07-01",
-    end_date: "2026-12-31",
-    quoted_price: 120000000,
-    status: "accepted",
-    created_at: "2026-06-16T10:30:00Z",
-    updated_at: "2026-06-16T10:30:00Z",
-    customer_name: "Ngân hàng TMCP Việt Á",
-    service_name: "Bảo vệ Văn phòng/Trụ sở"
-  },
-  {
-    booking_id: "bkg-3",
-    customer_id: "cust-3",
-    company_id: "9b9da580-1a8b-4394-87c4-ebcba555ffe5",
-    service_id: "svc-3",
-    address: "208 Nguyễn Hữu Cảnh, Phường 22, Bình Thạnh, TP. HCM",
-    description: "Đội ngũ phản ứng nhanh bảo vệ an ninh sự kiện âm nhạc cuối tuần.",
-    guards_per_slot: 5,
-    time_slots: ["16:00-23:00"],
-    start_date: "2026-06-25",
-    end_date: "2026-06-27",
-    quoted_price: 45000000,
-    status: "accepted",
-    created_at: "2026-06-15T14:15:00Z",
-    updated_at: "2026-06-15T14:15:00Z",
-    customer_name: "Chung cư Cao cấp Landmark",
-    service_name: "An ninh Sự kiện"
-  },
-  {
-    booking_id: "bkg-4",
-    customer_id: "cust-4",
-    company_id: "9b9da580-1a8b-4394-87c4-ebcba555ffe5",
-    service_id: "svc-4",
-    address: "78 Lê Lợi, Bến Thành, Quận 1, TP. HCM",
-    description: "Bảo vệ nhà hàng ẩm thực vào giờ cao điểm từ trưa đến tối.",
-    guards_per_slot: 1,
-    time_slots: ["11:00-22:00"],
-    start_date: "2026-06-10",
-    end_date: "2026-06-15",
-    quoted_price: 6000000,
-    status: "accepted",
-    created_at: "2026-06-08T09:00:00Z",
-    updated_at: "2026-06-08T09:00:00Z",
-    customer_name: "Chuỗi Nhà hàng ẩm thực Sen",
-    service_name: "Bảo vệ Mục tiêu Cố định"
-  },
-  {
-    booking_id: "bkg-5",
-    customer_id: "cust-5",
-    company_id: "9b9da580-1a8b-4394-87c4-ebcba555ffe5",
-    service_id: "svc-5",
-    address: "12 Đường Số 4, Linh Chiểu, Thủ Đức, TP. HCM",
-    description: "Bảo vệ cổng chính trường tiểu học, phân luồng giao thông vào giờ đưa đón học sinh.",
-    guards_per_slot: 2,
-    time_slots: ["06:30-18:30"],
-    start_date: "2026-09-01",
-    end_date: "2027-05-31",
-    quoted_price: null,
-    status: "accepted",
-    created_at: "2026-06-18T07:30:00Z",
-    updated_at: "2026-06-18T07:30:00Z",
-    customer_name: "Trường Tiểu học Quốc tế IQ",
-    service_name: "An ninh Học đường"
-  }
-];
+import { requestGetBookings } from "@/features/booking/api/booking.api";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function CoordinatorBookingsPage() {
   const router = useRouter();
+  const storeCompanyId = useAuthStore((state) => state.company_id);
+
+  // Fallback to demo company ID if none is active in store
+  const companyId = storeCompanyId || "9b9da580-1a8b-4394-87c4-ebcba555ffe5";
+
+  // Data and loading states
+  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
+  const [isLoading, setIsLoading] = useState(true);
 
   // Local state for pagination and filtering
   const [page, setPage] = useState(1);
@@ -111,6 +28,40 @@ export default function CoordinatorBookingsPage() {
   const [search, setSearch] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
+
+  // Fetch approved bookings (accepted status) from API
+  useEffect(() => {
+    let active = true;
+    const fetchApprovedBookings = async () => {
+      setIsLoading(true);
+      try {
+        const result = await requestGetBookings(
+          companyId,
+          page,
+          limit,
+          "accepted", // Booking status must be accepted
+          "active"    // Contract status must be active
+        );
+
+        if (active) {
+          setBookings(result.bookings || []);
+          setTotalCount(result.totalCount || 0);
+        }
+      } catch (error) {
+        console.error("Lỗi khi tải danh sách đơn đặt lịch từ API:", error);
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchApprovedBookings();
+
+    return () => {
+      active = false;
+    };
+  }, [page, companyId]);
 
   // Handler for filter changes
   const handleSearchChange = (val: string) => {
@@ -128,10 +79,10 @@ export default function CoordinatorBookingsPage() {
     setPage(1);
   };
 
-  // Export report handler (simulated)
+  // Export report handler
   const handleExport = () => {
     const jsonStr = `data:text/json;charset=utf-8,${encodeURIComponent(
-      JSON.stringify(MOCK_BOOKINGS, null, 2),
+      JSON.stringify(bookings, null, 2),
     )}`;
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", jsonStr);
@@ -168,7 +119,7 @@ export default function CoordinatorBookingsPage() {
                 type="text"
                 value={search}
                 onChange={(e) => handleSearchChange(e.target.value)}
-                placeholder="Mã Booking, Khách Hàng, Dịch Vụ, Địa Chỉ..."
+                placeholder="Tìm theo khách hàng, dịch vụ, địa chỉ..."
                 className="w-full pl-9 pr-3 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
               />
             </div>
@@ -203,14 +154,23 @@ export default function CoordinatorBookingsPage() {
       </div>
 
       {/* Data Table */}
-      <BookingTable
-        bookings={MOCK_BOOKINGS}
-        totalCount={MOCK_BOOKINGS.length}
-        page={page}
-        limit={limit}
-        onPageChange={setPage}
-        onViewDetails={(id) => router.push(`/bookings/${id}`)}
-      />
+      {isLoading ? (
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-12 text-center shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
+          <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
+          <p className="text-xs text-on-surface-variant/80 font-medium">
+            Đang tải danh sách đơn đặt lịch...
+          </p>
+        </div>
+      ) : (
+        <BookingTable
+          bookings={bookings}
+          totalCount={totalCount}
+          page={page}
+          limit={limit}
+          onPageChange={setPage}
+          onViewDetails={(id) => router.push(`/bookings/${id}`)}
+        />
+      )}
     </div>
   );
 }

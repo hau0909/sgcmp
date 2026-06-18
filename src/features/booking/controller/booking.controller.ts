@@ -4,9 +4,11 @@ import { getBookingsService, getBookingDetailService } from "../service/booking.
 export const handleGetBookings = async (
   companyId: string,
   page: number,
-  limit: number
+  limit: number,
+  status?: string,
+  contractStatus?: string
 ): Promise<{ bookings: Booking[]; totalCount: number }> => {
-  const result = await getBookingsService(companyId, page, limit);
+  const result = await getBookingsService(companyId, page, limit, status, contractStatus);
   return result;
 };
 

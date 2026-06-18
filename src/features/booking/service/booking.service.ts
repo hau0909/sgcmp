@@ -4,9 +4,11 @@ import { getBookings, getBookingDetail } from "../repository/booking.repository"
 export const getBookingsService = async (
   companyId: string,
   page: number,
-  limit: number
+  limit: number,
+  status?: string,
+  contractStatus?: string
 ): Promise<{ bookings: Booking[]; totalCount: number }> => {
-  const { data, count } = await getBookings(companyId, page, limit);
+  const { data, count } = await getBookings(companyId, page, limit, status, contractStatus);
 
   const bookings = data.map((item: BookingWithCustomerProfile): Booking => {
     return {
