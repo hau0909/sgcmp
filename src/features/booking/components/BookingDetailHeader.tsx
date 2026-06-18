@@ -9,12 +9,14 @@ interface BookingDetailHeaderProps {
   bookingId: string;
   status: BookingStatus;
   createdAt: string;
+  backUrl?: string;
 }
 
 export function BookingDetailHeader({
   bookingId,
   status,
   createdAt,
+  backUrl = "/requests",
 }: BookingDetailHeaderProps) {
   // Format receipt time
   const formattedDate = React.useMemo(() => {
@@ -76,7 +78,7 @@ export function BookingDetailHeader({
       {/* Breadcrumbs Navigation */}
       <nav className="flex items-center space-x-2 text-xs font-medium text-on-surface-variant mb-2">
         <Link
-          href="/requests"
+          href={backUrl}
           className="hover:text-primary transition-colors cursor-pointer"
         >
           Yêu cầu

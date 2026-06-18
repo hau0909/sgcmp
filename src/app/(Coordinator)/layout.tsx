@@ -38,6 +38,12 @@ export default function CoordinatorLayout({
       active: pathname === "/schedules",
     },
     {
+      name: "Đơn yêu cầu",
+      href: "/bookings",
+      icon: FileText,
+      active: pathname === "/bookings" || pathname.startsWith("/bookings/"),
+    },
+    {
       name: "Bảo vệ",
       href: "/guards",
       icon: ShieldUser,
@@ -184,7 +190,7 @@ export default function CoordinatorLayout({
           </header>
 
           {/* Page Content Viewport */}
-          <main className="flex-1 overflow-y-auto bg-surface-bright p-6">
+          <main className="flex-1 overflow-y-auto bg-surface-bright">
             {children}
           </main>
         </div>

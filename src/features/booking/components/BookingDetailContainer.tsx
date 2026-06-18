@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { CheckCircle, X, Loader2, ArrowLeft, FileQuestion } from "lucide-react";
 import { BookingDetailHeader } from "./BookingDetailHeader";
 import { BookingCustomerInfo } from "./BookingCustomerInfo";
@@ -10,6 +11,94 @@ import { BookingQuotationPanel } from "./BookingQuotationPanel";
 import { BookingStatus } from "../types";
 import { requestGetBookingDetail } from "../api/booking.api";
 
+const MOCK_DETAILS: Record<string, any> = {
+  "bkg-1": {
+    booking_id: "bkg-1",
+    customer_name: "Công ty TNHH Vận Tải Đông Á",
+    contact_person: "Nguyễn Văn Hùng",
+    phone: "0901234567",
+    email: "hung.nguyen@donga.com",
+    address: "120 Xa Lộ Hà Nội, Thảo Điền, Quận 2, TP. HCM",
+    service_name: "Tuần tra ban đêm",
+    guards_count: 3,
+    start_date: "2026-06-20",
+    end_date: "2026-06-30",
+    time_slots: ["22:00-06:00"],
+    special_instructions: "Cần bảo vệ tuần tra đêm, tuần tra xung quanh khu văn phòng vào mỗi giờ từ 22h tối đến 6h sáng.",
+    quoted_price: 15000000,
+    status: "accepted",
+    created_at: "2026-06-17T08:00:00Z"
+  },
+  "bkg-2": {
+    booking_id: "bkg-2",
+    customer_name: "Ngân hàng TMCP Việt Á",
+    contact_person: "Trần Thị Lan",
+    phone: "0918765432",
+    email: "lan.tran@vieta.com.vn",
+    address: "45 Nguyễn Huệ, Bến Nghé, Quận 1, TP. HCM",
+    service_name: "Bảo vệ Văn phòng/Trụ sở",
+    guards_count: 2,
+    start_date: "2026-07-01",
+    end_date: "2026-12-31",
+    time_slots: ["07:30-17:30"],
+    special_instructions: "Bảo vệ sảnh chính tòa nhà văn phòng ngân hàng. Yêu cầu ngoại hình lịch sự, biết tiếng Anh cơ bản.",
+    quoted_price: 120000000,
+    status: "accepted",
+    created_at: "2026-06-16T10:30:00Z"
+  },
+  "bkg-3": {
+    booking_id: "bkg-3",
+    customer_name: "Chung cư Cao cấp Landmark",
+    contact_person: "Phạm Minh Hoàng",
+    phone: "0987654321",
+    email: "hoang.pham@landmark.vn",
+    address: "208 Nguyễn Hữu Cảnh, Phường 22, Bình Thạnh, TP. HCM",
+    service_name: "An ninh Sự kiện",
+    guards_count: 5,
+    start_date: "2026-06-25",
+    end_date: "2026-06-27",
+    time_slots: ["16:00-23:00"],
+    special_instructions: "Đội ngũ phản ứng nhanh bảo vệ an ninh sự kiện âm nhạc cuối tuần.",
+    quoted_price: 45000000,
+    status: "accepted",
+    created_at: "2026-06-15T14:15:00Z"
+  },
+  "bkg-4": {
+    booking_id: "bkg-4",
+    customer_name: "Chuỗi Nhà hàng ẩm thực Sen",
+    contact_person: "Lê Hoàng Nam",
+    phone: "0976543210",
+    email: "nam.le@senrestaurants.com",
+    address: "78 Lê Lợi, Bến Thành, Quận 1, TP. HCM",
+    service_name: "Bảo vệ Mục tiêu Cố định",
+    guards_count: 1,
+    start_date: "2026-06-10",
+    end_date: "2026-06-15",
+    time_slots: ["11:00-22:00"],
+    special_instructions: "Bảo vệ nhà hàng ẩm thực vào giờ cao điểm từ trưa đến tối.",
+    quoted_price: 6000000,
+    status: "accepted",
+    created_at: "2026-06-08T09:00:00Z"
+  },
+  "bkg-5": {
+    booking_id: "bkg-5",
+    customer_name: "Trường Tiểu học Quốc tế IQ",
+    contact_person: "Đỗ Thùy Chi",
+    phone: "0934567890",
+    email: "chi.do@iqschool.edu.vn",
+    address: "12 Đường Số 4, Linh Chiểu, Thủ Đức, TP. HCM",
+    service_name: "An ninh Học đường",
+    guards_count: 2,
+    start_date: "2026-09-01",
+    end_date: "2027-05-31",
+    time_slots: ["06:30-18:30"],
+    special_instructions: "Bảo vệ cổng chính trường tiểu học, phân luồng giao thông vào giờ đưa đón học sinh.",
+    quoted_price: null,
+    status: "accepted",
+    created_at: "2026-06-18T07:30:00Z"
+  }
+};
+
 interface BookingDetailContainerProps {
   bookingId: string;
 }
@@ -17,6 +106,9 @@ interface BookingDetailContainerProps {
 export function BookingDetailContainer({
   bookingId,
 }: BookingDetailContainerProps) {
+  const pathname = usePathname();
+  const isCoordinator = pathname?.includes("/bookings");
+  const backUrl = isCoordinator ? "/bookings" : "/requests";
   const [booking, setBooking] = useState<{
     booking_id: string;
     customer_name: string;
@@ -47,6 +139,15 @@ export function BookingDetailContainer({
         setIsLoading(true);
       }
       setError(null);
+
+      // Handle UI-only mock IDs
+      if (MOCK_DETAILS[bookingId]) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        setBooking(MOCK_DETAILS[bookingId]);
+        setIsLoading(false);
+        return;
+      }
+
       const res = await requestGetBookingDetail(bookingId);
       if (res && res.booking) {
         const b = res.booking;
@@ -157,7 +258,7 @@ export function BookingDetailContainer({
           {error || "Rất tiếc, chúng tôi không tìm thấy thông tin yêu cầu được yêu cầu."}
         </p>
         <Link
-          href="/requests"
+          href={backUrl}
           className="bg-primary hover:bg-primary/95 text-on-primary font-semibold px-4 py-2 rounded-lg text-sm transition-transform active:scale-95 duration-100 flex items-center gap-1.5 shadow-sm cursor-pointer"
         >
           <ArrowLeft className="w-4 h-4" />
@@ -199,12 +300,13 @@ export function BookingDetailContainer({
         bookingId={booking.booking_id}
         status={booking.status}
         createdAt={booking.created_at}
+        backUrl={backUrl}
       />
 
       {/* Bento Grid layout matching specs */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column (Customer details & Service specs) */}
-        <div className="xl:col-span-2 space-y-6">
+        <div className={`${isCoordinator ? "xl:col-span-3" : "xl:col-span-2"} space-y-6`}>
           {/* Customer info card */}
           <BookingCustomerInfo
             customerName={booking.customer_name}
@@ -225,16 +327,18 @@ export function BookingDetailContainer({
           />
         </div>
 
-        {/* Right Column (Quotation action card) */}
-        <div className="xl:col-span-1">
-          <BookingQuotationPanel
-            initialPrice={booking.quoted_price}
-            guardsCount={booking.guards_count}
-            status={booking.status}
-            onQuote={handleQuote}
-            onReject={handleReject}
-          />
-        </div>
+        {/* Right Column (Quotation action card - only for Company side) */}
+        {!isCoordinator && (
+          <div className="xl:col-span-1">
+            <BookingQuotationPanel
+              initialPrice={booking.quoted_price}
+              guardsCount={booking.guards_count}
+              status={booking.status}
+              onQuote={handleQuote}
+              onReject={handleReject}
+            />
+          </div>
+        )}
       </div>
     </div>
   );
