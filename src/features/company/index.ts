@@ -7,7 +7,6 @@ export { default as CompanyDetailLegal } from "./components/CompanyDetailLegal";
 export { default as CompanyDetailServices } from "./components/CompanyDetailServices";
 export { default as CompanyDetailSidebar } from "./components/CompanyDetailSidebar";
 export { default as CompanyDetailDirector } from "./components/CompanyDetailDirector";
-export { default as CompanyDetailReviews } from "./components/CompanyDetailReviews";
 export * from "./api/company.api";
 export * from "./controller/company.controller";
 export * from "./service/company.service";

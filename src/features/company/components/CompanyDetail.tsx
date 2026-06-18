@@ -7,7 +7,7 @@ import CompanyDetailHeader from "./CompanyDetailHeader";
 import CompanyDetailAbout from "./CompanyDetailAbout";
 import CompanyDetailDirector from "./CompanyDetailDirector";
 import CompanyDetailLegal from "./CompanyDetailLegal";
-import CompanyDetailReviews from "./CompanyDetailReviews";
+import CompanyDetailReviews from "@/features/review/components/CompanyDetailReviews";
 import CompanyDetailSidebar from "./CompanyDetailSidebar";
 
 // Exact Mock Data matching the UI mockup (Sentinel Prime)
@@ -99,8 +99,6 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
             insuranceLevel={mockCompany.insuranceLevel}
           />
 
-          {/* Customer Reviews & Testimonials */}
-          <CompanyDetailReviews />
         </div>
 
         {/* Right Column (1/3) */}
@@ -113,6 +111,9 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
           provinceCount={mockCompany.provinceCount}
         />
       </div>
+
+      {/* Customer Reviews Full Width */}
+      <CompanyDetailReviews />
     </div>
   );
 }
