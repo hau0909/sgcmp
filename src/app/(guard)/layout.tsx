@@ -1,21 +1,48 @@
 "use client";
 
-import React, { useState } from "react";
+import Image from "next/image";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { createClient } from "@/lib/supabase/client";
+import { requestGetUserProfile } from "@/features/auth/api/auth.api";
+import { useAuthStore } from "@/store/auth.store";
 import {
   Menu,
   X,
-  Bell,
   LayoutDashboard,
   ClipboardCheck,
   CalendarDays,
   ShieldCheck,
   UserRound,
   LogOut,
+  Bell,
+  UserCircle,
 } from "lucide-react";
+
+type UserRole =
+  | "customer"
+  | "guard"
+  | "Coordinator"
+  | "admin"
+  | "company-admin";
+
+type UserProfile = {
+  id?: string;
+  user_id?: string;
+  email: string | null;
+  full_name: string | null;
+  phone_number: string | null;
+  role: UserRole;
+  status: string;
+  avatar_url: string | null;
+  company_id?: string | null;
+};
+
+const getProfileUserId = (profile: UserProfile | null) => {
+  return profile?.user_id ?? profile?.id ?? null;
+};
 
 export default function GuardLayout({
   children,
@@ -24,7 +51,17 @@ export default function GuardLayout({
 }>) {
   const pathname = usePathname() || "/guard";
   const router = useRouter();
+
   const [menuOpen, setMenuOpen] = useState(false);
+  const [profile, setProfile] = useState<UserProfile | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
+
+  const userId = useAuthStore((state) => state.user_id);
+  const setAuth = useAuthStore((state) => state.setAuth);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+
+  const isAuthenticated = !!userId;
+  const shouldShowCheckingAuth = checkingAuth && !userId;
 
   const bottomLinks = [
     {
@@ -34,16 +71,16 @@ export default function GuardLayout({
       active: pathname === "/overview",
     },
     {
-      name: "Ca trực",
-      href: "/checkin-shift",
-      icon: ClipboardCheck,
-      active: pathname === "/checkin-shift",
-    },
-    {
       name: "Lịch trình",
       href: "/guard-schedule",
       icon: CalendarDays,
       active: pathname === "/guard-schedule",
+    },
+    {
+      name: "Ca trực",
+      href: "/checkin-shift",
+      icon: ClipboardCheck,
+      active: pathname === "/checkin-shift",
     },
   ];
 
@@ -57,14 +94,71 @@ export default function GuardLayout({
     },
   ];
 
+  const closeMenus = () => {
+    setMenuOpen(false);
+  };
+
+  useEffect(() => {
+    let isMounted = true;
+
+    const syncAuthAndProfile = async () => {
+      try {
+        const result = await requestGetUserProfile();
+
+        if (!isMounted) return;
+
+        if (result?.success && result?.data) {
+          const fetchedProfile = result.data as UserProfile;
+          const fetchedUserId = getProfileUserId(fetchedProfile);
+
+          setProfile(fetchedProfile);
+
+          if (fetchedUserId && fetchedProfile.role) {
+            const currentCompanyId = useAuthStore.getState().company_id;
+
+            setAuth({
+              user_id: fetchedUserId,
+              role: fetchedProfile.role,
+              company_id: fetchedProfile.company_id ?? currentCompanyId ?? null,
+            });
+          }
+        } else {
+          setProfile(null);
+          clearAuth();
+        }
+      } catch {
+        if (!isMounted) return;
+
+        setProfile(null);
+        clearAuth();
+      } finally {
+        if (isMounted) {
+          setCheckingAuth(false);
+        }
+      }
+    };
+
+    void syncAuthAndProfile();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [setAuth, clearAuth]);
+
   const handleLogout = async () => {
     const supabase = createClient();
 
-    await supabase.auth.signOut();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      clearAuth();
+      setProfile(null);
+      setCheckingAuth(false);
+      closeMenus();
 
-    setMenuOpen(false);
-    router.replace("/login");
-    router.refresh();
+      router.replace("/login");
+      router.refresh();
+    }
   };
 
   return (
@@ -99,6 +193,34 @@ export default function GuardLayout({
                 >
                   <X className="w-5 h-5" />
                 </button>
+              </div>
+
+              {/* User info trong drawer */}
+              <div className="border-b border-slate-200 px-4 py-4">
+                <div className="flex items-center gap-3">
+                  <div className="h-11 w-11 overflow-hidden rounded-full border border-slate-200 bg-slate-100 flex items-center justify-center text-slate-500">
+                    {profile?.avatar_url ? (
+                      <Image
+                        src={profile.avatar_url}
+                        width={44}
+                        height={44}
+                        alt={profile.full_name ?? "Avatar bảo vệ"}
+                        className="h-11 w-11 rounded-full object-cover"
+                      />
+                    ) : (
+                      <UserCircle className="h-8 w-8" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-extrabold text-slate-800">
+                      {profile?.full_name ?? "Nhân viên bảo vệ"}
+                    </p>
+                    <p className="truncate text-xs font-medium text-slate-500">
+                      {profile?.email ?? "Đang kiểm tra tài khoản"}
+                    </p>
+                  </div>
+                </div>
               </div>
 
               <nav className="p-4 flex flex-col gap-2">

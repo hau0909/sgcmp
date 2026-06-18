@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 
 import type {
   InsertGuardInformationParams,
@@ -88,7 +89,32 @@ export const uploadGuardAvatar = async ({
   user_id,
   file,
 }: UploadGuardAvatarRepositoryParams): Promise<UploadGuardAvatarResult> => {
-  const supabase = await createClient();
+  const authSupabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await authSupabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("Bạn chưa đăng nhập.");
+  }
+
+  const { data: currentProfile, error: profileError } = await authSupabase
+    .from("profiles")
+    .select("user_id, role")
+    .eq("user_id", user.id)
+    .single();
+
+  if (profileError || !currentProfile) {
+    throw new Error("Không tìm thấy hồ sơ người dùng hiện tại.");
+  }
+
+  if (currentProfile.role !== "Coordinator") {
+    throw new Error("Bạn không có quyền tải ảnh bảo vệ.");
+  }
+
+  const bucket_name = "profiles";
 
   const file_extension = file.name.split(".").pop()?.toLowerCase();
 
@@ -96,10 +122,27 @@ export const uploadGuardAvatar = async ({
     throw new Error("Không xác định được định dạng ảnh.");
   }
 
-  const file_path = `${user_id}/avatar-${Date.now()}.${file_extension}`;
+  const allowedExtensions = ["jpg", "jpeg", "png"];
 
-  const { data: upload_data, error: upload_error } = await supabase.storage
-    .from("guard-avatars")
+  if (!allowedExtensions.includes(file_extension)) {
+    throw new Error("Chỉ hỗ trợ ảnh JPG, JPEG hoặc PNG.");
+  }
+
+  if (!file.type.startsWith("image/")) {
+    throw new Error("File tải lên không phải là ảnh.");
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    throw new Error("Ảnh không được vượt quá 2MB.");
+  }
+
+  const file_name = `avatar-${Date.now()}.${file_extension}`;
+  const file_path = `${user_id}/avatar/${file_name}`;
+
+  const supabaseAdmin = createAdminClient();
+
+  const { data: upload_data, error: upload_error } = await supabaseAdmin.storage
+    .from(bucket_name)
     .upload(file_path, file, {
       contentType: file.type,
       cacheControl: "3600",
@@ -113,7 +156,7 @@ export const uploadGuardAvatar = async ({
 
   const {
     data: { publicUrl: public_url },
-  } = supabase.storage.from("guard-avatars").getPublicUrl(upload_data.path);
+  } = supabaseAdmin.storage.from(bucket_name).getPublicUrl(file_path);
 
   return {
     file_path: upload_data.path,

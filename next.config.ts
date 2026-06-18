@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "yrptpasveuvtmnwtgilr.supabase.co",
         port: "",
-        pathname: "/storage/v1/object/public/guard-avatars/**",
+        pathname: "/storage/v1/object/public/**",
       },
     ],
   },
