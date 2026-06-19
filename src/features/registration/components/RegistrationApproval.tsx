@@ -20,6 +20,7 @@ import {
   requestUpdateRegistrationStatus,
 } from "../api/registration.api";
 import { RegistrationDetail } from "../types";
+import { formatAddressService } from "@/features/address";
 
 const formatDate = (dateStr: string) => {
   try {
@@ -73,6 +74,8 @@ export default function RegistrationApproval() {
     }, 4000);
   };
 
+  const [formattedAddress, setFormattedAddress] = useState("");
+
   useEffect(() => {
     const fetchDetail = async () => {
       if (!registrationId) return;
@@ -80,6 +83,11 @@ export default function RegistrationApproval() {
         setLoading(true);
         const res = await requestGetRegistrationDetail(registrationId);
         setRegistration(res.registration);
+        
+        if (res.registration?.companies?.address) {
+          const formatted = await formatAddressService(res.registration.companies.address);
+          setFormattedAddress(formatted);
+        }
       } catch (err: any) {
         console.error("Error fetching registration detail:", err);
         setError(err.message || "Không thể tải chi tiết hồ sơ");
@@ -154,8 +162,6 @@ export default function RegistrationApproval() {
   const companyName = registration.companies?.company_name || "N/A";
   const desc = registration.companies?.description || "N/A";
   const licenseNo = registration.companies?.business_license_no || "N/A";
-  const officeAddress = registration.companies?.address || "N/A";
-
   const repName = registration.companies?.profiles?.full_name || "N/A";
   const repGender = registration.companies?.profiles?.gender || "N/A";
   const repDob = registration.companies?.profiles?.date_of_birth
@@ -164,6 +170,7 @@ export default function RegistrationApproval() {
   const repPhone = registration.companies?.profiles?.phone_number || "N/A";
   const repEmail = registration.companies?.profiles?.email || "N/A";
   const repAddress = registration.companies?.profiles?.address || "N/A";
+  const officeAddress = formattedAddress || "N/A";
 
   return (
     <div className="max-w-7xl mx-auto p-6 space-y-6 relative">

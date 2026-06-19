@@ -7,7 +7,7 @@ export interface DbCompany {
   company_name: string;
   business_license_no: string;
   license_file_url?: string;
-  address: string;
+  address: any;
   description?: string;
   rating_average: number | null;
   status: string;
@@ -52,32 +52,6 @@ export const getAllActiveCompanies = async (): Promise<DbCompany[]> => {
   }
 
   return (data as any[]) || [];
-};
-
-export const getCities = async (): Promise<City[]> => {
-  const { data, error } = await supabase
-    .from("cities")
-    .select("*")
-    .order("city_name", { ascending: true });
-
-  if (error) {
-    throw error;
-  }
-
-  return (data as City[]) || [];
-};
-
-export const getWards = async (): Promise<Ward[]> => {
-  const { data, error } = await supabase
-    .from("wards")
-    .select("*")
-    .order("ward_name", { ascending: true });
-
-  if (error) {
-    throw error;
-  }
-
-  return (data as Ward[]) || [];
 };
 
 export const getServices = async (): Promise<Service[]> => {

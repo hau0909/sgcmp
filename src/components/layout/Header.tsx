@@ -209,6 +209,16 @@ export default function Header() {
                       Xem hồ sơ
                     </Link>
 
+                    {profile?.role !== "company-admin" && profile?.role !== "admin" && (
+                      <Link
+                        href="/register-company"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors font-semibold"
+                      >
+                        Đăng ký doanh nghiệp
+                      </Link>
+                    )}
+
                     <Link
                       href="/my-contracts"
                       onClick={closeMenus}
@@ -330,6 +340,16 @@ export default function Header() {
               >
                 Xem hồ sơ
               </Link>
+
+              {profile?.role !== "company-admin" && profile?.role !== "admin" && (
+                <Link
+                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                  href="/register-company"
+                  onClick={closeMenus}
+                >
+                  Đăng ký doanh nghiệp
+                </Link>
+              )}
 
               <Link
                 className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"

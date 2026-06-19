@@ -24,3 +24,41 @@ export async function requestUpdateRegistrationStatus(
     },
   });
 }
+
+export async function requestSubmitRegistration(payload: {
+  userId: string;
+  profile: {
+    fullName: string;
+    phoneNumber: string;
+    avatarUrl: string | null;
+  };
+  identity: {
+    identityId: string;
+    issueDate: string;
+    issuePlace: string;
+    frontUrl: string;
+    backUrl: string;
+  };
+  company: {
+    companyId?: string | null;
+    companyName: string;
+    businessLicenseNo: string;
+    licenseFileUrl: string | null;
+    address: any;
+    email: string;
+    phone: string;
+    description: string | null;
+  };
+  images: {
+    imageUrl: string;
+    imageType: "logo" | "banner" | "other";
+  }[];
+}) {
+  return await fetcher("/api/registrations/submit", {
+    method: "POST",
+    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+}
