@@ -68,19 +68,22 @@ export default function GuardLayout({
       name: "Bảng điều khiển",
       href: "/overview",
       icon: LayoutDashboard,
-      active: pathname === "/overview",
+      active: pathname === "/overview" || pathname.startsWith("/overview"),
     },
     {
       name: "Lịch trình",
       href: "/guard-schedule",
       icon: CalendarDays,
-      active: pathname === "/guard-schedule",
+      active:
+        pathname === "/guard-schedule" ||
+        pathname.startsWith("/guard-schedule"),
     },
     {
       name: "Ca trực",
-      href: "/checkin-shift",
+      href: "/guard-shift",
       icon: ClipboardCheck,
-      active: pathname === "/checkin-shift",
+      active:
+        pathname === "/guard-shift" || pathname.startsWith("/guard-shift"),
     },
   ];
 
