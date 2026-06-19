@@ -10,6 +10,7 @@ import {
   MapPin,
   ShieldCheck,
   UserRound,
+  UserCheck,
 } from "lucide-react";
 import { requestGetGuardShiftsByDay } from "@/features/shift/api/shift.api";
 import type { GuardShiftItem } from "@/features/shift/type";
@@ -121,6 +122,14 @@ export default function GuardShiftDetailPage() {
   const [shift, setShift] = useState<ShiftItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const handleOpenCheckinPage = () => {
+    if (!shift) {
+      return;
+    }
+
+    router.push(`/guard-shift/${shift.id}/checkin?date=${selectedDateKey}`);
+  };
 
   useEffect(() => {
     const fetchShiftDetail = async () => {
@@ -382,6 +391,16 @@ export default function GuardShiftDetailPage() {
               </div>
             ))}
           </div>
+        </div>
+        <div className=" bottom-3 z-20 rounded-2xl bg-[#f7f8fb]/90 pt-2 backdrop-blur">
+          <button
+            type="button"
+            onClick={handleOpenCheckinPage}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0754a6] px-4 py-4 text-sm font-black uppercase text-white shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]"
+          >
+            <UserCheck className="h-5 w-5" />
+            Xác nhận ca làm việc
+          </button>
         </div>
       </section>
     </div>
