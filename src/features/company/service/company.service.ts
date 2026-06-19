@@ -1,10 +1,9 @@
 import {
   getAllActiveCompanies,
   DbCompany,
-  getCities,
-  getWards,
   getServices
 } from "../repository/company.repository";
+import { getCitiesService as getCities, getWardsService as getWards, formatAddressService } from "@/features/address";
 import { MarketplaceCompany, City, Ward, Service } from "../types";
 
 export interface CompanyFilterParams {
@@ -42,7 +41,7 @@ function normalizeText(text: string): string {
     .trim();
 }
 
-export const mapDbCompanyToMarketplace = (dbCompany: DbCompany): MarketplaceCompany => {
+export const mapDbCompanyToMarketplace = async (dbCompany: DbCompany): Promise<MarketplaceCompany> => {
   const name = dbCompany.company_name;
 
   // Extract tags from services name
@@ -76,13 +75,15 @@ export const mapDbCompanyToMarketplace = (dbCompany: DbCompany): MarketplaceComp
     initials = words[0].substring(0, 2).toUpperCase();
   }
 
+  const location = await formatAddressService(dbCompany.address);
+
   return {
     id: dbCompany.company_id,
     name: dbCompany.company_name,
     logoUrl: undefined,
     initials,
     rating: dbCompany.rating_average,
-    location: dbCompany.address,
+    location,
     tags,
     pricePerHour,
     description: dbCompany.description || undefined,
@@ -95,7 +96,7 @@ export const getCompaniesService = async (
   const dbCompanies = await getAllActiveCompanies();
   
   // 1. Map to MarketplaceCompany schema
-  let companies = dbCompanies.map(mapDbCompanyToMarketplace);
+  let companies = await Promise.all(dbCompanies.map(mapDbCompanyToMarketplace));
 
   // 2. Search query filter (search by name, description or tags)
   if (params.search && params.search.trim()) {

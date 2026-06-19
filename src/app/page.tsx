@@ -1,8 +1,14 @@
+"use client";
+
 /* eslint-disable @next/next/no-img-element */
 /* eslint-disable jsx-a11y/alt-text */
+import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { LANDING_PLANS } from "@/features/payment/component/plans-data";
+import { useAuthStore } from "@/store/auth.store";
+import { createClient } from "@/lib/supabase/client";
 import {
   ArrowRight,
   ChartColumn,
@@ -16,9 +22,48 @@ import {
   TriangleAlert,
   UsersRound,
   Verified,
+  Loader2,
 } from "lucide-react";
 
 export default function Home() {
+  const router = useRouter();
+  const userId = useAuthStore((state) => state.user_id);
+  const supabase = createClient();
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+
+  const handlePlanClick = async (e: React.MouseEvent, href: string) => {
+    e.preventDefault();
+
+    if (!userId) {
+      router.push("/login?redirect=" + encodeURIComponent("/"));
+      return;
+    }
+
+    try {
+      setLoadingPlan(href);
+      const { data: compData, error } = await supabase
+        .from("companies")
+        .select("status")
+        .eq("owner_id", userId)
+        .maybeSingle();
+
+      if (error) {
+        console.error("Check company status error:", error);
+      }
+
+      if (compData?.status === "active") {
+        router.push(href);
+      } else {
+        router.push("/register-company");
+      }
+    } catch (err) {
+      console.error("Error checking company status:", err);
+      router.push("/register-company");
+    } finally {
+      setLoadingPlan(null);
+    }
+  };
+
   return (
     <>
       {/* Top sticky Navigation Navbar */}
@@ -393,17 +438,25 @@ export default function Home() {
                       </ul>
                     </div>
 
-                    <a
-                      className={`w-full font-semibold py-3 px-6 rounded-xl transition-all duration-300 text-[14px] h-12 flex items-center justify-center
+                    <button
+                      onClick={(e) => handlePlanClick(e, plan.href)}
+                      disabled={loadingPlan !== null}
+                      className={`w-full font-semibold py-3 px-6 rounded-xl transition-all duration-300 text-[14px] h-12 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed
                         ${
                           plan.isPopular
                             ? "bg-primary hover:bg-primary-container text-on-primary shadow-md hover:shadow-lg hover:scale-[1.02]"
                             : "border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low"
                         }`}
-                      href={plan.href}
                     >
-                      {plan.actionText}
-                    </a>
+                      {loadingPlan === plan.href ? (
+                        <span className="flex items-center gap-2">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Đang kiểm tra...
+                        </span>
+                      ) : (
+                        plan.actionText
+                      )}
+                    </button>
                   </div>
                 );
               })}
