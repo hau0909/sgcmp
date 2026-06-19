@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { MapPin, Clock3, CalendarDays, Building2 } from "lucide-react";
 import { type ShiftItem } from "@/features/shift/components/ShiftCardGuard";
 import { requestGetGuardShiftsByDay } from "@/features/shift/api/shift.api";
@@ -105,6 +105,7 @@ const ShiftDetailSkeleton = () => {
 };
 
 export default function GuardShiftPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
 
   const selectedDate = useMemo(() => {
@@ -146,9 +147,12 @@ export default function GuardShiftPage() {
     fetchGuardShiftsByDay();
   }, [selectedDateKey]);
 
+  const handleOpenShiftDetail = (shiftId: string) => {
+    router.push(`/guard-shift/${shiftId}?date=${selectedDateKey}`);
+  };
+
   return (
     <div className="space-y-4">
-      {/* Header */}
       <section>
         <h1 className="text-2xl font-extrabold text-slate-950">
           Ca trực trong ngày
@@ -166,7 +170,6 @@ export default function GuardShiftPage() {
         </div>
       )}
 
-      {/* Shift List */}
       <section className="space-y-3">
         {loading ? (
           <>
@@ -178,7 +181,8 @@ export default function GuardShiftPage() {
             return (
               <article
                 key={shift.id}
-                className="w-full rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm"
+                onClick={() => handleOpenShiftDetail(shift.id)}
+                className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.98]"
               >
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
@@ -222,6 +226,7 @@ export default function GuardShiftPage() {
         ) : !error ? (
           <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-center">
             <CalendarDays className="mx-auto mb-3 h-10 w-10 text-slate-300" />
+
             <p className="text-sm font-bold text-slate-500">
               Không có ca trực trong ngày này.
             </p>

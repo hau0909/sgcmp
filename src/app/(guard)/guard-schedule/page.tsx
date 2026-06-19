@@ -202,7 +202,7 @@ export default function GuardSchedulePage() {
     const dateKey = formatGuardShiftDateKey(date);
 
     setSelectedDate(date);
-    router.push(`/checkin-shift?date=${dateKey}`);
+    router.push(`/guard-shift?date=${dateKey}`);
   };
 
   const handlePreviousWeek = () => {
