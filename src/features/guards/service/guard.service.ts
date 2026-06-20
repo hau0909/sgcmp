@@ -11,9 +11,12 @@ import type {
   GuardDetail,
   GuardDetailDatabase,
 } from "../type";
+import type { Guard } from "@/types/Guard";
 import {
   uploadGuardAvatar,
   getGuardIdByUserId,
+  getGuardByUserId,
+  getGuardsByIds,
 } from "../repository/guard.repository";
 
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"];
@@ -83,4 +86,16 @@ export const getGuardIdByUserIdService = async (
   userId: string,
 ): Promise<string | null> => {
   return getGuardIdByUserId(userId);
+};
+
+export const getGuardByUserIdService = async (
+  userId: string,
+): Promise<Guard | null> => {
+  return await getGuardByUserId(userId);
+};
+
+export const getGuardsByIdsService = async (
+  guardIds: string[],
+): Promise<Guard[]> => {
+  return await getGuardsByIds(guardIds);
 };

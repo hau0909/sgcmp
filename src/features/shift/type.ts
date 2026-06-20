@@ -1,4 +1,5 @@
-export type ShiftAssignmentStatus = "assigned" | "completed" | "absent";
+import { ShiftAssignmentStatus } from "@/types/Enum";
+export type { ShiftAssignmentStatus };
 
 export type Shift = {
   shift_id: string;
@@ -21,7 +22,6 @@ export type ShiftAssignment = {
   status: ShiftAssignmentStatus;
   created_at: string;
   updated_at: string;
-
   guard_name: string;
   note?: string;
 };
@@ -424,4 +424,52 @@ export type GetGuardShiftsServiceParams = {
 export type GetGuardShiftsResponse = {
   message: string;
   data: GetGuardShiftsResult;
+};
+
+export type GuardShiftDetailItem = {
+  id: string;
+  shift_id: string;
+  assignment_id: string;
+  time: string;
+  location: string;
+  address: string;
+  status: ShiftAssignmentStatus;
+  start_time: string;
+  end_time: string;
+  required_guards: number;
+  assigned_by: {
+    user_id: string;
+    full_name: string;
+    phone_number: string | null;
+  } | null;
+  company: {
+    company_id: string;
+    company_name: string;
+    address: string | null;
+  } | null;
+  service: {
+    service_id: string;
+    name: string;
+  } | null;
+  contract: {
+    contract_id: string;
+    start_date: string | null;
+    end_date: string | null;
+    status: string | null;
+  } | null;
+  guards: {
+    guard_id: string;
+    user_id: string;
+    full_name: string;
+    phone_number: string | null;
+    avatar_url: string | null;
+    status: ShiftAssignmentStatus;
+  }[];
+};
+
+export type GuardShiftDetailResponse = {
+   message: string;
+  data: {
+    shift: GuardShiftDetailItem;
+  };
 };

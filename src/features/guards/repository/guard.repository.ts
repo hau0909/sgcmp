@@ -8,6 +8,7 @@ import type {
   GuardListItem,
   GuardDetailDatabase,
 } from "../type";
+import { Guard } from "@/types/Guard";
 
 export const insertGuardInformation = async ({
   user_id,
@@ -266,4 +267,43 @@ export const getGuardIdByUserId = async (
   }
 
   return data?.guard_id ?? null;
+};
+
+export const getGuardByUserId = async (
+  userId: string,
+): Promise<Guard | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("guards")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Guard) || null;
+};
+
+export const getGuardsByIds = async (
+  guardIds: string[],
+): Promise<Guard[]> => {
+  if (guardIds.length === 0) {
+    return [];
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("guards")
+    .select("*")
+    .in("guard_id", guardIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Guard[]) || [];
 };

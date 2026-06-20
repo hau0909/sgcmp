@@ -2,10 +2,12 @@ import { supabase } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
 import { ContractStatus } from "@/types/Enum";
 import type { CompanyContractQuery } from "@/features/shift/type";
+import { Contract } from "@/types/Contract";
 
 export const getContracts = async (
   page: number,
   limit: number,
+  companyId?: string,
   search?: string,
   status?: ContractStatus,
   startDate?: string,
@@ -43,6 +45,10 @@ export const getContracts = async (
   `,
     { count: "exact" },
   );
+
+  if (companyId) {
+    query = query.eq("bookings.company_id", companyId);
+  }
 
   if (status) {
     query = query.eq("status", status);
@@ -313,4 +319,22 @@ export const getContractIdsByCompany = async (
   return ((data ?? []) as CompanyContractQuery[]).map(
     (contract) => contract.contract_id,
   );
+};
+
+export const getContractById = async (
+  contractId: string,
+): Promise<Contract | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("contracts")
+    .select("*")
+    .eq("contract_id", contractId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Contract) || null;
 };

@@ -7,9 +7,11 @@ import { ContractHeader } from "@/features/contract/components/ContractHeader";
 import { ContractFilters } from "@/features/contract/components/ContractFilters";
 import { ContractTable } from "@/features/contract/components/ContractTable";
 import { requestGetContracts } from "@/features/contract/api/contract.api";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function ContractsPage() {
   const router = useRouter();
+  const companyId = useAuthStore((state) => state.company_id);
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -28,11 +30,16 @@ export default function ContractsPage() {
 
   // Fetch contracts from API
   useEffect(() => {
+    if (!companyId) {
+      setIsLoading(false);
+      return;
+    }
     let active = true;
     const fetchContracts = async () => {
       setIsLoading(true);
       try {
         const result = await requestGetContracts({
+          companyId,
           page,
           limit,
           search: search.trim() || undefined,
@@ -59,7 +66,7 @@ export default function ContractsPage() {
     return () => {
       active = false;
     };
-  }, [page, search, status, startDate, endDate]);
+  }, [page, search, status, startDate, endDate, companyId]);
 
   // Handle page resets when filters change
   const handleSearchChange = (val: string) => {

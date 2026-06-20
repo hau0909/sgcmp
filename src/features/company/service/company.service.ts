@@ -2,10 +2,14 @@ import {
   getAllActiveCompanies,
   DbCompany,
   getServices,
-  getCompanyById
+  getCompanyById,
+  getCompanyByIdWithDetails
 } from "../repository/company.repository";
 import { getCitiesService as getCities, getWardsService as getWards, formatAddressService } from "@/features/address";
 import { MarketplaceCompany, City, Ward, Service, CompanyDetailData, CompanyServiceData } from "../types";
+import { Company } from "@/types/Company";
+
+
 
 export interface CompanyFilterParams {
   search?: string;
@@ -216,8 +220,8 @@ export const getCompanyFiltersService = async (
   };
 };
 
-export const getCompanyByIdService = async (id: string): Promise<CompanyDetailData | null> => {
-  const dbCompany = await getCompanyById(id);
+export const getCompanyByIdServiceInCustomer = async (id: string): Promise<CompanyDetailData | null> => {
+  const dbCompany = await getCompanyByIdWithDetails(id);
   if (!dbCompany) return null;
 
   const addressStr = await formatAddressService(dbCompany.address);
@@ -249,4 +253,10 @@ export const getCompanyByIdService = async (id: string): Promise<CompanyDetailDa
     email: dbCompany.email,
     services,
   };
+}
+export const getCompanyByIdService = async (
+  companyId: string,
+): Promise<Company | null> => {
+  return await getCompanyById(companyId);
 };
+

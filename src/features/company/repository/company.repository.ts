@@ -1,5 +1,8 @@
 import { supabase } from "@/lib/supabase";
+import { createClient } from "@/lib/supabase/server";
 import { City, Ward, Service } from "../types";
+import type { Company } from "@/types/Company";
+
 
 export interface DbCompany {
   company_id: string;
@@ -95,8 +98,10 @@ export interface DbCompanyDetail {
   }[];
 }
 
-export const getCompanyById = async (id: string): Promise<DbCompanyDetail | null> => {
-  const { data, error } = await supabase
+export const getCompanyByIdWithDetails = async (id: string): Promise<DbCompanyDetail | null> => {
+  const supabaseServer = await createClient();
+
+  const { data, error } = await supabaseServer
     .from("companies")
     .select(`
       company_id,
@@ -133,4 +138,22 @@ export const getCompanyById = async (id: string): Promise<DbCompanyDetail | null
   }
 
   return (data as any) || null;
+};
+
+export const getCompanyById = async (
+  companyId: string,
+): Promise<Company | null> => {
+  const supabaseServer = await createClient();
+
+  const { data, error } = await supabaseServer
+    .from("companies")
+    .select("*")
+    .eq("company_id", companyId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Company) || null;
 };

@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { Profile } from "@/types/Profile";
 
 export const updateProfile = async (
   userId: string,
@@ -26,4 +27,43 @@ export const updateProfile = async (
   if (error) {
     throw error;
   }
+};
+
+export const getProfileByUserId = async (
+  userId: string,
+): Promise<Profile | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Profile) || null;
+};
+
+export const getProfilesByUserIds = async (
+  userIds: string[],
+): Promise<Profile[]> => {
+  if (userIds.length === 0) {
+    return [];
+  }
+
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("*")
+    .in("user_id", userIds);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Profile[]) || [];
 };

@@ -10,10 +10,10 @@ import {
   MapPin,
   ShieldCheck,
   UserRound,
+  UserCheck,
 } from "lucide-react";
-import { requestGetGuardShiftsByDay } from "@/features/shift/api/shift.api";
-import type { GuardShiftItem } from "@/features/shift/type";
-import type { ShiftItem } from "@/features/shift/components/ShiftCardGuard";
+import { requestGetGuardShiftDetail } from "@/features/shift/api/shift.api";
+import type { GuardShiftDetailItem } from "@/features/shift/type";
 
 const parseDateKey = (dateKey: string | null) => {
   if (!dateKey) {
@@ -46,7 +46,7 @@ const formatDateTitle = (date: Date) => {
   });
 };
 
-const getStatusLabel = (status: ShiftItem["status"]) => {
+const getStatusLabel = (status: GuardShiftDetailItem["status"]) => {
   if (status === "assigned") {
     return "PHÂN CÔNG";
   }
@@ -58,7 +58,19 @@ const getStatusLabel = (status: ShiftItem["status"]) => {
   return "VẮNG MẶT";
 };
 
-const getStatusStyle = (status: ShiftItem["status"]) => {
+const getGuardStatusLabel = (status: GuardShiftDetailItem["status"]) => {
+  if (status === "assigned") {
+    return "Đang trực";
+  }
+
+  if (status === "completed") {
+    return "Hoàn thành";
+  }
+
+  return "Vắng mặt";
+};
+
+const getStatusStyle = (status: GuardShiftDetailItem["status"]) => {
   if (status === "assigned") {
     return "bg-[#0754a6] text-white";
   }
@@ -70,36 +82,17 @@ const getStatusStyle = (status: ShiftItem["status"]) => {
   return "bg-red-600 text-white";
 };
 
-const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
-  return {
-    id: shift.id,
-    time: shift.time,
-    location: shift.location,
-    address: shift.address,
-    status: shift.status,
-  };
-};
+const getGuardStatusStyle = (status: GuardShiftDetailItem["status"]) => {
+  if (status === "assigned") {
+    return "bg-emerald-50 text-emerald-700";
+  }
 
-const guardOnDutyList = [
-  {
-    id: "BV001",
-    name: "Nguyễn Văn A",
-    phone: "0944408532",
-    status: "Đang trực",
-  },
-  {
-    id: "BV002",
-    name: "Thanh Lam",
-    phone: "0368543865",
-    status: "Đang trực",
-  },
-  {
-    id: "BV003",
-    name: "Trần Minh Khang",
-    phone: "0909123456",
-    status: "Đang trực",
-  },
-];
+  if (status === "completed") {
+    return "bg-green-50 text-green-700";
+  }
+
+  return "bg-red-50 text-red-700";
+};
 
 export default function GuardShiftDetailPage() {
   const router = useRouter();
@@ -118,9 +111,17 @@ export default function GuardShiftDetailPage() {
     return formatGuardShiftDateKey(selectedDate);
   }, [selectedDate]);
 
-  const [shift, setShift] = useState<ShiftItem | null>(null);
+  const [shift, setShift] = useState<GuardShiftDetailItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const handleOpenCheckinPage = () => {
+    if (!shift) {
+      return;
+    }
+
+    router.push(`/guard-shift/${shift.id}/checkin?date=${selectedDateKey}`);
+  };
 
   useEffect(() => {
     const fetchShiftDetail = async () => {
@@ -133,20 +134,16 @@ export default function GuardShiftDetailPage() {
         setLoading(true);
         setError("");
 
-        const response = await requestGetGuardShiftsByDay({
-          date: selectedDateKey,
+        const response = await requestGetGuardShiftDetail({
+          shiftId,
         });
 
-        const mappedShifts = response.data.shifts.map(mapGuardShiftToShiftItem);
-        const selectedShift = mappedShifts.find((item) => item.id === shiftId);
+        const shiftDetail = response.data.shift;
 
-        if (!selectedShift) {
-          setError("Không tìm thấy ca trực này trong ngày đã chọn.");
-          setShift(null);
-          return;
-        }
-
-        setShift(selectedShift);
+        setShift({
+          ...shiftDetail,
+          guards: shiftDetail.guards ?? [],
+        });
       } catch (error) {
         const message =
           error instanceof Error
@@ -161,7 +158,7 @@ export default function GuardShiftDetailPage() {
     };
 
     fetchShiftDetail();
-  }, [shiftId, selectedDateKey]);
+  }, [shiftId]);
 
   if (loading) {
     return (
@@ -194,9 +191,10 @@ export default function GuardShiftDetailPage() {
     );
   }
 
+  const guards = shift.guards ?? [];
+
   return (
     <div className="space-y-4 pb-6">
-      {/* Header */}
       <section className="flex items-center justify-between gap-3">
         <button
           type="button"
@@ -217,7 +215,6 @@ export default function GuardShiftDetailPage() {
         <div className="h-10 w-10" />
       </section>
 
-      {/* Shift Summary */}
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -276,7 +273,6 @@ export default function GuardShiftDetailPage() {
         </div>
       </section>
 
-      {/* Detail Info */}
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-4 text-base font-black text-slate-900">
           Thông tin ca trực
@@ -336,13 +332,12 @@ export default function GuardShiftDetailPage() {
               </p>
 
               <p className="mt-1 text-sm font-black text-slate-900">
-                Điều phối viên SGCMP
+                {shift.assigned_by?.full_name || "Điều phối viên SGCMP"}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Guard List */}
         <div className="mt-5 border-t border-slate-100 pt-4">
           <div className="mb-3 flex items-center justify-between">
             <h4 className="text-sm font-black text-slate-900">
@@ -350,38 +345,65 @@ export default function GuardShiftDetailPage() {
             </h4>
 
             <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-black text-[#0754a6]">
-              {guardOnDutyList.length} bảo vệ
+              {guards.length} bảo vệ
             </span>
           </div>
 
           <div className="space-y-2">
-            {guardOnDutyList.map((guard) => (
-              <div
-                key={guard.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3"
-              >
-                <div className="flex min-w-0 items-center gap-3">
-                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#0754a6] text-sm font-black text-white">
-                    {guard.name.charAt(0)}
+            {guards.length > 0 ? (
+              guards.map((guard) => {
+                const guardName = guard.full_name || "Chưa có tên";
+
+                return (
+                  <div
+                    key={guard.guard_id}
+                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3"
+                  >
+                    <div className="flex min-w-0 items-center gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0754a6] text-sm font-black text-white">
+                        {guard.avatar_url ? (
+                          <img
+                            src={guard.avatar_url}
+                            alt={guardName}
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          guardName.charAt(0).toUpperCase()
+                        )}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-slate-900">
+                          {guardName}
+                        </p>
+
+                        <p className="mt-0.5 truncate text-xs font-bold text-slate-500">
+                          {guard.phone_number || "Chưa có SĐT"}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-black text-slate-900">
-                      {guard.name}
-                    </p>
-
-                    <p className="mt-0.5 truncate text-xs font-bold text-slate-500">
-                      {guard.id} • {guard.phone}
-                    </p>
-                  </div>
-                </div>
-
-                <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">
-                  {guard.status}
-                </span>
+                );
+              })
+            ) : (
+              <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
+                <p className="text-xs font-bold text-slate-500">
+                  Chưa có danh sách bảo vệ trong ca này.
+                </p>
               </div>
-            ))}
+            )}
           </div>
+        </div>
+
+        <div className="bottom-3 z-20 rounded-2xl bg-[#f7f8fb]/90 pt-2 backdrop-blur">
+          <button
+            type="button"
+            onClick={handleOpenCheckinPage}
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0754a6] px-4 py-4 text-sm font-black uppercase text-white shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]"
+          >
+            <UserCheck className="h-5 w-5" />
+            Xác nhận ca làm việc
+          </button>
         </div>
       </section>
     </div>

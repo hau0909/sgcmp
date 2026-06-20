@@ -15,6 +15,7 @@ import { CustomerContract } from "../types";
 export const handleGetContracts = async (params: {
   page: number;
   limit: number;
+  companyId?: string;
   search?: string;
   status?: string;
   startDate?: string;
@@ -27,6 +28,7 @@ export const handleGetContracts = async (params: {
   return await getContractsService(
     params.page,
     params.limit,
+    params.companyId,
     params.search,
     validStatus,
     params.startDate,

@@ -11,7 +11,7 @@ import {
   getCoordinatorByCompanyIdService,
 } from "@/features/guards/service/guard.service";
 import { getUser } from "@/features/auth/service/auth.service";
-import type { CreateShiftInput } from "../type";
+import type { CreateShiftInput, GuardShiftDetailItem  } from "../type";
 import {
   validateCreateShiftInput,
   validateShiftDateInContract,
@@ -26,8 +26,36 @@ import {
 import { getGuardShiftQueryParams } from "../utils/shift-server.utils";
 import { resolveGuardIdForShift } from "../utils/shift-server.utils";
 import { addDaysToDateKey } from "@/utils/calcDate";
-import { getGuardShiftsService } from "../service/shift.service";
-import { startOfWeekMondayDateKey } from "../utils/shift.utils";
+import { getGuardShiftsService,   getShiftAssignmentByShiftAndGuardService,
+  getShiftAssignmentsByShiftIdService,
+  getShiftByIdService, } from "../service/shift.service";
+import { startOfWeekMondayDateKey, formatShiftTime, isValidUuid } from "../utils/shift.utils";
+import {
+  getGuardByUserIdService,
+  getGuardsByIdsService,
+} from "@/features/guards/service/guard.service";
+
+import {
+  getProfileByUserIdService,
+  getProfilesByUserIdsService,
+} from "@/features/profile/service/profile.service";
+
+import { getContractByIdService } from "@/features/contract/service/contract.service";
+import { getBookingByIdService } from "@/features/booking/service/booking.service";
+import { getCompanyByIdService } from "@/features/company/service/company.service";
+import { getServiceByIdService } from "@/features/service/service/service.service";
+
+
+export class ShiftApiError extends Error {
+  statusCode: number;
+
+  constructor(message: string, statusCode: number) {
+    super(message);
+    this.name = "ShiftApiError";
+    this.statusCode = statusCode;
+  }
+}
+
 
 export const handleGetShiftContracts = async () => {
   const user = await getUser();
@@ -514,4 +542,131 @@ export const handleGetGuardShiftsByWeek = async (request: Request) => {
       },
     );
   }
+};
+
+export const handleGetGuardShiftDetail = async ({
+  shiftId,
+}: {
+  shiftId: string;
+}): Promise<GuardShiftDetailItem> => {
+  if (!shiftId || !isValidUuid(shiftId)) {
+    throw new ShiftApiError("Mã ca trực không hợp lệ.", 400);
+  }
+
+  const user = await getUser();
+
+  if (!user) {
+    throw new ShiftApiError("Bạn cần đăng nhập để xem ca trực.", 401);
+  }
+
+ const guard = await getGuardByUserIdService(user.id);
+
+if (!guard) {
+  throw new ShiftApiError("Không tìm thấy thông tin bảo vệ.", 403);
+}
+
+const assignment = await getShiftAssignmentByShiftAndGuardService({
+  shiftId,
+  guardId: user.id,
+});
+
+
+if (!assignment) {
+  throw new ShiftApiError(
+    "Bạn không có quyền xem ca trực này hoặc ca trực không tồn tại.",
+    404,
+  );
+}
+
+  const shift = await getShiftByIdService(shiftId);
+
+  if (!shift) {
+    throw new ShiftApiError("Không tìm thấy ca trực.", 404);
+  }
+
+  const contract = shift.contract_id
+    ? await getContractByIdService(shift.contract_id)
+    : null;
+
+  const booking = contract?.booking_id
+    ? await getBookingByIdService(contract.booking_id)
+    : null;
+
+  const company = booking?.company_id
+    ? await getCompanyByIdService(booking.company_id)
+    : null;
+
+  const service = booking?.service_id
+    ? await getServiceByIdService(booking.service_id)
+    : null;
+
+  const assignedByProfile = assignment.assigned_by
+    ? await getProfileByUserIdService(assignment.assigned_by)
+    : null;
+
+    
+  const shiftAssignments = await getShiftAssignmentsByShiftIdService(
+    shift.shift_id,
+  );
+
+ const userIds = shiftAssignments.map((item) => item.guard_id);
+const profiles = await getProfilesByUserIdsService(userIds);
+
+const guardList = shiftAssignments.map((shiftAssignment) => {
+  const profile = profiles.find(
+    (item) => item.user_id === shiftAssignment.guard_id,
+  );
+
+  return {
+    guard_id: shiftAssignment.guard_id,
+    user_id: shiftAssignment.guard_id,
+    full_name: profile?.full_name || "Chưa có tên",
+    phone_number: profile?.phone_number || null,
+    avatar_url: profile?.avatar_url || null,
+    status: shiftAssignment.status,
+  };
+});
+
+  return {
+    id: shift.shift_id,
+    shift_id: shift.shift_id,
+    assignment_id: assignment.assignment_id,
+    time: formatShiftTime(shift.start_time, shift.end_time),
+    location: shift.location || "Chưa cập nhật vị trí",
+    address: booking?.address || shift.location || "Chưa cập nhật địa chỉ",
+    status: assignment.status,
+    start_time: shift.start_time,
+    end_time: shift.end_time,
+    required_guards: shift.required_guards,
+    assigned_by: assignedByProfile
+      ? {
+          user_id: assignedByProfile.user_id,
+          full_name: assignedByProfile.full_name || "Điều phối viên",
+          phone_number: assignedByProfile.phone_number || null,
+        }
+      : null,
+company: company
+  ? {
+      company_id: company.company_id,
+      company_name: company.company_name || "Chưa cập nhật công ty",
+      address:
+        typeof company.address === "string" ? company.address : null,
+    }
+  : null,
+    service: service
+      ? {
+          service_id: service.service_id,
+          name: service.name,
+        }
+      : null,
+    contract: contract
+      ? {
+          contract_id: contract.contract_id,
+          start_date: contract.start_date,
+          end_date: contract.end_date,
+          status: contract.status,
+        }
+      : null,
+    guards: guardList,
+  };
 };

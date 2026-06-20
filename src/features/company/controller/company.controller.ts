@@ -4,7 +4,7 @@ import {
   getCompaniesService,
   CompanyFiltersDataResponse,
   getCompanyFiltersService,
-  getCompanyByIdService
+  getCompanyByIdServiceInCustomer
 } from "../service/company.service";
 import { CompanyDetailData } from "../types";
 
@@ -25,6 +25,6 @@ export const handleGetCompanyFilters = async (
 export const handleGetCompanyById = async (
   id: string
 ): Promise<CompanyDetailData | null> => {
-  const result = await getCompanyByIdService(id);
+  const result = await getCompanyByIdServiceInCustomer(id);
   return result;
 };

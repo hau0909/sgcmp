@@ -11,9 +11,12 @@ export async function GET(request: NextRequest) {
     const startDate = searchParams.get("startDate") || undefined;
     const endDate = searchParams.get("endDate") || undefined;
 
+    const companyId = searchParams.get("companyId") || undefined;
+
     const result = await handleGetContracts({
       page,
       limit,
+      companyId,
       search,
       status,
       startDate,
