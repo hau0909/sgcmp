@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { handleGetCustomerContractDetail, handleSignContractCustomer } from "@/features/contract/controller/contract.controller";
-import { createClient } from "@/lib/supabase/server";
 
 interface RouteParams {
   params: Promise<{
@@ -10,13 +9,11 @@ interface RouteParams {
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { searchParams } = new URL(request.url);
+    const customerId = searchParams.get("customerId");
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!customerId) {
+      return NextResponse.json({ error: "customerId is required" }, { status: 400 });
     }
 
     const { id } = await params;
@@ -28,7 +25,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const result = await handleGetCustomerContractDetail(id, user.id);
+    const result = await handleGetCustomerContractDetail(id, customerId);
     if (!result) {
       return NextResponse.json(
         { error: "Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập" },
@@ -49,13 +46,11 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
   try {
-    const supabase = await createClient();
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
+    const { searchParams } = new URL(request.url);
+    const customerId = searchParams.get("customerId");
 
-    if (!user) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!customerId) {
+      return NextResponse.json({ error: "customerId is required" }, { status: 400 });
     }
 
     const { id } = await params;
@@ -75,7 +70,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const result = await handleSignContractCustomer(id, user.id);
+    const result = await handleSignContractCustomer(id, customerId);
 
     return NextResponse.json(
       { success: true, contract: result },
