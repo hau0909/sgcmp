@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { UserCircle } from "lucide-react";
 import Link from "next/link";
-
+import { requestLogout } from "@/features/auth/api/auth.api";
 import { createClient } from "@/lib/supabase/client";
 import { requestGetUserProfile } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/store/auth.store";
@@ -112,16 +112,13 @@ export default function Header() {
   }, [userId, setAuth, clearAuth]);
 
   const handleLogout = async () => {
-    const supabase = createClient();
-
     try {
-      await supabase.auth.signOut();
+      await requestLogout();
     } finally {
       clearAuth();
       setProfile(null);
       setCheckingAuth(false);
       closeMenus();
-
       router.replace("/");
       router.refresh();
     }
@@ -209,15 +206,16 @@ export default function Header() {
                       Xem hồ sơ
                     </Link>
 
-                    {profile?.role !== "company-admin" && profile?.role !== "admin" && (
-                      <Link
-                        href="/register-company"
-                        onClick={closeMenus}
-                        className="block px-4 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors font-semibold"
-                      >
-                        Đăng ký doanh nghiệp
-                      </Link>
-                    )}
+                    {profile?.role !== "company-admin" &&
+                      profile?.role !== "admin" && (
+                        <Link
+                          href="/register-company"
+                          onClick={closeMenus}
+                          className="block px-4 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors font-semibold"
+                        >
+                          Đăng ký doanh nghiệp
+                        </Link>
+                      )}
 
                     <Link
                       href="/my-contracts"
@@ -341,15 +339,16 @@ export default function Header() {
                 Xem hồ sơ
               </Link>
 
-              {profile?.role !== "company-admin" && profile?.role !== "admin" && (
-                <Link
-                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
-                  href="/register-company"
-                  onClick={closeMenus}
-                >
-                  Đăng ký doanh nghiệp
-                </Link>
-              )}
+              {profile?.role !== "company-admin" &&
+                profile?.role !== "admin" && (
+                  <Link
+                    className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                    href="/register-company"
+                    onClick={closeMenus}
+                  >
+                    Đăng ký doanh nghiệp
+                  </Link>
+                )}
 
               <Link
                 className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
