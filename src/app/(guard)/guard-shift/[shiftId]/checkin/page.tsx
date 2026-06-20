@@ -1,6 +1,6 @@
 "use client";
 
-import React, { type ChangeEvent, useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -11,11 +11,22 @@ import {
   LocateFixed,
   MapPin,
   MapPinned,
-  MoreHorizontal,
   UserCheck,
 } from "lucide-react";
 
-type GpsStatus = "idle" | "loading" | "success" | "error";
+import {
+  requestCheckinGuardShift,
+  requestGetGuardShiftDetail,
+} from "@/features/shift/api/shift.api";
+import type { GuardShiftDetailItem } from "@/features/shift/type";
+
+const CHECKIN_BEFORE_MINUTES = 5;
+const CHECKIN_AFTER_MINUTES = 5;
+
+type CheckinPopup = {
+  type: "success" | "error";
+  message: string;
+};
 
 const getDurationFromTimeRange = (timeRange: string) => {
   const [start, end] = timeRange.split(" - ");
@@ -38,15 +49,49 @@ const getDurationFromTimeRange = (timeRange: string) => {
 
   const startTotal = startHour * 60 + startMinute;
   const endTotal = endHour * 60 + endMinute;
-  const diffMinutes = endTotal - startTotal;
+
+  let diffMinutes = endTotal - startTotal;
 
   if (diffMinutes <= 0) {
-    return timeRange;
+    diffMinutes += 24 * 60;
   }
 
   const hours = diffMinutes / 60;
 
   return `${timeRange} (${Number.isInteger(hours) ? hours : hours.toFixed(1)}h)`;
+};
+
+const formatCheckinTime = (date: Date) => {
+  return date.toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+};
+
+const getStatusLabel = (status: GuardShiftDetailItem["status"]) => {
+  if (status === "assigned") {
+    return "Chờ xác nhận";
+  }
+
+  if (status === "completed") {
+    return "Hoàn thành";
+  }
+
+  return "Vắng mặt";
+};
+
+const getStatusStyle = (status: GuardShiftDetailItem["status"]) => {
+  if (status === "assigned") {
+    return "bg-[#0754a6] text-white";
+  }
+
+  if (status === "completed") {
+    return "bg-emerald-600 text-white";
+  }
+
+  return "bg-red-600 text-white";
 };
 
 export default function GuardShiftCheckinPage() {
@@ -57,99 +102,279 @@ export default function GuardShiftCheckinPage() {
     ? params.shiftId[0]
     : params.shiftId;
 
-  const [gpsStatus, setGpsStatus] = useState<GpsStatus>("idle");
-  const [gpsMessage, setGpsMessage] = useState("");
-  const [currentPosition, setCurrentPosition] = useState("");
+  const [shift, setShift] = useState<GuardShiftDetailItem | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
-  const [idVerified, setIdVerified] = useState(false);
-  const [idImageName, setIdImageName] = useState("");
-  const [idImagePreview, setIdImagePreview] = useState("");
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [autoUpdatingAbsent, setAutoUpdatingAbsent] = useState(false);
+  const [currentTime, setCurrentTime] = useState(new Date());
+  const [checkinPopup, setCheckinPopup] = useState<CheckinPopup | null>(null);
 
-  // Mock UI data - thay bằng data thật sau nếu cần
-  const shiftLocation = "Tech Campus HQ";
-  const shiftTime = "08:00 - 16:00";
+  const hasAutoMarkedAbsentRef = useRef(false);
 
   const shiftDuration = useMemo(() => {
-    return getDurationFromTimeRange(shiftTime);
-  }, [shiftTime]);
+    if (!shift) {
+      return "Đang tải...";
+    }
 
-  const gpsVerified = gpsStatus === "success";
-  const canCheckin = gpsVerified && idVerified;
+    return getDurationFromTimeRange(shift.time);
+  }, [shift]);
+
+  const checkinState = useMemo(() => {
+    if (!shift) {
+      return null;
+    }
+
+    const startTime = new Date(shift.start_time);
+
+    if (Number.isNaN(startTime.getTime())) {
+      return null;
+    }
+
+    const canCheckinFrom = new Date(
+      startTime.getTime() - CHECKIN_BEFORE_MINUTES * 60 * 1000,
+    );
+
+    const absentAfter = new Date(
+      startTime.getTime() + CHECKIN_AFTER_MINUTES * 60 * 1000,
+    );
+
+    const isBeforeWindow = currentTime < canCheckinFrom;
+    const isExpired = currentTime >= absentAfter;
+
+    return {
+      startTime,
+      canCheckinFrom,
+      absentAfter,
+      isBeforeWindow,
+      isExpired,
+      canCheckinByTime:
+        shift.status === "assigned" &&
+        currentTime >= canCheckinFrom &&
+        currentTime < absentAfter,
+    };
+  }, [shift, currentTime]);
+
+  const canCheckin =
+    Boolean(checkinState?.canCheckinByTime) &&
+    !checkingIn &&
+    !autoUpdatingAbsent;
+
+  const checkinMessage = useMemo(() => {
+    if (!shift || !checkinState) {
+      return "Không tìm thấy thông tin ca trực.";
+    }
+
+    if (shift.status === "completed") {
+      return "Ca trực này đã được điểm danh.";
+    }
+
+    if (shift.status === "absent" || checkinState.isExpired) {
+      return "Đã quá thời gian điểm danh. Ca trực được đánh dấu vắng mặt.";
+    }
+
+    if (checkinState.isBeforeWindow) {
+      return `Có thể điểm danh từ ${formatCheckinTime(
+        checkinState.canCheckinFrom,
+      )}.`;
+    }
+
+    return "Đã đến thời gian điểm danh. Bạn có thể xác nhận ca làm việc.";
+  }, [shift, checkinState]);
+
+  const checkinButtonLabel = useMemo(() => {
+    if (checkingIn) {
+      return "Đang điểm danh...";
+    }
+
+    if (shift?.status === "completed") {
+      return "Đã điểm danh";
+    }
+
+    if (shift?.status === "absent" || checkinState?.isExpired) {
+      return "Đã vắng mặt";
+    }
+
+    if (autoUpdatingAbsent) {
+      return "Đang cập nhật...";
+    }
+
+    return "Điểm danh";
+  }, [checkingIn, autoUpdatingAbsent, shift?.status, checkinState?.isExpired]);
 
   useEffect(() => {
-    return () => {
-      if (idImagePreview) {
-        URL.revokeObjectURL(idImagePreview);
+    const fetchShiftDetail = async () => {
+      if (!shiftId) {
+        setError("Không tìm thấy mã ca trực.");
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await requestGetGuardShiftDetail({
+          shiftId,
+        });
+
+        const shiftDetail = response.data.shift;
+
+        setShift({
+          ...shiftDetail,
+          guards: shiftDetail.guards ?? [],
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Không thể lấy thông tin ca trực.";
+
+        setError(message);
+        setShift(null);
+      } finally {
+        setLoading(false);
       }
     };
-  }, [idImagePreview]);
+
+    fetchShiftDetail();
+  }, [shiftId]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, []);
+
+  useEffect(() => {
+    const markAbsentIfExpired = async () => {
+      if (!shift || !checkinState) {
+        return;
+      }
+
+      if (hasAutoMarkedAbsentRef.current) {
+        return;
+      }
+
+      if (shift.status !== "assigned" || !checkinState.isExpired) {
+        return;
+      }
+
+      try {
+        hasAutoMarkedAbsentRef.current = true;
+        setAutoUpdatingAbsent(true);
+
+        const response = await requestCheckinGuardShift({
+          shiftId: shift.id,
+        });
+
+        setShift((currentShift) => {
+          if (!currentShift) {
+            return currentShift;
+          }
+
+          return {
+            ...currentShift,
+            status: response.data.assignment.status,
+          };
+        });
+      } catch {
+        hasAutoMarkedAbsentRef.current = false;
+      } finally {
+        setAutoUpdatingAbsent(false);
+      }
+    };
+
+    markAbsentIfExpired();
+  }, [shift, checkinState]);
 
   const handleBack = () => {
     router.back();
   };
 
-  const handleGetLocation = () => {
-    setGpsStatus("loading");
-    setGpsMessage("");
-    setCurrentPosition("");
-
-    if (!navigator.geolocation) {
-      setGpsStatus("error");
-      setGpsMessage("Trình duyệt không hỗ trợ lấy vị trí GPS.");
+  const handleCheckin = async () => {
+    if (!canCheckin || !shift) {
       return;
     }
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const latitude = position.coords.latitude.toFixed(5);
-        const longitude = position.coords.longitude.toFixed(5);
+    try {
+      setCheckingIn(true);
+      setCheckinPopup(null);
 
-        setGpsStatus("success");
-        setCurrentPosition(`${latitude}, ${longitude}`);
-        setGpsMessage("Đã lấy vị trí thành công.");
-      },
-      () => {
-        setGpsStatus("error");
-        setGpsMessage("Không thể lấy vị trí. Vui lòng bật GPS và thử lại.");
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 10000,
-        maximumAge: 0,
-      },
+      const response = await requestCheckinGuardShift({
+        shiftId: shift.id,
+      });
+
+      setShift((currentShift) => {
+        if (!currentShift) {
+          return currentShift;
+        }
+
+        return {
+          ...currentShift,
+          status: response.data.assignment.status,
+        };
+      });
+
+      setCheckinPopup({
+        type: "success",
+        message: response.message,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Điểm danh ca trực thất bại.";
+
+      setCheckinPopup({
+        type: "error",
+        message,
+      });
+    } finally {
+      setCheckingIn(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="mx-auto w-full max-w-[430px] bg-[#f3f3f5] p-3">
+        <div className="space-y-3">
+          <div className="h-10 w-28 animate-pulse rounded-full bg-slate-200" />
+          <div className="h-32 animate-pulse rounded-2xl bg-slate-200" />
+          <div className="h-[330px] animate-pulse rounded-2xl bg-slate-200" />
+          <div className="h-[300px] animate-pulse rounded-2xl bg-slate-200" />
+        </div>
+      </div>
     );
-  };
+  }
 
-  const handleIdImageChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
+  if (error || !shift) {
+    return (
+      <div className="mx-auto w-full max-w-[430px] bg-[#f3f3f5] p-3">
+        <button
+          type="button"
+          onClick={handleBack}
+          className="mb-4 flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-extrabold text-slate-700 shadow-sm transition-all active:scale-[0.98]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Quay lại
+        </button>
 
-    if (!file) {
-      return;
-    }
-
-    if (idImagePreview) {
-      URL.revokeObjectURL(idImagePreview);
-    }
-
-    const previewUrl = URL.createObjectURL(file);
-
-    setIdVerified(true);
-    setIdImageName(file.name);
-    setIdImagePreview(previewUrl);
-  };
-
-  const handleCheckin = () => {
-    if (!canCheckin) {
-      return;
-    }
-
-    alert(`Điểm danh thành công.${shiftId ? ` Mã ca: ${shiftId}` : ""}`);
-  };
+        <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-center">
+          <p className="text-sm font-bold text-red-600">
+            {error || "Không tìm thấy ca trực."}
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="mx-auto w-full max-w-[430px] bg-[#f3f3f5]">
       <main className="space-y-3 px-3 pb-3 pt-3">
-        {/* Back Button */}
         <div className="flex items-center justify-between">
           <button
             type="button"
@@ -161,15 +386,18 @@ export default function GuardShiftCheckinPage() {
           </button>
         </div>
 
-        {/* Shift Summary */}
         <section className="rounded-2xl border border-slate-300 bg-white p-4">
           <div className="mb-3 flex items-start justify-between gap-3">
             <h1 className="text-[18px] font-extrabold text-slate-800">
               Ca trực sắp tới
             </h1>
 
-            <span className="rounded-sm bg-[#0754a6] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide text-white">
-              Chờ duyệt
+            <span
+              className={`rounded-sm px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide ${getStatusStyle(
+                shift.status,
+              )}`}
+            >
+              {getStatusLabel(shift.status)}
             </span>
           </div>
 
@@ -181,7 +409,7 @@ export default function GuardShiftCheckinPage() {
               </div>
 
               <p className="text-[15px] font-extrabold text-slate-800">
-                {shiftLocation}
+                {shift.location}
               </p>
             </div>
 
@@ -196,9 +424,15 @@ export default function GuardShiftCheckinPage() {
               </p>
             </div>
           </div>
+
+          <div className="mt-3 rounded-xl bg-slate-50 p-3">
+            <p className="text-xs font-bold text-slate-500">Địa chỉ</p>
+            <p className="mt-1 text-sm font-bold text-slate-800">
+              {shift.address}
+            </p>
+          </div>
         </section>
 
-        {/* GPS */}
         <section className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-300 bg-[#f8f8fa] px-3 py-3">
             <div className="flex items-center gap-2">
@@ -209,13 +443,7 @@ export default function GuardShiftCheckinPage() {
               </h2>
             </div>
 
-            {gpsVerified ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-red-500 text-red-500">
-                <MoreHorizontal className="h-5 w-5" />
-              </div>
-            )}
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           </div>
 
           <div className="relative h-[280px] overflow-hidden bg-[#b8b8bb]">
@@ -224,37 +452,26 @@ export default function GuardShiftCheckinPage() {
             <div className="absolute left-1/2 top-1/2 h-24 w-36 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white/15 blur-sm" />
             <div className="absolute inset-0 backdrop-blur-[1px]" />
 
-            <div className="relative flex h-full items-center justify-center">
-              <button
-                type="button"
-                onClick={handleGetLocation}
-                disabled={gpsStatus === "loading"}
-                className="flex items-center gap-2 rounded bg-[#0754a6] px-5 py-3 text-sm font-extrabold text-white shadow-md transition-all active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <MapPinned className="h-5 w-5" />
-                {gpsStatus === "loading" ? "Đang lấy..." : "Lấy vị trí"}
-              </button>
+            <div className="relative flex h-full flex-col items-center justify-center px-4 text-center">
+              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#0754a6] text-white shadow-md">
+                <MapPinned className="h-8 w-8" />
+              </div>
+
+              <p className="mt-4 text-sm font-extrabold text-white">
+                Giao diện xác thực GPS
+              </p>
+
+              <p className="mt-1 max-w-[260px] text-xs font-bold text-white/70">
+                Phần này chỉ hiển thị UI, không lấy vị trí thực tế.
+              </p>
             </div>
 
-            {gpsMessage && (
-              <div
-                className={`absolute bottom-3 left-3 right-3 rounded px-3 py-2 text-center text-[11px] font-bold ${
-                  gpsVerified
-                    ? "bg-emerald-50 text-emerald-700"
-                    : "bg-red-50 text-red-600"
-                }`}
-              >
-                <p>{gpsMessage}</p>
-
-                {currentPosition && (
-                  <p className="mt-1 truncate opacity-80">{currentPosition}</p>
-                )}
-              </div>
-            )}
+            <div className="absolute bottom-3 left-3 right-3 rounded bg-emerald-50 px-3 py-2 text-center text-[11px] font-bold text-emerald-700">
+              <p>GPS đã sẵn sàng</p>
+            </div>
           </div>
         </section>
 
-        {/* ID */}
         <section className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-300 bg-[#f8f8fa] px-3 py-3">
             <div className="flex items-center gap-2">
@@ -265,64 +482,31 @@ export default function GuardShiftCheckinPage() {
               </h2>
             </div>
 
-            {idVerified ? (
-              <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-            ) : (
-              <div className="flex h-8 w-8 items-center justify-center rounded-full border-2 border-red-500 text-red-500">
-                <MoreHorizontal className="h-5 w-5" />
-              </div>
-            )}
+            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
           </div>
 
           <div className="relative h-[250px] overflow-hidden bg-[#25292e]">
-            {idImagePreview ? (
-              <div
-                className="absolute inset-0 bg-cover bg-center"
-                style={{ backgroundImage: `url(${idImagePreview})` }}
-              />
-            ) : null}
-
             <div className="absolute inset-0 bg-black/20" />
 
             <div className="relative flex h-full flex-col items-center justify-center px-4 text-center">
-              {!idImagePreview && (
-                <>
-                  <Camera className="h-20 w-20 text-white/45" />
+              <Camera className="h-20 w-20 text-white/45" />
 
-                  <p className="mt-3 text-sm font-bold text-white/55">
-                    Chụp ảnh ID để xác thực
-                  </p>
-                </>
-              )}
+              <p className="mt-3 text-sm font-bold text-white/55">
+                Giao diện xác thực ID
+              </p>
 
-              <input
-                id="guard-id-photo"
-                type="file"
-                accept="image/*"
-                capture="environment"
-                onChange={handleIdImageChange}
-                className="hidden"
-              />
-
-              <label
-                htmlFor="guard-id-photo"
-                className="mt-6 cursor-pointer rounded bg-white px-5 py-3 text-sm font-extrabold text-slate-800 shadow-sm transition-all active:scale-[0.98]"
-              >
-                {idVerified ? "Chụp lại ID" : "Chụp ảnh ID"}
-              </label>
+              <div className="mt-6 rounded bg-white px-5 py-3 text-sm font-extrabold text-slate-800 shadow-sm">
+                Ảnh ID
+              </div>
             </div>
 
-            {idImageName && (
-              <div className="absolute bottom-3 left-3 right-3 rounded bg-emerald-50 px-3 py-2 text-center text-[11px] font-bold text-emerald-700">
-                <p>Đã xác thực ảnh ID</p>
-                <p className="mt-1 truncate opacity-80">{idImageName}</p>
-              </div>
-            )}
+            <div className="absolute bottom-3 left-3 right-3 rounded bg-emerald-50 px-3 py-2 text-center text-[11px] font-bold text-emerald-700">
+              <p>ID đã sẵn sàng</p>
+            </div>
           </div>
         </section>
       </main>
 
-      {/* Footer */}
       <footer className="bottom-0 z-20 rounded-2xl border-t border-slate-200 bg-[#f3f3f5] px-3 pb-4 pt-3">
         <button
           type="button"
@@ -335,16 +519,54 @@ export default function GuardShiftCheckinPage() {
           }`}
         >
           <UserCheck className="h-5 w-5" />
-          Điểm danh
+          {checkinButtonLabel}
         </button>
 
         <p className="mt-3 flex items-center justify-center gap-1.5 text-center text-[11px] font-bold text-slate-500">
           <span className="inline-block h-1.5 w-1.5 rounded-full bg-slate-500" />
-          {canCheckin
-            ? "Đã hoàn tất xác thực. Có thể tiếp tục"
-            : "Hoàn tất các bước xác thực để tiếp tục"}
+          {checkinMessage}
         </p>
       </footer>
+
+      {checkinPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
+          <div className="w-full max-w-[340px] rounded-2xl bg-white p-5 text-center shadow-xl">
+            <div
+              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
+                checkinPopup.type === "success"
+                  ? "bg-emerald-50 text-emerald-600"
+                  : "bg-red-50 text-red-600"
+              }`}
+            >
+              <CheckCircle2 className="h-8 w-8" />
+            </div>
+
+            <h3
+              className={`mt-4 text-base font-black ${
+                checkinPopup.type === "success"
+                  ? "text-emerald-700"
+                  : "text-red-600"
+              }`}
+            >
+              {checkinPopup.type === "success"
+                ? "Điểm danh thành công"
+                : "Điểm danh thất bại"}
+            </h3>
+
+            <p className="mt-2 text-sm font-bold text-slate-600">
+              {checkinPopup.message}
+            </p>
+
+            <button
+              type="button"
+              onClick={() => setCheckinPopup(null)}
+              className="mt-5 w-full rounded-xl bg-[#0754a6] px-4 py-3 text-sm font-black text-white transition-all active:scale-[0.98]"
+            >
+              Đóng
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

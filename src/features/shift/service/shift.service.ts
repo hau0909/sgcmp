@@ -4,6 +4,7 @@ import type {
   GetShiftDateRangeParams,
   GetGuardShiftsResult,
   GetGuardShiftsServiceParams,
+  UpdateShiftAssignmentStatusParams,
 } from "../type";
 
 import type { Shifts } from "@/types/Shift";
@@ -24,6 +25,8 @@ import {
   getShiftAssignmentByShiftAndGuard,
   getShiftAssignmentsByShiftId,
   getShiftById,
+  updateShiftAssignmentStatusByShiftAndGuard,
+  updateAssignedShiftAssignmentsToAbsentByShiftId,
 } from "../repository/shift.repository";
 
 export const getShiftContractOptionsService = async (
@@ -136,4 +139,16 @@ export const getShiftAssignmentsByShiftIdService = async (
   shiftId: string,
 ): Promise<Shift_Assignment[]> => {
   return await getShiftAssignmentsByShiftId(shiftId);
+};
+
+export const updateShiftAssignmentStatusByShiftAndGuardService = async (
+  params: UpdateShiftAssignmentStatusParams,
+) => {
+  return await updateShiftAssignmentStatusByShiftAndGuard(params);
+};
+
+export const updateAssignedShiftAssignmentsToAbsentByShiftIdService = async (
+  shiftId: string,
+) => {
+  return await updateAssignedShiftAssignmentsToAbsentByShiftId(shiftId);
 };

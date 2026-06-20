@@ -4,6 +4,7 @@ import {
   getShiftContractOptionsService,
   getOverlappingGuardShiftsService,
   getAllShiftsByDateRangeService,
+  updateAssignedShiftAssignmentsToAbsentByShiftIdService,
 } from "../service/shift.service";
 import { handleGetUserProfile } from "@/features/auth/controller/auth.controller";
 import {
@@ -11,7 +12,7 @@ import {
   getCoordinatorByCompanyIdService,
 } from "@/features/guards/service/guard.service";
 import { getUser } from "@/features/auth/service/auth.service";
-import type { CreateShiftInput, GuardShiftDetailItem  } from "../type";
+import type { CreateShiftInput, GuardShiftDetailItem } from "../type";
 import {
   validateCreateShiftInput,
   validateShiftDateInContract,
@@ -26,10 +27,19 @@ import {
 import { getGuardShiftQueryParams } from "../utils/shift-server.utils";
 import { resolveGuardIdForShift } from "../utils/shift-server.utils";
 import { addDaysToDateKey } from "@/utils/calcDate";
-import { getGuardShiftsService,   getShiftAssignmentByShiftAndGuardService,
+import {
+  getGuardShiftsService,
+  getShiftAssignmentByShiftAndGuardService,
   getShiftAssignmentsByShiftIdService,
-  getShiftByIdService, } from "../service/shift.service";
-import { startOfWeekMondayDateKey, formatShiftTime, isValidUuid } from "../utils/shift.utils";
+  getShiftByIdService,
+  updateShiftAssignmentStatusByShiftAndGuardService,
+} from "../service/shift.service";
+import {
+  startOfWeekMondayDateKey,
+  formatShiftTime,
+  isValidUuid,
+  formatTimes,
+} from "../utils/shift.utils";
 import {
   getGuardByUserIdService,
   getGuardsByIdsService,
@@ -45,6 +55,8 @@ import { getBookingByIdService } from "@/features/booking/service/booking.servic
 import { getCompanyByIdService } from "@/features/company/service/company.service";
 import { getServiceByIdService } from "@/features/service/service/service.service";
 
+const CHECKIN_BEFORE_MINUTES = 5;
+const CHECKIN_AFTER_MINUTES = 5;
 
 export class ShiftApiError extends Error {
   statusCode: number;
@@ -55,7 +67,6 @@ export class ShiftApiError extends Error {
     this.statusCode = statusCode;
   }
 }
-
 
 export const handleGetShiftContracts = async () => {
   const user = await getUser();
@@ -559,24 +570,23 @@ export const handleGetGuardShiftDetail = async ({
     throw new ShiftApiError("Bạn cần đăng nhập để xem ca trực.", 401);
   }
 
- const guard = await getGuardByUserIdService(user.id);
+  const guard = await getGuardByUserIdService(user.id);
 
-if (!guard) {
-  throw new ShiftApiError("Không tìm thấy thông tin bảo vệ.", 403);
-}
+  if (!guard) {
+    throw new ShiftApiError("Không tìm thấy thông tin bảo vệ.", 403);
+  }
 
-const assignment = await getShiftAssignmentByShiftAndGuardService({
-  shiftId,
-  guardId: user.id,
-});
+  const assignment = await getShiftAssignmentByShiftAndGuardService({
+    shiftId,
+    guardId: user.id,
+  });
 
-
-if (!assignment) {
-  throw new ShiftApiError(
-    "Bạn không có quyền xem ca trực này hoặc ca trực không tồn tại.",
-    404,
-  );
-}
+  if (!assignment) {
+    throw new ShiftApiError(
+      "Bạn không có quyền xem ca trực này hoặc ca trực không tồn tại.",
+      404,
+    );
+  }
 
   const shift = await getShiftByIdService(shiftId);
 
@@ -604,28 +614,27 @@ if (!assignment) {
     ? await getProfileByUserIdService(assignment.assigned_by)
     : null;
 
-    
   const shiftAssignments = await getShiftAssignmentsByShiftIdService(
     shift.shift_id,
   );
 
- const userIds = shiftAssignments.map((item) => item.guard_id);
-const profiles = await getProfilesByUserIdsService(userIds);
+  const userIds = shiftAssignments.map((item) => item.guard_id);
+  const profiles = await getProfilesByUserIdsService(userIds);
 
-const guardList = shiftAssignments.map((shiftAssignment) => {
-  const profile = profiles.find(
-    (item) => item.user_id === shiftAssignment.guard_id,
-  );
+  const guardList = shiftAssignments.map((shiftAssignment) => {
+    const profile = profiles.find(
+      (item) => item.user_id === shiftAssignment.guard_id,
+    );
 
-  return {
-    guard_id: shiftAssignment.guard_id,
-    user_id: shiftAssignment.guard_id,
-    full_name: profile?.full_name || "Chưa có tên",
-    phone_number: profile?.phone_number || null,
-    avatar_url: profile?.avatar_url || null,
-    status: shiftAssignment.status,
-  };
-});
+    return {
+      guard_id: shiftAssignment.guard_id,
+      user_id: shiftAssignment.guard_id,
+      full_name: profile?.full_name || "Chưa có tên",
+      phone_number: profile?.phone_number || null,
+      avatar_url: profile?.avatar_url || null,
+      status: shiftAssignment.status,
+    };
+  });
 
   return {
     id: shift.shift_id,
@@ -645,14 +654,13 @@ const guardList = shiftAssignments.map((shiftAssignment) => {
           phone_number: assignedByProfile.phone_number || null,
         }
       : null,
-company: company
-  ? {
-      company_id: company.company_id,
-      company_name: company.company_name || "Chưa cập nhật công ty",
-      address:
-        typeof company.address === "string" ? company.address : null,
-    }
-  : null,
+    company: company
+      ? {
+          company_id: company.company_id,
+          company_name: company.company_name || "Chưa cập nhật công ty",
+          address: typeof company.address === "string" ? company.address : null,
+        }
+      : null,
     service: service
       ? {
           service_id: service.service_id,
@@ -668,5 +676,132 @@ company: company
         }
       : null,
     guards: guardList,
+  };
+};
+
+export const handleCheckinGuardShift = async ({
+  shiftId,
+}: {
+  shiftId: string;
+}) => {
+  if (!shiftId || !isValidUuid(shiftId)) {
+    throw new ShiftApiError("Mã ca trực không hợp lệ.", 400);
+  }
+
+  const user = await getUser();
+
+  if (!user) {
+    throw new ShiftApiError("Bạn cần đăng nhập để điểm danh.", 401);
+  }
+
+  const guard = await getGuardByUserIdService(user.id);
+
+  if (!guard) {
+    throw new ShiftApiError("Không tìm thấy thông tin bảo vệ.", 403);
+  }
+
+  const shift = await getShiftByIdService(shiftId);
+
+  if (!shift) {
+    throw new ShiftApiError("Không tìm thấy ca trực.", 404);
+  }
+
+  /**
+   * DB hiện tại của bạn:
+   * shift_assignments.guard_id = profiles.user_id
+   * nên chỗ này dùng user.id, không dùng guard.guard_id.
+   */
+  const assignment = await getShiftAssignmentByShiftAndGuardService({
+    shiftId,
+    guardId: user.id,
+  });
+
+  if (!assignment) {
+    throw new ShiftApiError(
+      "Bạn không có quyền điểm danh ca trực này hoặc ca trực không tồn tại.",
+      404,
+    );
+  }
+
+  if (assignment.status === "completed") {
+    throw new ShiftApiError("Ca trực này đã được điểm danh.", 409);
+  }
+
+  if (assignment.status === "absent") {
+    throw new ShiftApiError("Ca trực này đã bị đánh dấu vắng mặt.", 409);
+  }
+
+  const now = new Date();
+  const shiftStartTime = new Date(shift.start_time);
+
+  if (Number.isNaN(shiftStartTime.getTime())) {
+    throw new ShiftApiError("Thời gian bắt đầu ca trực không hợp lệ.", 400);
+  }
+
+  const canCheckinFrom = new Date(
+    shiftStartTime.getTime() - CHECKIN_BEFORE_MINUTES * 60 * 1000,
+  );
+
+  const absentAfter = new Date(
+    shiftStartTime.getTime() + CHECKIN_AFTER_MINUTES * 60 * 1000,
+  );
+
+  if (now < canCheckinFrom) {
+    throw new ShiftApiError(
+      `Chưa đến thời gian điểm danh. Bạn có thể điểm danh từ ${formatTimes(
+        canCheckinFrom.toISOString(),
+      )}.`,
+      400,
+    );
+  }
+
+  /**
+   * Từ start_time + 5 phút trở đi:
+   * assigned -> absent
+   */
+  if (now >= absentAfter) {
+    const updatedAssignments =
+      await updateAssignedShiftAssignmentsToAbsentByShiftIdService(shiftId);
+
+    const currentAssignment = updatedAssignments.find(
+      (item) => item.guard_id === user.id,
+    );
+
+    if (!currentAssignment) {
+      throw new ShiftApiError("Ca trực đã quá thời gian điểm danh.", 409);
+    }
+
+    return {
+      assignment: currentAssignment,
+      checkin_window: {
+        server_time: now.toISOString(),
+        can_checkin_from: canCheckinFrom.toISOString(),
+        absent_after: absentAfter.toISOString(),
+      },
+    };
+  }
+
+  /**
+   * Trong khoảng hợp lệ:
+   * assigned -> completed
+   */
+  const updatedAssignment =
+    await updateShiftAssignmentStatusByShiftAndGuardService({
+      shiftId,
+      guardId: user.id,
+      status: "completed",
+    });
+
+  if (!updatedAssignment) {
+    throw new ShiftApiError("Không thể điểm danh ca trực.", 500);
+  }
+
+  return {
+    assignment: updatedAssignment,
+    checkin_window: {
+      server_time: now.toISOString(),
+      can_checkin_from: canCheckinFrom.toISOString(),
+      absent_after: absentAfter.toISOString(),
+    },
   };
 };
