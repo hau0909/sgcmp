@@ -7,6 +7,7 @@ import { Contract } from "@/types/Contract";
 export const getContracts = async (
   page: number,
   limit: number,
+  companyId?: string,
   search?: string,
   status?: ContractStatus,
   startDate?: string,
@@ -44,6 +45,10 @@ export const getContracts = async (
   `,
     { count: "exact" },
   );
+
+  if (companyId) {
+    query = query.eq("bookings.company_id", companyId);
+  }
 
   if (status) {
     query = query.eq("status", status);

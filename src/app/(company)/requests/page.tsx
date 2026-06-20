@@ -7,9 +7,12 @@ import { BookingFilters } from "@/features/booking/components/BookingFilters";
 import { BookingTable } from "@/features/booking/components/BookingTable";
 import { Booking } from "@/features/booking/types";
 import { requestGetBookings } from "@/features/booking/api/booking.api";
+import { useAuthStore } from "@/store/auth.store";
 
 export default function BookingsPage() {
   const router = useRouter();
+  const companyId = useAuthStore((state) => state.company_id);
+
   // Bookings list state
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [totalCount, setTotalCount] = useState(0);
@@ -20,8 +23,11 @@ export default function BookingsPage() {
 
   // Fetch bookings from API
   useEffect(() => {
+    if (!companyId) {
+      setIsLoading(false);
+      return;
+    }
     let active = true;
-    const companyId = "9b9da580-1a8b-4394-87c4-ebcba555ffe5"; // Demo company ID
     const fetchBookings = async () => {
       setIsLoading(true);
       try {
@@ -44,7 +50,7 @@ export default function BookingsPage() {
     return () => {
       active = false;
     };
-  }, [page]);
+  }, [page, companyId]);
 
   // Filters state (UI only, no filtering is performed)
   const [search, setSearch] = useState("");

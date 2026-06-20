@@ -96,19 +96,39 @@ export default function SubscriptionPlans({
               </div>
 
               <ul className="space-y-3 mb-8 flex-1">
-                {plan?.features?.map((feature, index) => (
-                  <li
-                    key={index}
-                    className={`flex items-start gap-2.5 text-xs text-on-surface-variant font-semibold
-                      ${isCurrent ? "text-on-surface/80" : ""}`}
-                  >
-                    <CheckCircle2
-                      className={`w-4 h-4 shrink-0 mt-0.5
-                        ${isCurrent ? "text-primary" : "text-secondary"}`}
-                    />
-                    <span>{feature}</span>
-                  </li>
-                ))}
+                {(() => {
+                  let parsedFeatures: string[] = [];
+                  if (Array.isArray(plan?.features)) {
+                    parsedFeatures = plan.features;
+                  } else if (typeof plan?.features === "string") {
+                    try {
+                      const parsed = JSON.parse(plan.features);
+                      if (Array.isArray(parsed)) {
+                        parsedFeatures = parsed;
+                      } else {
+                        parsedFeatures = [plan.features];
+                      }
+                    } catch {
+                      parsedFeatures = (plan.features as string)
+                        .split(",")
+                        .map((f) => f.trim())
+                        .filter(Boolean);
+                    }
+                  }
+                  return parsedFeatures.map((feature, index) => (
+                    <li
+                      key={index}
+                      className={`flex items-start gap-2.5 text-xs text-on-surface-variant font-semibold
+                        ${isCurrent ? "text-on-surface/80" : ""}`}
+                    >
+                      <CheckCircle2
+                        className={`w-4 h-4 shrink-0 mt-0.5
+                          ${isCurrent ? "text-primary" : "text-secondary"}`}
+                      />
+                      <span>{feature}</span>
+                    </li>
+                  ));
+                })()}
               </ul>
 
               {isCurrent ? (
