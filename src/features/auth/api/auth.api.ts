@@ -26,3 +26,13 @@ export const requestGetUserProfile = async () => {
   });
   return result;
 };
+
+export type LogoutResponse = {
+  message: string;
+};
+
+export const requestLogout = async (): Promise<LogoutResponse> => {
+  return await fetcher("/api/auth/logout", {
+    method: "POST",
+  });
+};
