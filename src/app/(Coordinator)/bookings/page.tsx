@@ -14,7 +14,7 @@ export default function CoordinatorBookingsPage() {
   const storeCompanyId = useAuthStore((state) => state.company_id);
 
   // Fallback to demo company ID if none is active in store
-  const companyId = storeCompanyId || "9b9da580-1a8b-4394-87c4-ebcba555ffe5";
+  const companyId = storeCompanyId;
 
   // Data and loading states
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -34,13 +34,20 @@ export default function CoordinatorBookingsPage() {
     let active = true;
     const fetchApprovedBookings = async () => {
       setIsLoading(true);
+
       try {
+        if (!companyId) {
+          setBookings([]);
+          setTotalCount(0);
+          return;
+        }
+
         const result = await requestGetBookings(
           companyId,
           page,
           limit,
           "accepted", // Booking status must be accepted
-          "active"    // Contract status must be active
+          "active", // Contract status must be active
         );
 
         if (active) {
@@ -101,7 +108,9 @@ export default function CoordinatorBookingsPage() {
       <BookingHeader
         onExport={handleExport}
         onCreateNew={() =>
-          alert("Điều phối viên không có quyền trực tiếp tạo đơn mới! Vui lòng liên hệ Admin hoặc Khách hàng.")
+          alert(
+            "Điều phối viên không có quyền trực tiếp tạo đơn mới! Vui lòng liên hệ Admin hoặc Khách hàng.",
+          )
         }
       />
 

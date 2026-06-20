@@ -14,6 +14,7 @@ import { createClient } from "@/lib/supabase/server";
 export const getContractsService = async (
   page: number,
   limit: number,
+  companyId?: string,
   search?: string,
   status?: ContractStatus,
   startDate?: string,
@@ -22,6 +23,7 @@ export const getContractsService = async (
   const { data, count } = await getContracts(
     page,
     limit,
+    companyId,
     search,
     status,
     startDate,
