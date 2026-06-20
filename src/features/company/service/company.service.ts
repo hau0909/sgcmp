@@ -1,10 +1,11 @@
 import {
   getAllActiveCompanies,
   DbCompany,
-  getServices
+  getServices,
+  getCompanyById
 } from "../repository/company.repository";
 import { getCitiesService as getCities, getWardsService as getWards, formatAddressService } from "@/features/address";
-import { MarketplaceCompany, City, Ward, Service } from "../types";
+import { MarketplaceCompany, City, Ward, Service, CompanyDetailData, CompanyServiceData } from "../types";
 
 export interface CompanyFilterParams {
   search?: string;
@@ -47,8 +48,8 @@ export const mapDbCompanyToMarketplace = async (dbCompany: DbCompany): Promise<M
   // Extract tags from services name
   const tags = dbCompany.company_services
     ? dbCompany.company_services
-        .map((cs) => cs.services?.name)
-        .filter((n): n is string => !!n)
+      .map((cs) => cs.services?.name)
+      .filter((n): n is string => !!n)
     : [];
 
   // Find minimum price among services, default to 0 if none
@@ -94,7 +95,7 @@ export const getCompaniesService = async (
   params: CompanyFilterParams = {}
 ): Promise<PaginatedCompaniesResponse> => {
   const dbCompanies = await getAllActiveCompanies();
-  
+
   // 1. Map to MarketplaceCompany schema
   let companies = await Promise.all(dbCompanies.map(mapDbCompanyToMarketplace));
 
@@ -181,7 +182,7 @@ export const getCompaniesService = async (
   const page = params.page || 1;
   const limit = params.limit || 6;
   const totalPages = Math.ceil(totalCount / limit) || 1;
-  
+
   const startIndex = (page - 1) * limit;
   const paginatedCompanies = companies.slice(startIndex, startIndex + limit);
 
@@ -201,9 +202,9 @@ export const getCompanyFiltersService = async (
     getWards(),
     getServices(),
   ]);
-  
+
   const companiesResult = await getCompaniesService(params);
-  
+
   return {
     cities,
     wards,
@@ -212,5 +213,40 @@ export const getCompanyFiltersService = async (
     totalCount: companiesResult.totalCount,
     totalPages: companiesResult.totalPages,
     currentPage: companiesResult.currentPage,
+  };
+};
+
+export const getCompanyByIdService = async (id: string): Promise<CompanyDetailData | null> => {
+  const dbCompany = await getCompanyById(id);
+  if (!dbCompany) return null;
+
+  const addressStr = await formatAddressService(dbCompany.address);
+  const logoImg = dbCompany.company_imgs?.find((img) => img.image_type === "logo");
+  const bannerImg = dbCompany.company_imgs?.find((img) => img.image_type === "banner");
+
+  const services: CompanyServiceData[] = dbCompany.company_services
+    ? dbCompany.company_services
+      .map((cs) => {
+        if (!cs.services) return null;
+        return {
+          name: cs.services.name,
+          description: cs.description || "",
+          baseDescription: cs.services.description || "",
+          price: cs.price,
+        };
+      })
+      .filter((s): s is CompanyServiceData => !!s)
+    : [];
+
+  return {
+    id: dbCompany.company_id,
+    name: dbCompany.company_name,
+    logoUrl: logoImg ? logoImg.image_url : undefined,
+    bannerUrl: bannerImg ? bannerImg.image_url : undefined,
+    description: dbCompany.description || "",
+    address: addressStr,
+    phone: dbCompany.phone,
+    email: dbCompany.email,
+    services,
   };
 };

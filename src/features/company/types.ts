@@ -57,3 +57,22 @@ export interface GetCompanyFiltersResponse {
   currentPage?: number;
 }
 
+export interface CompanyServiceData {
+  name: string;
+  description: string;
+  baseDescription: string;
+  price: number;
+}
+
+export interface CompanyDetailData {
+  id: string;
+  name: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  description: string;
+  address: string;
+  phone: string;
+  email: string;
+  services: CompanyServiceData[];
+}
+

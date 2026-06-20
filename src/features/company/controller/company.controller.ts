@@ -3,8 +3,10 @@ import {
   PaginatedCompaniesResponse,
   getCompaniesService,
   CompanyFiltersDataResponse,
-  getCompanyFiltersService
+  getCompanyFiltersService,
+  getCompanyByIdService
 } from "../service/company.service";
+import { CompanyDetailData } from "../types";
 
 export const handleGetCompanies = async (
   params: CompanyFilterParams
@@ -17,5 +19,12 @@ export const handleGetCompanyFilters = async (
   params?: CompanyFilterParams
 ): Promise<CompanyFiltersDataResponse> => {
   const result = await getCompanyFiltersService(params);
+  return result;
+};
+
+export const handleGetCompanyById = async (
+  id: string
+): Promise<CompanyDetailData | null> => {
+  const result = await getCompanyByIdService(id);
   return result;
 };
