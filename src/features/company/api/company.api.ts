@@ -4,6 +4,7 @@ import {
   GetCompaniesResponse,
   GetCompanyFiltersRequestParams,
   GetCompanyFiltersResponse,
+  CompanyDetailData,
 } from "../types";
 
 export async function requestGetCompanies(params: GetCompaniesRequestParams = {}): Promise<GetCompaniesResponse> {
@@ -35,6 +36,13 @@ export async function requestGetCompanyFilters(
   const queryString = queryParams.toString();
   const url = `/api/companies/filters${queryString ? `?${queryString}` : ""}`;
 
+  return await fetcher(url, {
+    method: "GET",
+  });
+}
+
+export async function requestGetCompanyById(id: string): Promise<CompanyDetailData> {
+  const url = `/api/companies/${id}`;
   return await fetcher(url, {
     method: "GET",
   });

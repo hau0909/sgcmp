@@ -1,4 +1,5 @@
 import { ShiftAssignmentStatus } from "@/types/Enum";
+export type { ShiftAssignmentStatus };
 
 export type Shift = {
   shift_id: string;
