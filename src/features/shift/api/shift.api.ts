@@ -5,7 +5,8 @@ import type {
   CreateShiftInput,
   GetAllShiftsResponse,
   GetGuardShiftsResponse,
-  GuardShiftDetailResponse 
+  GuardShiftDetailResponse,
+  CheckinGuardShiftResponse,
 } from "../type";
 
 export const requestGetShiftContracts =
@@ -93,5 +94,15 @@ export const requestGetGuardShiftDetail = async ({
 }): Promise<GuardShiftDetailResponse> => {
   return await fetcher(`/api/shifts/${encodeURIComponent(shiftId)}`, {
     method: "GET",
+  });
+};
+
+export const requestCheckinGuardShift = async ({
+  shiftId,
+}: {
+  shiftId: string;
+}): Promise<CheckinGuardShiftResponse> => {
+  return await fetcher(`/api/shifts/${encodeURIComponent(shiftId)}/checkin`, {
+    method: "POST",
   });
 };

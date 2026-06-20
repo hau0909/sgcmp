@@ -468,8 +468,34 @@ export type GuardShiftDetailItem = {
 };
 
 export type GuardShiftDetailResponse = {
-   message: string;
+  message: string;
   data: {
     shift: GuardShiftDetailItem;
+  };
+};
+
+export type UpdateShiftAssignmentStatusParams = {
+  shiftId: string;
+  guardId: string;
+  status: ShiftAssignmentStatus;
+};
+
+export type CheckinGuardShiftResponse = {
+  message: string;
+  data: {
+    assignment: {
+      assignment_id: string;
+      shift_id: string;
+      guard_id: string;
+      assigned_by: string | null;
+      status: ShiftAssignmentStatus;
+      created_at: string;
+      updated_at: string;
+    };
+    checkin_window: {
+      server_time: string;
+      can_checkin_from: string;
+      absent_after: string;
+    };
   };
 };
