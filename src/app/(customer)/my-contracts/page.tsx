@@ -6,11 +6,14 @@ import { Contract } from "@/types/Contract";
 import { CustomerContractTable } from "@/features/contract/components/CustomerContractTable";
 import { CustomerContractFilters } from "@/features/contract/components/CustomerContractFilters";
 import { requestGetCustomerContracts } from "@/features/contract/api/contract.api";
+import { useAuthStore } from "@/store/auth.store";
 import { FileText } from "lucide-react";
 
 
 export default function CustomerContractsPage() {
   const router = useRouter();
+  const customerId = useAuthStore((state) => state.user_id) || "";
+
 
   // Filter state
   const [search, setSearch] = useState("");
@@ -35,6 +38,7 @@ export default function CustomerContractsPage() {
       try {
         setIsLoading(true);
         const result = await requestGetCustomerContracts({
+          customerId,
           page,
           limit,
           search: search.trim() || undefined,
@@ -61,7 +65,7 @@ export default function CustomerContractsPage() {
     return () => {
       active = false;
     };
-  }, [page, search, status, startDate, endDate]);
+  }, [page, search, status, startDate, endDate, customerId]);
 
   // Reset page on filter change
   const handleSearchChange = (val: string) => { setSearch(val); setPage(1); };

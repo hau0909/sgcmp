@@ -130,7 +130,7 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
       <CompanyDetailServices services={company.services} />
 
       {/* Customer Reviews Full Width */}
-      <CompanyDetailReviews />
+      <CompanyDetailReviews companyId={company.id} />
     </div>
   );
 }

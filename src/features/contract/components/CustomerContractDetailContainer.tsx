@@ -21,6 +21,7 @@ import {
   requestGetCustomerContractDetail,
   requestSignContractCustomer,
 } from "../api/contract.api";
+import { useAuthStore } from "@/store/auth.store";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 interface CustomerContractDetailContainerProps {
@@ -30,6 +31,8 @@ interface CustomerContractDetailContainerProps {
 export function CustomerContractDetailContainer({
   contractId,
 }: CustomerContractDetailContainerProps) {
+  const customerId = useAuthStore((state) => state.user_id) || "";
+
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [contract, setContract] = useState<any | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -49,7 +52,7 @@ export function CustomerContractDetailContainer({
       await Promise.resolve();
       if (showLoading) setIsLoading(true);
       setError(null);
-      const res = await requestGetCustomerContractDetail(contractId);
+      const res = await requestGetCustomerContractDetail(contractId, customerId);
       if (res && res.contract) {
         setContract(res.contract);
       } else {
@@ -73,7 +76,7 @@ export function CustomerContractDetailContainer({
   const handleSignCustomer = async () => {
     try {
       setIsSignModalOpen(false);
-      const res = await requestSignContractCustomer(contractId);
+      const res = await requestSignContractCustomer(contractId, customerId);
       if (res && res.success) {
         showToast("Ký xác nhận hợp đồng thành công!");
         await fetchDetail(false);
