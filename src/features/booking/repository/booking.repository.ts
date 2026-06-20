@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { BookingWithCustomerProfile } from "../types";
+import type { Booking } from "@/types/Booking";
 
 export const getBookings = async (
   companyId: string,
@@ -111,3 +112,20 @@ export const getBookingDetail = async (id: string): Promise<any | null> => {
   return data;
 };
 
+export const getBookingById = async (
+  bookingId: string,
+): Promise<Booking | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Booking) || null;
+};

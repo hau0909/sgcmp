@@ -8,6 +8,7 @@ import {
   getCustomerContracts,
   getCustomerContractDetail,
   getContractIdsByCompany,
+  getContractById 
 } from "../repository/contract.repository";
 import { createClient } from "@/lib/supabase/server";
 
@@ -391,4 +392,10 @@ export const getContractIdsByCompanyService = async (
   location?: string,
 ) => {
   return getContractIdsByCompany(companyId, location);
+};
+
+export const getContractByIdService = async (
+  contractId: string,
+): Promise<Contract | null> => {
+  return await getContractById(contractId);
 };

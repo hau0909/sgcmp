@@ -18,6 +18,8 @@ import type {
   GuardShiftItem,
   ShiftRow,
 } from "../type";
+import { Shifts } from "@/types/Shift";
+import { Shift_Assignment } from "@/types/ShiftAssignment";
 
 const getSingleRelation = <T>(value: T | T[] | null | undefined): T | null => {
   if (!value) {
@@ -419,23 +421,23 @@ const mapShiftRowToItem = (row: ShiftRow): GuardShiftItem | null => {
   const startTime = formatTimes(shift.start_time);
   const endTime = formatTimes(shift.end_time);
 
-  return {
-    id: row.assignment_id,
-    assignment_id: row.assignment_id,
-    shift_id: shift.shift_id,
-    contract_id: shift.contract_id,
+ return {
+  id: row.assignment_id,
+  assignment_id: row.assignment_id,
+  shift_id: shift.shift_id,
+  contract_id: shift.contract_id,
 
-    date: formatDateKey(shift.start_time),
-    time: `${startTime} - ${endTime}`,
+  date: formatDateKey(shift.start_time),
+  time: `${startTime} - ${endTime}`,
 
-    start_time: shift.start_time,
-    end_time: shift.end_time,
+  start_time: shift.start_time,
+  end_time: shift.end_time,
 
-    location: shift.location ?? "Chưa cập nhật vị trí",
-    address: booking?.address ?? "Chưa cập nhật địa chỉ",
+  location: shift.location ?? "Chưa cập nhật vị trí",
+  address: booking?.address ?? "Chưa cập nhật địa chỉ",
 
-    status: row.status,
-  };
+  status: row.status,
+};
 };
 
 export const getGuardIdByUserId = async (
@@ -527,4 +529,62 @@ export const getGuardShiftsByRange = async ({
         new Date(second.start_time).getTime()
       );
     });
+};
+
+export const getShiftById = async (
+  shiftId: string,
+): Promise<Shifts | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shifts")
+    .select("*")
+    .eq("shift_id", shiftId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Shifts) || null;
+};
+
+export const getShiftAssignmentByShiftAndGuard = async ({
+  shiftId,
+  guardId,
+}: {
+  shiftId: string;
+  guardId: string;
+}): Promise<Shift_Assignment | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select("*")
+    .eq("shift_id", shiftId)
+    .eq("guard_id", guardId)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Shift_Assignment) || null;
+};
+
+export const getShiftAssignmentsByShiftId = async (
+  shiftId: string,
+): Promise<Shift_Assignment[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .select("*")
+    .eq("shift_id", shiftId);
+
+  if (error) {
+    throw error;
+  }
+
+  return (data as Shift_Assignment[]) || [];
 };

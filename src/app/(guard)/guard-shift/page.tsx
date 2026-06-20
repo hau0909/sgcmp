@@ -64,7 +64,7 @@ const getStatusStyle = (status: ShiftItem["status"]) => {
 
 const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
   return {
-    id: shift.id,
+    id: shift.shift_id,
     time: shift.time,
     location: shift.location,
     address: shift.address,

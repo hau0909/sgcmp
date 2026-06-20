@@ -1,4 +1,6 @@
-import { updateProfile } from "../repository/profile.repository";
+import type { Profile } from "@/types/Profile";
+
+import { updateProfile, getProfileByUserId, getProfilesByUserIds, } from "../repository/profile.repository";
 
 export const updateProfileService = async (
   userId: string,
@@ -15,4 +17,16 @@ export const updateProfileService = async (
   }
   
   await updateProfile(userId, payload);
+};
+
+export const getProfileByUserIdService = async (
+  userId: string,
+): Promise<Profile | null> => {
+  return await getProfileByUserId(userId);
+};
+
+export const getProfilesByUserIdsService = async (
+  userIds: string[],
+): Promise<Profile[]> => {
+  return await getProfilesByUserIds(userIds);
 };

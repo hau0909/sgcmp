@@ -119,3 +119,28 @@ export const startOfWeekMondayDateKey = (dateKey: string) => {
 
   return addDaysToDateKey(dateKey, diff);
 };
+
+export const formatShiftTime = (startTime: string, endTime: string) => {
+  const start = new Date(startTime).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+
+  const end = new Date(endTime).toLocaleTimeString("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Ho_Chi_Minh",
+  });
+
+  return `${start} - ${end}`;
+};
+
+export const isValidUuid = (value: string) => {
+  const uuidRegex =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+
+  return uuidRegex.test(value);
+};

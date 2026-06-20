@@ -1,5 +1,6 @@
 import { Booking, BookingWithCustomerProfile } from "../types";
-import { getBookings, getBookingDetail } from "../repository/booking.repository";
+import { getBookings, getBookingDetail, getBookingById  } from "../repository/booking.repository";
+
 
 export const getBookingsService = async (
   companyId: string,
@@ -85,3 +86,8 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
   };
 };
 
+export const getBookingByIdService = async (
+  bookingId: string,
+): Promise<Booking | null> => {
+  return await getBookingById(bookingId);
+};
