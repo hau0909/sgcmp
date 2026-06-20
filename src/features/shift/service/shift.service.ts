@@ -6,6 +6,9 @@ import type {
   GetGuardShiftsServiceParams,
 } from "../type";
 
+import type { Shifts } from "@/types/Shift";
+import type { Shift_Assignment } from "@/types/ShiftAssignment";
+
 import { groupShiftsByDate } from "../utils/shift.utils";
 
 import {
@@ -18,6 +21,9 @@ import {
   getOverlappingGuardShifts,
   getAllShiftsByDateRange,
   getGuardShiftsByRange,
+  getShiftAssignmentByShiftAndGuard,
+  getShiftAssignmentsByShiftId,
+  getShiftById,
 } from "../repository/shift.repository";
 
 export const getShiftContractOptionsService = async (
@@ -105,4 +111,29 @@ export const getGuardShiftsService = async ({
     shifts,
     grouped_by_date: groupShiftsByDate(shifts),
   };
+};
+
+export const getShiftByIdService = async (
+  shiftId: string,
+): Promise<Shifts | null> => {
+  return await getShiftById(shiftId);
+};
+
+export const getShiftAssignmentByShiftAndGuardService = async ({
+  shiftId,
+  guardId,
+}: {
+  shiftId: string;
+  guardId: string;
+}): Promise<Shift_Assignment | null> => {
+  return await getShiftAssignmentByShiftAndGuard({
+    shiftId,
+    guardId,
+  });
+};
+
+export const getShiftAssignmentsByShiftIdService = async (
+  shiftId: string,
+): Promise<Shift_Assignment[]> => {
+  return await getShiftAssignmentsByShiftId(shiftId);
 };
