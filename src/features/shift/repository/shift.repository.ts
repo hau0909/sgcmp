@@ -22,6 +22,14 @@ import type {
 import { Shifts } from "@/types/Shift";
 import { Shift_Assignment } from "@/types/ShiftAssignment";
 
+const toStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string");
+};
+
 const getSingleRelation = <T>(value: T | T[] | null | undefined): T | null => {
   if (!value) {
     return null;
@@ -53,6 +61,8 @@ export const getShiftContractsByCompanyId = async (
         address,
         description,
         guards_per_slot,
+        time_slots,
+        day_per_week,
         customer:profiles!bookings_customer_id_fkey (
           full_name
         ),
@@ -92,6 +102,8 @@ export const getShiftContractsByCompanyId = async (
         description: booking?.description ?? "Chưa cập nhật",
         start_date: contract.start_date,
         end_date: contract.end_date,
+        time_slots: toStringArray(booking?.time_slots) ?? "Chưa cập nhật",
+        day_per_week: toStringArray(booking?.day_per_week) ?? "Chưa cập nhật",
       };
     },
   );
