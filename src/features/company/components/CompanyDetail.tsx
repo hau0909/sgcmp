@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 
 // Import our sub-components
 import CompanyDetailHeader from "./CompanyDetailHeader";
@@ -26,11 +27,9 @@ const mockCompany = {
   provinceCount: 50,
 };
 
-interface CompanyDetailProps {
-  id: string;
-}
-
-export default function CompanyDetail({ id }: CompanyDetailProps) {
+export default function CompanyDetail() {
+  const params = useParams();
+  const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -81,6 +80,7 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
       <CompanyDetailHeader
         name={mockCompany.name}
         logoUrl={mockCompany.logoUrl}
+        companyId={id}
       />
 
       <div className="flex flex-col lg:flex-row gap-5">
@@ -98,7 +98,6 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
             securityLicenseNo={mockCompany.securityLicenseNo}
             insuranceLevel={mockCompany.insuranceLevel}
           />
-
         </div>
 
         {/* Right Column (1/3) */}

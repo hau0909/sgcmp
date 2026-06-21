@@ -9,7 +9,7 @@ import { BookingCustomerInfo } from "./BookingCustomerInfo";
 import { BookingServiceSpec } from "./BookingServiceSpec";
 import { BookingQuotationPanel } from "./BookingQuotationPanel";
 import { BookingStatus } from "../types";
-import { requestGetBookingDetail } from "../api/booking.api";
+import { requestGetBookingDetail, updateQuotation, updateBookingDecision } from "../api/booking.api";
 
 const MOCK_DETAILS: Record<string, any> = {
   "bkg-1": {
@@ -186,11 +186,11 @@ export function BookingDetailContainer({
     }
   }, [bookingId, fetchDetail]);
 
-  // Trigger local state updates to simulate sending a quote to customer
-  const handleQuote = (price: number, notes: string) => {
+  // Trigger network request to update quotation
+  const handleQuote = async (price: number, notes: string) => {
     setIsSimulating(true);
-    // Simulate slight network delay for a high-end feel
-    setTimeout(() => {
+    try {
+      await updateQuotation(bookingId, price);
       setBooking((prev) => {
         if (!prev) return null;
         return {
@@ -203,14 +203,19 @@ export function BookingDetailContainer({
       setToastMessage(
         `Đã cập nhật báo giá ${price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`
       );
+    } catch (err: any) {
+      setToastType("error");
+      setToastMessage(err.message || "Lỗi khi cập nhật báo giá.");
+    } finally {
       setIsSimulating(false);
-    }, 600);
+    }
   };
 
-  // Trigger local state updates to simulate rejecting the booking
-  const handleReject = () => {
+  // Trigger network request to reject the booking
+  const handleReject = async () => {
     setIsSimulating(true);
-    setTimeout(() => {
+    try {
+      await updateBookingDecision(bookingId, "rejected");
       setBooking((prev) => {
         if (!prev) return null;
         return {
@@ -220,8 +225,12 @@ export function BookingDetailContainer({
       });
       setToastType("success");
       setToastMessage("Yêu cầu đặt lịch đã bị từ chối thành công.");
+    } catch (err: any) {
+      setToastType("error");
+      setToastMessage(err.message || "Lỗi khi từ chối yêu cầu.");
+    } finally {
       setIsSimulating(false);
-    }, 600);
+    }
   };
 
   // Clear toast notifications after 4 seconds

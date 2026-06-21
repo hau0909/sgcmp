@@ -1,5 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
-import { BookingWithCustomerProfile } from "../types";
+import { BookingWithCustomerProfile, CreateBookingRequest } from "../types";
 import type { Booking } from "@/types/Booking";
 
 export const getBookings = async (
@@ -128,4 +128,81 @@ export const getBookingById = async (
   }
 
   return (data as Booking) || null;
+};
+
+export const createBooking = async (
+  data: CreateBookingRequest
+): Promise<Booking> => {
+  const supabase = await createClient();
+
+  const { data: result, error } = await supabase
+    .from("bookings")
+    .insert({
+      customer_id: data.customer_id,
+      company_id: data.company_id,
+      service_id: data.service_id,
+      address: data.address,
+      description: data.description || null,
+      guards_per_slot: data.guards_per_slot,
+      time_slots: data.time_slots,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      status: "pending",
+      quoted_price: null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return result as Booking;
+};
+
+export const updateQuotation = async (
+  bookingId: string,
+  price: number
+): Promise<Booking> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .update({
+      quoted_price: price,
+      status: "quoted",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("booking_id", bookingId)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as Booking;
+};
+
+export const updateBookingStatus = async (
+  bookingId: string,
+  status: "accepted" | "rejected"
+): Promise<Booking> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .update({
+      status: status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("booking_id", bookingId)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data as Booking;
 };

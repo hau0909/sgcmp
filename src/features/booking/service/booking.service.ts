@@ -1,5 +1,5 @@
-import { Booking, BookingWithCustomerProfile } from "../types";
-import { getBookings, getBookingDetail, getBookingById  } from "../repository/booking.repository";
+import { Booking, BookingWithCustomerProfile, CreateBookingRequest } from "../types";
+import { getBookings, getBookingDetail, getBookingById, createBooking, updateQuotation, updateBookingStatus } from "../repository/booking.repository";
 
 
 export const getBookingsService = async (
@@ -90,4 +90,36 @@ export const getBookingByIdService = async (
   bookingId: string,
 ): Promise<Booking | null> => {
   return await getBookingById(bookingId);
+};
+
+export const sendServiceRequest = async (
+  data: CreateBookingRequest
+): Promise<Booking> => {
+  if (!data.customer_id || !data.company_id || !data.service_id || !data.start_date || !data.end_date) {
+    throw new Error("Missing required fields for booking request");
+  }
+
+  return await createBooking(data);
+};
+
+export const updateServiceQuotation = async (
+  id: string,
+  price: number
+): Promise<Booking> => {
+  if (price === undefined || price === null || price < 0) {
+    throw new Error("Invalid quotation price");
+  }
+
+  return await updateQuotation(id, price);
+};
+
+export const confirmOrDenyQuotation = async (
+  id: string,
+  decision: "accepted" | "rejected"
+): Promise<Booking> => {
+  if (decision !== "accepted" && decision !== "rejected") {
+    throw new Error("Invalid decision. Must be 'accepted' or 'rejected'");
+  }
+
+  return await updateBookingStatus(id, decision);
 };

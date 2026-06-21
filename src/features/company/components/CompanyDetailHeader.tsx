@@ -1,7 +1,8 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { ShieldCheck, Mail, Calendar } from "lucide-react";
+import BookingModal from "./BookingModal";
 
 interface CompanyDetailHeaderProps {
   name: string;
@@ -11,7 +12,9 @@ interface CompanyDetailHeaderProps {
 export default function CompanyDetailHeader({
   name,
   logoUrl,
-}: CompanyDetailHeaderProps) {
+  companyId = "9b9da580-1a8b-4394-87c4-ebcba555ffe5", // fallback mock ID if not provided
+}: CompanyDetailHeaderProps & { companyId?: string }) {
+  const [isModalOpen, setIsModalOpen] = useState(false);
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-xs">
       {/* cover banner - subtle, premium gradient with overlay */}
@@ -48,12 +51,19 @@ export default function CompanyDetailHeader({
             <Mail className="w-4 h-4" /> Liên hệ
           </button>
           <button
+            onClick={() => setIsModalOpen(true)}
             className="flex-1 md:flex-none px-3.5 py-2 bg-primary text-on-primary font-semibold rounded-lg hover:bg-primary/90 transition-colors shadow-xs text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
           >
             <Calendar className="w-4 h-4" /> Đặt dịch vụ
           </button>
         </div>
       </div>
+
+      <BookingModal 
+        isOpen={isModalOpen} 
+        onClose={() => setIsModalOpen(false)} 
+        companyId={companyId} 
+      />
     </div>
   );
 }

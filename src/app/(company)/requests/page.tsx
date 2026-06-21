@@ -105,6 +105,7 @@ export default function BookingsPage() {
         }
       />
 
+
       {/* Filters Bar */}
       <BookingFilters
         search={search}
