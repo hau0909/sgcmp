@@ -45,6 +45,8 @@ export type ContractOption = {
   service_name: string;
   address: string;
   guards_per_slot: number;
+  time_slots: string[];
+  day_per_week: string[];
   description: string | null;
   start_date: string;
   end_date: string;
@@ -91,6 +93,8 @@ export type ContractQueryResult = {
         address: string | null;
         guards_per_slot: number | null;
         description: string | null;
+        time_slots: string[] | null;
+        day_per_week: string[] | null;
         customer:
           | {
               full_name: string | null;
@@ -122,6 +126,8 @@ export type ContractQueryResult = {
         address: string | null;
         guards_per_slot: number | null;
         description: string | null;
+        time_slots: string[] | null;
+        day_per_week: string[] | null;
         customer:
           | {
               full_name: string | null;

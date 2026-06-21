@@ -79,6 +79,14 @@ export function CreateShiftModal({
     return contracts.find((contract) => contract.contract_id === contractId);
   }, [contracts, contractId]);
 
+  const formatDayPerWeek = (days?: string[] | null) => {
+    if (!days || days.length === 0) {
+      return "Chưa cập nhật";
+    }
+
+    return days.join(", ");
+  };
+
   useEffect(() => {
     if (!open) {
       return;
@@ -369,6 +377,22 @@ export function CreateShiftModal({
                       value={`${formatDate(
                         selectedContract.start_date,
                       )} - ${formatDate(selectedContract.end_date)}`}
+                    />
+                    <InfoRow
+                      label="Ngày trực trong tuần"
+                      value={
+                        selectedContract.day_per_week?.length
+                          ? selectedContract.day_per_week.join(", ")
+                          : "Chưa cập nhật"
+                      }
+                    />
+                    <InfoRow
+                      label="Ca trực trong ngày"
+                      value={
+                        selectedContract.time_slots?.length
+                          ? selectedContract.time_slots.join(", ")
+                          : "Chưa cập nhật"
+                      }
                     />
                   </div>
                 </div>

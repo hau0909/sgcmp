@@ -9,6 +9,7 @@ export interface Booking {
   description?: string | null;
   guards_per_slot: number;
   time_slots: string[];
+  day_per_week: string[];
   start_date: string;
   end_date: string;
   quoted_price: number | null;
