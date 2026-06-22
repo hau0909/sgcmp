@@ -227,23 +227,41 @@ export default function BookingModal({ isOpen, onClose, companyId }: BookingModa
                   </div>
                 </div>
 
-                {/* LOẠI DỊCH VỤ */}
-                <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">Loại dịch vụ</label>
-                  <select
-                    name="service_id"
-                    value={formData.service_id}
-                    onChange={handleChange}
-                    required
-                    className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary bg-surface-container-lowest text-sm appearance-none"
-                  >
-                    <option value="" disabled>Chọn dịch vụ cần thiết</option>
-                    {services.map((svc) => (
-                      <option key={svc.service_id} value={svc.service_id}>
-                        {svc.name}
-                      </option>
-                    ))}
-                  </select>
+                {/* LOẠI DỊCH VỤ & SỐ LƯỢNG NHÂN SỰ */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* LOẠI DỊCH VỤ */}
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">Loại dịch vụ</label>
+                    <select
+                      name="service_id"
+                      value={formData.service_id}
+                      onChange={handleChange}
+                      required
+                      className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary bg-surface-container-lowest text-sm appearance-none"
+                    >
+                      <option value="" disabled>Chọn dịch vụ cần thiết</option>
+                      {services.map((svc) => (
+                        <option key={svc.service_id} value={svc.service_id}>
+                          {svc.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  {/* SỐ LƯỢNG NHÂN SỰ */}
+                  <div>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1.5 uppercase tracking-wide">Số lượng nhân sự</label>
+                    <input
+                      type="number"
+                      name="guards_per_slot"
+                      value={formData.guards_per_slot}
+                      onChange={handleChange}
+                      min={1}
+                      required
+                      className="w-full px-3 py-2 border border-outline-variant rounded-lg focus:outline-primary bg-surface-container-lowest text-sm"
+                      placeholder="Nhập số lượng..."
+                    />
+                  </div>
                 </div>
 
                 {/* YÊU CẦU CỤ THỂ */}
