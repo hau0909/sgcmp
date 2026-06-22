@@ -20,7 +20,6 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Guard: không fetch nếu id chưa sẵn sàng hoặc là "undefined"
     if (!id || id === "undefined") {
       setIsLoading(false);
       return;
@@ -55,7 +54,6 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
   if (isLoading) {
     return (
       <div className="space-y-5 animate-pulse">
-        {/* Header Skeleton */}
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col md:flex-row items-start md:items-center justify-between gap-5">
           <div className="flex items-center gap-4 w-full">
             <div className="w-18 h-18 bg-surface-container rounded-xl border border-outline-variant" />
@@ -69,8 +67,6 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
             <div className="h-8.5 bg-surface-container rounded w-24" />
           </div>
         </div>
-
-        {/* Content Skeleton */}
         <div className="flex flex-col lg:flex-row gap-5">
           <div className="w-full lg:w-2/3 space-y-5">
             <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 h-36" />
@@ -110,21 +106,17 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
 
   return (
     <div className="space-y-5">
-      {/* 1. Header Section with cover banner */}
       <CompanyDetailHeader
         name={company.name}
         logoUrl={company.logoUrl}
         bannerUrl={company.bannerUrl}
+        companyId={company.id}
       />
 
       <div className="flex flex-col lg:flex-row gap-5">
-        {/* Left Column (2/3) */}
         <div className="w-full lg:w-2/3 space-y-5">
-          {/* About us */}
           <CompanyDetailAbout description={company.description} />
         </div>
-
-        {/* Right Column (1/3) */}
         <CompanyDetailSidebar
           location={company.address}
           phone={company.phone}
@@ -132,10 +124,8 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
         />
       </div>
 
-      {/* Main Services Table */}
       <CompanyDetailServices services={company.services} />
 
-      {/* Customer Reviews Full Width */}
       <CompanyDetailReviews companyId={company.id} />
     </div>
   );
