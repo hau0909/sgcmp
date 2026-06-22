@@ -1,44 +1,56 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
 
-// Import our sub-components
 import CompanyDetailHeader from "./CompanyDetailHeader";
 import CompanyDetailAbout from "./CompanyDetailAbout";
-import CompanyDetailDirector from "./CompanyDetailDirector";
-import CompanyDetailLegal from "./CompanyDetailLegal";
+import CompanyDetailServices from "./CompanyDetailServices";
 import CompanyDetailReviews from "@/features/review/components/CompanyDetailReviews";
 import CompanyDetailSidebar from "./CompanyDetailSidebar";
+import { requestGetCompanyById } from "../api/company.api";
+import { CompanyDetailData } from "../types";
 
-// Exact Mock Data matching the UI mockup (Sentinel Prime)
-const mockCompany = {
-  name: "Sentinel Prime",
-  logoUrl: "https://lh3.googleusercontent.com/aida-public/AB6AXuBi-fWj3V8vDHHkdVZgJ5h2XiIQsXj8oH2DDV0pztynXpzPdJSMWTvLAS1yRRl2sCq2xY47DOjJGTwAdaXS6A_nqw-CqBLMWSI9A-S7tjq-2ba_60jI_YnnJp5VPyxff3ID3J866d6gZn4Bt_o4ejIXkHdjDOebBguHo5tfGVd-11OW2R26RpWELpf-Bosf3cORimCl_Bx--s0K6XtzFAcc1zRhP6iIYnzkEBNTNUufXLBYu52zTnFlABd6iueLPoStYDtAqFJKNt6t",
-  description: "Sentinel Prime là nhà cung cấp dịch vụ bảo vệ tài sản giá trị cao hàng đầu tại Việt Nam với hơn 15 năm kinh nghiệm. Chúng tôi chuyên cung cấp các giải pháp an ninh toàn diện cho các tập đoàn đa quốc gia, sự kiện quy mô lớn và các cơ sở trọng yếu. Đội ngũ của chúng tôi bao gồm các cựu quân nhân và chuyên gia an ninh được đào tạo bài bản theo tiêu chuẩn quốc tế, đảm bảo sự an toàn tuyệt đối cho khách hàng trong mọi tình huống.",
-  businessLicenseNo: "0312456789",
-  securityLicenseNo: "AN-88/2010",
-  insuranceLevel: "50 Tỷ VND",
-  location: "Tầng 45, Tòa nhà Landmark 81, 720A Điện Biên Phủ, P. 22, Q. Bình Thạnh, TP. Hồ Chí Minh, Việt Nam",
-  phone: "+84 28 3888 9999",
-  email: "contact@sentinelprime.vn",
-  website: "www.sentinelprime.vn",
-  guardCount: 1000,
-  provinceCount: 50,
-};
+interface CompanyDetailProps {
+  id: string;
+}
 
-export default function CompanyDetail() {
-  const params = useParams();
-  const id = Array.isArray(params?.id) ? params.id[0] : params?.id;
+export default function CompanyDetail({ id }: CompanyDetailProps) {
   const [isLoading, setIsLoading] = useState(true);
+  const [company, setCompany] = useState<CompanyDetailData | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Premium loading transition
-    const timer = setTimeout(() => {
+    // Guard: không fetch nếu id chưa sẵn sàng hoặc là "undefined"
+    if (!id || id === "undefined") {
       setIsLoading(false);
-    }, 400);
-    return () => clearTimeout(timer);
-  }, []);
+      return;
+    }
+
+    let isMounted = true;
+    const fetchCompany = async () => {
+      try {
+        setIsLoading(true);
+        const data = await requestGetCompanyById(id);
+        if (isMounted) {
+          setCompany(data);
+          setError(null);
+        }
+      } catch (err: any) {
+        console.error("Lỗi khi tải thông tin công ty:", err);
+        if (isMounted) {
+          setError(err.message || "Không thể tải thông tin chi tiết công ty. Vui lòng thử lại sau.");
+        }
+      } finally {
+        if (isMounted) {
+          setIsLoading(false);
+        }
+      }
+    };
+    fetchCompany();
+    return () => {
+      isMounted = false;
+    };
+  }, [id]);
 
   if (isLoading) {
     return (
@@ -74,43 +86,57 @@ export default function CompanyDetail() {
     );
   }
 
+  if (error) {
+    return (
+      <div className="bg-red-50 border border-red-200 rounded-xl p-8 text-center space-y-4">
+        <p className="text-red-600 font-medium">{error}</p>
+        <button
+          onClick={() => window.location.reload()}
+          className="px-4 py-2 bg-primary text-on-primary rounded-lg text-sm font-semibold hover:bg-primary/90 transition-colors cursor-pointer active:scale-98"
+        >
+          Tải lại trang
+        </button>
+      </div>
+    );
+  }
+
+  if (!company) {
+    return (
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-8 text-center space-y-4">
+        <p className="text-on-surface-variant font-medium">Không tìm thấy thông tin công ty này.</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-5">
       {/* 1. Header Section with cover banner */}
       <CompanyDetailHeader
-        name={mockCompany.name}
-        logoUrl={mockCompany.logoUrl}
-        companyId={id}
+        name={company.name}
+        logoUrl={company.logoUrl}
+        bannerUrl={company.bannerUrl}
       />
 
       <div className="flex flex-col lg:flex-row gap-5">
         {/* Left Column (2/3) */}
         <div className="w-full lg:w-2/3 space-y-5">
           {/* About us */}
-          <CompanyDetailAbout description={mockCompany.description} />
-
-          {/* Leadership & CEO Profile */}
-          <CompanyDetailDirector />
-
-          {/* Legal credentials */}
-          <CompanyDetailLegal
-            businessLicenseNo={mockCompany.businessLicenseNo}
-            securityLicenseNo={mockCompany.securityLicenseNo}
-            insuranceLevel={mockCompany.insuranceLevel}
-          />
-
+          <CompanyDetailAbout description={company.description} />
         </div>
 
         {/* Right Column (1/3) */}
         <CompanyDetailSidebar
-          location={mockCompany.location}
-          phone={mockCompany.phone}
-          email={mockCompany.email}
+          location={company.address}
+          phone={company.phone}
+          email={company.email}
         />
       </div>
 
+      {/* Main Services Table */}
+      <CompanyDetailServices services={company.services} />
+
       {/* Customer Reviews Full Width */}
-      <CompanyDetailReviews />
+      <CompanyDetailReviews companyId={company.id} />
     </div>
   );
 }
