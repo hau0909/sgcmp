@@ -32,9 +32,10 @@ export default function SubscriptionPlans({
       } else {
         throw new Error("Không thể khởi tạo giao dịch thanh toán");
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Lỗi đăng ký gói:", error);
-      setErrorMsg(error.message || "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.");
+      const message = error instanceof Error ? error.message : "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.";
+      setErrorMsg(message);
       setLoadingPlanId(null);
     }
   };
@@ -45,7 +46,7 @@ export default function SubscriptionPlans({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-base font-bold text-on-surface tracking-tight">
-          Các Gói Dịch Vụ Khác
+          {currentPlan ? "Các Gói Dịch Vụ Khác" : "Các Gói Dịch Vụ"}
         </h3>
         {errorMsg && (
           <p className="text-xs font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-md border border-red-200 animate-fade-in">
@@ -56,7 +57,7 @@ export default function SubscriptionPlans({
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
         {plans.map((plan: Plan) => {
-          const isCurrent = plan?.plan_id === currentPlanId;
+          const isCurrent = currentPlan ? plan?.plan_id === currentPlanId : false;
           const showRegister = currentPlan === null;
 
           return (

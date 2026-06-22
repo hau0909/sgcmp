@@ -1,7 +1,7 @@
 import { supabase } from "@/lib/supabase";
 import { Plan } from "@/types/Plan";
 import { Subscription } from "@/types/Subscription";
-import { CurrentPlanWithSubscription } from "../types";
+import { CurrentPlanWithSubscription, CompanySubscriptionCheckResult } from "../types";
 
 export const getAllPlans = async (): Promise<Plan[]> => {
   const { data, error } = await supabase.from("plans").select("*");
@@ -126,5 +126,39 @@ export const deactivateCompanySubscriptions = async (
   const { error } = await query;
 
   if (error) throw error;
+};
+
+export const checkCompanySubscription = async (
+  companyId: string,
+): Promise<CompanySubscriptionCheckResult> => {
+  const { data, error } = await supabase
+    .from("subscriptions")
+    .select("*")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  if (!data || data.length === 0) {
+    return {
+      hasSubscription: false,
+      isActive: false,
+      subscription: null,
+    };
+  }
+
+  const today = new Date().toISOString().split("T")[0];
+  const activeSub = data.find(
+    (sub) =>
+      sub.status === "active" &&
+      sub.start_date <= today &&
+      sub.end_date >= today
+  );
+
+  return {
+    hasSubscription: true,
+    isActive: !!activeSub,
+    subscription: (activeSub || data[0]) as Subscription,
+  };
 };
 

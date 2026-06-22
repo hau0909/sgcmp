@@ -3,8 +3,9 @@ import {
   getAllPlans,
   getCurrentActivePlan,
   getPlanById,
+  checkCompanySubscription,
 } from "../repository/subscription.repository";
-import { CurrentPlanWithSubscription } from "../types";
+import { CurrentPlanWithSubscription, CompanySubscriptionCheckResult } from "../types";
 
 export const getAllPlansService = async (): Promise<Plan[]> => {
   const result = await getAllPlans();
@@ -23,6 +24,16 @@ export const getPlanByIdService = async (planId: number): Promise<Plan | null> =
     throw new Error("Plan ID is required");
   }
   const result = await getPlanById(planId);
+  return result;
+};
+
+export const checkCompanySubscriptionService = async (
+  companyId: string,
+): Promise<CompanySubscriptionCheckResult> => {
+  if (!companyId) {
+    throw new Error("Company ID is required");
+  }
+  const result = await checkCompanySubscription(companyId);
   return result;
 };
 

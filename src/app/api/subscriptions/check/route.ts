@@ -1,4 +1,4 @@
-import { handleGetCurrentActivePlan } from "@/features/subscription/controller/subscription.controller";
+import { handleCheckCompanySubscription } from "@/features/subscription/controller/subscription.controller";
 import { NextResponse } from "next/server";
 
 export async function GET(request: Request) {
@@ -13,10 +13,10 @@ export async function GET(request: Request) {
       );
     }
 
-    const currentPlan = await handleGetCurrentActivePlan(companyId);
-    return NextResponse.json({ currentPlan: currentPlan || null }, { status: 200 });
+    const checkResult = await handleCheckCompanySubscription(companyId);
+    return NextResponse.json(checkResult, { status: 200 });
   } catch (error) {
-    console.error("[GET /api/subscriptions/plans/current] Error:", error);
+    console.error("[GET /api/subscriptions/check] Error:", error);
     return NextResponse.json(
       { error: "Internal Server Error" },
       { status: 500 }
