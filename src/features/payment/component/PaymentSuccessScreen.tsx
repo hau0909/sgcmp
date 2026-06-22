@@ -305,16 +305,16 @@ export default function PaymentSuccessScreen() {
         </div>
 
         <div className="flex flex-col sm:flex-row gap-4 w-full">
-          <Link
+          <a
             href="/billing"
             className={cn(
               buttonVariants({ variant: "default", size: "lg" }),
-              "w-full font-bold text-xs flex items-center justify-center hover:opacity-95 transition-opacity bg-primary text-white",
+              "w-full font-bold text-xs flex items-center justify-center hover:opacity-95 transition-opacity bg-primary text-white cursor-pointer",
             )}
           >
             Quay lại Quản lý gói
             <ArrowRight className="w-4 h-4 ml-1.5" />
-          </Link>
+          </a>
         </div>
       </div>
     </div>

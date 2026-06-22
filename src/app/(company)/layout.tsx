@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Shield,
   LayoutDashboard,
@@ -20,6 +20,8 @@ import {
   Building2,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
+import { useAuthStore } from "@/store/auth.store";
+import { useSubscriptionStore } from "@/store/subscription.store";
 
 export default function CompanyLayout({
   children,
@@ -27,11 +29,37 @@ export default function CompanyLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const router = useRouter();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+
+  const companyId = useAuthStore((state) => state.company_id);
+  const fetchSubscription = useSubscriptionStore((state) => state.fetchSubscription);
+  const { isActive, isLoading } = useSubscriptionStore();
+
+  useEffect(() => {
+    if (companyId) {
+      fetchSubscription(companyId);
+    }
+  }, [companyId, fetchSubscription]);
 
   if (pathname.startsWith("/onboarding")) {
     return <>{children}</>;
   }
+
+  const isRestrictedPath =
+    pathname.startsWith("/requests") ||
+    pathname.startsWith("/contracts") ||
+    pathname.startsWith("/coordinator");
+
+  useEffect(() => {
+    if (!companyId || isLoading) return;
+
+    if (!isActive && isRestrictedPath) {
+      router.replace("/billing");
+    }
+  }, [companyId, isLoading, isActive, isRestrictedPath, router]);
+
+  const shouldBlockAccess = isRestrictedPath && (isLoading || !isActive);
 
   const sidebarLinks = [
     {
@@ -46,31 +74,59 @@ export default function CompanyLayout({
       icon: Building2,
       active: pathname === "/my-company" || pathname.startsWith("/my-company/"),
     },
-    {
-      name: "Yêu cầu dịch vụ",
-      href: "/requests",
-      icon: Calendar,
-      active: pathname === "/requests" || pathname.startsWith("/requests/"),
-    },
-    {
-      name: "Quản lý hợp đồng",
-      href: "/contracts",
-      icon: FileText,
-      active: pathname === "/contracts" || pathname.startsWith("/contracts/"),
-    },
+    ...(isActive
+      ? [
+          {
+            name: "Yêu cầu dịch vụ",
+            href: "/requests",
+            icon: Calendar,
+            active: pathname === "/requests" || pathname.startsWith("/requests/"),
+          },
+          {
+            name: "Quản lý hợp đồng",
+            href: "/contracts",
+            icon: FileText,
+            active: pathname === "/contracts" || pathname.startsWith("/contracts/"),
+          },
+        ]
+      : []),
     {
       name: "Quản lý gói dịch vụ",
       href: "/billing",
       icon: Package,
       active: pathname === "/billing",
     },
-    {
-      name: "Quản lý điều phối viên",
-      href: "/coordinator",
-      icon: Users,
-      active: pathname === "/coordinator",
-    },
+    ...(isActive
+      ? [
+          {
+            name: "Quản lý điều phối viên",
+            href: "/coordinator",
+            icon: Users,
+            active: pathname === "/coordinator",
+          },
+        ]
+      : []),
   ];
+
+  if (shouldBlockAccess) {
+    return (
+      <RoleGuard allowedRoles={["company-admin"]}>
+        <div className="min-h-screen bg-surface flex text-on-surface antialiased items-center justify-center">
+          <div className="text-center space-y-4">
+            {isLoading ? (
+              <p className="text-sm text-on-surface-variant font-medium animate-pulse font-body">
+                Đang kiểm tra quyền truy cập...
+              </p>
+            ) : (
+              <p className="text-sm text-on-surface-variant font-medium font-body">
+                Đang chuyển hướng đến trang quản lý gói dịch vụ...
+              </p>
+            )}
+          </div>
+        </div>
+      </RoleGuard>
+    );
+  }
 
   return (
     <RoleGuard allowedRoles={["company-admin"]}>
@@ -163,10 +219,13 @@ export default function CompanyLayout({
               <span>Hỗ trợ</span>
             </Link>
 
-            <button className="mt-4 w-full bg-primary hover:bg-primary-container text-on-primary font-medium py-2 rounded shadow-sm transition-colors flex items-center justify-center gap-2">
+            <Link
+              href="/billing"
+              className="mt-4 w-full bg-primary hover:bg-primary-container text-on-primary font-medium py-2 rounded shadow-sm transition-colors flex items-center justify-center gap-2"
+            >
               <ArrowUpCircle className="w-4 h-4" />
-              <span>Nâng cấp gói</span>
-            </button>
+              <span>{isActive ? "Nâng cấp gói" : "Đăng ký gói"}</span>
+            </Link>
           </div>
         </aside>
 

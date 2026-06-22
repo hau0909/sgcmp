@@ -1,5 +1,6 @@
 import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
+import { checkCompanySubscriptionService } from "@/features/subscription/service/subscription.service";
 import {
   getContractsService,
   getContractDetailService,
@@ -21,6 +22,13 @@ export const handleGetContracts = async (params: {
   startDate?: string;
   endDate?: string;
 }): Promise<{ contracts: Contract[]; totalCount: number }> => {
+  if (params.companyId) {
+    const subCheck = await checkCompanySubscriptionService(params.companyId);
+    if (!subCheck.isActive) {
+      throw new Error("Tài khoản doanh nghiệp chưa đăng ký gói dịch vụ hoặc gói đã hết hạn.");
+    }
+  }
+
   const validStatus = (params.status && params.status !== "")
     ? (params.status as ContractStatus)
     : undefined;
