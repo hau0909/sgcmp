@@ -2,6 +2,7 @@ import {
   getCoordinatorsService,
   addCoordinatorToCompanyService,
 } from "../service/coordinator.service";
+import { checkCompanySubscriptionService } from "@/features/subscription/service/subscription.service";
 import { registerAccountService } from "@/features/auth/service/auth.service";
 import {
   validateEmail,
@@ -17,6 +18,10 @@ export const handleGetCoordinators = async (
   page = 1,
   limit = 10,
 ): Promise<{ data: CoordinatorWithUser[]; total: number }> => {
+  const subCheck = await checkCompanySubscriptionService(companyId);
+  if (!subCheck.isActive) {
+    throw new Error("Tài khoản doanh nghiệp chưa đăng ký gói dịch vụ hoặc gói đã hết hạn.");
+  }
   return await getCoordinatorsService(companyId, page, limit);
 };
 
@@ -35,6 +40,14 @@ export const handleCreateCoordinator = async (
 
   if (!payload.companyId) {
     return { success: false, message: "Company ID là bắt buộc" };
+  }
+
+  const subCheck = await checkCompanySubscriptionService(payload.companyId);
+  if (!subCheck.isActive) {
+    return {
+      success: false,
+      message: "Tài khoản doanh nghiệp chưa đăng ký gói dịch vụ hoặc gói đã hết hạn.",
+    };
   }
 
   if (!payload.issueDate || !payload.issuePlace) {
@@ -83,6 +96,11 @@ export const handleCreateCoordinator = async (
     const userId = authData.user?.id;
     if (!userId) {
       throw new Error("Không thể trích xuất user.id sau khi đăng ký");
+    }
+
+    // Kiểm tra giả mạo từ Supabase (bảo mật email enumeration)
+    if (authData.user?.identities && authData.user.identities.length === 0) {
+      throw new Error("Email này đã được sử dụng trên hệ thống.");
     }
 
     // 2. Gắn coordinator vào công ty (vẫn làm ở đây vì thuộc về Coordinator resource)

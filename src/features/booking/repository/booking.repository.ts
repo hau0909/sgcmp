@@ -7,7 +7,8 @@ export const getBookings = async (
   page: number,
   limit: number,
   status?: string,
-  contractStatus?: string
+  contractStatus?: string,
+  customerId?: string | null
 ): Promise<{ data: BookingWithCustomerProfile[]; count: number }> => {
   const supabase = await createClient();
   const from = (page - 1) * limit;

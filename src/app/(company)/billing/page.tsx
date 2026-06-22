@@ -24,7 +24,6 @@ function BillingContent() {
 
   useEffect(() => {
     if (!companyId) {
-      setIsLoading(false);
       return;
     }
 
@@ -32,9 +31,18 @@ function BillingContent() {
       setIsLoading(true);
       try {
         const [plansRes, currentPlanRes, paymentsRes] = await Promise.all([
-          requestGetAllPlans(),
-          requestGetCurrentPlan(companyId),
-          requestGetPaymentHistory(companyId),
+          requestGetAllPlans().catch((err) => {
+            console.error("Error loading plans:", err);
+            return [];
+          }),
+          requestGetCurrentPlan(companyId).catch((err) => {
+            console.error("Error loading current plan:", err);
+            return null;
+          }),
+          requestGetPaymentHistory(companyId).catch((err) => {
+            console.error("Error loading payment history:", err);
+            return { success: false, data: [] };
+          }),
         ]);
         setPlans(plansRes || []);
         setCurrentPlan(currentPlanRes || null);

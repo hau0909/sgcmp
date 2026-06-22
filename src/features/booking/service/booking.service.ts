@@ -1,15 +1,16 @@
 import { Booking, BookingWithCustomerProfile, CreateBookingRequest } from "../types";
 import { getBookings, getBookingDetail, getBookingById, createBooking, updateQuotation, updateBookingStatus } from "../repository/booking.repository";
 
-
 export const getBookingsService = async (
   companyId: string,
   page: number,
   limit: number,
   status?: string,
-  contractStatus?: string
+  contractStatus?: string,
+  customerId?: string | null // <-- Đã thêm tham số customerId
 ): Promise<{ bookings: Booking[]; totalCount: number }> => {
-  const { data, count } = await getBookings(companyId, page, limit, status, contractStatus);
+  // <-- Truyền thêm customerId vào getBookings
+  const { data, count } = await getBookings(companyId, page, limit, status, contractStatus, customerId);
 
   const bookings = data.map((item: BookingWithCustomerProfile): Booking => {
     return {
@@ -23,11 +24,12 @@ export const getBookingsService = async (
       time_slots: item.time_slots || [],
       start_date: item.start_date,
       end_date: item.end_date,
+      day_per_week: item.day_per_week || [],
       quoted_price: item.quoted_price !== null ? Number(item.quoted_price) : null,
       status: item.status,
       created_at: item.created_at,
       updated_at: item.updated_at,
-      
+
       // Virtual/mapped fields for UI rendering
       customer_name: Array.isArray(item.profiles)
         ? (item.profiles[0]?.full_name || "Khách hàng không tên")
@@ -43,6 +45,8 @@ export const getBookingsService = async (
     totalCount: count,
   };
 };
+
+// ... (Các hàm getBookingDetailService, getBookingByIdService, sendServiceRequest, updateServiceQuotation, confirmOrDenyQuotation giữ nguyên như code của bạn)
 
 export const getBookingDetailService = async (id: string): Promise<any | null> => {
   const item = await getBookingDetail(id);
@@ -66,8 +70,7 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
     status: item.status,
     created_at: item.created_at,
     updated_at: item.updated_at,
-    
-    // Virtual/mapped fields for UI rendering
+
     customer_name: Array.isArray(profile)
       ? (profile[0]?.full_name || "Khách hàng không tên")
       : (profile?.full_name || "Khách hàng không tên"),

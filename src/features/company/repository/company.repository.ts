@@ -96,6 +96,9 @@ export interface DbCompanyDetail {
       description: string;
     } | null;
   }[];
+  registrations?: {
+    registration_code: string;
+  }[];
 }
 
 export const getCompanyByIdWithDetails = async (id: string): Promise<DbCompanyDetail | null> => {
@@ -128,6 +131,9 @@ export const getCompanyByIdWithDetails = async (id: string): Promise<DbCompanyDe
           name,
           description
         )
+      ),
+      registrations (
+        registration_code
       )
     `)
     .eq("company_id", id)

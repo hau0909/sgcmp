@@ -1,4 +1,3 @@
-import { GET } from "./../../../app/api/auth/user/route";
 import { fetcher } from "@/lib/fetcher";
 import { RegisterPayload, LoginPayload } from "../types";
 

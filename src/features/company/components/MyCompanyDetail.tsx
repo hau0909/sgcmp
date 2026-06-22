@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { requestGetCompanyById } from "@/features/company/api/company.api";
+import { useAuthStore } from "@/store/auth.store";
 import {
   Building2,
   Mail,
@@ -18,46 +20,153 @@ import {
   Camera,
   Upload,
   Image as ImageIcon,
-  ChevronRight
+  ChevronRight,
+  Plus,
+  Trash,
+  ChevronDown
 } from "lucide-react";
 
 export default function MyCompanyDetail() {
+  const { company_id } = useAuthStore();
+  const [loading, setLoading] = useState(true);
+
   // 1. Core State
-  const [companyName, setCompanyName] = useState("CÔNG TY PTL");
-  const [description, setDescription] = useState(
-    "Công ty bảo vệ chuyên cung cấp dịch vụ an ninh chuyên nghiệp, đảm bảo an toàn cho cá nhân, doanh nghiệp, tòa nhà, sự kiện với đội ngũ nhân viên tận tâm, được đào tạo bài bản."
-  );
+  const [companyName, setCompanyName] = useState("");
+  const [description, setDescription] = useState("");
 
   // 2. Company Details State
-  const [fullName, setFullName] = useState("CÔNG TY TNHH ABC SECURITY");
-  const [companyCode, setCompanyCode] = useState("COM001");
-  const [businessLicense, setBusinessLicense] = useState("0312345678");
-  const [licenseDate, setLicenseDate] = useState("20/05/2023");
-  const [licensePlace, setLicensePlace] = useState("Sở KHĐT TP. Hồ Chí Minh");
-  const [address, setAddress] = useState("123 Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. Hồ Chí Minh");
-  const [email, setEmail] = useState("abcsecurity@gmail.com");
-  const [phone, setPhone] = useState("0909 123 456");
-  const [detailDesc, setDetailDesc] = useState(
-    "Cung cấp dịch vụ bảo vệ chuyên nghiệp cho sự kiện, tòa nhà, cá nhân, nhà máy..."
-  );
-  const [status, setStatus] = useState("Đang hoạt động");
-  const [createdAt, setCreatedAt] = useState("15/06/2023 10:30");
+  const [fullName, setFullName] = useState("");
+  const [companyLicense, setCompanyLicense] = useState("");
+  const [businessLicense, setBusinessLicense] = useState("");
+  const [address, setAddress] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
 
   // 5. Image URLs State
   const [logoUrl, setLogoUrl] = useState("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300");
   const [bannerUrl, setBannerUrl] = useState("https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200");
   const [licenseImg, setLicenseImg] = useState("https://images.unsplash.com/photo-1589330694653-ded6dfc7f6bb?q=80&w=600");
   
-  const [companyImgs, setCompanyImgs] = useState([
-    "https://images.unsplash.com/photo-1557597774-9d273605dfa9?q=80&w=400",
-    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=400",
-    "https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=400",
-    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=400",
-    "https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=400"
-  ]);
+  const [companyImgs, setCompanyImgs] = useState<string[]>([]);
 
   // 6. UI Modals / Modes State
   const [activeViewerImg, setActiveViewerImg] = useState<string | null>(null);
+
+  // 7. Services State (Frontend mockup for table display)
+  const [companyServices, setCompanyServices] = useState([
+    {
+      id: "s1",
+      name: "VIP Protection Service",
+      description: "Dịch vụ bảo vệ chuyên nghiệp đảm bảo an ninh, giám sát chặt chẽ, bảo vệ tài sản hiệu quả.",
+      price: "5.000.000đ"
+    },
+    {
+      id: "s2",
+      name: "Patrol & Guard Service",
+      description: "Tuần tra, canh gác và kiểm soát an ninh tại mục tiêu cố định, nhà máy, văn phòng, khu công nghiệp.",
+      price: "3.500.000đ"
+    },
+    {
+      id: "s3",
+      name: "Event Security Service",
+      description: "Đội ngũ chuyên nghiệp bảo vệ sự kiện lớn, triển lãm, hội nghị, chương trình ca nhạc, thể thao.",
+      price: "6.000.000đ"
+    }
+  ]);
+
+  // Predefined services list for dropdown selection
+  const PREDEFINED_SERVICES = [
+    { name: "VIP Protection Service", description: "Dịch vụ bảo vệ chuyên nghiệp đảm bảo an ninh, giám sát chặt chẽ, bảo vệ tài sản hiệu quả." },
+    { name: "24/7 Security Monitoring Service", description: "Dịch vụ giám sát an ninh 24/7 bằng hệ thống camera giám sát và đội ngũ trực ban chuyên nghiệp." },
+    { name: "Shopping Mall Security Service", description: "Dịch vụ bảo vệ trung tâm thương mại, kiểm soát lưu lượng khách ra vào và đảm bảo trật tự mua sắm." },
+    { name: "Patrol Security Service", description: "Dịch vụ tuần tra và canh gác kiểm soát an ninh định kỳ tại các khu dân cư, cơ sở kinh doanh." },
+    { name: "Building Security Service", description: "Dịch vụ bảo vệ tòa nhà văn phòng, chung cư cao tầng, kiểm soát thẻ ra vào và hỗ trợ khách hàng." },
+    { name: "Factory Security Service", description: "Dịch vụ bảo vệ nhà máy, kho bãi, xí nghiệp, kiểm soát luồng hàng hóa và an toàn phòng chống cháy nổ." },
+    { name: "Event Security Service", description: "Dịch vụ bảo vệ sự kiện, hội nghị, chương trình biểu diễn nghệ thuật, thể thao quy mô lớn." },
+    { name: "Construction Site Security Service", description: "Dịch vụ bảo vệ công trường xây dựng, bảo vệ vật tư thiết bị và kiểm soát công nhân ra vào." }
+  ];
+
+  // 8. Add Service Modal State
+  const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
+  const [newServiceName, setNewServiceName] = useState("");
+  const [newServiceDesc, setNewServiceDesc] = useState("");
+  const [newServicePrice, setNewServicePrice] = useState("");
+
+  const handleServiceSelect = (serviceName: string) => {
+    setNewServiceName(serviceName);
+    const found = PREDEFINED_SERVICES.find(s => s.name === serviceName);
+    if (found) {
+      setNewServiceDesc(found.description);
+    } else {
+      setNewServiceDesc("");
+    }
+  };
+
+  const handleAddService = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newServiceName || !newServicePrice) return;
+    
+    const newService = {
+      id: `s-${Date.now()}`,
+      name: newServiceName,
+      description: newServiceDesc,
+      price: newServicePrice.endsWith("đ") ? newServicePrice : `${newServicePrice}đ`
+    };
+    
+    setCompanyServices([...companyServices, newService]);
+    
+    // Reset state
+    setNewServiceName("");
+    setNewServiceDesc("");
+    setNewServicePrice("");
+    setIsAddServiceOpen(false);
+  };
+
+  const handleRemoveService = (id: string) => {
+    setCompanyServices(companyServices.filter(s => s.id !== id));
+  };
+
+  useEffect(() => {
+    if (!company_id) {
+      return;
+    }
+
+    const fetchCompanyData = async () => {
+      try {
+        setLoading(true);
+        const data = await requestGetCompanyById(company_id);
+        if (data) {
+          setCompanyName(data.name || "");
+          setFullName(data.name || "");
+          setDescription(data.description || "");
+          setCompanyLicense(data.companyLicenseNo || "");
+          setBusinessLicense(data.businessLicenseNo || "");
+          setEmail(data.email || "");
+          setPhone(data.phone || "");
+          setAddress(data.address || "");
+          if (data.logoUrl) setLogoUrl(data.logoUrl);
+          if (data.bannerUrl) setBannerUrl(data.bannerUrl);
+          if (data.licenseFileUrl) setLicenseImg(data.licenseFileUrl);
+          if (data.activityImgs) setCompanyImgs(data.activityImgs);
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải thông tin công ty:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompanyData();
+  }, [company_id]);
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6 max-w-[1400px] mx-auto pb-16 font-sans bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="text-xs text-slate-500 font-semibold mt-2">Đang tải thông tin công ty...</p>
+      </div>
+    );
+  }
 
 
 
@@ -152,8 +261,8 @@ export default function MyCompanyDetail() {
                   <span className="col-span-8 text-slate-800 font-semibold">{businessLicense}</span>
                 </div>
                 <div className="grid grid-cols-12 gap-2 text-sm">
-                  <span className="col-span-4 font-bold text-slate-400 flex items-center gap-1.5"><Briefcase className="w-4 h-4 text-slate-300" /> Mã số công ty</span>
-                  <span className="col-span-8 text-slate-800 font-mono font-bold">{companyCode}</span>
+                  <span className="col-span-4 font-bold text-slate-400 flex items-center gap-1.5"><Briefcase className="w-4 h-4 text-slate-300" /> Mã số giấy phép</span>
+                  <span className="col-span-8 text-slate-800 font-mono font-bold">{companyLicense}</span>
                 </div>
                 <div className="grid grid-cols-12 gap-2 text-sm">
                   <span className="col-span-4 font-bold text-slate-400 flex items-center gap-1.5"><Mail className="w-4 h-4 text-slate-300" /> Email</span>
@@ -187,6 +296,73 @@ export default function MyCompanyDetail() {
                   Xem giấy phép
                 </button>
               </div>
+            </div>
+          </section>
+
+          {/* Card 2.3: Dịch vụ cung cấp */}
+          <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-4">
+              <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-3 border-blue-600 pl-2.5">
+                Dịch vụ cung cấp
+              </h2>
+              <button
+                onClick={() => setIsAddServiceOpen(true)}
+                className="px-3.5 py-1.5 border border-blue-200 bg-blue-50/50 hover:bg-blue-50 text-blue-600 active:bg-blue-100 transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-3xs cursor-pointer font-sans"
+              >
+                <Plus className="w-3.5 h-3.5" /> Thêm dịch vụ
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="border-b border-slate-100 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    <th className="pb-3 pl-2 w-1/3">Tên dịch vụ</th>
+                    <th className="pb-3 w-5/12">Mô tả</th>
+                    <th className="pb-3 pr-2 w-1/4 text-right">Giá dịch vụ</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100">
+                  {companyServices.map((service) => (
+                    <tr 
+                      key={service.id} 
+                      className="group hover:bg-slate-50/70 transition-colors"
+                    >
+                      <td className="py-4 pl-2">
+                        <div className="font-bold text-slate-800 text-sm">
+                          {service.name}
+                        </div>
+                      </td>
+                      <td className="py-4 pr-4">
+                        <p className="text-sm text-slate-600 font-medium leading-relaxed">
+                          {service.description}
+                        </p>
+                      </td>
+                      <td className="py-4 pr-2 text-right">
+                        <div className="flex items-center justify-end gap-3">
+                          <span className="text-sm font-extrabold text-blue-600">
+                            {service.price}
+                          </span>
+                          <button
+                            onClick={() => handleRemoveService(service.id)}
+                            className="p-1 text-slate-300 hover:text-red-500 rounded-md transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                            title="Xóa dịch vụ"
+                          >
+                            <Trash className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                  {companyServices.length === 0 && (
+                    <tr>
+                      <td colSpan={3} className="py-8 text-center text-sm text-slate-400 font-medium">
+                        Chưa có dịch vụ nào được đăng ký
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           </section>
         </div>
@@ -224,6 +400,88 @@ export default function MyCompanyDetail() {
       </div>
 
 
+
+      {/* 4. Add Service Modal */}
+      {isAddServiceOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 font-sans">
+            <div className="flex justify-between items-center border-b border-slate-100 pb-3">
+              <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
+                Thêm dịch vụ cung cấp
+              </h3>
+              <button 
+                onClick={() => setIsAddServiceOpen(false)}
+                className="text-slate-400 hover:text-slate-600 rounded-lg p-1 transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddService} className="space-y-4">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase">Tên dịch vụ *</label>
+                <div className="relative">
+                  <select
+                    required
+                    value={newServiceName}
+                    onChange={(e) => handleServiceSelect(e.target.value)}
+                    className="w-full text-sm border border-slate-200 bg-white rounded-xl pl-3.5 pr-10 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-semibold text-slate-800 appearance-none cursor-pointer"
+                  >
+                    <option value="" disabled className="text-slate-400 font-medium">--- Chọn dịch vụ ---</option>
+                    {PREDEFINED_SERVICES.map((s) => (
+                      <option key={s.name} value={s.name} className="text-slate-700 font-medium">
+                        {s.name}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400">
+                    <ChevronDown className="w-4 h-4" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase">Mô tả dịch vụ</label>
+                <textarea 
+                  rows={3}
+                  value={newServiceDesc}
+                  onChange={(e) => setNewServiceDesc(e.target.value)}
+                  placeholder="Nhập mô tả chi tiết dịch vụ..." 
+                  className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium resize-none"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-500 uppercase">Giá dịch vụ *</label>
+                <input 
+                  type="text" 
+                  required
+                  value={newServicePrice}
+                  onChange={(e) => setNewServicePrice(e.target.value)}
+                  placeholder="Ví dụ: 5.000.000đ" 
+                  className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button 
+                  type="button"
+                  onClick={() => setIsAddServiceOpen(false)}
+                  className="px-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                >
+                  Hủy bỏ
+                </button>
+                <button 
+                  type="submit"
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                >
+                  Thêm dịch vụ
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 5. Image Lightbox Viewer Modal */}
       {activeViewerImg && (
