@@ -16,7 +16,7 @@ export default function CoordinatorPage() {
           </p>
         </div>
         <Link
-          href="/coordinator/add"
+          href="/coordinators/add"
           className="bg-secondary hover:bg-primary text-on-secondary font-bold py-2 px-4 rounded text-sm transition-colors flex items-center gap-2 w-fit shadow-sm active:scale-95 duration-100"
         >
           <Plus className="w-4 h-4" />

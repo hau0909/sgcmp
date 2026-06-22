@@ -9,7 +9,7 @@ export default function AddCoordinatorPage() {
       {/* Page header */}
       <div className="flex flex-col gap-1 border-b border-outline-variant/60 pb-4">
         <Link
-          href="/coordinator"
+          href="/coordinators"
           className="inline-flex items-center gap-1.5 text-body-sm font-body-sm text-on-surface-variant hover:text-primary transition-colors w-fit mb-1"
         >
           <ArrowLeft className="w-[15px] h-[15px]" />

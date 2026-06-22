@@ -49,7 +49,7 @@ export default function CompanyLayout({
   const isRestrictedPath =
     pathname.startsWith("/requests") ||
     pathname.startsWith("/contracts") ||
-    pathname.startsWith("/coordinator");
+    pathname.startsWith("/coordinators");
 
   useEffect(() => {
     if (!companyId || isLoading) return;
@@ -100,9 +100,9 @@ export default function CompanyLayout({
       ? [
           {
             name: "Quản lý điều phối viên",
-            href: "/coordinator",
+            href: "/coordinators",
             icon: Users,
-            active: pathname === "/coordinator",
+            active: pathname === "/coordinators" || pathname.startsWith("/coordinators/"),
           },
         ]
       : []),
