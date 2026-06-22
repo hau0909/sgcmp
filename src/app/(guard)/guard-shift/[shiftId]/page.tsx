@@ -219,7 +219,7 @@ export default function GuardShiftDetailPage() {
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <h2 className="text-lg font-black text-slate-950">
-              Ca trực được phân công
+              {shift.shift_name}
             </h2>
 
             <p className="mt-1 text-xs font-bold text-slate-500">

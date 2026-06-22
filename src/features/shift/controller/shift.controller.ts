@@ -642,6 +642,7 @@ export const handleGetGuardShiftDetail = async ({
     assignment_id: assignment.assignment_id,
     time: formatShiftTime(shift.start_time, shift.end_time),
     location: shift.location || "Chưa cập nhật vị trí",
+    shift_name: shift.shift_name || "Chưa cập nhật ca trực",
     address: booking?.address || shift.location || "Chưa cập nhật địa chỉ",
     status: assignment.status,
     start_time: shift.start_time,

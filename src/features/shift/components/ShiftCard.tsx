@@ -2,7 +2,13 @@
 
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { Clock, MapPin, MoreVertical, UserRound } from "lucide-react";
+import {
+  Clock,
+  MapPin,
+  MoreVertical,
+  UserRound,
+  SquarePen,
+} from "lucide-react";
 import type {
   ShiftAssignment,
   ShiftAssignmentStatus,
@@ -158,6 +164,16 @@ function ShiftTooltip({ shift, statusLabel, position }: ShiftTooltipProps) {
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
+            Tên ca trực
+          </p>
+          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
+            <SquarePen size={15} className="mt-0.5 shrink-0" />
+            <span>{shift.shift_name || "Chưa cập nhật"} </span>
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase text-slate-400">
             Địa điểm hợp đồng
           </p>
           <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
@@ -251,6 +267,12 @@ export function ShiftCard({ shift }: ShiftCardProps) {
                 </span>
               ) : null}
             </p>
+          </div>
+
+          <div className="flex items-center gap-2 text-sm text-slate-600">
+            <SquarePen size={14} />
+
+            <p className="line-clamp-1">{shift.shift_name}</p>
           </div>
 
           <div className="flex items-center gap-2 text-sm text-slate-600">

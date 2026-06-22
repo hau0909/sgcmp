@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   UserRound,
   X,
+  SquarePen,
 } from "lucide-react";
 
 import type { GuardListItem } from "@/features/guards/type";
@@ -54,6 +55,7 @@ export function CreateShiftModal({
   onCreated,
 }: CreateShiftModalProps) {
   const [contractId, setContractId] = useState("");
+  const [shiftName, setShiftName] = useState("");
   const [location, setLocation] = useState("");
   const [workDate, setWorkDate] = useState(DEFAULT_WORK_DATE);
   const [startTime, setStartTime] = useState(DEFAULT_START_TIME);
@@ -162,6 +164,7 @@ export function CreateShiftModal({
     setSelectedGuardIds([]);
     setSubmitError("");
     setSubmitSuccess("");
+    setShiftName("");
   };
 
   const handleCloseModal = () => {
@@ -226,7 +229,7 @@ export function CreateShiftModal({
 
       const payload = {
         contract_id: contractId,
-        shift_name: "Ca trực",
+        shift_name: shiftName.trim(),
         start_time: `${workDate}T${startTime}:00+07:00`,
         end_time:
           endTime <= startTime
@@ -253,6 +256,7 @@ export function CreateShiftModal({
 
   const canSubmit = Boolean(
     contractId &&
+    shiftName.trim() &&
     location.trim() &&
     workDate &&
     startTime &&
@@ -417,6 +421,29 @@ export function CreateShiftModal({
                       setSubmitSuccess("");
                     }}
                     placeholder="Ví dụ: Sảnh chính tầng 1"
+                    className="w-full rounded-md border border-slate-300 px-9 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  Tên ca trực
+                </label>
+
+                <div className="relative">
+                  <SquarePen
+                    size={17}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
+                  />{" "}
+                  <input
+                    value={shiftName}
+                    onChange={(event) => {
+                      setShiftName(event.target.value);
+                      setSubmitError("");
+                      setSubmitSuccess("");
+                    }}
+                    placeholder="Ví dụ: bảo vệ cửa hàng hoa"
                     className="w-full rounded-md border border-slate-300 px-9 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
