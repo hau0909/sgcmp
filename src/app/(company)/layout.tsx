@@ -18,6 +18,7 @@ import {
   FileText,
   Calendar,
   Building2,
+  MessageSquare,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/store/auth.store";
@@ -87,6 +88,12 @@ export default function CompanyLayout({
             href: "/contracts",
             icon: FileText,
             active: pathname === "/contracts" || pathname.startsWith("/contracts/"),
+          },
+          {
+            name: "Tin nhắn",
+            href: "/chat",
+            icon: MessageSquare,
+            active: pathname === "/chat" || pathname.startsWith("/chat/"),
           },
         ]
       : []),
