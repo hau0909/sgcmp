@@ -1,6 +1,5 @@
 "use client";
 
-/* eslint-disable @next/next/no-img-element */
 import React from "react";
 import Link from "next/link";
 import { MapPin, Star, StarHalf } from "lucide-react";
@@ -98,9 +97,9 @@ export default function CompanyCard({ company }: CompanyCardProps) {
           </p>
         </div>
 
-        <Link 
+        <Link
           href={`/companies/${company.id}`}
-          className="h-8 px-4 flex items-center justify-center border border-outline-variant rounded bg-surface-container-lowest text-primary text-xs font-bold hover:bg-primary/5 hover:border-primary/30 transition-all duration-150 cursor-pointer shadow-sm active:scale-[0.98]"
+          className="h-8 px-4 border border-outline-variant rounded bg-surface-container-lowest text-primary text-xs font-bold hover:bg-primary/5 hover:border-primary/30 transition-all duration-150 cursor-pointer shadow-sm active:scale-[0.98] inline-flex items-center justify-center"
         >
           Xem hồ sơ
         </Link>

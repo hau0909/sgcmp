@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation"; // <-- Bổ sung useRouter để điều hướng
+import { useRouter } from "next/navigation";
 import { X, Calendar, MapPin, CheckCircle2 } from "lucide-react";
 import { createBooking } from "@/features/booking/api/booking.api";
 import { useAuthStore } from "@/store/auth.store";
@@ -139,7 +139,7 @@ export default function BookingModal({ isOpen, onClose, companyId }: BookingModa
                   Trạng thái hiện tại
                 </span>
                 <span className="font-mono text-lg font-bold text-primary tracking-wider">
-                  ĐANG CHỜ XÁC NHẬN
+                  ĐANG CHỜ BÁO GIÁ
                 </span>
               </div>
 

@@ -1,5 +1,9 @@
 import { RegisterInputService, LoginInputService } from "../types";
-import { registerAccount, loginAccount } from "../repository/auth.repository";
+import {
+  registerAccount,
+  loginAccount,
+  logoutUser,
+} from "../repository/auth.repository";
 import { getUserProfile, getCurrentUser } from "../repository/auth.repository";
 
 export const registerAccountService = async ({
@@ -45,4 +49,8 @@ export const getCurrentUserProfileService = async () => {
 
 export const getUser = async () => {
   return getCurrentUser();
+};
+
+export const logoutUserService = async () => {
+  return await logoutUser();
 };

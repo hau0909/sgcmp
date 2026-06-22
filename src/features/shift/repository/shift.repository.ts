@@ -17,9 +17,18 @@ import type {
   ShiftQuery,
   GuardShiftItem,
   ShiftRow,
+  UpdateShiftAssignmentStatusParams,
 } from "../type";
 import { Shifts } from "@/types/Shift";
 import { Shift_Assignment } from "@/types/ShiftAssignment";
+
+const toStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return [];
+  }
+
+  return value.filter((item): item is string => typeof item === "string");
+};
 
 const getSingleRelation = <T>(value: T | T[] | null | undefined): T | null => {
   if (!value) {
@@ -52,6 +61,8 @@ export const getShiftContractsByCompanyId = async (
         address,
         description,
         guards_per_slot,
+        time_slots,
+        day_per_week,
         customer:profiles!bookings_customer_id_fkey (
           full_name
         ),
@@ -91,6 +102,8 @@ export const getShiftContractsByCompanyId = async (
         description: booking?.description ?? "Chưa cập nhật",
         start_date: contract.start_date,
         end_date: contract.end_date,
+        time_slots: toStringArray(booking?.time_slots) ?? "Chưa cập nhật",
+        day_per_week: toStringArray(booking?.day_per_week) ?? "Chưa cập nhật",
       };
     },
   );
@@ -421,23 +434,23 @@ const mapShiftRowToItem = (row: ShiftRow): GuardShiftItem | null => {
   const startTime = formatTimes(shift.start_time);
   const endTime = formatTimes(shift.end_time);
 
- return {
-  id: row.assignment_id,
-  assignment_id: row.assignment_id,
-  shift_id: shift.shift_id,
-  contract_id: shift.contract_id,
+  return {
+    id: row.assignment_id,
+    assignment_id: row.assignment_id,
+    shift_id: shift.shift_id,
+    contract_id: shift.contract_id,
 
-  date: formatDateKey(shift.start_time),
-  time: `${startTime} - ${endTime}`,
+    date: formatDateKey(shift.start_time),
+    time: `${startTime} - ${endTime}`,
 
-  start_time: shift.start_time,
-  end_time: shift.end_time,
+    start_time: shift.start_time,
+    end_time: shift.end_time,
 
-  location: shift.location ?? "Chưa cập nhật vị trí",
-  address: booking?.address ?? "Chưa cập nhật địa chỉ",
+    location: shift.location ?? "Chưa cập nhật vị trí",
+    address: booking?.address ?? "Chưa cập nhật địa chỉ",
 
-  status: row.status,
-};
+    status: row.status,
+  };
 };
 
 export const getGuardIdByUserId = async (
@@ -531,9 +544,7 @@ export const getGuardShiftsByRange = async ({
     });
 };
 
-export const getShiftById = async (
-  shiftId: string,
-): Promise<Shifts | null> => {
+export const getShiftById = async (shiftId: string): Promise<Shifts | null> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -587,4 +598,53 @@ export const getShiftAssignmentsByShiftId = async (
   }
 
   return (data as Shift_Assignment[]) || [];
+};
+
+export const updateShiftAssignmentStatusByShiftAndGuard = async ({
+  shiftId,
+  guardId,
+  status,
+}: UpdateShiftAssignmentStatusParams): Promise<Shift_Assignment | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("shift_id", shiftId)
+    .eq("guard_id", guardId)
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Update Shift Assignment Status Error:", error);
+    throw new Error(error.message);
+  }
+
+  return data;
+};
+
+export const updateAssignedShiftAssignmentsToAbsentByShiftId = async (
+  shiftId: string,
+) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shift_assignments")
+    .update({
+      status: "absent",
+      updated_at: new Date().toISOString(),
+    })
+    .eq("shift_id", shiftId)
+    .eq("status", "assigned")
+    .select("*");
+
+  if (error) {
+    console.error("Update Shift Assignments To Absent Error:", error);
+    throw new Error(error.message);
+  }
+
+  return data ?? [];
 };

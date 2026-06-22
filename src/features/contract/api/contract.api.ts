@@ -54,7 +54,10 @@ export async function requestDeleteContractFile(id: string) {
     method: "DELETE",
   });
 }
+// ─── Customer-facing API (uses user_id from useAuthStore as customerId) ────────
+
 export async function requestGetCustomerContracts(params: {
+  customerId: string;
   page: number;
   limit: number;
   search?: string;
@@ -63,6 +66,7 @@ export async function requestGetCustomerContracts(params: {
   endDate?: string;
 }) {
   const query = new URLSearchParams();
+  query.append("customerId", params.customerId);
   query.append("page", params.page.toString());
   query.append("limit", params.limit.toString());
   if (params.search) query.append("search", params.search);
@@ -75,14 +79,14 @@ export async function requestGetCustomerContracts(params: {
   });
 }
 
-export async function requestGetCustomerContractDetail(id: string) {
-  return await fetcher(`/api/my-contracts/${id}`, {
+export async function requestGetCustomerContractDetail(id: string, customerId: string) {
+  return await fetcher(`/api/my-contracts/${id}?customerId=${customerId}`, {
     method: "GET",
   });
 }
 
-export async function requestSignContractCustomer(id: string) {
-  return await fetcher(`/api/my-contracts/${id}`, {
+export async function requestSignContractCustomer(id: string, customerId: string) {
+  return await fetcher(`/api/my-contracts/${id}?customerId=${customerId}`, {
     method: "PUT",
     headers: {
       "Content-Type": "application/json",

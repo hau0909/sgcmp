@@ -1,6 +1,6 @@
 import { Review } from '@/types/Review';
 import { CreateReviewPayload } from '../types';
-import { createReviewService } from '../service/review.service';
+import { createReviewService, getReviewsByCompanyService } from '../service/review.service';
 
 export async function handleCreateReview(payload: CreateReviewPayload): Promise<Review> {
   try {
@@ -11,3 +11,9 @@ export async function handleCreateReview(payload: CreateReviewPayload): Promise<
     throw error; // Re-throw to be handled by the route layer
   }
 }
+
+export async function handleGetReviewsByCompany(companyId: string): Promise<Review[]> {
+  const reviews = await getReviewsByCompanyService(companyId);
+  return reviews;
+}
+

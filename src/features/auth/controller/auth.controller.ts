@@ -2,6 +2,7 @@ import {
   registerAccountService,
   loginAccountService,
   getUserProfileService,
+  logoutUserService,
 } from "../service/auth.service";
 import {
   emailExistError,
@@ -146,4 +147,12 @@ export const handleGetUserProfile = async (userId: string) => {
       data: null,
     };
   }
+};
+
+export const handleLogout = async () => {
+  await logoutUserService();
+
+  return {
+    message: "Đăng xuất thành công.",
+  };
 };

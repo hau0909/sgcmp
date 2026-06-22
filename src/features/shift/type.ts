@@ -1,4 +1,5 @@
 import { ShiftAssignmentStatus } from "@/types/Enum";
+export type { ShiftAssignmentStatus };
 
 export type Shift = {
   shift_id: string;
@@ -44,6 +45,8 @@ export type ContractOption = {
   service_name: string;
   address: string;
   guards_per_slot: number;
+  time_slots: string[];
+  day_per_week: string[];
   description: string | null;
   start_date: string;
   end_date: string;
@@ -90,6 +93,8 @@ export type ContractQueryResult = {
         address: string | null;
         guards_per_slot: number | null;
         description: string | null;
+        time_slots: string[] | null;
+        day_per_week: string[] | null;
         customer:
           | {
               full_name: string | null;
@@ -121,6 +126,8 @@ export type ContractQueryResult = {
         address: string | null;
         guards_per_slot: number | null;
         description: string | null;
+        time_slots: string[] | null;
+        day_per_week: string[] | null;
         customer:
           | {
               full_name: string | null;
@@ -467,8 +474,34 @@ export type GuardShiftDetailItem = {
 };
 
 export type GuardShiftDetailResponse = {
-   message: string;
+  message: string;
   data: {
     shift: GuardShiftDetailItem;
+  };
+};
+
+export type UpdateShiftAssignmentStatusParams = {
+  shiftId: string;
+  guardId: string;
+  status: ShiftAssignmentStatus;
+};
+
+export type CheckinGuardShiftResponse = {
+  message: string;
+  data: {
+    assignment: {
+      assignment_id: string;
+      shift_id: string;
+      guard_id: string;
+      assigned_by: string | null;
+      status: ShiftAssignmentStatus;
+      created_at: string;
+      updated_at: string;
+    };
+    checkin_window: {
+      server_time: string;
+      can_checkin_from: string;
+      absent_after: string;
+    };
   };
 };

@@ -17,6 +17,7 @@ import {
   Users,
   FileText,
   Calendar,
+  Building2,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
@@ -38,6 +39,12 @@ export default function CompanyLayout({
       href: "/dashboard",
       icon: LayoutDashboard,
       active: pathname === "/dashboard",
+    },
+    {
+      name: "Quản lý công ty",
+      href: "/my-company",
+      icon: Building2,
+      active: pathname === "/my-company" || pathname.startsWith("/my-company/"),
     },
     {
       name: "Yêu cầu dịch vụ",

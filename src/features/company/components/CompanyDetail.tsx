@@ -98,6 +98,7 @@ export default function CompanyDetail() {
             securityLicenseNo={mockCompany.securityLicenseNo}
             insuranceLevel={mockCompany.insuranceLevel}
           />
+
         </div>
 
         {/* Right Column (1/3) */}
@@ -105,9 +106,6 @@ export default function CompanyDetail() {
           location={mockCompany.location}
           phone={mockCompany.phone}
           email={mockCompany.email}
-          website={mockCompany.website}
-          guardCount={mockCompany.guardCount}
-          provinceCount={mockCompany.provinceCount}
         />
       </div>
 
