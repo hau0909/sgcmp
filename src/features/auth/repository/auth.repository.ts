@@ -58,6 +58,14 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
     throw new Error("Không tìm thấy thông tin tài khoản.");
   }
 
+  if (!loginData.user.email_confirmed_at) {
+    await supabase.auth.signOut();
+
+    throw new Error(
+      "Email chưa được xác thực. Vui lòng kiểm tra email trước khi đăng nhập.",
+    );
+  }
+
   const userProfile = await getUserProfile(userId);
 
   let companyId: string | null = null;
@@ -84,6 +92,8 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
       .single();
 
     if (error) {
+      await supabase.auth.signOut();
+
       throw new Error(`Không thể lấy thông tin công ty: ${error.message}`);
     }
 
@@ -99,6 +109,8 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
       .single();
 
     if (error) {
+      await supabase.auth.signOut();
+
       throw new Error(
         `Không thể lấy thông tin điều phối viên: ${error.message}`,
       );
@@ -115,6 +127,8 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
       .single();
 
     if (error) {
+      await supabase.auth.signOut();
+
       throw new Error(`Không thể lấy thông tin bảo vệ: ${error.message}`);
     }
 
