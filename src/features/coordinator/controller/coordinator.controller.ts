@@ -98,6 +98,11 @@ export const handleCreateCoordinator = async (
       throw new Error("Không thể trích xuất user.id sau khi đăng ký");
     }
 
+    // Kiểm tra giả mạo từ Supabase (bảo mật email enumeration)
+    if (authData.user?.identities && authData.user.identities.length === 0) {
+      throw new Error("Email này đã được sử dụng trên hệ thống.");
+    }
+
     // 2. Gắn coordinator vào công ty (vẫn làm ở đây vì thuộc về Coordinator resource)
     await addCoordinatorToCompanyService(userId, payload.companyId);
 

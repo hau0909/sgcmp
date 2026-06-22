@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, Filter, Download, Edit2, Ban, Unlock, Trash2, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { requestGetCoordinators } from '../api/coordinator.api';
 import { CoordinatorWithUser } from '../types';
+import { useAuthStore } from '@/store/auth.store';
 
 // Helpers
 function getInitials(name: string) {
@@ -48,10 +49,13 @@ export function CoordinatorTable() {
   const limit = 10;
   const totalPages = Math.ceil(total / limit) || 1;
 
-  // Cứng ID công ty cho demo
-  const companyId = "11111111-aaaa-bbbb-cccc-dddddddddddd"; 
+  const companyId = useAuthStore((state) => state.company_id);
 
   useEffect(() => {
+    if (!companyId) {
+      setLoading(false);
+      return;
+    }
     const fetchData = async () => {
       setLoading(true);
       try {

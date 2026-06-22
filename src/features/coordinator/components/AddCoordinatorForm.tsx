@@ -5,16 +5,15 @@ import { useRouter } from "next/navigation";
 import { requestCreateCoordinator } from "@/features/coordinator/api/coordinator.api";
 import { requestUpdateProfile } from "@/features/profile/api/profile.api";
 import { requestCreateIdentity } from "@/features/identity/api/identity.api";
+import { useAuthStore } from "@/store/auth.store";
 import {
   User,
   Phone,
   Mail,
   MapPin,
   CreditCard,
-  Calendar,
   Building2,
   ChevronDown,
-  ArrowLeft,
   Save,
   X,
 } from "lucide-react";
@@ -58,14 +57,12 @@ function SectionCard({
 }) {
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] overflow-hidden">
-      {/* Section header */}
       <div className="flex items-center gap-2 px-5 py-3 border-b border-outline-variant bg-surface-container-lowest">
         <span className="text-primary w-4 h-4 flex items-center justify-center">{icon}</span>
         <h3 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
           {title}
         </h3>
       </div>
-      {/* Section body */}
       <div className="p-5">{children}</div>
     </div>
   );
@@ -98,6 +95,7 @@ function TextInput({
   onChange,
   placeholder,
   type = "text",
+  required,
 }: {
   id: string;
   name: string;
@@ -105,6 +103,7 @@ function TextInput({
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   placeholder?: string;
   type?: string;
+  required?: boolean;
 }) {
   return (
     <div className="relative">
@@ -115,6 +114,7 @@ function TextInput({
         value={value}
         onChange={onChange}
         placeholder={placeholder}
+        required={required}
         className="w-full pl-3 pr-3 py-1.5 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-body-sm font-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all placeholder:text-on-surface-variant/50"
       />
     </div>
@@ -128,6 +128,7 @@ function SelectInput({
   onChange,
   placeholder,
   options,
+  required,
 }: {
   id: string;
   name: string;
@@ -135,6 +136,7 @@ function SelectInput({
   onChange: (e: React.ChangeEvent<HTMLSelectElement>) => void;
   placeholder?: string;
   options: { label: string; value: string }[];
+  required?: boolean;
 }) {
   return (
     <div className="relative">
@@ -143,6 +145,7 @@ function SelectInput({
         name={name}
         value={value}
         onChange={onChange}
+        required={required}
         className="w-full appearance-none pl-3 pr-8 py-1.5 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-body-sm font-body-sm text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
       >
         {placeholder && (
@@ -156,7 +159,7 @@ function SelectInput({
           </option>
         ))}
       </select>
-      <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 w-[16px] h-[16px] text-on-surface-variant pointer-events-none" />
+      <ChevronDown className="absolute right-2.5 top-[10px] w-[16px] h-[16px] text-on-surface-variant pointer-events-none" />
     </div>
   );
 }
@@ -167,6 +170,7 @@ export function AddCoordinatorForm() {
   const router = useRouter();
   const [form, setForm] = useState<AddCoordinatorFormData>(INITIAL);
   const [submitting, setSubmitting] = useState(false);
+  const companyId = useAuthStore((state) => state.company_id);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
@@ -181,11 +185,14 @@ export function AddCoordinatorForm() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!companyId) {
+      alert("❌ Không tìm thấy thông tin công ty.");
+      return;
+    }
+
     setSubmitting(true);
     try {
-      // TODO: Thay bằng companyId dynamic khi Auth context sẵn sàng
-      const companyId = "11111111-aaaa-bbbb-cccc-dddddddddddd";
-
       const result = await requestCreateCoordinator({
         email: form.email,
         fullName: form.full_name,
@@ -197,14 +204,14 @@ export function AddCoordinatorForm() {
       });
 
       if (!result.success || !result.userId) {
-        alert("❌ " + result.message);
+        alert("❌ " + (result.message || "Lỗi tạo tài khoản"));
         setSubmitting(false);
         return;
       }
 
       const { userId } = result;
 
-      // 2. Cập nhật Profile
+      // Cập nhật Profile
       const profileResult = await requestUpdateProfile({
         userId,
         fullName: form.full_name,
@@ -218,7 +225,7 @@ export function AddCoordinatorForm() {
         alert("❌ Tạo tài khoản thành công nhưng cập nhật hồ sơ thất bại: " + profileResult.message);
       }
 
-      // 3. Khai báo định danh
+      // Khai báo định danh
       const identityResult = await requestCreateIdentity({
         userId,
         identityId: form.id_number,
@@ -232,7 +239,9 @@ export function AddCoordinatorForm() {
 
       if (result.success && profileResult.success && identityResult.success) {
         alert("✅ Tạo tài khoản Điều phối viên thành công!");
-        router.back();
+        setForm(INITIAL);
+        router.push("/coordinators");
+        router.refresh();
       } 
     } catch (err: any) {
       console.error("Lỗi tạo điều phối viên:", err);
@@ -245,39 +254,32 @@ export function AddCoordinatorForm() {
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
       {/* ── Thông tin cơ bản ── */}
-      <SectionCard
-        icon={<User className="w-4 h-4" />}
-        title="Thông tin cơ bản"
-      >
+      <SectionCard icon={<User className="w-4 h-4" />} title="Thông tin cơ bản">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <FieldLabel htmlFor="full_name" required>
-              Họ và tên
-            </FieldLabel>
+            <FieldLabel htmlFor="full_name" required>Họ và tên</FieldLabel>
             <TextInput
               id="full_name"
               name="full_name"
               value={form.full_name}
               onChange={handleChange}
               placeholder="Nhập họ và tên"
+              required
             />
           </div>
           <div>
-            <FieldLabel htmlFor="date_of_birth" required>
-              Ngày sinh
-            </FieldLabel>
+            <FieldLabel htmlFor="date_of_birth" required>Ngày sinh</FieldLabel>
             <TextInput
               id="date_of_birth"
               name="date_of_birth"
               type="date"
               value={form.date_of_birth}
               onChange={handleChange}
+              required
             />
           </div>
           <div>
-            <FieldLabel htmlFor="gender" required>
-              Giới tính
-            </FieldLabel>
+            <FieldLabel htmlFor="gender" required>Giới tính</FieldLabel>
             <SelectInput
               id="gender"
               name="gender"
@@ -289,21 +291,17 @@ export function AddCoordinatorForm() {
                 { label: "Nữ", value: "Nữ" },
                 { label: "Khác", value: "Khác" },
               ]}
+              required
             />
           </div>
         </div>
       </SectionCard>
 
       {/* ── Thông tin liên hệ ── */}
-      <SectionCard
-        icon={<Phone className="w-4 h-4" />}
-        title="Thông tin liên hệ"
-      >
+      <SectionCard icon={<Phone className="w-4 h-4" />} title="Thông tin liên hệ">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <FieldLabel htmlFor="phone_number" required>
-              Số điện thoại
-            </FieldLabel>
+            <FieldLabel htmlFor="phone_number" required>Số điện thoại</FieldLabel>
             <TextInput
               id="phone_number"
               name="phone_number"
@@ -311,12 +309,11 @@ export function AddCoordinatorForm() {
               value={form.phone_number}
               onChange={handleChange}
               placeholder="Nhập số điện thoại"
+              required
             />
           </div>
           <div>
-            <FieldLabel htmlFor="email" required>
-              Email
-            </FieldLabel>
+            <FieldLabel htmlFor="email" required>Email</FieldLabel>
             <TextInput
               id="email"
               name="email"
@@ -324,12 +321,11 @@ export function AddCoordinatorForm() {
               value={form.email}
               onChange={handleChange}
               placeholder="example@domain.com"
+              required
             />
           </div>
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="address">
-              Địa chỉ thường trú
-            </FieldLabel>
+            <FieldLabel htmlFor="address">Địa chỉ thường trú</FieldLabel>
             <TextInput
               id="address"
               name="address"
@@ -342,45 +338,39 @@ export function AddCoordinatorForm() {
       </SectionCard>
 
       {/* ── Thông tin định danh ── */}
-      <SectionCard
-        icon={<CreditCard className="w-4 h-4" />}
-        title="Thông tin định danh"
-      >
+      <SectionCard icon={<CreditCard className="w-4 h-4" />} title="Thông tin định danh">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div className="sm:col-span-2">
-            <FieldLabel htmlFor="id_number" required>
-              Số CCCD / Hộ chiếu
-            </FieldLabel>
+            <FieldLabel htmlFor="id_number" required>Số CCCD / CMND</FieldLabel>
             <TextInput
               id="id_number"
               name="id_number"
               value={form.id_number}
               onChange={handleChange}
               placeholder="Nhập số giấy tờ"
+              required
             />
           </div>
           <div>
-            <FieldLabel htmlFor="issue_date">
-              Ngày cấp
-            </FieldLabel>
+            <FieldLabel htmlFor="issue_date" required>Ngày cấp</FieldLabel>
             <TextInput
               id="issue_date"
               name="issue_date"
               type="date"
               value={form.issue_date}
               onChange={handleChange}
+              required
             />
           </div>
           <div>
-            <FieldLabel htmlFor="issue_place">
-              Nơi cấp
-            </FieldLabel>
+            <FieldLabel htmlFor="issue_place" required>Nơi cấp</FieldLabel>
             <TextInput
               id="issue_place"
               name="issue_place"
               value={form.issue_place}
               onChange={handleChange}
               placeholder="Cục CS QLHC về TTXH"
+              required
             />
           </div>
         </div>
