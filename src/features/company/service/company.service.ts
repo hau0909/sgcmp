@@ -242,6 +242,16 @@ export const getCompanyByIdServiceInCustomer = async (id: string): Promise<Compa
       .filter((s): s is CompanyServiceData => !!s)
     : [];
 
+  const activityImgs = dbCompany.company_imgs
+    ? dbCompany.company_imgs
+      .filter((img) => img.image_type !== "logo" && img.image_type !== "banner")
+      .map((img) => img.image_url)
+    : [];
+
+  const registrationCode = dbCompany.registrations && dbCompany.registrations.length > 0
+    ? dbCompany.registrations[0].registration_code
+    : dbCompany.business_license_no;
+
   return {
     id: dbCompany.company_id,
     name: dbCompany.company_name,
@@ -252,6 +262,12 @@ export const getCompanyByIdServiceInCustomer = async (id: string): Promise<Compa
     phone: dbCompany.phone,
     email: dbCompany.email,
     services,
+    businessLicenseNo: registrationCode,
+    licenseFileUrl: dbCompany.license_file_url || undefined,
+    status: dbCompany.status,
+    createdAt: dbCompany.created_at,
+    activityImgs,
+    companyLicenseNo: dbCompany.business_license_no,
   };
 }
 export const getCompanyByIdService = async (

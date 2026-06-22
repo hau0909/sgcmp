@@ -1,6 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { requestGetCompanyById } from "@/features/company/api/company.api";
+import { useAuthStore } from "@/store/auth.store";
 import {
   Building2,
   Mail,
@@ -22,42 +24,72 @@ import {
 } from "lucide-react";
 
 export default function MyCompanyDetail() {
+  const { company_id } = useAuthStore();
+  const [loading, setLoading] = useState(true);
+
   // 1. Core State
-  const [companyName, setCompanyName] = useState("CÔNG TY PTL");
-  const [description, setDescription] = useState(
-    "Công ty bảo vệ chuyên cung cấp dịch vụ an ninh chuyên nghiệp, đảm bảo an toàn cho cá nhân, doanh nghiệp, tòa nhà, sự kiện với đội ngũ nhân viên tận tâm, được đào tạo bài bản."
-  );
+  const [companyName, setCompanyName] = useState("");
+  const [description, setDescription] = useState("");
 
   // 2. Company Details State
-  const [fullName, setFullName] = useState("CÔNG TY TNHH ABC SECURITY");
-  const [companyCode, setCompanyCode] = useState("COM001");
-  const [businessLicense, setBusinessLicense] = useState("0312345678");
-  const [licenseDate, setLicenseDate] = useState("20/05/2023");
-  const [licensePlace, setLicensePlace] = useState("Sở KHĐT TP. Hồ Chí Minh");
-  const [address, setAddress] = useState("123 Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. Hồ Chí Minh");
-  const [email, setEmail] = useState("abcsecurity@gmail.com");
-  const [phone, setPhone] = useState("0909 123 456");
-  const [detailDesc, setDetailDesc] = useState(
-    "Cung cấp dịch vụ bảo vệ chuyên nghiệp cho sự kiện, tòa nhà, cá nhân, nhà máy..."
-  );
-  const [status, setStatus] = useState("Đang hoạt động");
-  const [createdAt, setCreatedAt] = useState("15/06/2023 10:30");
+  const [fullName, setFullName] = useState("");
+  const [companyLicense, setCompanyLicense] = useState("");
+  const [businessLicense, setBusinessLicense] = useState("");
+  const [address, setAddress] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
 
   // 5. Image URLs State
   const [logoUrl, setLogoUrl] = useState("https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300");
   const [bannerUrl, setBannerUrl] = useState("https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200");
   const [licenseImg, setLicenseImg] = useState("https://images.unsplash.com/photo-1589330694653-ded6dfc7f6bb?q=80&w=600");
   
-  const [companyImgs, setCompanyImgs] = useState([
-    "https://images.unsplash.com/photo-1557597774-9d273605dfa9?q=80&w=400",
-    "https://images.unsplash.com/photo-1507679799987-c73779587ccf?q=80&w=400",
-    "https://images.unsplash.com/photo-1628157582853-a796fa650a6a?q=80&w=400",
-    "https://images.unsplash.com/photo-1503376780353-7e6692767b70?q=80&w=400",
-    "https://images.unsplash.com/photo-1560250097-0b93528c311a?q=80&w=400"
-  ]);
+  const [companyImgs, setCompanyImgs] = useState<string[]>([]);
 
   // 6. UI Modals / Modes State
   const [activeViewerImg, setActiveViewerImg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!company_id) {
+      return;
+    }
+
+    const fetchCompanyData = async () => {
+      try {
+        setLoading(true);
+        const data = await requestGetCompanyById(company_id);
+        if (data) {
+          setCompanyName(data.name || "");
+          setFullName(data.name || "");
+          setDescription(data.description || "");
+          setCompanyLicense(data.companyLicenseNo || "");
+          setBusinessLicense(data.businessLicenseNo || "");
+          setEmail(data.email || "");
+          setPhone(data.phone || "");
+          setAddress(data.address || "");
+          if (data.logoUrl) setLogoUrl(data.logoUrl);
+          if (data.bannerUrl) setBannerUrl(data.bannerUrl);
+          if (data.licenseFileUrl) setLicenseImg(data.licenseFileUrl);
+          if (data.activityImgs) setCompanyImgs(data.activityImgs);
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải thông tin công ty:", err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCompanyData();
+  }, [company_id]);
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6 max-w-[1400px] mx-auto pb-16 font-sans bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-center items-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        <p className="text-xs text-slate-500 font-semibold mt-2">Đang tải thông tin công ty...</p>
+      </div>
+    );
+  }
 
 
 
@@ -152,8 +184,8 @@ export default function MyCompanyDetail() {
                   <span className="col-span-8 text-slate-800 font-semibold">{businessLicense}</span>
                 </div>
                 <div className="grid grid-cols-12 gap-2 text-sm">
-                  <span className="col-span-4 font-bold text-slate-400 flex items-center gap-1.5"><Briefcase className="w-4 h-4 text-slate-300" /> Mã số công ty</span>
-                  <span className="col-span-8 text-slate-800 font-mono font-bold">{companyCode}</span>
+                  <span className="col-span-4 font-bold text-slate-400 flex items-center gap-1.5"><Briefcase className="w-4 h-4 text-slate-300" /> Mã số giấy phép</span>
+                  <span className="col-span-8 text-slate-800 font-mono font-bold">{companyLicense}</span>
                 </div>
                 <div className="grid grid-cols-12 gap-2 text-sm">
                   <span className="col-span-4 font-bold text-slate-400 flex items-center gap-1.5"><Mail className="w-4 h-4 text-slate-300" /> Email</span>

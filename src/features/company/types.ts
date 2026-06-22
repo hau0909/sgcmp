@@ -74,5 +74,11 @@ export interface CompanyDetailData {
   phone: string;
   email: string;
   services: CompanyServiceData[];
+  businessLicenseNo?: string;
+  licenseFileUrl?: string;
+  status?: string;
+  createdAt?: string;
+  activityImgs?: string[];
+  companyLicenseNo?: string;
 }
 
