@@ -7,6 +7,7 @@ import CompanyDetailAbout from "./CompanyDetailAbout";
 import CompanyDetailServices from "./CompanyDetailServices";
 import CompanyDetailReviews from "@/features/review/components/CompanyDetailReviews";
 import CompanyDetailSidebar from "./CompanyDetailSidebar";
+import NewBookingModal from "./NewBookingModal";
 import { requestGetCompanyById } from "../api/company.api";
 import { CompanyDetailData } from "../types";
 
@@ -18,6 +19,7 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
   const [isLoading, setIsLoading] = useState(true);
   const [company, setCompany] = useState<CompanyDetailData | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isBookingModalOpen, setIsBookingModalOpen] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -109,6 +111,7 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
         name={company.name}
         logoUrl={company.logoUrl}
         bannerUrl={company.bannerUrl}
+        onOpenBookingModal={() => setIsBookingModalOpen(true)}
       />
 
       <div className="flex flex-col lg:flex-row gap-5">
@@ -131,6 +134,15 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
 
       {/* Customer Reviews Full Width */}
       <CompanyDetailReviews companyId={company.id} />
+
+      {/* New Booking Modal */}
+      <NewBookingModal
+        isOpen={isBookingModalOpen}
+        onClose={() => setIsBookingModalOpen(false)}
+        companyId={company.id}
+        companyName={company.name}
+        services={company.services}
+      />
     </div>
   );
 }

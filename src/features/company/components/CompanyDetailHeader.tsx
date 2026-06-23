@@ -7,12 +7,14 @@ interface CompanyDetailHeaderProps {
   name: string;
   logoUrl?: string;
   bannerUrl?: string;
+  onOpenBookingModal?: () => void;
 }
 
 export default function CompanyDetailHeader({
   name,
   logoUrl,
   bannerUrl,
+  onOpenBookingModal,
 }: CompanyDetailHeaderProps) {
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-xs">
@@ -66,6 +68,7 @@ export default function CompanyDetailHeader({
             <Mail className="w-4 h-4" /> Liên hệ
           </button>
           <button
+            onClick={onOpenBookingModal}
             className="flex-1 sm:flex-none px-2.5 py-1.5 sm:px-3.5 sm:py-2 bg-primary text-on-primary font-semibold rounded-lg hover:bg-primary/90 transition-colors shadow-xs text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
           >
             <Calendar className="w-4 h-4" /> Đặt dịch vụ

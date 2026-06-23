@@ -2,7 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, FileText } from "lucide-react";
 import { BookingStatus } from "../types";
 
 interface BookingDetailHeaderProps {
@@ -10,6 +10,8 @@ interface BookingDetailHeaderProps {
   status: BookingStatus;
   createdAt: string;
   backUrl?: string;
+  contractId?: string | null;
+  isCustomer?: boolean;
 }
 
 export function BookingDetailHeader({
@@ -17,6 +19,8 @@ export function BookingDetailHeader({
   status,
   createdAt,
   backUrl = "/requests",
+  contractId,
+  isCustomer = false,
 }: BookingDetailHeaderProps) {
   // Format receipt time
   const formattedDate = React.useMemo(() => {
@@ -102,8 +106,17 @@ export function BookingDetailHeader({
             {formattedDate}
           </p>
         </div>
-        <div className="flex shrink-0 items-center">
+        <div className="flex shrink-0 items-center gap-3">
           {renderStatusBadge()}
+          {contractId && (
+            <Link
+              href={isCustomer ? `/my-contracts/${contractId}` : `/contracts/${contractId}`}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-primary hover:bg-primary/95 text-on-primary font-semibold rounded-lg text-xs transition-all duration-100 active:scale-95 shadow-sm cursor-pointer"
+            >
+              <FileText className="w-4 h-4 shrink-0" />
+              <span>Xem hợp đồng</span>
+            </Link>
+          )}
         </div>
       </div>
     </div>

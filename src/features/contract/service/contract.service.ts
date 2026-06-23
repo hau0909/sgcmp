@@ -11,6 +11,7 @@ import {
   getContractById 
 } from "../repository/contract.repository";
 import { createClient } from "@/lib/supabase/server";
+import { formatAddressService } from "@/features/address/service/address.service";
 
 export const getContractsService = async (
   page: number,
@@ -351,6 +352,8 @@ export const getCustomerContractDetailService = async (
     }).format(Number(booking.quoted_price));
   }
 
+  const formattedCompanyAddress = await formatAddressService(company?.address);
+
   return {
     contract_id: item.contract_id,
     customer_id: booking?.customer_id,
@@ -382,9 +385,9 @@ export const getCustomerContractDetailService = async (
 
     company: {
       name: companyName,
-      phone: "Chưa cập nhật",
-      email: "Chưa cập nhật",
-      address: company?.address || "Chưa cập nhật địa chỉ",
+      phone: company?.phone || "Chưa cập nhật",
+      email: company?.email || "Chưa cập nhật",
+      address: formattedCompanyAddress,
     },
   };
 };
