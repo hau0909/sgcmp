@@ -200,7 +200,7 @@ export const getCurrentUser = async () => {
   } = await supabase.auth.getUser();
 
   if (error) {
-    throw error;
+    return null;
   }
 
   return user;

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
+import { CustomerChatWidget } from "@/features/chat/components/CustomerChatWidget";
 
 const robotoSans = Roboto({
   variable: "--font-roboto-sans",
@@ -31,8 +32,8 @@ export default function RootLayout({
       className={`${robotoSans.variable} ${robotoMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        {" "}
         {children}
+        <CustomerChatWidget />
       </body>
     </html>
   );

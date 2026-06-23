@@ -9,6 +9,8 @@ interface BookingCustomerInfoProps {
   phone: string;
   email: string;
   address: string;
+  title?: string;
+  nameLabel?: string;
 }
 
 export function BookingCustomerInfo({
@@ -17,6 +19,8 @@ export function BookingCustomerInfo({
   phone,
   email,
   address,
+  title = "Thông tin khách hàng",
+  nameLabel = "Tên khách hàng / Công ty",
 }: BookingCustomerInfoProps) {
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative overflow-hidden transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] duration-300 animate-in fade-in slide-in-from-top-3 duration-300">
@@ -25,14 +29,14 @@ export function BookingCustomerInfo({
 
       <h3 className="text-base font-bold text-on-surface mb-4 flex items-center gap-2 border-b border-outline-variant/30 pb-2 font-headline">
         <Building2 className="w-5 h-5 text-secondary" />
-        <span>Thông tin khách hàng</span>
+        <span>{title}</span>
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Customer / Company Name */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Tên khách hàng / Công ty
+            {nameLabel}
           </span>
           <span className="text-sm font-semibold text-on-surface">
             {customerName}

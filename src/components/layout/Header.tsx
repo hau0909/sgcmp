@@ -217,6 +217,16 @@ export default function Header() {
                         </Link>
                       )}
 
+                    {profile?.role === "customer" && (
+                      <Link
+                        href="/my-requests"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors font-semibold"
+                      >
+                        Quản lý yêu cầu
+                      </Link>
+                    )}
+
                     <Link
                       href="/my-contracts"
                       onClick={closeMenus}
@@ -349,6 +359,16 @@ export default function Header() {
                     Đăng ký doanh nghiệp
                   </Link>
                 )}
+
+              {profile?.role === "customer" && (
+                <Link
+                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                  href="/my-requests"
+                  onClick={closeMenus}
+                >
+                  Quản lý yêu cầu
+                </Link>
+              )}
 
               <Link
                 className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
