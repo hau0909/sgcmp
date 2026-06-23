@@ -446,6 +446,7 @@ const mapShiftRowToItem = (row: ShiftRow): GuardShiftItem | null => {
     start_time: shift.start_time,
     end_time: shift.end_time,
 
+    shift_name: shift.shift_name ?? "Chưa cập nhật tên ca trực",
     location: shift.location ?? "Chưa cập nhật vị trí",
     address: booking?.address ?? "Chưa cập nhật địa chỉ",
 

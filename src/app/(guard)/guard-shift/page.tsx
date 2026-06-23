@@ -66,6 +66,7 @@ const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
   return {
     id: shift.shift_id,
     time: shift.time,
+    shift_name: shift.shift_name,
     location: shift.location,
     address: shift.address,
     status: shift.status,
@@ -187,7 +188,7 @@ export default function GuardShiftPage() {
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-extrabold text-slate-800">
-                      Ca trực
+                      {shift.shift_name}
                     </h2>
 
                     <p className="mt-1 text-xs font-bold text-slate-500">

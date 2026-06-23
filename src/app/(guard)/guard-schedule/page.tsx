@@ -80,6 +80,7 @@ const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
   return {
     id: shift.id,
     time: shift.time,
+    shift_name: shift.shift_name,
     location: shift.location,
     address: shift.address,
     status: shift.status,

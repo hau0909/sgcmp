@@ -9,6 +9,7 @@ import {
   Clock,
   MapPin,
   UserRound,
+  SquarePen,
 } from "lucide-react";
 import type {
   ShiftAssignment,
@@ -260,6 +261,16 @@ function WeekShiftTooltip({
                 </span>
               </div>
             ))}
+          </div>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase text-slate-400">
+            Tên ca trực
+          </p>
+          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
+            <SquarePen size={15} className="mt-0.5 shrink-0" />
+            <span>{shift.shift_name || "Chưa cập nhật"} </span>
           </div>
         </div>
 
@@ -517,6 +528,11 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
           <span className="whitespace-nowrap">
             {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
           </span>
+        </div>
+
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+          <SquarePen size={12} className="shrink-0" />
+          <span className="whitespace-nowrap">{shift.shift_name}</span>
         </div>
 
         <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-700">

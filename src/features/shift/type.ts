@@ -316,6 +316,7 @@ export type GuardShiftItem = {
   start_time: string;
   end_time: string;
 
+  shift_name: string;
   location: string;
   address: string;
 
@@ -437,6 +438,7 @@ export type GuardShiftDetailItem = {
   shift_id: string;
   assignment_id: string;
   time: string;
+  shift_name: string;
   location: string;
   address: string;
   status: ShiftAssignmentStatus;
