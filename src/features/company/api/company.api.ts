@@ -5,6 +5,7 @@ import {
   GetCompanyFiltersRequestParams,
   GetCompanyFiltersResponse,
   CompanyDetailData,
+  Service,
 } from "../types";
 
 export async function requestGetCompanies(params: GetCompaniesRequestParams = {}): Promise<GetCompaniesResponse> {
@@ -45,5 +46,36 @@ export async function requestGetCompanyById(id: string): Promise<CompanyDetailDa
   const url = `/api/companies/${id}`;
   return await fetcher(url, {
     method: "GET",
+  });
+}
+
+export async function requestGetAvailableServices(): Promise<Service[]> {
+  const url = `/api/services`;
+  return await fetcher(url, {
+    method: "GET",
+  });
+}
+
+export async function requestAddCompanyService(
+  companyId: string,
+  payload: { serviceId: string; description: string; price: number }
+): Promise<any> {
+  const url = `/api/companies/${companyId}/services`;
+  return await fetcher(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function requestDeleteCompanyService(
+  companyId: string,
+  serviceId: string
+): Promise<any> {
+  const url = `/api/companies/${companyId}/services?serviceId=${serviceId}`;
+  return await fetcher(url, {
+    method: "DELETE",
   });
 }

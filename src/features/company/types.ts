@@ -58,6 +58,7 @@ export interface GetCompanyFiltersResponse {
 }
 
 export interface CompanyServiceData {
+  serviceId: string;
   name: string;
   description: string;
   baseDescription: string;
