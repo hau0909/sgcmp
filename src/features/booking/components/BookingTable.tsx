@@ -11,6 +11,7 @@ interface BookingTableProps {
   limit: number;
   onPageChange: (page: number) => void;
   onViewDetails?: (bookingId: string) => void;
+  viewMode?: "company" | "customer";
 }
 
 function getStatusBadge(status: BookingStatus) {
@@ -51,6 +52,7 @@ export function BookingTable({
   limit,
   onPageChange,
   onViewDetails,
+  viewMode = "company",
 }: BookingTableProps) {
   const totalPages = Math.ceil(totalCount / limit) || 1;
   const startIdx = totalCount === 0 ? 0 : (page - 1) * limit + 1;
@@ -69,7 +71,7 @@ export function BookingTable({
                 Mã Booking
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Khách hàng
+                {viewMode === "customer" ? "Doanh nghiệp" : "Khách hàng"}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
                 Dịch vụ
@@ -120,7 +122,9 @@ export function BookingTable({
                       </button>
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap font-semibold text-on-surface">
-                      {booking.customer_name || "Khách hàng doanh nghiệp"}
+                      {viewMode === "customer"
+                        ? (booking.company_name || "Doanh nghiệp bảo vệ")
+                        : (booking.customer_name || "Khách hàng doanh nghiệp")}
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap font-medium text-on-surface-variant">
                       {booking.service_name || "Dịch vụ chưa xác định"}

@@ -9,8 +9,19 @@ interface BookingServiceSpecProps {
   startDate: string;
   endDate: string;
   timeSlots?: string[];
+  day_per_week?: string[];
   specialInstructions: string | string[] | null;
 }
+
+const DAYS_OF_WEEK = [
+  { value: "Monday", label: "T2" },
+  { value: "Tuesday", label: "T3" },
+  { value: "Wednesday", label: "T4" },
+  { value: "Thursday", label: "T5" },
+  { value: "Friday", label: "T6" },
+  { value: "Saturday", label: "T7" },
+  { value: "Sunday", label: "CN" },
+];
 
 export function BookingServiceSpec({
   serviceName,
@@ -18,6 +29,7 @@ export function BookingServiceSpec({
   startDate,
   endDate,
   timeSlots = [],
+  day_per_week = [],
   specialInstructions,
 }: BookingServiceSpecProps) {
   // Format start and end date labels
@@ -84,6 +96,30 @@ export function BookingServiceSpec({
             <Calendar className="w-4 h-4 text-outline-variant" />
             <span>{durationText}</span>
           </span>
+        </div>
+
+        {/* Ngày làm việc trong tuần */}
+        <div className="flex flex-col pt-1">
+          <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
+            Ngày làm việc trong tuần
+          </span>
+          <div className="flex gap-1.5 bg-surface-container-low/40 p-1.5 border border-outline-variant/60 rounded-xl max-w-sm">
+            {DAYS_OF_WEEK.map((day) => {
+              const isSelected = day_per_week.includes(day.value);
+              return (
+                <div
+                  key={day.value}
+                  className={`flex-1 text-center py-2 text-xs font-bold rounded-lg select-none transition-all ${
+                    isSelected
+                      ? "bg-secondary text-white shadow-xs"
+                      : "bg-surface-container-low text-on-surface-variant/40 border border-outline-variant/10"
+                  }`}
+                >
+                  {day.label}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
         {/* Khung giờ thực hiện */}

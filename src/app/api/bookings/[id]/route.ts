@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleGetBookingDetail } from "@/features/booking/controller/booking.controller";
+import { handleGetBookingDetail, handleUpdateBookingStatusAndPrice } from "@/features/booking/controller/booking.controller";
 
 interface RouteParams {
   params: Promise<{
@@ -33,6 +33,30 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
     return NextResponse.json(
       { error: err?.message || "Internal Server Error" },
       { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest, { params }: RouteParams) {
+  try {
+    const { id } = await params;
+
+    if (!id) {
+      return NextResponse.json(
+        { error: "Mã yêu cầu là bắt buộc" },
+        { status: 400 }
+      );
+    }
+
+    const body = await request.json();
+    const result = await handleUpdateBookingStatusAndPrice(id, body);
+    return NextResponse.json({ booking: result }, { status: 200 });
+  } catch (error) {
+    const err = error as Error;
+    console.error("[PATCH /api/bookings/[id]] Error:", err);
+    return NextResponse.json(
+      { error: err?.message || "Internal Server Error" },
+      { status: 400 }
     );
   }
 }

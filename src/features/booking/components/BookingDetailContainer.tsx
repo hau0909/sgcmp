@@ -3,13 +3,13 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { CheckCircle, X, Loader2, ArrowLeft, FileQuestion } from "lucide-react";
+import { CheckCircle, X, Loader2, ArrowLeft, FileQuestion, AlertCircle } from "lucide-react";
 import { BookingDetailHeader } from "./BookingDetailHeader";
 import { BookingCustomerInfo } from "./BookingCustomerInfo";
 import { BookingServiceSpec } from "./BookingServiceSpec";
 import { BookingQuotationPanel } from "./BookingQuotationPanel";
 import { BookingStatus } from "../types";
-import { requestGetBookingDetail } from "../api/booking.api";
+import { requestGetBookingDetail, requestUpdateBookingQuotation } from "../api/booking.api";
 
 const MOCK_DETAILS: Record<string, any> = {
   "bkg-1": {
@@ -24,10 +24,15 @@ const MOCK_DETAILS: Record<string, any> = {
     start_date: "2026-06-20",
     end_date: "2026-06-30",
     time_slots: ["22:00-06:00"],
+    day_per_week: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
     special_instructions: "Cần bảo vệ tuần tra đêm, tuần tra xung quanh khu văn phòng vào mỗi giờ từ 22h tối đến 6h sáng.",
     quoted_price: 15000000,
     status: "accepted",
-    created_at: "2026-06-17T08:00:00Z"
+    created_at: "2026-06-17T08:00:00Z",
+    company_name: "Công ty Cổ phần Dịch vụ Bảo vệ Sài Gòn",
+    company_phone: "02838445678",
+    company_email: "contact@baovesg.vn",
+    company_address: "48 Nguyễn Du, Bến Nghé, Quận 1, TP. HCM"
   },
   "bkg-2": {
     booking_id: "bkg-2",
@@ -41,10 +46,15 @@ const MOCK_DETAILS: Record<string, any> = {
     start_date: "2026-07-01",
     end_date: "2026-12-31",
     time_slots: ["07:30-17:30"],
+    day_per_week: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
     special_instructions: "Bảo vệ sảnh chính tòa nhà văn phòng ngân hàng. Yêu cầu ngoại hình lịch sự, biết tiếng Anh cơ bản.",
     quoted_price: 120000000,
     status: "accepted",
-    created_at: "2026-06-16T10:30:00Z"
+    created_at: "2026-06-16T10:30:00Z",
+    company_name: "Công ty Cổ phần Dịch vụ Bảo vệ Sài Gòn",
+    company_phone: "02838445678",
+    company_email: "contact@baovesg.vn",
+    company_address: "48 Nguyễn Du, Bến Nghé, Quận 1, TP. HCM"
   },
   "bkg-3": {
     booking_id: "bkg-3",
@@ -58,10 +68,15 @@ const MOCK_DETAILS: Record<string, any> = {
     start_date: "2026-06-25",
     end_date: "2026-06-27",
     time_slots: ["16:00-23:00"],
+    day_per_week: ["Friday", "Saturday", "Sunday"],
     special_instructions: "Đội ngũ phản ứng nhanh bảo vệ an ninh sự kiện âm nhạc cuối tuần.",
     quoted_price: 45000000,
     status: "accepted",
-    created_at: "2026-06-15T14:15:00Z"
+    created_at: "2026-06-15T14:15:00Z",
+    company_name: "Công ty Cổ phần Dịch vụ Bảo vệ Sài Gòn",
+    company_phone: "02838445678",
+    company_email: "contact@baovesg.vn",
+    company_address: "48 Nguyễn Du, Bến Nghé, Quận 1, TP. HCM"
   },
   "bkg-4": {
     booking_id: "bkg-4",
@@ -75,10 +90,15 @@ const MOCK_DETAILS: Record<string, any> = {
     start_date: "2026-06-10",
     end_date: "2026-06-15",
     time_slots: ["11:00-22:00"],
+    day_per_week: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"],
     special_instructions: "Bảo vệ nhà hàng ẩm thực vào giờ cao điểm từ trưa đến tối.",
     quoted_price: 6000000,
     status: "accepted",
-    created_at: "2026-06-08T09:00:00Z"
+    created_at: "2026-06-08T09:00:00Z",
+    company_name: "Công ty Cổ phần Dịch vụ Bảo vệ Sài Gòn",
+    company_phone: "02838445678",
+    company_email: "contact@baovesg.vn",
+    company_address: "48 Nguyễn Du, Bến Nghé, Quận 1, TP. HCM"
   },
   "bkg-5": {
     booking_id: "bkg-5",
@@ -92,10 +112,15 @@ const MOCK_DETAILS: Record<string, any> = {
     start_date: "2026-09-01",
     end_date: "2027-05-31",
     time_slots: ["06:30-18:30"],
+    day_per_week: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
     special_instructions: "Bảo vệ cổng chính trường tiểu học, phân luồng giao thông vào giờ đưa đón học sinh.",
     quoted_price: null,
     status: "accepted",
-    created_at: "2026-06-18T07:30:00Z"
+    created_at: "2026-06-18T07:30:00Z",
+    company_name: "Công ty Cổ phần Dịch vụ Bảo vệ Sài Gòn",
+    company_phone: "02838445678",
+    company_email: "contact@baovesg.vn",
+    company_address: "48 Nguyễn Du, Bến Nghé, Quận 1, TP. HCM"
   }
 };
 
@@ -108,7 +133,8 @@ export function BookingDetailContainer({
 }: BookingDetailContainerProps) {
   const pathname = usePathname();
   const isCoordinator = pathname?.includes("/bookings");
-  const backUrl = isCoordinator ? "/bookings" : "/requests";
+  const isCustomer = pathname?.includes("/my-requests");
+  const backUrl = isCoordinator ? "/bookings" : isCustomer ? "/my-requests" : "/requests";
   const [booking, setBooking] = useState<{
     booking_id: string;
     customer_name: string;
@@ -125,6 +151,11 @@ export function BookingDetailContainer({
     quoted_price: number | null;
     status: BookingStatus;
     created_at: string;
+    day_per_week: string[];
+    company_name?: string;
+    company_phone?: string;
+    company_email?: string;
+    company_address?: string;
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -132,6 +163,7 @@ export function BookingDetailContainer({
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [isSimulating, setIsSimulating] = useState(false);
+  const [contractId, setContractId] = useState<string | null>(null);
 
   const fetchDetail = React.useCallback(async (showLoading = true) => {
     try {
@@ -144,6 +176,11 @@ export function BookingDetailContainer({
       if (MOCK_DETAILS[bookingId]) {
         await new Promise((resolve) => setTimeout(resolve, 300));
         setBooking(MOCK_DETAILS[bookingId]);
+        if (MOCK_DETAILS[bookingId].status === "accepted") {
+          setContractId("mock-contract-123");
+        } else {
+          setContractId(null);
+        }
         setIsLoading(false);
         return;
       }
@@ -167,7 +204,17 @@ export function BookingDetailContainer({
           quoted_price: b.quoted_price,
           status: b.status,
           created_at: b.created_at,
+          day_per_week: b.day_per_week || [],
+          company_name: b.company_name,
+          company_phone: b.company_phone,
+          company_email: b.company_email,
+          company_address: b.company_address,
         });
+        if (b.contract_id) {
+          setContractId(b.contract_id);
+        } else {
+          setContractId(null);
+        }
       } else {
         setError("Không tìm thấy thông tin yêu cầu đặt lịch.");
       }
@@ -186,42 +233,147 @@ export function BookingDetailContainer({
     }
   }, [bookingId, fetchDetail]);
 
-  // Trigger local state updates to simulate sending a quote to customer
-  const handleQuote = (price: number, notes: string) => {
-    setIsSimulating(true);
-    // Simulate slight network delay for a high-end feel
-    setTimeout(() => {
-      setBooking((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          status: "quoted",
-          quoted_price: price,
-        };
+  // Send a quote to the customer using API
+  const handleQuote = async (price: number, notes: string) => {
+    try {
+      setIsSimulating(true);
+
+      // If it is mock, fallback to mock simulation
+      if (MOCK_DETAILS[bookingId]) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        setBooking((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: "quoted",
+            quoted_price: price,
+          };
+        });
+        setToastType("success");
+        setToastMessage(
+          `Đã cập nhật báo giá ${price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`
+        );
+        return;
+      }
+
+      const updated = await requestUpdateBookingQuotation(bookingId, {
+        status: "quoted",
+        quoted_price: price,
       });
-      setToastType("success");
-      setToastMessage(
-        `Đã cập nhật báo giá ${price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`
-      );
+
+      if (updated && updated.booking) {
+        setBooking((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: updated.booking.status,
+            quoted_price: updated.booking.quoted_price,
+          };
+        });
+        setToastType("success");
+        setToastMessage(
+          `Đã cập nhật báo giá ${price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`
+        );
+      }
+    } catch (err: any) {
+      console.error("Lỗi khi gửi báo giá:", err);
+      setToastType("error");
+      setToastMessage(err?.message || "Lỗi khi cập nhật báo giá.");
+    } finally {
       setIsSimulating(false);
-    }, 600);
+    }
   };
 
-  // Trigger local state updates to simulate rejecting the booking
-  const handleReject = () => {
-    setIsSimulating(true);
-    setTimeout(() => {
-      setBooking((prev) => {
-        if (!prev) return null;
-        return {
-          ...prev,
-          status: "rejected",
-        };
+  // Reject the booking using API
+  const handleReject = async () => {
+    try {
+      setIsSimulating(true);
+
+      // If it is mock, fallback to mock simulation
+      if (MOCK_DETAILS[bookingId]) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        setBooking((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: "rejected",
+          };
+        });
+        setToastType("success");
+        setToastMessage(isCustomer ? "Bạn đã từ chối báo giá thành công." : "Yêu cầu đặt lịch đã bị từ chối thành công.");
+        return;
+      }
+
+      const updated = await requestUpdateBookingQuotation(bookingId, {
+        status: "rejected",
       });
-      setToastType("success");
-      setToastMessage("Yêu cầu đặt lịch đã bị từ chối thành công.");
+
+      if (updated && updated.booking) {
+        setBooking((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: updated.booking.status,
+          };
+        });
+        setToastType("success");
+        setToastMessage(isCustomer ? "Bạn đã từ chối báo giá thành công." : "Yêu cầu đặt lịch đã bị từ chối thành công.");
+      }
+    } catch (err: any) {
+      console.error("Lỗi khi từ chối yêu cầu:", err);
+      setToastType("error");
+      setToastMessage(err?.message || "Lỗi khi từ chối yêu cầu.");
+    } finally {
       setIsSimulating(false);
-    }, 600);
+    }
+  };
+
+  // Accept the booking quotation using API (for customer)
+  const handleAcceptQuote = async () => {
+    try {
+      setIsSimulating(true);
+
+      // If it is mock, fallback to mock simulation
+      if (MOCK_DETAILS[bookingId]) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        setBooking((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: "accepted",
+          };
+        });
+        setContractId("mock-contract-123");
+        setToastType("success");
+        setToastMessage("Bạn đã đồng ý báo giá thành công! Hợp đồng đã được tạo tự động.");
+        return;
+      }
+
+      const res = await requestUpdateBookingQuotation(bookingId, {
+        status: "accepted",
+      });
+
+      if (res && res.booking) {
+        setBooking((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: res.booking.status,
+          };
+        });
+        if (res.contract_id) {
+          setContractId(res.contract_id);
+        }
+        setToastType("success");
+        setToastMessage("Bạn đã đồng ý báo giá thành công! Hợp đồng đã được tạo tự động.");
+      }
+    } catch (err: any) {
+      console.error("Lỗi khi đồng ý báo giá:", err);
+      setToastType("error");
+      setToastMessage(err?.message || "Lỗi khi đồng ý báo giá.");
+    } finally {
+      setIsSimulating(false);
+    }
   };
 
   // Clear toast notifications after 4 seconds
@@ -274,7 +426,11 @@ export function BookingDetailContainer({
       {/* Toast notification component */}
       {toastMessage && (
         <div className="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-50 animate-in fade-in slide-in-from-bottom-5 duration-300">
-          <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+          {toastType === "error" ? (
+            <AlertCircle className="w-5 h-5 text-rose-500 shrink-0" />
+          ) : (
+            <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
+          )}
           <span className="text-xs font-semibold leading-normal">{toastMessage}</span>
           <button
             onClick={() => setToastMessage(null)}
@@ -301,19 +457,23 @@ export function BookingDetailContainer({
         status={booking.status}
         createdAt={booking.created_at}
         backUrl={backUrl}
+        contractId={contractId}
+        isCustomer={!!isCustomer}
       />
 
       {/* Bento Grid layout matching specs */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column (Customer details & Service specs) */}
         <div className={`${isCoordinator ? "xl:col-span-3" : "xl:col-span-2"} space-y-6`}>
-          {/* Customer info card */}
+          {/* Customer/Company info card */}
           <BookingCustomerInfo
-            customerName={booking.customer_name}
-            contactPerson={booking.contact_person}
-            phone={booking.phone}
-            email={booking.email}
+            customerName={isCustomer ? (booking.company_name || "Doanh nghiệp bảo vệ") : booking.customer_name}
+            contactPerson={isCustomer ? "Đại diện doanh nghiệp" : booking.contact_person}
+            phone={isCustomer ? (booking.company_phone || "Chưa cập nhật") : booking.phone}
+            email={isCustomer ? (booking.company_email || "Chưa cập nhật") : booking.email}
             address={booking.address}
+            title={isCustomer ? "Thông tin doanh nghiệp" : "Thông tin khách hàng"}
+            nameLabel={isCustomer ? "Tên doanh nghiệp bảo vệ" : "Tên khách hàng / Công ty"}
           />
 
           {/* Service specifications card */}
@@ -323,6 +483,7 @@ export function BookingDetailContainer({
             startDate={booking.start_date}
             endDate={booking.end_date}
             timeSlots={booking.time_slots}
+            day_per_week={booking.day_per_week}
             specialInstructions={booking.special_instructions}
           />
         </div>
@@ -336,6 +497,9 @@ export function BookingDetailContainer({
               status={booking.status}
               onQuote={handleQuote}
               onReject={handleReject}
+              viewMode={isCustomer ? "customer" : "company"}
+              onAccept={handleAcceptQuote}
+              contractId={contractId}
             />
           </div>
         )}

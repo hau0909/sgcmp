@@ -267,6 +267,8 @@ export const getCustomerContractDetail = async (
         companies!inner (
           company_id,
           company_name,
+          phone,
+          email,
           address
         ),
         services!inner (
