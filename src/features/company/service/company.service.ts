@@ -233,6 +233,7 @@ export const getCompanyByIdServiceInCustomer = async (id: string): Promise<Compa
       .map((cs) => {
         if (!cs.services) return null;
         return {
+          serviceId: cs.services.service_id,
           name: cs.services.name,
           description: cs.description || "",
           baseDescription: cs.services.description || "",

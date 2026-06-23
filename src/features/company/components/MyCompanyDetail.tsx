@@ -1,7 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { requestGetCompanyById } from "@/features/company/api/company.api";
+import {
+  requestGetCompanyById,
+  requestGetAvailableServices,
+  requestAddCompanyService,
+  requestDeleteCompanyService
+} from "@/features/company/api/company.api";
+import { Service, CompanyServiceData } from "@/features/company/types";
 import { useAuthStore } from "@/store/auth.store";
 import {
   Building2,
@@ -52,78 +58,67 @@ export default function MyCompanyDetail() {
   // 6. UI Modals / Modes State
   const [activeViewerImg, setActiveViewerImg] = useState<string | null>(null);
 
-  // 7. Services State (Frontend mockup for table display)
-  const [companyServices, setCompanyServices] = useState([
-    {
-      id: "s1",
-      name: "VIP Protection Service",
-      description: "Dịch vụ bảo vệ chuyên nghiệp đảm bảo an ninh, giám sát chặt chẽ, bảo vệ tài sản hiệu quả.",
-      price: "5.000.000đ"
-    },
-    {
-      id: "s2",
-      name: "Patrol & Guard Service",
-      description: "Tuần tra, canh gác và kiểm soát an ninh tại mục tiêu cố định, nhà máy, văn phòng, khu công nghiệp.",
-      price: "3.500.000đ"
-    },
-    {
-      id: "s3",
-      name: "Event Security Service",
-      description: "Đội ngũ chuyên nghiệp bảo vệ sự kiện lớn, triển lãm, hội nghị, chương trình ca nhạc, thể thao.",
-      price: "6.000.000đ"
-    }
-  ]);
-
-  // Predefined services list for dropdown selection
-  const PREDEFINED_SERVICES = [
-    { name: "VIP Protection Service", description: "Dịch vụ bảo vệ chuyên nghiệp đảm bảo an ninh, giám sát chặt chẽ, bảo vệ tài sản hiệu quả." },
-    { name: "24/7 Security Monitoring Service", description: "Dịch vụ giám sát an ninh 24/7 bằng hệ thống camera giám sát và đội ngũ trực ban chuyên nghiệp." },
-    { name: "Shopping Mall Security Service", description: "Dịch vụ bảo vệ trung tâm thương mại, kiểm soát lưu lượng khách ra vào và đảm bảo trật tự mua sắm." },
-    { name: "Patrol Security Service", description: "Dịch vụ tuần tra và canh gác kiểm soát an ninh định kỳ tại các khu dân cư, cơ sở kinh doanh." },
-    { name: "Building Security Service", description: "Dịch vụ bảo vệ tòa nhà văn phòng, chung cư cao tầng, kiểm soát thẻ ra vào và hỗ trợ khách hàng." },
-    { name: "Factory Security Service", description: "Dịch vụ bảo vệ nhà máy, kho bãi, xí nghiệp, kiểm soát luồng hàng hóa và an toàn phòng chống cháy nổ." },
-    { name: "Event Security Service", description: "Dịch vụ bảo vệ sự kiện, hội nghị, chương trình biểu diễn nghệ thuật, thể thao quy mô lớn." },
-    { name: "Construction Site Security Service", description: "Dịch vụ bảo vệ công trường xây dựng, bảo vệ vật tư thiết bị và kiểm soát công nhân ra vào." }
-  ];
+  // 7. Services State
+  const [companyServices, setCompanyServices] = useState<CompanyServiceData[]>([]);
+  const [availableServices, setAvailableServices] = useState<Service[]>([]);
 
   // 8. Add Service Modal State
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
-  const [newServiceName, setNewServiceName] = useState("");
+  const [newServiceId, setNewServiceId] = useState("");
   const [newServiceDesc, setNewServiceDesc] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
 
-  const handleServiceSelect = (serviceName: string) => {
-    setNewServiceName(serviceName);
-    const found = PREDEFINED_SERVICES.find(s => s.name === serviceName);
-    if (found) {
-      setNewServiceDesc(found.description);
-    } else {
+  const handleServiceSelect = (serviceId: string) => {
+    setNewServiceId(serviceId);
+  };
+
+  const handleAddService = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newServiceId || !newServicePrice || !company_id) return;
+
+    const numericPrice = parseInt(newServicePrice.replace(/\D/g, ""), 10);
+    if (isNaN(numericPrice) || numericPrice <= 0) {
+      alert("Vui lòng nhập giá dịch vụ hợp lệ.");
+      return;
+    }
+    
+    try {
+      await requestAddCompanyService(company_id, {
+        serviceId: newServiceId,
+        description: newServiceDesc,
+        price: numericPrice,
+      });
+
+      // Refresh company services list
+      const updatedData = await requestGetCompanyById(company_id);
+      if (updatedData && updatedData.services) {
+        setCompanyServices(updatedData.services);
+      }
+
+      // Reset state
+      setNewServiceId("");
       setNewServiceDesc("");
+      setNewServicePrice("");
+      setIsAddServiceOpen(false);
+    } catch (err: any) {
+      console.error("Lỗi khi thêm dịch vụ:", err);
+      alert(err.message || "Không thể thêm dịch vụ. Vui lòng thử lại.");
     }
   };
 
-  const handleAddService = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newServiceName || !newServicePrice) return;
-    
-    const newService = {
-      id: `s-${Date.now()}`,
-      name: newServiceName,
-      description: newServiceDesc,
-      price: newServicePrice.endsWith("đ") ? newServicePrice : `${newServicePrice}đ`
-    };
-    
-    setCompanyServices([...companyServices, newService]);
-    
-    // Reset state
-    setNewServiceName("");
-    setNewServiceDesc("");
-    setNewServicePrice("");
-    setIsAddServiceOpen(false);
-  };
-
-  const handleRemoveService = (id: string) => {
-    setCompanyServices(companyServices.filter(s => s.id !== id));
+  const handleRemoveService = async (serviceId?: string) => {
+    if (!company_id || !serviceId) return;
+    try {
+      await requestDeleteCompanyService(company_id, serviceId);
+      // Refresh list
+      const updatedData = await requestGetCompanyById(company_id);
+      if (updatedData && updatedData.services) {
+        setCompanyServices(updatedData.services);
+      }
+    } catch (err: any) {
+      console.error("Lỗi khi xóa dịch vụ:", err);
+      alert(err.message || "Không thể xóa dịch vụ.");
+    }
   };
 
   useEffect(() => {
@@ -134,7 +129,10 @@ export default function MyCompanyDetail() {
     const fetchCompanyData = async () => {
       try {
         setLoading(true);
-        const data = await requestGetCompanyById(company_id);
+        const [data, servs] = await Promise.all([
+          requestGetCompanyById(company_id),
+          requestGetAvailableServices()
+        ]);
         if (data) {
           setCompanyName(data.name || "");
           setFullName(data.name || "");
@@ -148,6 +146,10 @@ export default function MyCompanyDetail() {
           if (data.bannerUrl) setBannerUrl(data.bannerUrl);
           if (data.licenseFileUrl) setLicenseImg(data.licenseFileUrl);
           if (data.activityImgs) setCompanyImgs(data.activityImgs);
+          if (data.services) setCompanyServices(data.services);
+        }
+        if (servs) {
+          setAvailableServices(servs);
         }
       } catch (err) {
         console.error("Lỗi khi tải thông tin công ty:", err);
@@ -325,13 +327,18 @@ export default function MyCompanyDetail() {
                 <tbody className="divide-y divide-slate-100">
                   {companyServices.map((service) => (
                     <tr 
-                      key={service.id} 
+                      key={service.serviceId} 
                       className="group hover:bg-slate-50/70 transition-colors"
                     >
                       <td className="py-4 pl-2">
                         <div className="font-bold text-slate-800 text-sm">
                           {service.name}
                         </div>
+                        {service.baseDescription && (
+                          <div className="text-[11px] text-slate-400 font-medium mt-0.5 leading-normal max-w-[280px]">
+                            {service.baseDescription}
+                          </div>
+                        )}
                       </td>
                       <td className="py-4 pr-4">
                         <p className="text-sm text-slate-600 font-medium leading-relaxed">
@@ -341,10 +348,10 @@ export default function MyCompanyDetail() {
                       <td className="py-4 pr-2 text-right">
                         <div className="flex items-center justify-end gap-3">
                           <span className="text-sm font-extrabold text-blue-600">
-                            {service.price}
+                            {typeof service.price === "number" ? service.price.toLocaleString("vi-VN") + "đ" : service.price}
                           </span>
                           <button
-                            onClick={() => handleRemoveService(service.id)}
+                            onClick={() => handleRemoveService(service.serviceId)}
                             className="p-1 text-slate-300 hover:text-red-500 rounded-md transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
                             title="Xóa dịch vụ"
                           >
@@ -423,13 +430,13 @@ export default function MyCompanyDetail() {
                 <div className="relative">
                   <select
                     required
-                    value={newServiceName}
+                    value={newServiceId}
                     onChange={(e) => handleServiceSelect(e.target.value)}
                     className="w-full text-sm border border-slate-200 bg-white rounded-xl pl-3.5 pr-10 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-semibold text-slate-800 appearance-none cursor-pointer"
                   >
                     <option value="" disabled className="text-slate-400 font-medium">--- Chọn dịch vụ ---</option>
-                    {PREDEFINED_SERVICES.map((s) => (
-                      <option key={s.name} value={s.name} className="text-slate-700 font-medium">
+                    {availableServices.map((s) => (
+                      <option key={s.service_id} value={s.service_id} className="text-slate-700 font-medium">
                         {s.name}
                       </option>
                     ))}
@@ -438,6 +445,12 @@ export default function MyCompanyDetail() {
                     <ChevronDown className="w-4 h-4" />
                   </div>
                 </div>
+                {newServiceId && (
+                  <p className="text-[11px] text-slate-500 italic mt-1 font-medium bg-slate-50 border border-slate-100 rounded-lg p-2.5 leading-normal">
+                    <span className="font-bold not-italic text-slate-600">Ý nghĩa: </span>
+                    {availableServices.find(s => s.service_id === newServiceId)?.description}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-1.5">
