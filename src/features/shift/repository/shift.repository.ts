@@ -75,7 +75,9 @@ export const getShiftContractsByCompanyId = async (
       )
     `,
     )
+    .eq("status", "active") // status của contracts
     .eq("booking.company_id", companyId)
+    .eq("booking.status", "accepted") // status của bookings
     .order("created_at", {
       ascending: false,
     });
