@@ -10,6 +10,7 @@ import {
   deleteContractFileService,
   getCustomerContractsService,
   getCustomerContractDetailService,
+  completeContractCustomerService,
 } from "../service/contract.service";
 import { CustomerContract } from "../types";
 
@@ -63,6 +64,12 @@ export const handleSignContractCompany = async (id: string): Promise<any> => {
 export const handleSignContractCustomer = async (id: string, customerId: string): Promise<any> => {
   return await signContractCustomerService(id, customerId);
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const handleCompleteContractCustomer = async (id: string, customerId: string): Promise<any> => {
+  return await completeContractCustomerService(id, customerId);
+};
+
 
 export const handleUploadContractFile = async (id: string, file: File): Promise<string> => {
   return await uploadContractFileService(id, file);

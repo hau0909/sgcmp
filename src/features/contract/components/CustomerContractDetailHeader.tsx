@@ -17,6 +17,8 @@ interface CustomerContractDetailHeaderProps {
   onSignCustomer?: () => void;
   onReviewCustomer?: () => void;
   hasReviewed?: boolean;
+  canComplete?: boolean;
+  onCompleteContract?: () => void;
 }
 
 const STATUS_MAP: Record<ContractStatus, { label: string; className: string }> = {
@@ -47,6 +49,8 @@ export function CustomerContractDetailHeader({
   onSignCustomer,
   onReviewCustomer,
   hasReviewed = false,
+  canComplete = false,
+  onCompleteContract,
 }: CustomerContractDetailHeaderProps) {
   const statusInfo = STATUS_MAP[status] ?? {
     label: "Không xác định",
@@ -155,6 +159,17 @@ export function CustomerContractDetailHeader({
           >
             <Star className={`w-4 h-4 ${hasReviewed ? '' : 'fill-on-primary'}`} />
             {hasReviewed ? "Xem đánh giá" : "Đánh giá"}
+          </Button>
+        )}
+
+        {/* Customer Complete Contract CTA */}
+        {status === "active" && canComplete && (
+          <Button
+            onClick={onCompleteContract}
+            className="cursor-pointer font-bold shadow-md px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 active:scale-95 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 hover:border-emerald-700"
+          >
+            <CheckCircle2 className="w-4 h-4" />
+            Hoàn thành hợp đồng
           </Button>
         )}
       </div>
