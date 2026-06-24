@@ -327,6 +327,39 @@ export const signContractCustomerService = async (
   return await updateContract(id, payload);
 };
 
+export const completeContractCustomerService = async (
+  id: string,
+  customerId: string,
+): Promise<any> => {
+  const contract = await getCustomerContractDetail(id, customerId);
+  if (!contract) {
+    throw new Error("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập");
+  }
+
+  if (contract.status !== "active") {
+    throw new Error("Chỉ có thể hoàn thành hợp đồng đang hoạt động");
+  }
+
+  if (!contract.end_date) {
+    throw new Error("Hợp đồng không có ngày kết thúc");
+  }
+
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+
+  const endDate = new Date(contract.end_date);
+  endDate.setHours(0, 0, 0, 0);
+
+  if (endDate > today) {
+    throw new Error("Chưa đến ngày kết thúc hợp đồng");
+  }
+
+  return await updateContract(id, {
+    status: "completed",
+  });
+};
+
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const getCustomerContractDetailService = async (
   id: string,

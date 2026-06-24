@@ -20,6 +20,7 @@ import { requestCreateReview } from "../../review/api/review.api";
 import {
   requestGetCustomerContractDetail,
   requestSignContractCustomer,
+  requestCompleteContractCustomer,
 } from "../api/contract.api";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -39,6 +40,7 @@ export function CustomerContractDetailContainer({
   const [error, setError] = useState<string | null>(null);
   
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
+  const [isCompleteModalOpen, setIsCompleteModalOpen] = useState(false);
   const [isReviewModalOpen, setIsReviewModalOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
@@ -89,6 +91,34 @@ export function CustomerContractDetailContainer({
       showToast(errorObj?.message || "Có lỗi xảy ra khi ký hợp đồng.");
     }
   };
+
+  const handleCompleteCustomer = async () => {
+    try {
+      setIsCompleteModalOpen(false);
+      const res = await requestCompleteContractCustomer(contractId, customerId);
+      if (res && res.success) {
+        showToast("Hợp đồng đã được hoàn thành thành công!");
+        await fetchDetail(false);
+      } else {
+        showToast("Hoàn thành hợp đồng thất bại.");
+      }
+    } catch (err) {
+      const errorObj = err as Error & { message?: string };
+      console.error(errorObj);
+      showToast(errorObj?.message || "Có lỗi xảy ra khi hoàn thành hợp đồng.");
+    }
+  };
+
+  const canComplete = React.useMemo(() => {
+    if (!contract || contract.status !== "active" || !contract.end_date) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const endDate = new Date(contract.end_date);
+    endDate.setHours(0, 0, 0, 0);
+
+    return endDate <= today;
+  }, [contract]);
 
   if (isLoading) {
     return (
@@ -196,6 +226,8 @@ export function CustomerContractDetailContainer({
         onSignCustomer={() => setIsSignModalOpen(true)}
         onReviewCustomer={() => setIsReviewModalOpen(true)}
         hasReviewed={contract.has_reviewed}
+        canComplete={canComplete}
+        onCompleteContract={() => setIsCompleteModalOpen(true)}
       />
 
       {/* Pending banner */}
@@ -341,6 +373,60 @@ export function CustomerContractDetailContainer({
           initialRating={contract.review_rating}
           initialFeedback={contract.review_comment}
         />
+      )}
+
+      {/* Complete Confirmation Modal */}
+      {isCompleteModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in">
+          <div className="bg-white rounded-xl border border-[#c3c6d3] max-w-md w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            {/* Modal header */}
+            <div className="bg-[#eff4ff] border-b border-[#acc7ff] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-emerald-600">
+                <CheckCircle className="w-5 h-5 shrink-0 text-emerald-600" />
+                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">
+                  Xác nhận hoàn thành hợp đồng
+                </h3>
+              </div>
+              <button
+                onClick={() => setIsCompleteModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Modal body */}
+            <div className="p-6 space-y-3 font-body">
+              <p className="text-sm text-on-surface-variant leading-relaxed">
+                Bạn có chắc chắn muốn xác nhận hoàn thành hợp đồng{" "}
+                <span className="font-bold text-[#0b1c30]">
+                  #{contract.contract_code}
+                </span>{" "}
+                không?
+              </p>
+              <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 p-3 rounded-lg leading-normal flex gap-2">
+                <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
+                Lưu ý: Hành động này sẽ chuyển trạng thái của hợp đồng này sang "Đã hoàn thành". Hành động này không thể hoàn tác.
+              </p>
+            </div>
+
+            {/* Modal footer */}
+            <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setIsCompleteModalOpen(false)}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded text-sm font-semibold text-slate-700 cursor-pointer"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleCompleteCustomer}
+                className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white transition-colors rounded text-sm font-semibold cursor-pointer shadow-sm"
+              >
+                Xác nhận
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

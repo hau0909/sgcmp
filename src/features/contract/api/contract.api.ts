@@ -94,3 +94,14 @@ export async function requestSignContractCustomer(id: string, customerId: string
     body: JSON.stringify({ action: "sign" }),
   });
 }
+
+export async function requestCompleteContractCustomer(id: string, customerId: string) {
+  return await fetcher(`/api/my-contracts/${id}?customerId=${customerId}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ action: "complete" }),
+  });
+}
+

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleGetCustomerContractDetail, handleSignContractCustomer } from "@/features/contract/controller/contract.controller";
+import { handleGetCustomerContractDetail, handleSignContractCustomer, handleCompleteContractCustomer } from "@/features/contract/controller/contract.controller";
 
 interface RouteParams {
   params: Promise<{
@@ -63,19 +63,24 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    if (body.action !== "sign") {
+    if (body.action === "sign") {
+      const result = await handleSignContractCustomer(id, customerId);
+      return NextResponse.json(
+        { success: true, contract: result },
+        { status: 200 }
+      );
+    } else if (body.action === "complete") {
+      const result = await handleCompleteContractCustomer(id, customerId);
+      return NextResponse.json(
+        { success: true, contract: result },
+        { status: 200 }
+      );
+    } else {
       return NextResponse.json(
         { error: "Thao tác không hợp lệ" },
         { status: 400 }
       );
     }
-
-    const result = await handleSignContractCustomer(id, customerId);
-
-    return NextResponse.json(
-      { success: true, contract: result },
-      { status: 200 }
-    );
   } catch (error) {
     const err = error as Error;
     console.error("[PUT /api/my-contracts/[id]] Error:", err);
