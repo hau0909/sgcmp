@@ -104,7 +104,7 @@ export default function PaymentScreen() {
   const accountNumber = "012345678910";
   const accountName = "CONG TY CO PHAN SGCMP VIET NAM";
   const transactionCode = payment
-    ? (payment.transaction_code || "")
+    ? payment.transaction_code || ""
     : `SGCMP ORD789${selectedPlan.id}`;
 
   // Copy states
@@ -143,9 +143,7 @@ export default function PaymentScreen() {
         "completed",
       );
       if (res.success) {
-        router.push(
-          `/billing/payment/${selectedPlan.id}/success?paymentId=${payment.payment_id}`,
-        );
+        router.push(`/billing/payment/${selectedPlan.id}/success`);
       } else {
         throw new Error("Không thể cập nhật trạng thái giao dịch");
       }

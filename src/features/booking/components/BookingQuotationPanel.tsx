@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { DollarSign, Send, XCircle, FileText } from "lucide-react";
 import { BookingStatus } from "../types";
+import { formatPrice } from "@/utils/formatPrice";
 
 interface BookingQuotationPanelProps {
   initialPrice: number | null;
@@ -28,7 +29,7 @@ export function BookingQuotationPanel({
 }: BookingQuotationPanelProps) {
   // Calculate default price based on: guardsCount * 3,000,000 VND
   const defaultEstimate = React.useMemo(() => {
-    return guardsCount * 3000000;
+    return (guardsCount || 0) * 3000000;
   }, [guardsCount]);
 
   const [priceStr, setPriceStr] = useState("");
@@ -43,8 +44,8 @@ export function BookingQuotationPanel({
 
   // Synchronize initial value
   useEffect(() => {
-    const val = initialPrice !== null ? initialPrice : defaultEstimate;
-    setPriceStr(val.toLocaleString("vi-VN"));
+    const val = (initialPrice !== null && initialPrice !== undefined) ? initialPrice : defaultEstimate;
+    setPriceStr(formatPrice(val));
   }, [initialPrice, defaultEstimate]);
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -59,9 +60,8 @@ export function BookingQuotationPanel({
     onQuote(numericPrice, notes);
   };
 
-  const isReadOnly = viewMode === "customer"
-    ? status !== "quoted"
-    : status !== "pending";
+  const isReadOnly =
+    viewMode === "customer" ? status !== "quoted" : status !== "pending";
 
   const isInputsDisabled = isReadOnly || viewMode === "customer";
 
@@ -138,21 +138,29 @@ export function BookingQuotationPanel({
               <div>
                 {viewMode === "customer" ? (
                   <>
-                    {status === "pending" && "Yêu cầu đang chờ doanh nghiệp gửi báo giá."}
+                    {status === "pending" &&
+                      "Yêu cầu đang chờ doanh nghiệp gửi báo giá."}
                     {status === "accepted" && "Yêu cầu này đã được phê duyệt."}
                     {status === "rejected" && "Yêu cầu này đã bị từ chối."}
                   </>
                 ) : (
                   <>
-                    {status === "quoted" && "Yêu cầu này đã được báo giá. Không thể chỉnh sửa."}
-                    {status === "accepted" && "Yêu cầu này đã được phê duyệt. Không thể chỉnh sửa."}
-                    {status === "rejected" && "Yêu cầu này đã bị từ chối. Không thể chỉnh sửa."}
+                    {status === "quoted" &&
+                      "Yêu cầu này đã được báo giá. Không thể chỉnh sửa."}
+                    {status === "accepted" &&
+                      "Yêu cầu này đã được phê duyệt. Không thể chỉnh sửa."}
+                    {status === "rejected" &&
+                      "Yêu cầu này đã bị từ chối. Không thể chỉnh sửa."}
                   </>
                 )}
               </div>
               {status === "accepted" && contractId && (
                 <Link
-                  href={viewMode === "customer" ? `/my-contracts/${contractId}` : `/contracts/${contractId}`}
+                  href={
+                    viewMode === "customer"
+                      ? `/my-contracts/${contractId}`
+                      : `/contracts/${contractId}`
+                  }
                   className="inline-flex w-full justify-center items-center gap-1.5 px-3 py-2.5 bg-primary hover:bg-primary/95 text-on-primary font-bold rounded-lg text-xs transition-all duration-100 active:scale-95 cursor-pointer mt-2.5 shadow-sm"
                 >
                   <FileText className="w-4.5 h-4.5 shrink-0" />
