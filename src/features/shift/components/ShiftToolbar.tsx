@@ -127,6 +127,14 @@ export function ShiftToolbar({
     onChangeDate(getVietnamTodayKey());
   };
 
+  const handleSelectDate = (date: string) => {
+    if (!date) {
+      return;
+    }
+
+    onChangeDate(date);
+  };
+
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
       <div className="flex h-10 items-center border border-slate-300 bg-white p-1">
@@ -155,7 +163,7 @@ export function ShiftToolbar({
         </button>
       </div>
 
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           type="button"
           onClick={handlePrevious}
@@ -167,7 +175,8 @@ export function ShiftToolbar({
         <button
           type="button"
           onClick={handleToday}
-          className="h-10 cursor-pointer min-w-[220px] border border-slate-300 bg-white px-4 text-center text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-blue-700"
+          className="h-10 min-w-[220px] cursor-pointer border border-slate-300 bg-white px-4 text-center text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-blue-700"
+          title="Bấm để quay về hôm nay"
         >
           {dateTitle}
         </button>
@@ -179,6 +188,14 @@ export function ShiftToolbar({
         >
           <ChevronRight size={18} />
         </button>
+
+        <input
+          type="date"
+          value={currentDate}
+          onChange={(event) => handleSelectDate(event.target.value)}
+          className="h-10 cursor-pointer border border-slate-300 bg-white px-3 text-sm font-medium text-slate-700 outline-none hover:bg-slate-100 focus:border-blue-700"
+          title="Chọn ngày"
+        />
       </div>
 
       <div className="flex items-center gap-3">

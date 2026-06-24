@@ -26,7 +26,7 @@ type ShiftWeekScheduleTableProps = {
 type WeekDay = {
   date: string;
   dayLabel: string;
-  dayNumber: string;
+  dateLabel: string;
   isToday: boolean;
 };
 
@@ -146,11 +146,13 @@ const buildWeekDays = (weekStartDate?: string): WeekDay[] => {
     date.setUTCDate(startOfWeek.getUTCDate() + index);
 
     const dateKey = formatUtcDateKey(date);
+    const dayNumber = date.getUTCDate();
+    const monthNumber = date.getUTCMonth() + 1;
 
     return {
       date: dateKey,
       dayLabel: WEEK_DAY_LABELS[index],
-      dayNumber: String(date.getUTCDate()),
+      dateLabel: `${dayNumber}/${monthNumber}`,
       isToday: dateKey === todayKey,
     };
   });
@@ -268,9 +270,10 @@ function WeekShiftTooltip({
           <p className="text-xs font-semibold uppercase text-slate-400">
             Tên ca trực
           </p>
+
           <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
             <SquarePen size={15} className="mt-0.5 shrink-0" />
-            <span>{shift.shift_name || "Chưa cập nhật"} </span>
+            <span>{shift.shift_name || "Chưa cập nhật"}</span>
           </div>
         </div>
 
@@ -327,6 +330,15 @@ export function ShiftWeekScheduleTable({
       (a, b) => getDateTimeValue(a.start_time) - getDateTimeValue(b.start_time),
     );
 
+  const visibleWeekDays = weekDays
+    .map((day) => ({
+      ...day,
+      shifts: filteredShifts.filter(
+        (shift) => getShiftDateKey(shift.start_time) === day.date,
+      ),
+    }))
+    .filter((day) => day.shifts.length > 0);
+
   const handleMouseDown = (event: ReactMouseEvent<HTMLDivElement>) => {
     if (!scrollRef.current) {
       return;
@@ -359,6 +371,17 @@ export function ShiftWeekScheduleTable({
     setIsDragging(false);
   };
 
+  if (visibleWeekDays.length === 0) {
+    return (
+      <div className="rounded-sm border border-slate-300 bg-white p-10 text-center text-slate-400">
+        <CalendarX className="mx-auto" size={34} />
+        <p className="mt-3 text-sm font-semibold">
+          Không có ca trực trong tuần này
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div
       ref={scrollRef}
@@ -370,17 +393,21 @@ export function ShiftWeekScheduleTable({
         isDragging ? "cursor-grabbing select-none" : "cursor-grab"
       }`}
     >
-      <div style={{ width: `${WEEK_DAY_COLUMN_WIDTH * 7}px` }}>
+      <div
+        style={{
+          width: `${WEEK_DAY_COLUMN_WIDTH * visibleWeekDays.length}px`,
+        }}
+      >
         <div
           className="grid border-b border-slate-300"
           style={{
-            gridTemplateColumns: `repeat(7, ${WEEK_DAY_COLUMN_WIDTH}px)`,
+            gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
           }}
         >
-          {weekDays.map((day) => (
+          {visibleWeekDays.map((day) => (
             <div
               key={day.date}
-              className={`border-r border-slate-300 px-4 py-3 text-center last:border-r-0 ${
+              className={`border-r border-slate-300 px-4 py-3 text-center ${
                 day.isToday ? "bg-blue-700 text-white" : "bg-slate-100"
               }`}
             >
@@ -393,11 +420,11 @@ export function ShiftWeekScheduleTable({
               </p>
 
               <p
-                className={`text-2xl font-bold ${
+                className={`text-xl font-bold ${
                   day.isToday ? "text-white" : "text-slate-900"
                 }`}
               >
-                {day.dayNumber}
+                {day.dateLabel}
               </p>
             </div>
           ))}
@@ -406,36 +433,21 @@ export function ShiftWeekScheduleTable({
         <div
           className="grid min-h-[640px]"
           style={{
-            gridTemplateColumns: `repeat(7, ${WEEK_DAY_COLUMN_WIDTH}px)`,
+            gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
           }}
         >
-          {weekDays.map((day) => {
-            const dayShifts = filteredShifts.filter(
-              (shift) => getShiftDateKey(shift.start_time) === day.date,
-            );
-
-            return (
-              <div
-                key={day.date}
-                className="min-h-[640px] border-r border-slate-300 bg-white p-3 last:border-r-0"
-              >
-                {dayShifts.length === 0 ? (
-                  <div className="flex h-full min-h-[520px] flex-col items-center justify-center text-slate-400">
-                    <CalendarX size={30} />
-                    <p className="mt-2 text-xs font-semibold">
-                      Không có ca trực
-                    </p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {dayShifts.map((shift) => (
-                      <WeekShiftCard key={shift.shift_id} shift={shift} />
-                    ))}
-                  </div>
-                )}
+          {visibleWeekDays.map((day) => (
+            <div
+              key={day.date}
+              className="min-h-[640px] border-r border-slate-300 bg-white p-3"
+            >
+              <div className="space-y-3">
+                {day.shifts.map((shift) => (
+                  <WeekShiftCard key={shift.shift_id} shift={shift} />
+                ))}
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -498,7 +510,7 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
         type="button"
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="w-full rounded-md border border-blue-200 bg-blue-100 px-3 py-2 text-left text-blue-900 shadow-sm hover:bg-blue-200 transition-all duration-300"
+        className="w-full rounded-md border border-blue-200 bg-blue-100 px-3 py-2 text-left text-blue-900 shadow-sm transition-all duration-300 hover:bg-blue-200"
       >
         <div className="mb-1.5 flex items-center justify-between gap-2">
           <span
