@@ -9,6 +9,7 @@ import {
   Package,
   Settings,
   HelpCircle,
+  Star,
   Menu,
   X,
   Search,
@@ -34,7 +35,9 @@ export default function CompanyLayout({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const companyId = useAuthStore((state) => state.company_id);
-  const fetchSubscription = useSubscriptionStore((state) => state.fetchSubscription);
+  const fetchSubscription = useSubscriptionStore(
+    (state) => state.fetchSubscription,
+  );
   const { isActive, isLoading } = useSubscriptionStore();
 
   useEffect(() => {
@@ -81,13 +84,15 @@ export default function CompanyLayout({
             name: "Yêu cầu dịch vụ",
             href: "/requests",
             icon: Calendar,
-            active: pathname === "/requests" || pathname.startsWith("/requests/"),
+            active:
+              pathname === "/requests" || pathname.startsWith("/requests/"),
           },
           {
             name: "Quản lý hợp đồng",
             href: "/contracts",
             icon: FileText,
-            active: pathname === "/contracts" || pathname.startsWith("/contracts/"),
+            active:
+              pathname === "/contracts" || pathname.startsWith("/contracts/"),
           },
           {
             name: "Tin nhắn",
@@ -103,13 +108,22 @@ export default function CompanyLayout({
       icon: Package,
       active: pathname === "/billing",
     },
+    {
+      name: "Phản hồi khách hàng",
+      href: "/list-reviews",
+      icon: Star,
+      active:
+        pathname === "/list-reviews" || pathname.startsWith("/list-reviews/"),
+    },
     ...(isActive
       ? [
           {
             name: "Quản lý điều phối viên",
             href: "/coordinators",
             icon: Users,
-            active: pathname === "/coordinators" || pathname.startsWith("/coordinators/"),
+            active:
+              pathname === "/coordinators" ||
+              pathname.startsWith("/coordinators/"),
           },
         ]
       : []),

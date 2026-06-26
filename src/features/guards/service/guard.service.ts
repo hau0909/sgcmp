@@ -10,6 +10,8 @@ import type {
   UploadGuardAvatarRepositoryParams,
   GuardDetail,
   GuardDetailDatabase,
+  GuardListPaginatedData,
+  GetAllGuardsServiceParams,
 } from "../type";
 import type { Guard } from "@/types/Guard";
 import {
@@ -33,8 +35,28 @@ export const getCoordinatorByCompanyIdService = async (user_id: string) => {
   return getCoordinatorCompanyId(user_id);
 };
 
-export const getAllGuardService = async (company_id: string) => {
-  return getAllGuards(company_id);
+export const getAllGuardService = async ({
+  company_id,
+  page,
+  limit,
+  search,
+}: GetAllGuardsServiceParams): Promise<GuardListPaginatedData> => {
+  const { guards, total } = await getAllGuards({
+    company_id,
+    page,
+    limit,
+    search,
+  });
+
+  return {
+    guards,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
+  };
 };
 
 export const uploadGuardAvatarService = async ({

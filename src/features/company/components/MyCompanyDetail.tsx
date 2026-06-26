@@ -8,6 +8,7 @@ import {
   requestDeleteCompanyService,
   requestUpdateCompanyProfile,
   requestUploadCompanyImage,
+  requestGetCompanyActivityImages,
 } from "@/features/company/api/company.api";
 import { Service, CompanyServiceData } from "@/features/company/types";
 import { useAuthStore } from "@/store/auth.store";
@@ -73,6 +74,10 @@ export default function MyCompanyDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  const [isActivityGalleryOpen, setIsActivityGalleryOpen] = useState(false);
+  const [loadingActivityGallery, setLoadingActivityGallery] = useState(false);
+  const [allActivityImgs, setAllActivityImgs] = useState<string[]>([]);
 
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const [uploadingBanner, setUploadingBanner] = useState(false);
@@ -307,6 +312,30 @@ export default function MyCompanyDetail() {
     setFieldErrors({});
     hideToastImmediately();
     setIsEditing(true);
+  };
+
+  const handleOpenActivityGallery = async () => {
+    try {
+      setIsActivityGalleryOpen(true);
+      setLoadingActivityGallery(true);
+      hideToastImmediately();
+
+      const images = await requestGetCompanyActivityImages();
+
+      const imageUrls = images
+        .map((image: { image_url?: string }) => image.image_url)
+        .filter(Boolean);
+
+      setAllActivityImgs(imageUrls);
+    } catch (err: any) {
+      console.error("Lỗi khi lấy hình ảnh hoạt động:", err);
+      showToast(
+        "error",
+        err.message || "Không thể lấy danh sách hình ảnh hoạt động.",
+      );
+    } finally {
+      setLoadingActivityGallery(false);
+    }
   };
 
   const handleCancelEdit = () => {
@@ -1061,6 +1090,7 @@ export default function MyCompanyDetail() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
+                  onClick={handleOpenActivityGallery}
                   className="text-[11px] font-bold text-slate-500 hover:text-blue-600 hover:underline flex items-center gap-0.5"
                 >
                   Xem thêm <ChevronRight className="w-3 h-3" />
@@ -1162,6 +1192,74 @@ export default function MyCompanyDetail() {
             >
               <X className="h-4 w-4" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {isActivityGalleryOpen && (
+        <div className="fixed inset-0 z-[70] bg-slate-950/80 backdrop-blur-xs p-4 sm:p-6">
+          <div className="mx-auto flex h-full max-w-6xl flex-col rounded-2xl border border-white/10 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+              <div>
+                <h3 className="text-sm font-extrabold uppercase tracking-wide text-slate-800">
+                  Tất cả hình ảnh hoạt động
+                </h3>
+
+                <p className="mt-0.5 text-xs font-medium text-slate-400">
+                  {allActivityImgs.length} hình ảnh
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setIsActivityGalleryOpen(false)}
+                className="rounded-xl p-2 text-slate-400 transition-all hover:bg-slate-100 hover:text-slate-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto p-5">
+              {loadingActivityGallery ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  {Array.from({ length: 10 }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="aspect-square animate-pulse overflow-hidden rounded-2xl border border-slate-200 bg-slate-100"
+                    >
+                      <div className="h-full w-full bg-linear-to-r from-slate-100 via-slate-200 to-slate-100" />
+                    </div>
+                  ))}
+                </div>
+              ) : allActivityImgs.length > 0 ? (
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                  {allActivityImgs.map((img, index) => (
+                    <button
+                      key={`${img}-${index}`}
+                      type="button"
+                      onClick={() => setActiveViewerImg(img)}
+                      className="group relative aspect-square overflow-hidden rounded-2xl border border-slate-200 bg-slate-50"
+                    >
+                      <img
+                        src={img}
+                        alt={`Activity ${index + 1}`}
+                        className="h-full w-full object-cover transition-all duration-300 group-hover:scale-105"
+                      />
+
+                      <div className="absolute inset-0 flex items-center justify-center bg-slate-950/40 opacity-0 transition-all group-hover:opacity-100">
+                        <Eye className="h-5 w-5 text-white" />
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex h-full items-center justify-center">
+                  <p className="text-sm font-semibold text-slate-400">
+                    Chưa có hình ảnh hoạt động.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
@@ -1287,7 +1385,7 @@ export default function MyCompanyDetail() {
       {activeViewerImg && (
         <div
           onClick={() => setActiveViewerImg(null)}
-          className="fixed inset-0 bg-slate-950/90 backdrop-blur-xs z-55 flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
+          className="fixed inset-0 z-[90] bg-slate-950/90 backdrop-blur-xs flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
         >
           <div className="relative max-w-4xl max-h-[85vh] w-full flex items-center justify-center">
             <img

@@ -27,10 +27,22 @@ import type {
   gender,
   InsertGuardInformationBody,
   InsertGuardInformationInput,
-  GetAllGuardsResponse,
+  HandleGetAllGuardsResult,
   GetGuardDetailResponse,
   GuardDetail,
+  GuardListPaginatedData,
+  HandleGetAllGuardsInput,
 } from "../type";
+
+const createEmptyGuardListData = (): GuardListPaginatedData => ({
+  guards: [],
+  pagination: {
+    page: 1,
+    limit: 10,
+    total: 0,
+    totalPages: 1,
+  },
+});
 
 const generateTemporaryPassword = (): string => {
   const random_number = Math.floor(10000000 + Math.random() * 90000000);
@@ -276,7 +288,11 @@ export const handleInsertGuardInformation = async (
   }
 };
 
-export const handleGetAllGuards = async (): Promise<GetAllGuardsResponse> => {
+export const handleGetAllGuards = async ({
+  page,
+  limit,
+  search,
+}: HandleGetAllGuardsInput): Promise<HandleGetAllGuardsResult> => {
   try {
     const profile = await getCurrentUserProfileService();
 
@@ -284,13 +300,13 @@ export const handleGetAllGuards = async (): Promise<GetAllGuardsResponse> => {
       return {
         success: false,
         message: "Bạn chưa đăng nhập",
-        data: [],
+        data: createEmptyGuardListData(),
       };
     }
 
     const normalizedRole = profile.role?.trim().toLowerCase();
 
-    let companyId: string;
+    let company_id = "";
 
     if (normalizedRole === "company-admin") {
       const companyIdResult = await getCompanyByOwnerIdService(profile.user_id);
@@ -299,11 +315,11 @@ export const handleGetAllGuards = async (): Promise<GetAllGuardsResponse> => {
         return {
           success: false,
           message: "Không tìm thấy công ty của tài khoản",
-          data: [],
+          data: createEmptyGuardListData(),
         };
       }
 
-      companyId = companyIdResult;
+      company_id = companyIdResult;
     } else if (normalizedRole === "coordinator") {
       const coordinatorCompanyId = await getCoordinatorByCompanyIdService(
         profile.user_id,
@@ -313,25 +329,43 @@ export const handleGetAllGuards = async (): Promise<GetAllGuardsResponse> => {
         return {
           success: false,
           message: "Điều phối viên chưa được liên kết với công ty",
-          data: [],
+          data: createEmptyGuardListData(),
         };
       }
 
-      companyId = coordinatorCompanyId;
+      company_id = coordinatorCompanyId;
     } else {
       return {
         success: false,
         message: "Bạn không có quyền xem danh sách bảo vệ",
-        data: [],
+        data: createEmptyGuardListData(),
       };
     }
 
-    const guards = await getAllGuardService(companyId);
+    const pageNumber = Number(page ?? "1");
+    const limitNumber = Number(limit ?? "10");
+
+    const validPage =
+      Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1;
+
+    const validLimit =
+      Number.isInteger(limitNumber) && limitNumber > 0 && limitNumber <= 50
+        ? limitNumber
+        : 10;
+
+    const keyword = search?.trim() ?? "";
+
+    const data = await getAllGuardService({
+      company_id,
+      page: validPage,
+      limit: validLimit,
+      search: keyword,
+    });
 
     return {
       success: true,
       message: "Lấy danh sách bảo vệ thành công",
-      data: guards,
+      data,
     };
   } catch (error: unknown) {
     console.error("handleGetAllGuards error:", error);
@@ -342,7 +376,7 @@ export const handleGetAllGuards = async (): Promise<GetAllGuardsResponse> => {
         error instanceof Error
           ? error.message
           : "Lấy danh sách bảo vệ thất bại",
-      data: [],
+      data: createEmptyGuardListData(),
     };
   }
 };

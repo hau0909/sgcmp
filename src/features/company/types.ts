@@ -114,3 +114,11 @@ export type UploadCompanyImageServiceParams = {
   file: File;
   image_type: ImageType;
 };
+
+export type CompanyActivityImage = {
+  image_id: string;
+  company_id: string;
+  image_url: string;
+  image_type: "other";
+  created_at: string;
+};

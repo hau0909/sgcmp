@@ -14,6 +14,8 @@ import Image from "next/image";
 import { requestGetAllGuards } from "@/features/guards/api/guard.api";
 import type { GuardListItem, GuardProfileItem } from "@/features/guards/type";
 
+const PAGE_SIZE = 10;
+
 const getGuardProfile = (
   profiles: GuardListItem["profiles"],
 ): GuardProfileItem | null => {
@@ -28,29 +30,94 @@ const getGuardProfile = (
   return profiles;
 };
 
+const GuardTableSkeleton = () => {
+  return (
+    <>
+      {Array.from({ length: 6 }).map((_, index) => (
+        <tr key={index} className="border-t border-slate-200">
+          <td className="px-4 py-3">
+            <div className="h-4 w-8 animate-pulse rounded bg-slate-200" />
+          </td>
+
+          <td className="px-4 py-3">
+            <div className="h-11 w-11 animate-pulse rounded-full bg-slate-200" />
+          </td>
+
+          <td className="px-4 py-3">
+            <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+          </td>
+
+          <td className="px-4 py-3">
+            <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
+          </td>
+
+          <td className="px-4 py-3 text-center">
+            <div className="mx-auto h-4 w-14 animate-pulse rounded bg-slate-200" />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+};
+
 export default function GuardListScreen() {
   const router = useRouter();
 
   const [guards, setGuards] = useState<GuardListItem[]>([]);
   const [searchValue, setSearchValue] = useState("");
+  const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
+
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalGuards, setTotalGuards] = useState(0);
+  const [totalPages, setTotalPages] = useState(1);
+
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchValue(searchValue.trim());
+      setCurrentPage(1);
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [searchValue]);
+
+  useEffect(() => {
+    let isCancelled = false;
+
     const fetchGuards = async () => {
       try {
         setLoading(true);
         setErrorMessage("");
 
-        const result = await requestGetAllGuards();
+        const result = await requestGetAllGuards({
+          page: currentPage,
+          limit: PAGE_SIZE,
+          search: debouncedSearchValue,
+        });
+
+        if (isCancelled) {
+          return;
+        }
 
         if (!result.success) {
           throw new Error(result.message);
         }
 
-        setGuards(result.data);
+        setGuards(result.data.guards);
+        setTotalGuards(result.data.pagination.total);
+        setTotalPages(result.data.pagination.totalPages || 1);
       } catch (error: unknown) {
+        if (isCancelled) {
+          return;
+        }
+
         setGuards([]);
+        setTotalGuards(0);
+        setTotalPages(1);
 
         setErrorMessage(
           error instanceof Error
@@ -58,45 +125,43 @@ export default function GuardListScreen() {
             : "Không thể tải danh sách bảo vệ",
         );
       } finally {
-        setLoading(false);
+        if (!isCancelled) {
+          setLoading(false);
+        }
       }
     };
 
     void fetchGuards();
-  }, []);
 
-  const filteredGuards = useMemo(() => {
-    const keyword = searchValue.trim().toLowerCase();
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentPage, debouncedSearchValue]);
 
-    const guardsWithIndex = guards.map((guard, index) => ({
+  const guardsWithIndex = useMemo(() => {
+    return guards.map((guard, index) => ({
       guard,
-      displayIndex: index + 1,
+      displayIndex: (currentPage - 1) * PAGE_SIZE + index + 1,
     }));
+  }, [guards, currentPage]);
 
-    if (!keyword) {
-      return guardsWithIndex;
-    }
+  const startResult = totalGuards > 0 ? (currentPage - 1) * PAGE_SIZE + 1 : 0;
 
-    return guardsWithIndex.filter(({ guard, displayIndex }) => {
-      const profile = getGuardProfile(guard.profiles);
+  const endResult =
+    totalGuards > 0 ? Math.min(currentPage * PAGE_SIZE, totalGuards) : 0;
 
-      return (
-        String(displayIndex).includes(keyword) ||
-        profile?.full_name?.toLowerCase().includes(keyword) ||
-        profile?.phone_number?.includes(keyword)
-      );
-    });
-  }, [guards, searchValue]);
+  const canGoPrevious = currentPage > 1;
+  const canGoNext = currentPage < totalPages;
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-6">
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-base font-bold text-slate-950">
+          <h1 className="text-2xl font-bold text-slate-950">
             Danh sách nhân viên bảo vệ
           </h1>
 
-          <p className="mt-1 text-sm text-slate-600">
+          <p className="mt-1 text-md text-slate-600">
             Quản lý hồ sơ của đội ngũ bảo vệ.
           </p>
         </div>
@@ -120,7 +185,7 @@ export default function GuardListScreen() {
               type="text"
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
-              placeholder="Tìm kiếm theo STT, Họ tên, SĐT..."
+              placeholder="Tìm kiếm theo họ tên, SĐT, email..."
               className="h-9 w-full border border-slate-300 bg-slate-50 pl-9 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:bg-white"
             />
           </div>
@@ -131,27 +196,16 @@ export default function GuardListScreen() {
             <thead>
               <tr className="bg-sky-200/80 text-xs font-bold uppercase text-slate-950">
                 <th className="w-[100px] px-4 py-3">STT</th>
-
                 <th className="w-[120px] px-4 py-3">Ảnh bảo vệ</th>
-
                 <th className="w-[240px] px-4 py-3">Họ và tên</th>
-
                 <th className="w-[180px] px-4 py-3">Số điện thoại</th>
-
                 <th className="w-[110px] px-4 py-3 text-center">Hành động</th>
               </tr>
             </thead>
 
             <tbody>
               {loading ? (
-                <tr>
-                  <td
-                    colSpan={5}
-                    className="px-4 py-10 text-center text-sm text-slate-500"
-                  >
-                    Đang tải danh sách bảo vệ...
-                  </td>
-                </tr>
+                <GuardTableSkeleton />
               ) : errorMessage ? (
                 <tr>
                   <td
@@ -161,8 +215,8 @@ export default function GuardListScreen() {
                     {errorMessage}
                   </td>
                 </tr>
-              ) : filteredGuards.length > 0 ? (
-                filteredGuards.map(({ guard, displayIndex }) => {
+              ) : guardsWithIndex.length > 0 ? (
+                guardsWithIndex.map(({ guard, displayIndex }) => {
                   const profile = getGuardProfile(guard.profiles);
 
                   return (
@@ -218,7 +272,7 @@ export default function GuardListScreen() {
                     colSpan={5}
                     className="px-4 py-10 text-center text-sm text-slate-500"
                   >
-                    {searchValue.trim()
+                    {debouncedSearchValue
                       ? "Không tìm thấy nhân viên bảo vệ phù hợp."
                       : "Chưa có nhân viên bảo vệ."}
                   </td>
@@ -230,33 +284,37 @@ export default function GuardListScreen() {
 
         <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 md:flex-row md:items-center md:justify-between">
           <p>
-            Hiển thị{" "}
-            {filteredGuards.length > 0 ? `1-${filteredGuards.length}` : "0"}{" "}
-            trong số {guards.length} kết quả
+            Hiển thị {startResult}-{endResult} trong số {totalGuards} kết quả
           </p>
 
           <div className="flex items-center gap-1">
             <button
               type="button"
-              disabled
+              disabled={!canGoPrevious || loading}
+              onClick={() => setCurrentPage((page) => Math.max(page - 1, 1))}
               aria-label="Trang trước"
-              className="flex h-8 w-8 items-center justify-center border border-slate-300 text-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-8 w-8 cursor-pointer hover:bg-gray-300 transition-all duration-300 items-center justify-center border border-slate-300 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronLeft className="h-4 w-4" />
             </button>
 
             <button
               type="button"
-              className="h-8 w-8 bg-sky-400 text-sm font-semibold text-white"
+              className="h-8 min-w-8 bg-sky-400 px-2 text-sm font-semibold text-white"
             >
-              1
+              {currentPage}
             </button>
+
+            <span className="px-2 text-sm text-slate-500">/ {totalPages}</span>
 
             <button
               type="button"
-              disabled
+              disabled={!canGoNext || loading}
+              onClick={() =>
+                setCurrentPage((page) => Math.min(page + 1, totalPages))
+              }
               aria-label="Trang sau"
-              className="flex h-8 w-8 items-center justify-center border border-slate-300 text-slate-400 disabled:cursor-not-allowed disabled:opacity-60"
+              className="flex h-8 w-8 cursor-pointer hover:bg-gray-300 transition-all duration-300 items-center justify-center border border-slate-300 text-slate-600 disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronRight className="h-4 w-4" />
             </button>

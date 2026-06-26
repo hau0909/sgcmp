@@ -8,6 +8,7 @@ import {
   getCompanyByIdServiceInCustomer,
   updateCompanyProfileService,
   uploadCompanyImageService,
+  getCompanyActivityImagesService,
 } from "../service/company.service";
 import {
   CompanyDetailData,
@@ -104,6 +105,24 @@ export const handleUploadCompanyImage = async ({
     file: file as File,
     image_type: image_type as ImageType,
   });
+
+  return data;
+};
+
+export const handleGetCompanyActivityImages = async () => {
+  const profile = await getCurrentUserProfileService();
+
+  if (!profile) {
+    return {
+      success: false,
+      message: "Bạn chưa đăng nhập",
+      data: null,
+    };
+  }
+
+  const company_id = await getCompanyByOwnerIdService(profile.user_id);
+
+  const data = await getCompanyActivityImagesService(company_id);
 
   return data;
 };

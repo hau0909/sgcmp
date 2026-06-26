@@ -125,6 +125,55 @@ export type GuardListItem = {
   profiles: GuardProfileItem | GuardProfileItem[] | null;
 };
 
+export interface GuardPagination {
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
+export interface GuardListPaginatedData {
+  guards: GuardListItem[];
+  pagination: GuardPagination;
+}
+
+export type GetAllGuardsRepositoryParams = {
+  company_id: string;
+  page: number;
+  limit: number;
+  search?: string;
+};
+
+export type GetAllGuardsRepositoryResult = {
+  guards: GuardListItem[];
+  total: number;
+};
+
+export type GetAllGuardsServiceParams = {
+  company_id: string;
+  page: number;
+  limit: number;
+  search?: string;
+};
+
+export type HandleGetAllGuardsInput = {
+  page?: string | null;
+  limit?: string | null;
+  search?: string | null;
+};
+
+export interface GetAllGuardsParams {
+  page?: number;
+  limit?: number;
+  search?: string;
+}
+
+export type HandleGetAllGuardsResult = {
+  success: boolean;
+  message: string;
+  data: GuardListPaginatedData;
+};
+
 export type GetAllGuardsResponse = {
   success: boolean;
   message: string;

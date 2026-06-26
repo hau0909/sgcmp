@@ -120,3 +120,17 @@ export const requestUploadCompanyImage = async ({
 
   return result.data;
 };
+
+export const requestGetCompanyActivityImages = async () => {
+  const result = await fetcher("/api/companies/images", {
+    method: "GET",
+  });
+
+  if (result?.success === false) {
+    throw new Error(
+      result.message || "Không thể lấy danh sách hình ảnh hoạt động.",
+    );
+  }
+
+  return result.data;
+};
