@@ -1,3 +1,5 @@
+import { ImageType } from "@/types/Enum";
+
 export interface MarketplaceCompany {
   id: string;
   name: string;
@@ -83,3 +85,33 @@ export interface CompanyDetailData {
   companyLicenseNo?: string;
 }
 
+export type UpdateCompanyProfileInput = {
+  company_name: string;
+  description: string;
+  email: string;
+  phone: string;
+  address: string;
+  business_license_no: string;
+  registration_code: string;
+};
+
+export type UpdateCompanyProfileControllerParams = {
+  user_id: string;
+  input: UpdateCompanyProfileInput;
+};
+
+export type UploadCompanyImageInput = {
+  file: File;
+  image_type: ImageType;
+};
+
+export type UploadCompanyImageControllerParams = {
+  file: File | null;
+  image_type: FormDataEntryValue | null;
+};
+
+export type UploadCompanyImageServiceParams = {
+  company_id: string;
+  file: File;
+  image_type: ImageType;
+};

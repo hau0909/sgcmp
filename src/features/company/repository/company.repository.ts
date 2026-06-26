@@ -1,8 +1,15 @@
 import { supabase } from "@/lib/supabase";
 import { createClient } from "@/lib/supabase/server";
-import { City, Ward, Service } from "../types";
+import {
+  City,
+  Ward,
+  Service,
+  UpdateCompanyProfileInput,
+  UploadCompanyImageServiceParams,
+} from "../types";
 import type { Company } from "@/types/Company";
 
+const COMPANY_BUCKET = "companies";
 
 export interface DbCompany {
   company_id: string;
@@ -24,11 +31,11 @@ export interface DbCompany {
   }[];
 }
 
-
 export const getAllActiveCompanies = async (): Promise<DbCompany[]> => {
   const { data, error } = await supabase
     .from("companies")
-    .select(`
+    .select(
+      `
       company_id,
       owner_id,
       company_name,
@@ -46,7 +53,8 @@ export const getAllActiveCompanies = async (): Promise<DbCompany[]> => {
           name
         )
       )
-    `)
+    `,
+    )
     .eq("status", "active")
     .order("created_at", { ascending: false });
 
@@ -101,12 +109,15 @@ export interface DbCompanyDetail {
   }[];
 }
 
-export const getCompanyByIdWithDetails = async (id: string): Promise<DbCompanyDetail | null> => {
+export const getCompanyByIdWithDetails = async (
+  id: string,
+): Promise<DbCompanyDetail | null> => {
   const supabaseServer = await createClient();
 
   const { data, error } = await supabaseServer
     .from("companies")
-    .select(`
+    .select(
+      `
       company_id,
       owner_id,
       company_name,
@@ -135,7 +146,8 @@ export const getCompanyByIdWithDetails = async (id: string): Promise<DbCompanyDe
       registrations (
         registration_code
       )
-    `)
+    `,
+    )
     .eq("company_id", id)
     .maybeSingle();
 
@@ -162,4 +174,171 @@ export const getCompanyById = async (
   }
 
   return (data as Company) || null;
+};
+
+export const updateCompanyprofile = async ({
+  company_id,
+  input,
+}: {
+  company_id: string;
+  input: UpdateCompanyProfileInput;
+}) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("companies")
+    .update({
+      company_name: input.company_name,
+      description: input.description,
+      email: input.email,
+      phone: input.phone,
+      business_license_no: input.business_license_no,
+      address: input.address,
+    })
+    .eq("company_id", company_id)
+    .select(
+      `
+      company_id,
+      company_name,
+      description,
+      email,
+      phone,
+      address,
+      business_license_no
+    `,
+    )
+    .single();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+};
+
+export const updateRegistrationCodeByCompanyId = async ({
+  company_id,
+  registration_code,
+}: {
+  company_id: string;
+  registration_code: string;
+}) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("registrations")
+    .update({ registration_code, updated_at: new Date().toISOString() })
+    .eq("company_id", company_id)
+    .select(
+      `
+      registration_id,
+      registration_code
+    `,
+    )
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+};
+
+export const uploadCompanyImage = async ({
+  company_id,
+  file,
+  image_type,
+}: UploadCompanyImageServiceParams) => {
+  const supabase = await createClient();
+
+  const file_extension = file.name.split(".").pop()?.toLowerCase();
+
+  if (!file_extension) {
+    throw new Error("Không xác định được định dạng ảnh.");
+  }
+
+  const file_name = `${image_type}-${Date.now()}-${crypto.randomUUID()}.${file_extension}`;
+
+  // Bucket: companies
+  // Path trong bucket: {company_id}/images/{file_name}
+  const file_path = `${company_id}/images/${file_name}`;
+
+  const { error: upload_error } = await supabase.storage
+    .from(COMPANY_BUCKET)
+    .upload(file_path, file, {
+      contentType: file.type,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (upload_error) {
+    throw new Error(upload_error.message);
+  }
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage.from(COMPANY_BUCKET).getPublicUrl(file_path);
+
+  if (image_type === "logo" || image_type === "banner") {
+    const { data: existingImage, error: find_error } = await supabase
+      .from("company_imgs")
+      .select("image_id")
+      .eq("company_id", company_id)
+      .eq("image_type", image_type)
+      .maybeSingle();
+
+    if (find_error) {
+      await supabase.storage.from(COMPANY_BUCKET).remove([file_path]);
+      throw new Error(find_error.message);
+    }
+
+    const { data, error: upsert_error } = await supabase
+      .from("company_imgs")
+      .upsert(
+        {
+          image_id: existingImage?.image_id ?? crypto.randomUUID(),
+          company_id,
+          image_url: publicUrl,
+          image_type,
+          created_at: new Date().toISOString(),
+        },
+        {
+          onConflict: "image_id",
+        },
+      )
+      .select("image_id, company_id, image_url, image_type, created_at")
+      .single();
+
+    if (upsert_error) {
+      await supabase.storage.from(COMPANY_BUCKET).remove([file_path]);
+      throw new Error(upsert_error.message);
+    }
+
+    return {
+      ...data,
+      file_path,
+    };
+  }
+
+  const { data, error: insert_error } = await supabase
+    .from("company_imgs")
+    .insert({
+      image_id: crypto.randomUUID(),
+      company_id,
+      image_url: publicUrl,
+      image_type,
+      created_at: new Date().toISOString(),
+    })
+    .select("image_id, company_id, image_url, image_type, created_at")
+    .single();
+
+  if (insert_error) {
+    await supabase.storage.from(COMPANY_BUCKET).remove([file_path]);
+    throw new Error(insert_error.message);
+  }
+
+  return {
+    ...data,
+    file_path,
+  };
 };

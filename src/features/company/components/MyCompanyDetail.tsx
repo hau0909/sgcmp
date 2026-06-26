@@ -6,6 +6,8 @@ import {
   requestGetAvailableServices,
   requestAddCompanyService,
   requestDeleteCompanyService,
+  requestUpdateCompanyProfile,
+  requestUploadCompanyImage,
 } from "@/features/company/api/company.api";
 import { Service, CompanyServiceData } from "@/features/company/types";
 import { useAuthStore } from "@/store/auth.store";
@@ -40,6 +42,31 @@ type EditSnapshot = {
   phone: string;
 };
 
+type EditField =
+  | "company_name"
+  | "description"
+  | "business_license_no"
+  | "registration_code"
+  | "email"
+  | "phone"
+  | "address";
+
+type FieldErrors = Partial<Record<EditField, string>>;
+
+type ToastData = {
+  type: "success" | "error";
+  message: string;
+};
+
+type UploadedCompanyImage = {
+  image_id?: string;
+  company_id?: string;
+  image_url?: string;
+  image_type?: string;
+  created_at?: string;
+  file_path?: string;
+};
+
 export default function MyCompanyDetail() {
   const { company_id } = useAuthStore();
 
@@ -47,15 +74,21 @@ export default function MyCompanyDetail() {
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
 
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const [uploadingBanner, setUploadingBanner] = useState(false);
+  const [uploadingActivity, setUploadingActivity] = useState(false);
+
   const logoInputRef = useRef<HTMLInputElement>(null);
   const bannerInputRef = useRef<HTMLInputElement>(null);
   const activityInputRef = useRef<HTMLInputElement>(null);
 
-  // 1. Core State
+  const toastShowTimerRef = useRef<number | null>(null);
+  const toastHideTimerRef = useRef<number | null>(null);
+  const toastClearTimerRef = useRef<number | null>(null);
+
   const [companyName, setCompanyName] = useState("");
   const [description, setDescription] = useState("");
 
-  // 2. Company Details State
   const [fullName, setFullName] = useState("");
   const [companyLicense, setCompanyLicense] = useState("");
   const [businessLicense, setBusinessLicense] = useState("");
@@ -63,7 +96,6 @@ export default function MyCompanyDetail() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
-  // 3. Image URLs State
   const [logoUrl, setLogoUrl] = useState(
     "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300",
   );
@@ -75,29 +107,186 @@ export default function MyCompanyDetail() {
   );
   const [companyImgs, setCompanyImgs] = useState<string[]>([]);
 
-  // 4. Edit Snapshot
   const [editSnapshot, setEditSnapshot] = useState<EditSnapshot | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
 
-  // 5. UI Modals / Modes State
+  const [toast, setToast] = useState<ToastData | null>(null);
+  const [toastVisible, setToastVisible] = useState(false);
+
   const [activeViewerImg, setActiveViewerImg] = useState<string | null>(null);
 
-  // 6. Services State
   const [companyServices, setCompanyServices] = useState<CompanyServiceData[]>(
     [],
   );
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
 
-  // 7. Add Service Modal State
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [newServiceId, setNewServiceId] = useState("");
   const [newServiceDesc, setNewServiceDesc] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
 
-  const editInputClassName =
-    "col-span-8 text-sm border border-slate-200 rounded-lg px-3 py-2 font-semibold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden";
+  const baseEditControlClassName =
+    "w-full text-sm border rounded-lg px-3 py-2 font-semibold text-slate-800 outline-hidden";
 
-  const editTextareaClassName =
-    "col-span-8 text-sm border border-slate-200 rounded-lg px-3 py-2 font-semibold text-slate-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden resize-none";
+  const validateImageFile = (file: File) => {
+    const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
+
+    if (!allowedTypes.includes(file.type)) {
+      throw new Error("Vui lòng chọn file ảnh định dạng JPG, PNG hoặc WEBP.");
+    }
+
+    const maxSize = 5 * 1024 * 1024;
+
+    if (file.size > maxSize) {
+      throw new Error("Ảnh không được vượt quá 5MB.");
+    }
+  };
+
+  const clearToastTimers = () => {
+    if (toastShowTimerRef.current) {
+      window.clearTimeout(toastShowTimerRef.current);
+    }
+
+    if (toastHideTimerRef.current) {
+      window.clearTimeout(toastHideTimerRef.current);
+    }
+
+    if (toastClearTimerRef.current) {
+      window.clearTimeout(toastClearTimerRef.current);
+    }
+
+    toastShowTimerRef.current = null;
+    toastHideTimerRef.current = null;
+    toastClearTimerRef.current = null;
+  };
+
+  const showToast = (type: ToastData["type"], message: string) => {
+    clearToastTimers();
+
+    setToastVisible(false);
+    setToast({ type, message });
+
+    toastShowTimerRef.current = window.setTimeout(() => {
+      setToastVisible(true);
+    }, 20);
+
+    toastHideTimerRef.current = window.setTimeout(() => {
+      setToastVisible(false);
+    }, 2700);
+
+    toastClearTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+    }, 3000);
+  };
+
+  const closeToast = () => {
+    clearToastTimers();
+
+    setToastVisible(false);
+
+    toastClearTimerRef.current = window.setTimeout(() => {
+      setToast(null);
+    }, 250);
+  };
+
+  const hideToastImmediately = () => {
+    clearToastTimers();
+    setToastVisible(false);
+    setToast(null);
+  };
+
+  const getUploadedImageUrl = (image: UploadedCompanyImage) => {
+    return image?.image_url || "";
+  };
+
+  const getEditControlClassName = (field: EditField, extraClassName = "") => {
+    const hasError = Boolean(fieldErrors[field]);
+
+    return [
+      baseEditControlClassName,
+      hasError
+        ? "border-red-400 focus:border-red-500 focus:ring-1 focus:ring-red-500/20"
+        : "border-slate-200 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20",
+      extraClassName,
+    ].join(" ");
+  };
+
+  const renderFieldError = (field: EditField) => {
+    if (!fieldErrors[field]) return null;
+
+    return (
+      <p className="text-[11px] font-semibold text-red-500 leading-normal">
+        {fieldErrors[field]}
+      </p>
+    );
+  };
+
+  const clearFieldError = (field: EditField) => {
+    setFieldErrors((prev) => {
+      if (!prev[field]) return prev;
+
+      const next = { ...prev };
+      delete next[field];
+
+      return next;
+    });
+  };
+
+  const isValidEmail = (value: string) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  };
+
+  const isValidPhone = (value: string) => {
+    return /^(0|\+84)[0-9]{9,10}$/.test(value);
+  };
+
+  const validateEditForm = () => {
+    const nextErrors: FieldErrors = {};
+
+    const trimmedFullName = fullName.trim();
+    const trimmedDescription = description.trim();
+    const trimmedBusinessLicense = businessLicense.trim();
+    const trimmedCompanyLicense = companyLicense.trim();
+    const trimmedEmail = email.trim();
+    const trimmedPhone = phone.trim();
+    const trimmedAddress = address.trim();
+
+    if (!trimmedFullName) {
+      nextErrors.company_name = "Vui lòng nhập tên công ty.";
+    }
+
+    if (!trimmedDescription) {
+      nextErrors.description = "Vui lòng nhập giới thiệu doanh nghiệp.";
+    }
+
+    if (!trimmedBusinessLicense) {
+      nextErrors.business_license_no = "Vui lòng nhập mã số đăng ký.";
+    }
+
+    if (!trimmedCompanyLicense) {
+      nextErrors.registration_code = "Vui lòng nhập mã số giấy phép.";
+    }
+
+    if (!trimmedEmail) {
+      nextErrors.email = "Vui lòng nhập email.";
+    } else if (!isValidEmail(trimmedEmail)) {
+      nextErrors.email = "Email không đúng định dạng.";
+    }
+
+    if (!trimmedPhone) {
+      nextErrors.phone = "Vui lòng nhập số điện thoại.";
+    } else if (!isValidPhone(trimmedPhone)) {
+      nextErrors.phone = "Số điện thoại phải bắt đầu bằng 0 hoặc +84.";
+    }
+
+    if (!trimmedAddress) {
+      nextErrors.address = "Vui lòng nhập địa chỉ.";
+    }
+
+    setFieldErrors(nextErrors);
+
+    return Object.keys(nextErrors).length === 0;
+  };
 
   const handleServiceSelect = (serviceId: string) => {
     setNewServiceId(serviceId);
@@ -115,6 +304,8 @@ export default function MyCompanyDetail() {
       phone,
     });
 
+    setFieldErrors({});
+    hideToastImmediately();
     setIsEditing(true);
   };
 
@@ -130,110 +321,172 @@ export default function MyCompanyDetail() {
       setPhone(editSnapshot.phone);
     }
 
+    setFieldErrors({});
+    hideToastImmediately();
     setIsEditing(false);
   };
 
-  const handleSelectLogo = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleSelectLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const target = e.currentTarget;
+    const file = target.files?.[0];
 
     if (!file) return;
 
-    const previewUrl = URL.createObjectURL(file);
-    setLogoUrl(previewUrl);
+    try {
+      validateImageFile(file);
 
-    console.log("Selected logo file:", file);
+      setUploadingLogo(true);
+      hideToastImmediately();
 
-    // TODO:
-    // Gắn API upload logo ở đây nếu muốn lưu ngay sau khi chọn.
-    // await requestUploadCompanyImage(company_id, file, "logo");
+      const uploadedImage = await requestUploadCompanyImage({
+        file,
+        image_type: "logo",
+      });
 
-    e.target.value = "";
+      const imageUrl = getUploadedImageUrl(uploadedImage);
+
+      if (!imageUrl) {
+        throw new Error("Không nhận được đường dẫn logo sau khi tải lên.");
+      }
+
+      setLogoUrl(imageUrl);
+      showToast("success", "Cập nhật logo công ty thành công.");
+    } catch (err: any) {
+      console.error("Lỗi khi upload logo:", err);
+      showToast("error", err.message || "Không thể cập nhật logo công ty.");
+    } finally {
+      setUploadingLogo(false);
+      target.value = "";
+    }
   };
 
-  const handleSelectBanner = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  const handleSelectBanner = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const target = e.currentTarget;
+    const file = target.files?.[0];
 
     if (!file) return;
 
-    const previewUrl = URL.createObjectURL(file);
-    setBannerUrl(previewUrl);
+    try {
+      validateImageFile(file);
 
-    console.log("Selected banner file:", file);
+      setUploadingBanner(true);
+      hideToastImmediately();
 
-    // TODO:
-    // Gắn API upload banner ở đây nếu muốn lưu ngay sau khi chọn.
-    // await requestUploadCompanyImage(company_id, file, "banner");
+      const uploadedImage = await requestUploadCompanyImage({
+        file,
+        image_type: "banner",
+      });
 
-    e.target.value = "";
+      const imageUrl = getUploadedImageUrl(uploadedImage);
+
+      if (!imageUrl) {
+        throw new Error("Không nhận được đường dẫn ảnh bìa sau khi tải lên.");
+      }
+
+      setBannerUrl(imageUrl);
+      showToast("success", "Cập nhật ảnh bìa công ty thành công.");
+    } catch (err: any) {
+      console.error("Lỗi khi upload banner:", err);
+      showToast("error", err.message || "Không thể cập nhật ảnh bìa công ty.");
+    } finally {
+      setUploadingBanner(false);
+      target.value = "";
+    }
   };
 
-  const handleSelectActivityImages = (
+  const handleSelectActivityImages = async (
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const files = Array.from(e.target.files ?? []);
+    const target = e.currentTarget;
+    const files = Array.from(target.files ?? []);
 
     if (files.length === 0) return;
 
-    const previewUrls = files.map((file) => URL.createObjectURL(file));
+    try {
+      files.forEach(validateImageFile);
 
-    setCompanyImgs((prev) => [...previewUrls, ...prev]);
+      setUploadingActivity(true);
+      hideToastImmediately();
 
-    console.log("Selected activity image files:", files);
+      const uploadedImages = await Promise.all(
+        files.map((file) =>
+          requestUploadCompanyImage({
+            file,
+            image_type: "other",
+          }),
+        ),
+      );
 
-    // TODO:
-    // Gắn API upload nhiều hình ảnh hoạt động ở đây nếu muốn lưu ngay sau khi chọn.
-    // await requestUploadCompanyActivityImages(company_id, files);
+      const imageUrls = uploadedImages
+        .map((image) => getUploadedImageUrl(image))
+        .filter(Boolean);
 
-    e.target.value = "";
+      if (imageUrls.length === 0) {
+        throw new Error("Không nhận được đường dẫn hình ảnh sau khi tải lên.");
+      }
+
+      setCompanyImgs((prev) => [...imageUrls, ...prev]);
+
+      showToast(
+        "success",
+        `Tải lên ${imageUrls.length} hình ảnh hoạt động thành công.`,
+      );
+    } catch (err: any) {
+      console.error("Lỗi khi upload hình ảnh hoạt động:", err);
+      showToast("error", err.message || "Không thể tải hình ảnh hoạt động.");
+    } finally {
+      setUploadingActivity(false);
+      target.value = "";
+    }
   };
 
   const handleRemoveActivityImage = (index: number) => {
     setCompanyImgs((prev) => prev.filter((_, i) => i !== index));
-
-    // TODO:
-    // Nếu ảnh đã lưu DB thì cần gọi API delete company_imgs theo image_id.
   };
 
   const handleSaveEdit = async () => {
-    if (!company_id) return;
+    hideToastImmediately();
+
+    const isValid = validateEditForm();
+
+    if (!isValid) {
+      showToast("error", "Vui lòng kiểm tra lại các thông tin chưa hợp lệ.");
+      return;
+    }
 
     try {
       setSaving(true);
 
-      const payload = {
-        companyName: fullName,
-        description,
-        businessLicense,
-        companyLicense,
-        email,
-        phone,
-        address,
-      };
+      await requestUpdateCompanyProfile({
+        company_name: fullName.trim(),
+        description: description.trim(),
+        email: email.trim(),
+        phone: phone.trim(),
+        address: address.trim(),
+        business_license_no: businessLicense.trim(),
+        registration_code: companyLicense.trim(),
+      });
 
-      console.log("Update company info payload:", payload);
+      setCompanyName(fullName.trim());
+      setFullName(fullName.trim());
+      setDescription(description.trim());
+      setEmail(email.trim());
+      setPhone(phone.trim());
+      setAddress(address.trim());
+      setBusinessLicense(businessLicense.trim());
+      setCompanyLicense(companyLicense.trim());
 
-      // TODO:
-      // Gắn API update thông tin công ty ở đây.
-      // Ví dụ:
-      // await requestUpdateCompanyInfo(company_id, payload);
-      //
-      // API này chỉ update thông tin chữ:
-      // - company_name
-      // - description
-      // - business_license_no
-      // - company_license_no
-      // - email
-      // - phone
-      // - address
-
-      setCompanyName(fullName);
       setIsEditing(false);
       setEditSnapshot(null);
+      setFieldErrors({});
 
-      alert("Đã lưu thay đổi thông tin công ty.");
+      showToast("success", "Cập nhật thông tin công ty thành công.");
     } catch (err: any) {
       console.error("Lỗi khi cập nhật công ty:", err);
-      alert(err.message || "Không thể cập nhật thông tin công ty.");
+      showToast(
+        "error",
+        err.message || "Không thể cập nhật thông tin công ty.",
+      );
     } finally {
       setSaving(false);
     }
@@ -290,6 +543,12 @@ export default function MyCompanyDetail() {
       alert(err.message || "Không thể xóa dịch vụ.");
     }
   };
+
+  useEffect(() => {
+    return () => {
+      clearToastTimers();
+    };
+  }, []);
 
   useEffect(() => {
     if (!company_id) {
@@ -373,7 +632,6 @@ export default function MyCompanyDetail() {
         onChange={handleSelectActivityImages}
       />
 
-      {/* 1. Header & Cover Section */}
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-xs relative">
         <div className="relative h-48 sm:h-56 w-full bg-slate-900 overflow-hidden">
           <div
@@ -386,28 +644,37 @@ export default function MyCompanyDetail() {
           <button
             type="button"
             onClick={() => bannerInputRef.current?.click()}
-            className="absolute top-4 right-4 bg-white/90 hover:bg-white text-slate-800 rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+            disabled={uploadingBanner}
+            className="absolute top-4 right-4 bg-white/90 hover:bg-white text-slate-800 rounded-lg px-3 py-1.5 text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
           >
-            <Camera className="w-3.5 h-3.5" /> Thay đổi ảnh bìa
+            <Camera className="w-3.5 h-3.5" />
+            {uploadingBanner ? "Đang tải..." : "Thay đổi ảnh bìa"}
           </button>
         </div>
 
         <div className="px-6 pb-6 pt-4 relative flex flex-col sm:flex-row sm:items-end justify-between gap-6">
           <div className="flex flex-col sm:flex-row items-center sm:items-end gap-5 text-center sm:text-left">
-            <div className="relative -mt-16 sm:-mt-20 shrink-0 z-10 group">
-              <img
-                src={logoUrl}
-                alt="Company Logo"
-                className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-white bg-white object-cover shadow-md"
-              />
+            <div className="flex shrink-0 flex-col items-center gap-2 self-center sm:self-start -mt-16 sm:-mt-20 z-20">
+              <div className="relative group">
+                <img
+                  src={logoUrl}
+                  alt="Company Logo"
+                  className="w-28 h-28 sm:w-32 sm:h-32 rounded-2xl border-4 border-white bg-white object-cover shadow-md"
+                />
 
-              <button
-                type="button"
-                onClick={() => logoInputRef.current?.click()}
-                className="absolute inset-0 bg-slate-900/50 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all cursor-pointer"
-              >
-                <Upload className="w-5 h-5 text-white" />
-              </button>
+                <button
+                  type="button"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                  className="absolute inset-0 bg-slate-900/50 rounded-2xl opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {uploadingLogo ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Upload className="w-5 h-5 text-white" />
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="pb-1 space-y-1">
@@ -464,24 +731,31 @@ export default function MyCompanyDetail() {
         </div>
       </div>
 
-      {/* 2. Main content area */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Columns */}
         <div className="lg:col-span-2 space-y-6">
-          {/* Card 2.1: Giới thiệu */}
           <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-3">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-3 border-blue-600 pl-2.5">
               Giới thiệu doanh nghiệp
             </h2>
 
             {isEditing ? (
-              <textarea
-                rows={5}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Nhập giới thiệu doanh nghiệp..."
-                className="w-full text-sm text-slate-700 border border-slate-200 rounded-xl px-3.5 py-3 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium resize-none leading-relaxed"
-              />
+              <div className="space-y-1">
+                <textarea
+                  rows={5}
+                  value={description}
+                  onChange={(e) => {
+                    setDescription(e.target.value);
+                    clearFieldError("description");
+                  }}
+                  placeholder="Nhập giới thiệu doanh nghiệp..."
+                  className={getEditControlClassName(
+                    "description",
+                    "rounded-xl px-3.5 py-3 resize-none leading-relaxed",
+                  )}
+                />
+
+                {renderFieldError("description")}
+              </div>
             ) : (
               <p className="text-sm text-slate-600 leading-relaxed text-justify font-medium">
                 {description || "Chưa có giới thiệu doanh nghiệp."}
@@ -489,7 +763,6 @@ export default function MyCompanyDetail() {
             )}
           </section>
 
-          {/* Card 2.2: Thông tin công ty */}
           <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
             <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-3 border-blue-600 pl-2.5">
               Thông tin công ty
@@ -503,12 +776,19 @@ export default function MyCompanyDetail() {
                   </span>
 
                   {isEditing ? (
-                    <input
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      placeholder="Nhập tên công ty"
-                      className={editInputClassName}
-                    />
+                    <div className="col-span-8 space-y-1">
+                      <input
+                        value={fullName}
+                        onChange={(e) => {
+                          setFullName(e.target.value);
+                          clearFieldError("company_name");
+                        }}
+                        placeholder="Nhập tên công ty"
+                        className={getEditControlClassName("company_name")}
+                      />
+
+                      {renderFieldError("company_name")}
+                    </div>
                   ) : (
                     <span className="col-span-8 text-slate-800 font-bold">
                       {fullName}
@@ -523,12 +803,21 @@ export default function MyCompanyDetail() {
                   </span>
 
                   {isEditing ? (
-                    <input
-                      value={businessLicense}
-                      onChange={(e) => setBusinessLicense(e.target.value)}
-                      placeholder="Nhập mã số đăng ký"
-                      className={editInputClassName}
-                    />
+                    <div className="col-span-8 space-y-1">
+                      <input
+                        value={businessLicense}
+                        onChange={(e) => {
+                          setBusinessLicense(e.target.value);
+                          clearFieldError("business_license_no");
+                        }}
+                        placeholder="Nhập mã số đăng ký"
+                        className={getEditControlClassName(
+                          "business_license_no",
+                        )}
+                      />
+
+                      {renderFieldError("business_license_no")}
+                    </div>
                   ) : (
                     <span className="col-span-8 text-slate-800 font-semibold">
                       {businessLicense}
@@ -543,12 +832,19 @@ export default function MyCompanyDetail() {
                   </span>
 
                   {isEditing ? (
-                    <input
-                      value={companyLicense}
-                      onChange={(e) => setCompanyLicense(e.target.value)}
-                      placeholder="Nhập mã số giấy phép"
-                      className={editInputClassName}
-                    />
+                    <div className="col-span-8 space-y-1">
+                      <input
+                        value={companyLicense}
+                        onChange={(e) => {
+                          setCompanyLicense(e.target.value);
+                          clearFieldError("registration_code");
+                        }}
+                        placeholder="Nhập mã số giấy phép"
+                        className={getEditControlClassName("registration_code")}
+                      />
+
+                      {renderFieldError("registration_code")}
+                    </div>
                   ) : (
                     <span className="col-span-8 text-slate-800 font-mono font-bold">
                       {companyLicense}
@@ -562,13 +858,20 @@ export default function MyCompanyDetail() {
                   </span>
 
                   {isEditing ? (
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="Nhập email"
-                      className={editInputClassName}
-                    />
+                    <div className="col-span-8 space-y-1">
+                      <input
+                        type="email"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          clearFieldError("email");
+                        }}
+                        placeholder="Nhập email"
+                        className={getEditControlClassName("email")}
+                      />
+
+                      {renderFieldError("email")}
+                    </div>
                   ) : (
                     <span className="col-span-8 text-blue-600 font-semibold hover:underline break-all">
                       {email}
@@ -582,12 +885,19 @@ export default function MyCompanyDetail() {
                   </span>
 
                   {isEditing ? (
-                    <input
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      placeholder="Nhập số điện thoại"
-                      className={editInputClassName}
-                    />
+                    <div className="col-span-8 space-y-1">
+                      <input
+                        value={phone}
+                        onChange={(e) => {
+                          setPhone(e.target.value);
+                          clearFieldError("phone");
+                        }}
+                        placeholder="Nhập số điện thoại"
+                        className={getEditControlClassName("phone")}
+                      />
+
+                      {renderFieldError("phone")}
+                    </div>
                   ) : (
                     <span className="col-span-8 text-slate-800 font-mono font-semibold">
                       {phone}
@@ -601,13 +911,23 @@ export default function MyCompanyDetail() {
                   </span>
 
                   {isEditing ? (
-                    <textarea
-                      rows={3}
-                      value={address}
-                      onChange={(e) => setAddress(e.target.value)}
-                      placeholder="Nhập địa chỉ"
-                      className={editTextareaClassName}
-                    />
+                    <div className="col-span-8 space-y-1">
+                      <textarea
+                        rows={3}
+                        value={address}
+                        onChange={(e) => {
+                          setAddress(e.target.value);
+                          clearFieldError("address");
+                        }}
+                        placeholder="Nhập địa chỉ"
+                        className={getEditControlClassName(
+                          "address",
+                          "resize-none",
+                        )}
+                      />
+
+                      {renderFieldError("address")}
+                    </div>
                   ) : (
                     <span className="col-span-8 text-slate-700 font-semibold leading-relaxed">
                       {address}
@@ -643,7 +963,6 @@ export default function MyCompanyDetail() {
             </div>
           </section>
 
-          {/* Card 2.3: Dịch vụ cung cấp */}
           <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
             <div className="flex justify-between items-center border-b border-slate-100 pb-4">
               <h2 className="text-xs font-bold text-slate-400 uppercase tracking-widest border-l-3 border-blue-600 pl-2.5">
@@ -732,7 +1051,6 @@ export default function MyCompanyDetail() {
           </section>
         </div>
 
-        {/* Right Columns */}
         <div className="space-y-6">
           <section className="bg-white border border-slate-200 rounded-2xl p-6 shadow-2xs space-y-4">
             <div className="flex justify-between items-center border-b border-slate-100 pb-2">
@@ -766,16 +1084,36 @@ export default function MyCompanyDetail() {
                   <div className="absolute inset-0 bg-slate-950/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                     <Eye className="w-4 h-4 text-white" />
                   </div>
+
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      handleRemoveActivityImage(index);
+                    }}
+                    className="absolute top-1.5 right-1.5 rounded-full bg-white/90 p-1 text-slate-500 opacity-0 shadow-sm transition-all hover:text-red-500 group-hover:opacity-100"
+                    title="Xóa ảnh khỏi giao diện"
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
                 </div>
               ))}
 
               <button
                 type="button"
                 onClick={() => activityInputRef.current?.click()}
-                className="aspect-square rounded-xl border border-dashed border-blue-300 bg-blue-50/50 text-blue-600 flex flex-col items-center justify-center gap-1 hover:bg-blue-50 transition-all cursor-pointer"
+                disabled={uploadingActivity}
+                className="aspect-square rounded-xl border border-dashed border-blue-300 bg-blue-50/50 text-blue-600 flex flex-col items-center justify-center gap-1 hover:bg-blue-50 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <Upload className="w-5 h-5" />
-                <span className="text-[10px] font-bold">Thêm ảnh</span>
+                {uploadingActivity ? (
+                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-blue-600 border-t-transparent" />
+                ) : (
+                  <Upload className="w-5 h-5" />
+                )}
+
+                <span className="text-[10px] font-bold">
+                  {uploadingActivity ? "Đang tải" : "Thêm ảnh"}
+                </span>
               </button>
             </div>
 
@@ -788,7 +1126,46 @@ export default function MyCompanyDetail() {
         </div>
       </div>
 
-      {/* 4. Add Service Modal */}
+      {toast && (
+        <div
+          className={`fixed bottom-6 right-6 z-[80] w-[320px] rounded-2xl border bg-white px-4 py-3 shadow-2xl transition-all duration-300 ease-out ${
+            toastVisible
+              ? "translate-x-0 opacity-100"
+              : "translate-x-[120%] opacity-0"
+          } ${toast.type === "success" ? "border-green-200" : "border-red-200"}`}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                toast.type === "success" ? "bg-green-500" : "bg-red-500"
+              }`}
+            />
+
+            <div className="flex-1">
+              <p
+                className={`text-xs font-extrabold uppercase tracking-wide ${
+                  toast.type === "success" ? "text-green-700" : "text-red-600"
+                }`}
+              >
+                {toast.type === "success" ? "Thành công" : "Thất bại"}
+              </p>
+
+              <p className="mt-1 text-sm font-semibold text-slate-700 leading-relaxed">
+                {toast.message}
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={closeToast}
+              className="rounded-lg p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-all cursor-pointer"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {isAddServiceOpen && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 animate-fade-in">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 font-sans">
@@ -907,7 +1284,6 @@ export default function MyCompanyDetail() {
         </div>
       )}
 
-      {/* 5. Image Lightbox Viewer Modal */}
       {activeViewerImg && (
         <div
           onClick={() => setActiveViewerImg(null)}
