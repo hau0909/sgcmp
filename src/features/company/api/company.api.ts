@@ -6,9 +6,13 @@ import {
   GetCompanyFiltersResponse,
   CompanyDetailData,
   Service,
+  UpdateCompanyProfileInput,
 } from "../types";
+import { ImageType } from "@/types/Enum";
 
-export async function requestGetCompanies(params: GetCompaniesRequestParams = {}): Promise<GetCompaniesResponse> {
+export async function requestGetCompanies(
+  params: GetCompaniesRequestParams = {},
+): Promise<GetCompaniesResponse> {
   const queryParams = new URLSearchParams();
   if (params.page) queryParams.set("page", params.page.toString());
   if (params.limit) queryParams.set("limit", params.limit.toString());
@@ -22,7 +26,7 @@ export async function requestGetCompanies(params: GetCompaniesRequestParams = {}
 }
 
 export async function requestGetCompanyFilters(
-  params: GetCompanyFiltersRequestParams = {}
+  params: GetCompanyFiltersRequestParams = {},
 ): Promise<GetCompanyFiltersResponse> {
   const queryParams = new URLSearchParams();
   if (params.search) queryParams.set("search", params.search);
@@ -42,7 +46,9 @@ export async function requestGetCompanyFilters(
   });
 }
 
-export async function requestGetCompanyById(id: string): Promise<CompanyDetailData> {
+export async function requestGetCompanyById(
+  id: string,
+): Promise<CompanyDetailData> {
   const url = `/api/companies/${id}`;
   return await fetcher(url, {
     method: "GET",
@@ -58,7 +64,7 @@ export async function requestGetAvailableServices(): Promise<Service[]> {
 
 export async function requestAddCompanyService(
   companyId: string,
-  payload: { serviceId: string; description: string; price: number }
+  payload: { serviceId: string; description: string; price: number },
 ): Promise<any> {
   const url = `/api/companies/${companyId}/services`;
   return await fetcher(url, {
@@ -72,10 +78,45 @@ export async function requestAddCompanyService(
 
 export async function requestDeleteCompanyService(
   companyId: string,
-  serviceId: string
+  serviceId: string,
 ): Promise<any> {
   const url = `/api/companies/${companyId}/services?serviceId=${serviceId}`;
   return await fetcher(url, {
     method: "DELETE",
   });
 }
+
+export const requestUpdateCompanyProfile = async (
+  input: UpdateCompanyProfileInput,
+) => {
+  const result = await fetcher("/api/companies/profile", {
+    method: "PATCH",
+    body: JSON.stringify(input),
+  });
+
+  return result.data;
+};
+
+export const requestUploadCompanyImage = async ({
+  file,
+  image_type,
+}: {
+  file: File;
+  image_type: ImageType;
+}) => {
+  const formData = new FormData();
+
+  formData.append("file", file);
+  formData.append("image_type", image_type);
+
+  const result = await fetcher("/api/companies/images", {
+    method: "POST",
+    body: formData,
+  });
+
+  if (result?.success === false) {
+    throw new Error(result.message || "Không thể tải ảnh công ty.");
+  }
+
+  return result.data;
+};

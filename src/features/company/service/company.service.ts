@@ -3,13 +3,27 @@ import {
   DbCompany,
   getServices,
   getCompanyById,
-  getCompanyByIdWithDetails
+  getCompanyByIdWithDetails,
+  updateCompanyprofile,
+  updateRegistrationCodeByCompanyId,
+  uploadCompanyImage,
 } from "../repository/company.repository";
-import { getCitiesService as getCities, getWardsService as getWards, formatAddressService } from "@/features/address";
-import { MarketplaceCompany, City, Ward, Service, CompanyDetailData, CompanyServiceData } from "../types";
+import {
+  getCitiesService as getCities,
+  getWardsService as getWards,
+  formatAddressService,
+} from "@/features/address";
+import {
+  MarketplaceCompany,
+  City,
+  Ward,
+  Service,
+  CompanyDetailData,
+  CompanyServiceData,
+  UpdateCompanyProfileInput,
+  UploadCompanyImageServiceParams,
+} from "../types";
 import { Company } from "@/types/Company";
-
-
 
 export interface CompanyFilterParams {
   search?: string;
@@ -46,14 +60,16 @@ function normalizeText(text: string): string {
     .trim();
 }
 
-export const mapDbCompanyToMarketplace = async (dbCompany: DbCompany): Promise<MarketplaceCompany> => {
+export const mapDbCompanyToMarketplace = async (
+  dbCompany: DbCompany,
+): Promise<MarketplaceCompany> => {
   const name = dbCompany.company_name;
 
   // Extract tags from services name
   const tags = dbCompany.company_services
     ? dbCompany.company_services
-      .map((cs) => cs.services?.name)
-      .filter((n): n is string => !!n)
+        .map((cs) => cs.services?.name)
+        .filter((n): n is string => !!n)
     : [];
 
   // Find minimum price among services, default to 0 if none
@@ -69,7 +85,10 @@ export const mapDbCompanyToMarketplace = async (dbCompany: DbCompany): Promise<M
 
   // Calculate initials from name
   const cleanName = name
-    .replace(/^(Công ty|TNHH|Cổ phần|Dịch vụ|Bảo vệ|TNHH Dịch vụ Bảo vệ)\s+/gi, "")
+    .replace(
+      /^(Công ty|TNHH|Cổ phần|Dịch vụ|Bảo vệ|TNHH Dịch vụ Bảo vệ)\s+/gi,
+      "",
+    )
     .replace(/\s+(Cổ phần|TNHH)\s*/gi, "")
     .trim();
   const words = cleanName.split(/\s+/).filter(Boolean);
@@ -96,7 +115,7 @@ export const mapDbCompanyToMarketplace = async (dbCompany: DbCompany): Promise<M
 };
 
 export const getCompaniesService = async (
-  params: CompanyFilterParams = {}
+  params: CompanyFilterParams = {},
 ): Promise<PaginatedCompaniesResponse> => {
   const dbCompanies = await getAllActiveCompanies();
 
@@ -110,7 +129,7 @@ export const getCompaniesService = async (
       (c) =>
         c.name.toLowerCase().includes(q) ||
         (c.description && c.description.toLowerCase().includes(q)) ||
-        c.tags.some((tag) => tag.toLowerCase().includes(q))
+        c.tags.some((tag) => tag.toLowerCase().includes(q)),
     );
   }
 
@@ -156,8 +175,8 @@ export const getCompaniesService = async (
   if (params.tags && params.tags.length > 0) {
     companies = companies.filter((c) =>
       params.tags!.every((selectedTag) =>
-        c.tags.some((tag) => tag.toLowerCase() === selectedTag.toLowerCase())
-      )
+        c.tags.some((tag) => tag.toLowerCase() === selectedTag.toLowerCase()),
+      ),
     );
   }
 
@@ -199,7 +218,7 @@ export const getCompaniesService = async (
 };
 
 export const getCompanyFiltersService = async (
-  params: CompanyFilterParams = {}
+  params: CompanyFilterParams = {},
 ): Promise<CompanyFiltersDataResponse> => {
   const [cities, wards, services] = await Promise.all([
     getCities(),
@@ -220,38 +239,47 @@ export const getCompanyFiltersService = async (
   };
 };
 
-export const getCompanyByIdServiceInCustomer = async (id: string): Promise<CompanyDetailData | null> => {
+export const getCompanyByIdServiceInCustomer = async (
+  id: string,
+): Promise<CompanyDetailData | null> => {
   const dbCompany = await getCompanyByIdWithDetails(id);
   if (!dbCompany) return null;
 
   const addressStr = await formatAddressService(dbCompany.address);
-  const logoImg = dbCompany.company_imgs?.find((img) => img.image_type === "logo");
-  const bannerImg = dbCompany.company_imgs?.find((img) => img.image_type === "banner");
+  const logoImg = dbCompany.company_imgs?.find(
+    (img) => img.image_type === "logo",
+  );
+  const bannerImg = dbCompany.company_imgs?.find(
+    (img) => img.image_type === "banner",
+  );
 
   const services: CompanyServiceData[] = dbCompany.company_services
     ? dbCompany.company_services
-      .map((cs) => {
-        if (!cs.services) return null;
-        return {
-          serviceId: cs.services.service_id,
-          name: cs.services.name,
-          description: cs.description || "",
-          baseDescription: cs.services.description || "",
-          price: cs.price,
-        };
-      })
-      .filter((s): s is CompanyServiceData => !!s)
+        .map((cs) => {
+          if (!cs.services) return null;
+          return {
+            serviceId: cs.services.service_id,
+            name: cs.services.name,
+            description: cs.description || "",
+            baseDescription: cs.services.description || "",
+            price: cs.price,
+          };
+        })
+        .filter((s): s is CompanyServiceData => !!s)
     : [];
 
   const activityImgs = dbCompany.company_imgs
     ? dbCompany.company_imgs
-      .filter((img) => img.image_type !== "logo" && img.image_type !== "banner")
-      .map((img) => img.image_url)
+        .filter(
+          (img) => img.image_type !== "logo" && img.image_type !== "banner",
+        )
+        .map((img) => img.image_url)
     : [];
 
-  const registrationCode = dbCompany.registrations && dbCompany.registrations.length > 0
-    ? dbCompany.registrations[0].registration_code
-    : dbCompany.business_license_no;
+  const registrationCode =
+    dbCompany.registrations && dbCompany.registrations.length > 0
+      ? dbCompany.registrations[0].registration_code
+      : dbCompany.business_license_no;
 
   return {
     id: dbCompany.company_id,
@@ -270,10 +298,43 @@ export const getCompanyByIdServiceInCustomer = async (id: string): Promise<Compa
     activityImgs,
     companyLicenseNo: dbCompany.business_license_no,
   };
-}
+};
 export const getCompanyByIdService = async (
   companyId: string,
 ): Promise<Company | null> => {
   return await getCompanyById(companyId);
 };
 
+export const updateCompanyProfileService = async ({
+  company_id,
+  input,
+}: {
+  company_id: string;
+  input: UpdateCompanyProfileInput;
+}) => {
+  const company = await updateCompanyprofile({ company_id, input });
+
+  const registration = await updateRegistrationCodeByCompanyId({
+    company_id,
+    registration_code: input.registration_code,
+  });
+
+  return {
+    company,
+    registration,
+  };
+};
+
+export const uploadCompanyImageService = async ({
+  company_id,
+  file,
+  image_type,
+}: UploadCompanyImageServiceParams) => {
+  const image = await uploadCompanyImage({
+    company_id,
+    file,
+    image_type,
+  });
+
+  return image;
+};
