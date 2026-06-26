@@ -96,7 +96,6 @@ export type UpdateCompanyProfileInput = {
 };
 
 export type UpdateCompanyProfileControllerParams = {
-  user_id: string;
   input: UpdateCompanyProfileInput;
 };
 

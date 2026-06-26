@@ -44,7 +44,6 @@ export const handleGetCompanyById = async (
 };
 
 export const handleUpdateCompanyProfile = async ({
-  user_id,
   input,
 }: UpdateCompanyProfileControllerParams) => {
   validateUpdateCompanyProfileInput(input);
@@ -59,7 +58,7 @@ export const handleUpdateCompanyProfile = async ({
     };
   }
 
-  const company_id = await getCompanyByOwnerIdService(user_id);
+  const company_id = await getCompanyByOwnerIdService(profile.user_id);
 
   const cleanedInput: UpdateCompanyProfileInput = {
     company_name: input.company_name.trim(),
