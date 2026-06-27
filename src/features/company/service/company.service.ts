@@ -8,6 +8,7 @@ import {
   updateRegistrationCodeByCompanyId,
   uploadCompanyImage,
   getCompanyActivityImages,
+  createCompanyPublishRequest,
 } from "../repository/company.repository";
 import {
   getCitiesService as getCities,
@@ -25,6 +26,7 @@ import {
   UploadCompanyImageServiceParams,
 } from "../types";
 import { Company } from "@/types/Company";
+import { CompanyStatus } from "@/types/Enum";
 
 export interface CompanyFilterParams {
   search?: string;
@@ -294,7 +296,7 @@ export const getCompanyByIdServiceInCustomer = async (
     services,
     businessLicenseNo: registrationCode,
     licenseFileUrl: dbCompany.license_file_url || undefined,
-    status: dbCompany.status,
+    status: dbCompany.status as CompanyStatus,
     createdAt: dbCompany.created_at,
     activityImgs,
     companyLicenseNo: dbCompany.business_license_no,
@@ -345,4 +347,11 @@ export const getCompanyActivityImagesService = async (company_id: string) => {
   const images = await getCompanyActivityImages(company_id);
 
   return images;
+};
+
+export const createCompanyPublishRequestService = async (
+  companyId: string,
+  note?: string,
+): Promise<any> => {
+  return await createCompanyPublishRequest(companyId, note);
 };

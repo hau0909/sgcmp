@@ -1,4 +1,4 @@
-import { ImageType } from "@/types/Enum";
+import { ImageType, CompanyStatus } from "@/types/Enum";
 
 export interface MarketplaceCompany {
   id: string;
@@ -79,7 +79,7 @@ export interface CompanyDetailData {
   services: CompanyServiceData[];
   businessLicenseNo?: string;
   licenseFileUrl?: string;
-  status?: string;
+  status?: CompanyStatus;
   createdAt?: string;
   activityImgs?: string[];
   companyLicenseNo?: string;

@@ -9,6 +9,7 @@ import {
   updateCompanyProfileService,
   uploadCompanyImageService,
   getCompanyActivityImagesService,
+  createCompanyPublishRequestService,
 } from "../service/company.service";
 import {
   CompanyDetailData,
@@ -139,5 +140,25 @@ export const handleGetCompanyActivityImages = async () => {
 
   const data = await getCompanyActivityImagesService(company_id);
 
+  return data;
+};
+
+export const handleCreateCompanyPublishRequest = async (
+  companyId: string,
+  note?: string,
+): Promise<any> => {
+  const profile = await getCurrentUserProfileService();
+
+  if (!profile) {
+    throw new Error("Bạn chưa đăng nhập");
+  }
+
+  // Validate ownership
+  const userCompanyId = await getCompanyByOwnerIdService(profile.user_id);
+  if (userCompanyId !== companyId) {
+    throw new Error("Bạn không có quyền thực hiện hành động này");
+  }
+
+  const data = await createCompanyPublishRequestService(companyId, note);
   return data;
 };

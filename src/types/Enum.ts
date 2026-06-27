@@ -7,6 +7,14 @@ export type UserRole =
 
 export type GeneralStatus = "active" | "unactive";
 
+export type CompanyStatus =
+  | "draft"
+  | "pending_register"
+  | "active"
+  | "pending_publish"
+  | "published"
+  | "rejected";
+
 export type PaymentMethod = "bank_transfer" | "credit_card" | "e_wallet";
 
 export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
