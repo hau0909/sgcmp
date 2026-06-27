@@ -4,14 +4,16 @@ import { useEffect, useMemo, useState } from "react";
 import {
   CalendarDays,
   CheckCircle2,
+  ChevronLeft,
+  ChevronRight,
   Clock,
   FileText,
   MapPin,
   Search,
   ShieldCheck,
+  SquarePen,
   UserRound,
   X,
-  SquarePen,
 } from "lucide-react";
 
 import type { GuardListItem } from "@/features/guards/type";
@@ -32,6 +34,7 @@ const DEFAULT_WORK_DATE = "2026-06-14";
 const DEFAULT_START_TIME = "06:00";
 const DEFAULT_END_TIME = "10:00";
 const DEFAULT_REQUIRED_GUARDS = "1";
+const GUARD_PAGE_SIZE = 10;
 
 const formatDate = (date: string) => {
   return new Intl.DateTimeFormat("vi-VN").format(new Date(date));
@@ -49,6 +52,30 @@ const getGuardProfile = (profiles: GuardListItem["profiles"]) => {
   return profiles;
 };
 
+const GuardListSkeleton = () => {
+  return (
+    <div className="space-y-3">
+      {Array.from({ length: 5 }).map((_, index) => (
+        <div
+          key={index}
+          className="w-full rounded-md border border-slate-200 bg-white p-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-slate-200" />
+
+            <div className="min-w-0 flex-1">
+              <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+              <div className="mt-3 h-3 w-64 animate-pulse rounded bg-slate-200" />
+            </div>
+
+            <div className="h-5 w-5 animate-pulse rounded-full bg-slate-200" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 export function CreateShiftModal({
   open,
   onClose,
@@ -63,14 +90,23 @@ export function CreateShiftModal({
   const [requiredGuardsInput, setRequiredGuardsInput] = useState(
     DEFAULT_REQUIRED_GUARDS,
   );
+
   const [searchKeyword, setSearchKeyword] = useState("");
+  const [debouncedSearchKeyword, setDebouncedSearchKeyword] = useState("");
+
   const [selectedGuardIds, setSelectedGuardIds] = useState<string[]>([]);
 
   const [contracts, setContracts] = useState<ContractOption[]>([]);
   const [guards, setGuards] = useState<GuardListItem[]>([]);
 
+  const [guardPage, setGuardPage] = useState(1);
+  const [guardTotal, setGuardTotal] = useState(0);
+  const [guardTotalPages, setGuardTotalPages] = useState(1);
+
   const [isLoadingContracts, setIsLoadingContracts] = useState(false);
   const [isLoadingGuards, setIsLoadingGuards] = useState(false);
+  const [guardErrorMessage, setGuardErrorMessage] = useState("");
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
@@ -81,13 +117,14 @@ export function CreateShiftModal({
     return contracts.find((contract) => contract.contract_id === contractId);
   }, [contracts, contractId]);
 
-  const formatDayPerWeek = (days?: string[] | null) => {
-    if (!days || days.length === 0) {
-      return "Chưa cập nhật";
-    }
+  const guardStartResult =
+    guardTotal > 0 ? (guardPage - 1) * GUARD_PAGE_SIZE + 1 : 0;
 
-    return days.join(", ");
-  };
+  const guardEndResult =
+    guardTotal > 0 ? Math.min(guardPage * GUARD_PAGE_SIZE, guardTotal) : 0;
+
+  const canGoPreviousGuardPage = guardPage > 1;
+  const canGoNextGuardPage = guardPage < guardTotalPages;
 
   useEffect(() => {
     if (!open) {
@@ -117,41 +154,73 @@ export function CreateShiftModal({
       return;
     }
 
+    const timeoutId = window.setTimeout(() => {
+      setDebouncedSearchKeyword(searchKeyword.trim());
+      setGuardPage(1);
+    }, 400);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [open, searchKeyword]);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+
+    let isCancelled = false;
+
     const fetchGuards = async () => {
       try {
         setIsLoadingGuards(true);
+        setGuardErrorMessage("");
 
-        const response = await requestGetAllGuards();
+        const response = await requestGetAllGuards({
+          page: guardPage,
+          limit: GUARD_PAGE_SIZE,
+          search: debouncedSearchKeyword,
+        });
 
-        setGuards(response.data ?? []);
+        if (isCancelled) {
+          return;
+        }
+
+        if (!response.success) {
+          throw new Error(response.message);
+        }
+
+        setGuards(response.data.guards ?? []);
+        setGuardTotal(response.data.pagination.total ?? 0);
+        setGuardTotalPages(response.data.pagination.totalPages || 1);
       } catch (error) {
+        if (isCancelled) {
+          return;
+        }
+
         console.log(error);
         setGuards([]);
+        setGuardTotal(0);
+        setGuardTotalPages(1);
+
+        setGuardErrorMessage(
+          error instanceof Error
+            ? error.message
+            : "Không thể tải danh sách bảo vệ.",
+        );
       } finally {
-        setIsLoadingGuards(false);
+        if (!isCancelled) {
+          setIsLoadingGuards(false);
+        }
       }
     };
 
     fetchGuards();
-  }, [open]);
 
-  const filteredGuards = useMemo(() => {
-    const keyword = searchKeyword.trim().toLowerCase();
-
-    if (!keyword) {
-      return guards;
-    }
-
-    return guards.filter((guard) => {
-      const profile = getGuardProfile(guard.profiles);
-
-      return (
-        profile?.full_name?.toLowerCase().includes(keyword) ||
-        profile?.phone_number?.includes(keyword) ||
-        profile?.email?.toLowerCase().includes(keyword)
-      );
-    });
-  }, [guards, searchKeyword]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [open, guardPage, debouncedSearchKeyword]);
 
   const resetForm = () => {
     setContractId("");
@@ -161,10 +230,17 @@ export function CreateShiftModal({
     setEndTime(DEFAULT_END_TIME);
     setRequiredGuardsInput(DEFAULT_REQUIRED_GUARDS);
     setSearchKeyword("");
+    setDebouncedSearchKeyword("");
     setSelectedGuardIds([]);
     setSubmitError("");
     setSubmitSuccess("");
     setShiftName("");
+
+    setGuards([]);
+    setGuardPage(1);
+    setGuardTotal(0);
+    setGuardTotalPages(1);
+    setGuardErrorMessage("");
   };
 
   const handleCloseModal = () => {
@@ -382,6 +458,7 @@ export function CreateShiftModal({
                         selectedContract.start_date,
                       )} - ${formatDate(selectedContract.end_date)}`}
                     />
+
                     <InfoRow
                       label="Ngày trực trong tuần"
                       value={
@@ -390,6 +467,7 @@ export function CreateShiftModal({
                           : "Chưa cập nhật"
                       }
                     />
+
                     <InfoRow
                       label="Ca trực trong ngày"
                       value={
@@ -435,7 +513,8 @@ export function CreateShiftModal({
                   <SquarePen
                     size={17}
                     className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                  />{" "}
+                  />
+
                   <input
                     value={shiftName}
                     onChange={(event) => {
@@ -550,6 +629,7 @@ export function CreateShiftModal({
               </div>
             </div>
           </div>
+
           <div className="flex min-h-0 flex-col overflow-hidden p-6">
             <div className="shrink-0">
               <div className="mb-5 flex items-center justify-between gap-4">
@@ -585,38 +665,20 @@ export function CreateShiftModal({
             </div>
 
             <div className="min-h-0 flex-1 space-y-3 overflow-y-auto pr-1">
-              {isLoadingGuards && (
-                <div className="space-y-3">
-                  {" "}
-                  {Array.from({ length: 5 }).map((_, index) => (
-                    <div
-                      key={index}
-                      className="w-full rounded-md border border-slate-200 bg-white p-4"
-                    >
-                      {" "}
-                      <div className="flex items-center gap-3">
-                        {" "}
-                        <div className="h-12 w-12 shrink-0 animate-pulse rounded-full bg-slate-200" />{" "}
-                        <div className="min-w-0 flex-1">
-                          {" "}
-                          <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />{" "}
-                          <div className="mt-3 h-3 w-64 animate-pulse rounded bg-slate-200" />{" "}
-                        </div>{" "}
-                        <div className="h-5 w-5 animate-pulse rounded-full bg-slate-200" />{" "}
-                      </div>{" "}
-                    </div>
-                  ))}{" "}
-                </div>
-              )}
-
-              {!isLoadingGuards && filteredGuards.length === 0 && (
-                <p className="py-6 text-center text-sm text-slate-500">
-                  Không tìm thấy bảo vệ phù hợp.
+              {isLoadingGuards ? (
+                <GuardListSkeleton />
+              ) : guardErrorMessage ? (
+                <p className="py-6 text-center text-sm text-red-500">
+                  {guardErrorMessage}
                 </p>
-              )}
-
-              {!isLoadingGuards &&
-                filteredGuards.map((guard) => {
+              ) : guards.length === 0 ? (
+                <p className="py-6 text-center text-sm text-slate-500">
+                  {debouncedSearchKeyword
+                    ? "Không tìm thấy bảo vệ phù hợp."
+                    : "Chưa có bảo vệ để phân công."}
+                </p>
+              ) : (
+                guards.map((guard) => {
                   const profile = getGuardProfile(guard.profiles);
                   const profileUserId = profile?.user_id ?? "";
 
@@ -686,10 +748,55 @@ export function CreateShiftModal({
                       </div>
                     </button>
                   );
-                })}
+                })
+              )}
+            </div>
+
+            <div className="mt-4 flex shrink-0 flex-col gap-3 border-t border-slate-200 pt-4 text-sm text-slate-600 md:flex-row md:items-center md:justify-between">
+              <p>
+                {isLoadingGuards
+                  ? "Đang tải danh sách bảo vệ..."
+                  : `Hiển thị ${guardStartResult}-${guardEndResult} trong số ${guardTotal} bảo vệ`}
+              </p>
+
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  disabled={!canGoPreviousGuardPage || isLoadingGuards}
+                  onClick={() => setGuardPage((page) => Math.max(page - 1, 1))}
+                  aria-label="Trang trước"
+                  className="flex h-8 w-8 cursor-pointer transition-all duration-300 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+
+                <button
+                  type="button"
+                  className="h-8 min-w-8 rounded-md bg-sky-400 px-2 text-sm font-semibold text-white"
+                >
+                  {guardPage}
+                </button>
+
+                <span className="px-2 text-sm text-slate-500">
+                  / {guardTotalPages}
+                </span>
+
+                <button
+                  type="button"
+                  disabled={!canGoNextGuardPage || isLoadingGuards}
+                  onClick={() =>
+                    setGuardPage((page) => Math.min(page + 1, guardTotalPages))
+                  }
+                  aria-label="Trang sau"
+                  className="flex h-8 w-8 cursor-pointer transition-all duration-300 items-center justify-center rounded-md border border-slate-300 text-slate-600 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
+
         <div className="flex shrink-0 flex-col gap-3 border-t border-slate-200 bg-slate-50 px-6 py-4">
           {submitSuccess && (
             <p className="text-right text-sm font-medium text-emerald-600">
@@ -708,7 +815,7 @@ export function CreateShiftModal({
               type="button"
               onClick={handleCloseModal}
               disabled={isSubmitting}
-              className="rounded-md cursor-pointer border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
+              className="cursor-pointer rounded-md border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
             >
               Hủy bỏ
             </button>
@@ -717,7 +824,7 @@ export function CreateShiftModal({
               type="button"
               disabled={!canSubmit || isSubmitting}
               onClick={handleSubmit}
-              className="rounded-md cursor-pointer bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300"
+              className="cursor-pointer rounded-md bg-blue-700 px-5 py-2.5 text-sm font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:bg-slate-300"
             >
               {isSubmitting ? "Đang tạo..." : "Lưu & Tạo ca"}
             </button>
