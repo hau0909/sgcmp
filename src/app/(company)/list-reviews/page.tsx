@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
@@ -8,102 +8,245 @@ import {
   Search,
   Star,
 } from "lucide-react";
+import {
+  requestGetAllReviewByCompanyId,
+  requestGetAverageRatingByCompanyId,
+  requestGetRatingDistributionByCompanyId,
+} from "@/features/review/api/review.api";
+import {
+  GetAllReviewByCompanyIdResult,
+  RatingDistributionItem,
+} from "@/features/review/types";
+import { useAuthStore } from "@/store/auth.store";
 
-type ReviewItem = {
-  id: string;
-  customerName: string;
-  email: string;
-  customerAvatar?: string;
+const PAGE_SIZE = 10;
+
+const DEFAULT_RATING_DISTRIBUTION: RatingDistributionItem[] = [
+  { star: 5, count: 0, percent: 0 },
+  { star: 4, count: 0, percent: 0 },
+  { star: 3, count: 0, percent: 0 },
+  { star: 2, count: 0, percent: 0 },
+  { star: 1, count: 0, percent: 0 },
+];
+
+const StarRating = ({
+  rating,
+  sizeClassName = "h-4 w-4",
+  colorClassName = "fill-blue-600 text-blue-600",
+}: {
   rating: number;
-  content: string;
-};
+  sizeClassName?: string;
+  colorClassName?: string;
+}) => {
+  const safeRating = Math.max(0, Math.min(5, Number(rating) || 0));
 
-const reviews: ReviewItem[] = [
-  {
-    id: "1",
-    customerName: "Ngân hàng TMCP ACB",
-    email: "hcm@gmail.com",
-    customerAvatar: "🏦",
-    rating: 5,
-    content:
-      "Đội ngũ bảo vệ rất chuyên nghiệp, đúng giờ và xử lý tình huống tốt. Đội ngũ bảo vệ rất chuyên nghiệp, đúng giờ và xử lý tình huống tốt. Đội ngũ bảo vệ rất chuyên nghiệp, đúng giờ và xử lý tình huống tốt. Đội ngũ bảo vệ rất chuyên nghiệp, đúng giờ và xử lý tình huống tốt. Đội ngũ bảo vệ rất chuyên nghiệp, đúng giờ và xử lý tình huống tốt.",
-  },
-  {
-    id: "2",
-    customerName: "VinGroup Plaza",
-    email: "vincom@gmail.com",
-    customerAvatar: "V",
-    rating: 4,
-    content:
-      "Nhân viên nhiệt tình, tuy nhiên ca đêm cần cải thiện việc báo cáo.",
-  },
-  {
-    id: "3",
-    customerName: "TechFest Vietnam",
-    email: "techFest@gmail.com",
-    customerAvatar: "💻",
-    rating: 5,
-    content:
-      "Bảo vệ kiểm soát khu vực rất tốt, hỗ trợ khách tham dự nhanh chóng.",
-  },
-];
-
-const ratingDistribution = [
-  { star: 5, count: 934, percent: 76 },
-  { star: 4, count: 186, percent: 15 },
-  { star: 3, count: 62, percent: 5 },
-  { star: 2, count: 25, percent: 2 },
-  { star: 1, count: 38, percent: 3 },
-];
-
-const totalReviews = 1245;
-const averageRating = 4.8;
-
-const StarRating = ({ rating }: { rating: number }) => {
   return (
     <div className="flex items-center gap-0.5">
       {Array.from({ length: 5 }).map((_, index) => {
-        const active = index < rating;
+        const starNumber = index + 1;
+
+        const isFull = safeRating >= starNumber;
+        const isHalf = !isFull && safeRating > index;
+        const fillPercent = isFull ? 100 : isHalf ? 50 : 0;
 
         return (
-          <Star
-            key={index}
-            className={`h-4 w-4 ${
-              active
-                ? "fill-blue-600 text-blue-600"
-                : "fill-slate-200 text-slate-300"
-            }`}
-          />
+          <div key={index} className={`relative ${sizeClassName}`}>
+            <Star
+              className={`absolute inset-0 ${sizeClassName} fill-slate-200 text-slate-300`}
+            />
+
+            <div
+              className="absolute inset-0 overflow-hidden"
+              style={{ width: `${fillPercent}%` }}
+            >
+              <Star className={`${sizeClassName} ${colorClassName}`} />
+            </div>
+          </div>
         );
       })}
     </div>
   );
 };
 
+const ReviewTableSkeleton = () => {
+  return (
+    <>
+      {Array.from({ length: 5 }).map((_, index) => (
+        <tr key={index} className="animate-pulse">
+          <td className="px-5 py-5">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-md bg-slate-200" />
+              <div className="space-y-2">
+                <div className="h-4 w-36 rounded bg-slate-200" />
+                <div className="h-3 w-28 rounded bg-slate-200" />
+              </div>
+            </div>
+          </td>
+
+          <td className="px-5 py-5">
+            <div className="h-4 w-24 rounded bg-slate-200" />
+          </td>
+
+          <td className="px-5 py-5">
+            <div className="h-4 w-[420px] max-w-full rounded bg-slate-200" />
+          </td>
+
+          <td className="px-5 py-5 text-center">
+            <div className="mx-auto h-4 w-20 rounded bg-slate-200" />
+          </td>
+        </tr>
+      ))}
+    </>
+  );
+};
+
 export default function ServiceReviewPage() {
+  const companyId = useAuthStore((state) => state.company_id);
+
+  const [reviewData, setReviewData] =
+    useState<GetAllReviewByCompanyIdResult | null>(null);
+
+  const [averageRating, setAverageRating] = useState(0);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [ratingDistribution, setRatingDistribution] = useState<
+    RatingDistributionItem[]
+  >(DEFAULT_RATING_DISTRIBUTION);
+
   const [searchValue, setSearchValue] = useState("");
   const [ratingFilter, setRatingFilter] = useState("all");
+  const [page, setPage] = useState(1);
+
+  const [isReviewLoading, setIsReviewLoading] = useState(false);
+  const [isSummaryLoading, setIsSummaryLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  useEffect(() => {
+    const fetchReviewSummary = async () => {
+      if (!companyId) {
+        setErrorMessage("Không tìm thấy công ty để lấy dữ liệu đánh giá.");
+        return;
+      }
+
+      try {
+        setIsSummaryLoading(true);
+        setErrorMessage("");
+
+        const [averageRatingResponse, ratingDistributionResponse] =
+          await Promise.all([
+            requestGetAverageRatingByCompanyId(companyId),
+            requestGetRatingDistributionByCompanyId(companyId),
+          ]);
+
+        setAverageRating(
+          Number(averageRatingResponse.data.average_rating ?? 0),
+        );
+        setTotalReviews(ratingDistributionResponse.data.total_reviews ?? 0);
+        setRatingDistribution(
+          ratingDistributionResponse.data.rating_distribution ??
+            DEFAULT_RATING_DISTRIBUTION,
+        );
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Không thể lấy tổng quan đánh giá.";
+
+        setErrorMessage(message);
+      } finally {
+        setIsSummaryLoading(false);
+      }
+    };
+
+    fetchReviewSummary();
+  }, [companyId]);
+
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (!companyId) {
+        setErrorMessage("Không tìm thấy công ty để lấy danh sách đánh giá.");
+        return;
+      }
+
+      try {
+        setIsReviewLoading(true);
+        setErrorMessage("");
+
+        const response = await requestGetAllReviewByCompanyId({
+          companyId,
+          page,
+        });
+
+        setReviewData(response.data);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Không thể lấy danh sách đánh giá.";
+
+        setErrorMessage(message);
+      } finally {
+        setIsReviewLoading(false);
+      }
+    };
+
+    fetchReviews();
+  }, [companyId, page]);
+
+  const reviews = reviewData?.reviews ?? [];
+  const pagination = reviewData?.pagination;
 
   const filteredReviews = useMemo(() => {
     return reviews.filter((review) => {
       const keyword = searchValue.toLowerCase().trim();
 
+      const customerName = review.customer?.full_name ?? "";
+      const email = review.customer?.email ?? "";
+      const comment = review.comment ?? "";
+
       const matchSearch =
-        review.customerName.toLowerCase().includes(keyword) ||
-        review.email.toLowerCase().includes(keyword) ||
-        review.content.toLowerCase().includes(keyword);
+        keyword.length === 0 ||
+        customerName.toLowerCase().includes(keyword) ||
+        email.toLowerCase().includes(keyword) ||
+        comment.toLowerCase().includes(keyword);
+
+      const selectedRating = Number(ratingFilter);
+      const reviewRating = Number(review.rating);
 
       const matchRating =
-        ratingFilter === "all" || review.rating === Number(ratingFilter);
+        ratingFilter === "all" ||
+        (selectedRating === 5
+          ? reviewRating === 5
+          : reviewRating >= selectedRating &&
+            reviewRating < selectedRating + 1);
 
       return matchSearch && matchRating;
     });
-  }, [searchValue, ratingFilter]);
+  }, [reviews, searchValue, ratingFilter]);
+
+  const totalItems = pagination?.total_items ?? 0;
+  const currentPage = pagination?.page ?? page;
+  const totalPages = pagination?.total_pages ?? 0;
+
+  const fromItem = totalItems === 0 ? 0 : (currentPage - 1) * PAGE_SIZE + 1;
+
+  const toItem =
+    totalItems === 0 ? 0 : Math.min(currentPage * PAGE_SIZE, totalItems);
+
+  const handlePreviousPage = () => {
+    if (pagination?.has_previous_page) {
+      setPage((prevPage) => Math.max(prevPage - 1, 1));
+    }
+  };
+
+  const handleNextPage = () => {
+    if (pagination?.has_next_page) {
+      setPage((prevPage) => prevPage + 1);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto max-w-7xl space-y-6">
-        {/* Header */}
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-900">
@@ -121,7 +264,12 @@ export default function ServiceReviewPage() {
           </button>
         </div>
 
-        {/* Summary cards */}
+        {errorMessage && (
+          <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
+            {errorMessage}
+          </div>
+        )}
+
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-[330px_1fr]">
           <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex h-full flex-col items-center justify-center text-center">
@@ -130,19 +278,18 @@ export default function ServiceReviewPage() {
               </p>
 
               <div className="mt-4 text-6xl font-bold text-blue-800">
-                {averageRating}
+                {isSummaryLoading ? "..." : averageRating.toFixed(1)}
                 <span className="text-5xl font-semibold text-slate-800">
                   /5
                 </span>
               </div>
 
-              <div className="mt-3 flex items-center gap-1">
-                {Array.from({ length: 5 }).map((_, index) => (
-                  <Star
-                    key={index}
-                    className="h-6 w-6 fill-blue-800 text-blue-800"
-                  />
-                ))}
+              <div className="mt-3">
+                <StarRating
+                  rating={averageRating}
+                  sizeClassName="h-6 w-6"
+                  colorClassName="fill-blue-800 text-blue-800"
+                />
               </div>
 
               <p className="mt-4 text-sm text-slate-600">
@@ -187,9 +334,7 @@ export default function ServiceReviewPage() {
           </div>
         </div>
 
-        {/* Filter + Table */}
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          {/* Filters */}
           <div className="flex flex-col gap-3 border-b border-slate-200 bg-slate-50 p-4 md:flex-row md:items-center md:justify-between">
             <div className="flex flex-col gap-3 md:flex-row md:items-center">
               <div className="relative w-full md:w-[280px]">
@@ -218,21 +363,36 @@ export default function ServiceReviewPage() {
 
             <div className="flex items-center justify-end gap-4 text-sm text-slate-600">
               <span>
-                <span className="font-semibold text-slate-900">1-10</span> of{" "}
-                {totalReviews.toLocaleString("en-US")}
+                <span className="font-semibold text-slate-900">
+                  {fromItem}-{toItem}
+                </span>{" "}
+                of {totalItems.toLocaleString("en-US")}
               </span>
 
-              <button className="rounded-md p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700">
+              <button
+                type="button"
+                onClick={handlePreviousPage}
+                disabled={!pagination?.has_previous_page || isReviewLoading}
+                className="rounded-md p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 <ChevronLeft className="h-5 w-5" />
               </button>
 
-              <button className="rounded-md p-2 text-slate-700 transition hover:bg-slate-100">
+              <button
+                type="button"
+                onClick={handleNextPage}
+                disabled={!pagination?.has_next_page || isReviewLoading}
+                className="rounded-md p-2 text-slate-700 transition hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-40"
+              >
                 <ChevronRight className="h-5 w-5" />
               </button>
+
+              <span className="text-xs font-semibold text-slate-500">
+                Trang {currentPage}/{totalPages || 1}
+              </span>
             </div>
           </div>
 
-          {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full min-w-[760px] border-collapse">
               <thead>
@@ -253,44 +413,73 @@ export default function ServiceReviewPage() {
               </thead>
 
               <tbody className="divide-y divide-slate-200 bg-white">
-                {filteredReviews.map((review) => (
-                  <tr key={review.id} className="transition hover:bg-slate-50">
-                    <td className="px-5 py-5">
-                      <div className="flex items-center gap-3">
-                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-sm font-bold text-slate-700">
-                          {review.customerAvatar}
-                        </div>
+                {isReviewLoading ? (
+                  <ReviewTableSkeleton />
+                ) : (
+                  filteredReviews.map((review) => {
+                    const customerName =
+                      review.customer?.full_name ?? "Khách hàng";
+                    const customerEmail =
+                      review.customer?.email ?? "Chưa có email";
+                    const avatarUrl = review.customer?.avatar_url;
+                    const avatarFallback = customerName.charAt(0).toUpperCase();
 
-                        <div>
-                          <p className="max-w-[180px] font-bold text-slate-900">
-                            {review.customerName}
+                    return (
+                      <tr
+                        key={review.review_id}
+                        className="transition hover:bg-slate-50"
+                      >
+                        <td className="px-5 py-5">
+                          <div className="flex items-center gap-3">
+                            {avatarUrl ? (
+                              <img
+                                src={avatarUrl}
+                                alt={customerName}
+                                className="h-10 w-10 shrink-0 rounded-md border border-slate-300 object-cover"
+                              />
+                            ) : (
+                              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-slate-300 bg-slate-100 text-sm font-bold text-slate-700">
+                                {avatarFallback}
+                              </div>
+                            )}
+
+                            <div>
+                              <p className="max-w-[180px] font-bold text-slate-900">
+                                {customerName}
+                              </p>
+                              <p className="mt-1 text-xs text-slate-500">
+                                {customerEmail}
+                              </p>
+                            </div>
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <div className="flex items-center gap-2">
+                            <StarRating rating={Number(review.rating)} />
+                            <span className="text-xs font-semibold text-slate-500">
+                              {Number(review.rating).toFixed(1)}
+                            </span>
+                          </div>
+                        </td>
+
+                        <td className="px-5 py-5">
+                          <p className="max-w-[520px] truncate text-sm text-slate-600">
+                            {review.comment ?? "Không có nội dung đánh giá."}
                           </p>
-                          <p className="mt-1 text-xs text-slate-500">
-                            {review.email}
-                          </p>
-                        </div>
-                      </div>
-                    </td>
+                        </td>
 
-                    <td className="px-5 py-5">
-                      <StarRating rating={review.rating} />
-                    </td>
+                        <td className="px-5 py-5 text-center">
+                          <button className="text-sm font-bold uppercase text-blue-600 transition hover:text-blue-800">
+                            Xem chi tiết
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
 
-                    <td className="px-5 py-5">
-                      <p className="max-w-[520px] truncate text-sm text-slate-600">
-                        {review.content}
-                      </p>
-                    </td>
-
-                    <td className="px-5 py-5 text-center">
-                      <button className="text-sm font-bold uppercase text-blue-600 transition hover:text-blue-800">
-                        Xem chi tiết
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-
-                {filteredReviews.length === 0 && (
+                {!isReviewLoading && filteredReviews.length === 0 && (
                   <tr>
                     <td
                       colSpan={4}
