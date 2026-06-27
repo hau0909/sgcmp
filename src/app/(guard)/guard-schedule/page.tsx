@@ -1,0 +1,418 @@
+"use client";
+
+import React, { useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { requestGetGuardShiftsByWeek } from "@/features/shift/api/shift.api";
+import type { GuardShiftItem } from "@/features/shift/type";
+import {
+  type ShiftItem,
+  ShiftCard,
+} from "@/features/shift/components/ShiftCardGuard";
+
+type DaySchedule = {
+  date: Date;
+  shifts: ShiftItem[];
+};
+
+const weekDayLabels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+
+const addDays = (date: Date, days: number) => {
+  const result = new Date(date);
+  result.setDate(result.getDate() + days);
+  return result;
+};
+
+const startOfWeekMonday = (date: Date) => {
+  const result = new Date(date);
+  const day = result.getDay();
+  const diff = day === 0 ? -6 : 1 - day;
+
+  result.setDate(result.getDate() + diff);
+  result.setHours(0, 0, 0, 0);
+
+  return result;
+};
+
+const formatGuardShiftDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
+const formatMonthYear = (weekDays: Date[]) => {
+  const firstDay = weekDays[0];
+  const lastDay = weekDays[6];
+
+  const firstMonth = firstDay.toLocaleDateString("vi-VN", {
+    month: "long",
+  });
+
+  const lastMonth = lastDay.toLocaleDateString("vi-VN", {
+    month: "long",
+  });
+
+  const firstYear = firstDay.getFullYear();
+  const lastYear = lastDay.getFullYear();
+
+  if (firstMonth === lastMonth && firstYear === lastYear) {
+    return `${firstMonth} ${firstYear}`;
+  }
+
+  if (firstYear === lastYear) {
+    return `${firstMonth} - ${lastMonth} ${firstYear}`;
+  }
+
+  return `${firstMonth} ${firstYear} - ${lastMonth} ${lastYear}`;
+};
+
+const isSameDate = (first: Date, second: Date) => {
+  return (
+    first.getDate() === second.getDate() &&
+    first.getMonth() === second.getMonth() &&
+    first.getFullYear() === second.getFullYear()
+  );
+};
+
+const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
+  return {
+    id: shift.id,
+    time: shift.time,
+    shift_name: shift.shift_name,
+    location: shift.location,
+    address: shift.address,
+    status: shift.status,
+  };
+};
+
+const ShiftCardSkeleton = () => {
+  return (
+    <div className="animate-pulse rounded-lg border border-slate-200 bg-white p-3 shadow-sm">
+      <div className="mb-4 h-5 w-24 rounded-full bg-slate-200" />
+
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 shrink-0 rounded-full bg-slate-200" />
+          <div className="h-4 w-32 rounded bg-slate-200" />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 shrink-0 rounded-full bg-slate-200" />
+          <div className="h-4 w-52 rounded bg-slate-200" />
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="h-4 w-4 shrink-0 rounded-full bg-slate-200" />
+          <div className="h-4 w-40 rounded bg-slate-200" />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const EmptyScheduleSkeleton = () => {
+  return (
+    <div className="flex h-full min-h-[128px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4">
+      <div className="w-full animate-pulse space-y-3">
+        <div className="mx-auto h-4 w-32 rounded bg-slate-200" />
+        <div className="mx-auto h-4 w-48 rounded bg-slate-200" />
+        <div className="mx-auto h-4 w-24 rounded bg-slate-200" />
+      </div>
+    </div>
+  );
+};
+
+export default function GuardSchedulePage() {
+  const today = useMemo(() => new Date(), []);
+  const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(today));
+  const [selectedDate, setSelectedDate] = useState(today);
+  const [shiftsByDate, setShiftsByDate] = useState<Record<string, ShiftItem[]>>(
+    {},
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const router = useRouter();
+
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, index) => addDays(weekStart, index));
+  }, [weekStart]);
+
+  useEffect(() => {
+    const fetchGuardShiftsByWeek = async () => {
+      try {
+        setLoading(true);
+        setError("");
+
+        const response = await requestGetGuardShiftsByWeek({
+          date: formatGuardShiftDateKey(weekStart),
+        });
+
+        const groupedShifts = response.data.grouped_by_date;
+        const mappedShiftsByDate: Record<string, ShiftItem[]> = {};
+
+        Object.entries(groupedShifts).forEach(([dateKey, shifts]) => {
+          mappedShiftsByDate[dateKey] = shifts.map(mapGuardShiftToShiftItem);
+        });
+
+        setShiftsByDate(mappedShiftsByDate);
+      } catch (error) {
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Không thể lấy lịch trực theo tuần.";
+
+        setError(message);
+        setShiftsByDate({});
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchGuardShiftsByWeek();
+  }, [weekStart]);
+
+  const weekSchedules: DaySchedule[] = useMemo(() => {
+    return weekDays.map((date) => {
+      const dateKey = formatGuardShiftDateKey(date);
+
+      return {
+        date,
+        shifts: shiftsByDate[dateKey] ?? [],
+      };
+    });
+  }, [weekDays, shiftsByDate]);
+
+  const formatDayMonth = (date: Date) => {
+    return `${date.getDate()}/${date.getMonth() + 1}`;
+  };
+
+  const formatWeekdayText = (date: Date) => {
+    const day = date.getDay();
+
+    if (day === 0) {
+      return "Chủ nhật";
+    }
+
+    return `Thứ ${day + 1}`;
+  };
+
+  const handleOpenCheckinByDate = (date: Date) => {
+    const dateKey = formatGuardShiftDateKey(date);
+
+    setSelectedDate(date);
+    router.push(`/guard-shift?date=${dateKey}`);
+  };
+
+  const handlePreviousWeek = () => {
+    const newWeekStart = addDays(weekStart, -7);
+
+    setWeekStart(newWeekStart);
+    setSelectedDate(newWeekStart);
+  };
+
+  const handleCurrentWeek = () => {
+    const currentWeekStart = startOfWeekMonday(today);
+
+    setWeekStart(currentWeekStart);
+    setSelectedDate(today);
+  };
+
+  const handleNextWeek = () => {
+    const newWeekStart = addDays(weekStart, 7);
+
+    setWeekStart(newWeekStart);
+    setSelectedDate(newWeekStart);
+  };
+
+  return (
+    <div className="-mx-4 -my-4 min-h-full bg-[#f7f8fb]">
+      {/* Page Header */}
+      <section className="px-4 pb-5 pt-8">
+        <h1 className="text-4xl font-black leading-tight text-slate-950">
+          Lịch trực
+        </h1>
+        <p className="mt-3 text-lg font-bold text-slate-600">
+          Xem lịch ca trực theo tuần.
+        </p>
+      </section>
+
+      {/* Calendar Full Screen */}
+      <section className="w-full bg-white">
+        {/* Calendar Top */}
+        <div className="flex items-center justify-between border-y border-slate-200 px-6 py-5">
+          <button
+            type="button"
+            onClick={handlePreviousWeek}
+            disabled={loading}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-all hover:bg-blue-100 hover:text-[#0b4f9c] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ChevronLeft size={30} />
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCurrentWeek}
+            disabled={loading}
+            className="rounded-xl px-4 py-2 text-center transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-70"
+          >
+            <h2 className="text-lg font-black capitalize text-[#0b4f9c]">
+              {formatMonthYear(weekDays)}
+            </h2>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleNextWeek}
+            disabled={loading}
+            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-700 transition-all hover:bg-blue-100 hover:text-[#0b4f9c] disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <ChevronRight size={30} />
+          </button>
+        </div>
+
+        {/* 7 Days Bar */}
+        <div className="grid grid-cols-7 border-b border-slate-200 bg-white px-3 py-4">
+          {weekDays.map((date) => {
+            const dateKey = formatGuardShiftDateKey(date);
+            const isToday = isSameDate(date, today);
+            const hasShift = !!shiftsByDate[dateKey]?.length;
+
+            return (
+              <button
+                key={dateKey}
+                type="button"
+                onClick={() => handleOpenCheckinByDate(date)}
+                disabled={loading}
+                className={`relative mx-1 flex min-h-[74px] flex-col items-center justify-center rounded-2xl transition-all disabled:cursor-not-allowed ${
+                  isToday
+                    ? "bg-blue-200 text-[#0b4f9c]"
+                    : "bg-slate-50 text-slate-600 hover:bg-blue-50 hover:text-[#0b4f9c]"
+                }`}
+              >
+                <span
+                  className={`text-sm ${
+                    isToday
+                      ? "font-black text-[#0b4f9c]"
+                      : "font-bold text-slate-500"
+                  }`}
+                >
+                  {weekDayLabels[date.getDay()]}
+                </span>
+
+                <span
+                  className={`mt-1 text-sm ${
+                    isToday
+                      ? "font-black text-[#0b4f9c]"
+                      : "font-extrabold text-slate-700"
+                  }`}
+                >
+                  {date.getDate()}
+                </span>
+
+                {hasShift && !loading && (
+                  <span className="absolute bottom-2 h-2 w-2 rounded-full bg-[#0b4f9c]" />
+                )}
+
+                {loading && (
+                  <span className="absolute bottom-2 h-2 w-2 animate-pulse rounded-full bg-slate-300" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+
+        {error && (
+          <div className="border-b border-red-100 bg-red-50 px-4 py-3">
+            <p className="text-center text-sm font-bold text-red-600">
+              {error}
+            </p>
+          </div>
+        )}
+
+        {/* Vertical Calendar List */}
+        <div className="divide-y divide-slate-200">
+          {weekSchedules.map((day) => {
+            const dateKey = formatGuardShiftDateKey(day.date);
+            const isToday = isSameDate(day.date, today);
+            const active = isSameDate(day.date, selectedDate);
+            const hasShift = day.shifts.length > 0;
+
+            return (
+              <div
+                key={dateKey}
+                className={`grid w-full grid-cols-[92px_1fr] transition-all ${
+                  active ? "bg-blue-50/70" : "bg-white"
+                }`}
+              >
+                {/* Date Cell */}
+                <button
+                  type="button"
+                  onClick={() => handleOpenCheckinByDate(day.date)}
+                  disabled={loading}
+                  className={`flex min-h-[160px] flex-col items-center justify-center border-r border-slate-200 px-2 py-6 disabled:cursor-not-allowed ${
+                    isToday ? "bg-blue-50" : "bg-slate-50"
+                  }`}
+                >
+                  <span
+                    className={`text-2xl ${
+                      isToday
+                        ? "font-black text-[#0b4f9c]"
+                        : "font-black text-slate-950"
+                    }`}
+                  >
+                    {formatDayMonth(day.date)}
+                  </span>
+
+                  <span
+                    className={`mt-2 text-sm ${
+                      isToday
+                        ? "font-black text-[#0b4f9c]"
+                        : "font-bold text-slate-500"
+                    }`}
+                  >
+                    {formatWeekdayText(day.date)}
+                  </span>
+                </button>
+
+                {/* Shift Cell */}
+                <div
+                  className="min-h-[160px] cursor-pointer p-4"
+                  onClick={() => {
+                    if (!loading) {
+                      handleOpenCheckinByDate(day.date);
+                    }
+                  }}
+                >
+                  {loading ? (
+                    <div className="space-y-4">
+                      {isToday ? (
+                        <ShiftCardSkeleton />
+                      ) : (
+                        <EmptyScheduleSkeleton />
+                      )}
+                    </div>
+                  ) : hasShift ? (
+                    <div className="space-y-4">
+                      {day.shifts.map((shift) => (
+                        <ShiftCard key={shift.id} shift={shift} />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="flex h-full min-h-[128px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50">
+                      <p className="text-sm font-bold text-slate-400">
+                        Trống lịch
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
+    </div>
+  );
+}
