@@ -7,6 +7,7 @@ import {
   updateCompanyprofile,
   updateRegistrationCodeByCompanyId,
   uploadCompanyImage,
+  getCompanyActivityImages,
 } from "../repository/company.repository";
 import {
   getCitiesService as getCities,
@@ -337,4 +338,10 @@ export const uploadCompanyImageService = async ({
   });
 
   return image;
+};
+
+export const getCompanyActivityImagesService = async (company_id: string) => {
+  const images = await getCompanyActivityImages(company_id);
+
+  return images;
 };

@@ -342,3 +342,20 @@ export const uploadCompanyImage = async ({
     file_path,
   };
 };
+
+export const getCompanyActivityImages = async (company_id: string) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("company_imgs")
+    .select("image_id, company_id, image_url, image_type, created_at")
+    .eq("company_id", company_id)
+    .eq("image_type", "other")
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+};

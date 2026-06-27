@@ -6,7 +6,15 @@ import type {
   UploadGuardAvatarResponse,
   GetAllGuardsResponse,
   GetGuardDetailResponse,
+  GetAllGuardsParams,
+  GuardListPaginatedData,
 } from "../type";
+
+interface ApiResponse<T> {
+  success: boolean;
+  message: string;
+  data: T;
+}
 
 export const requestInsertGuardInformation = async (
   input: InsertGuardInformationInput,
@@ -56,16 +64,29 @@ export const requestUploadGuardAvatar = async (
   return data;
 };
 
-export const requestGetAllGuards = async (): Promise<GetAllGuardsResponse> => {
-  return fetcher("/api/guard", {
-    method: "GET",
-  });
-};
-
 export const requestGetGuardDetail = async (
   guard_id: string,
 ): Promise<GetGuardDetailResponse> => {
   return fetcher(`/api/guard/${encodeURIComponent(guard_id)}`, {
+    method: "GET",
+  });
+};
+
+export const requestGetAllGuards = ({
+  page = 1,
+  limit = 10,
+  search = "",
+}: GetAllGuardsParams = {}) => {
+  const searchParams = new URLSearchParams();
+
+  searchParams.set("page", String(page));
+  searchParams.set("limit", String(limit));
+
+  if (search.trim()) {
+    searchParams.set("search", search.trim());
+  }
+
+  return fetcher(`/api/guard?${searchParams.toString()}`, {
     method: "GET",
   });
 };

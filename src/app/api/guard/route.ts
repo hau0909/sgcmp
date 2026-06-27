@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextResponse, NextRequest } from "next/server";
 import {
   handleInsertGuardInformation,
   handleGetAllGuards,
@@ -34,24 +34,16 @@ export const POST = async (request: Request) => {
   }
 };
 
-export const GET = async () => {
-  try {
-    const result = await handleGetAllGuards();
+export async function GET(request: NextRequest) {
+  const { searchParams } = new URL(request.url);
 
-    return NextResponse.json(result, {
-      status: result.success ? 200 : 400,
-    });
-  } catch (error: unknown) {
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          error instanceof Error ? error.message : "Đã xảy ra lỗi hệ thống",
-        data: [],
-      },
-      {
-        status: 500,
-      },
-    );
-  }
-};
+  const result = await handleGetAllGuards({
+    page: searchParams.get("page"),
+    limit: searchParams.get("limit"),
+    search: searchParams.get("search"),
+  });
+
+  return NextResponse.json(result, {
+    status: result.success ? 200 : 400,
+  });
+}

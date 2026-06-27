@@ -7,6 +7,8 @@ import type {
   UploadGuardAvatarResult,
   GuardListItem,
   GuardDetailDatabase,
+  GetAllGuardsRepositoryParams,
+  GetAllGuardsRepositoryResult,
 } from "../type";
 import { Guard } from "@/types/Guard";
 
@@ -165,12 +167,47 @@ export const uploadGuardAvatar = async ({
   };
 };
 
-export const getAllGuards = async (
-  company_id: string,
-): Promise<GuardListItem[]> => {
+export const getAllGuards = async ({
+  company_id,
+  page,
+  limit,
+  search,
+}: GetAllGuardsRepositoryParams): Promise<GetAllGuardsRepositoryResult> => {
   const supabase = await createClient();
 
-  const { data, error } = await supabase
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  let matchedUserIds: string[] | null = null;
+
+  const keyword = search?.trim();
+
+  if (keyword) {
+    const safeKeyword = keyword.replace(/[,()]/g, " ");
+    const searchPattern = `%${safeKeyword}%`;
+
+    const { data: matchedProfiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .or(
+        `full_name.ilike.${searchPattern},phone_number.ilike.${searchPattern},email.ilike.${searchPattern}`,
+      );
+
+    if (profileError) {
+      throw new Error(profileError.message);
+    }
+
+    matchedUserIds = (matchedProfiles ?? []).map((profile) => profile.user_id);
+
+    if (matchedUserIds.length === 0) {
+      return {
+        guards: [],
+        total: 0,
+      };
+    }
+  }
+
+  let query = supabase
     .from("guards")
     .select(
       `
@@ -183,17 +220,30 @@ export const getAllGuards = async (
         email
       )
     `,
+      {
+        count: "exact",
+      },
     )
     .eq("company_id", company_id)
     .order("created_at", {
       ascending: false,
-    });
+    })
+    .range(from, to);
+
+  if (matchedUserIds) {
+    query = query.in("user_id", matchedUserIds);
+  }
+
+  const { data, error, count } = await query;
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return (data ?? []) as unknown as GuardListItem[];
+  return {
+    guards: (data ?? []) as unknown as GuardListItem[],
+    total: count ?? 0,
+  };
 };
 
 export const getCompanyByOwnerId = async (
@@ -287,9 +337,7 @@ export const getGuardByUserId = async (
   return (data as Guard) || null;
 };
 
-export const getGuardsByIds = async (
-  guardIds: string[],
-): Promise<Guard[]> => {
+export const getGuardsByIds = async (guardIds: string[]): Promise<Guard[]> => {
   if (guardIds.length === 0) {
     return [];
   }
