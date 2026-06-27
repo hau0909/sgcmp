@@ -24,6 +24,7 @@ import {
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/store/auth.store";
 import { useSubscriptionStore } from "@/store/subscription.store";
+import { requestGetCompanyById } from "@/features/company/api/company.api";
 
 export default function CompanyLayout({
   children,
@@ -39,6 +40,32 @@ export default function CompanyLayout({
     (state) => state.fetchSubscription,
   );
   const { isActive, isLoading } = useSubscriptionStore();
+  const [companyInfo, setCompanyInfo] = useState<{
+    name: string;
+    ownerName?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!companyId) return;
+    let active = true;
+    const fetchCompany = async () => {
+      try {
+        const data = await requestGetCompanyById(companyId);
+        if (active && data) {
+          setCompanyInfo({
+            name: data.name,
+            ownerName: data.ownerName,
+          });
+        }
+      } catch (err) {
+        console.error("Lỗi khi tải thông tin công ty trong layout:", err);
+      }
+    };
+    fetchCompany();
+    return () => {
+      active = false;
+    };
+  }, [companyId]);
 
   useEffect(() => {
     if (companyId) {
@@ -169,15 +196,15 @@ export default function CompanyLayout({
           {/* Sidebar Header */}
           <div className="flex items-center justify-between mb-6 px-2">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded bg-primary flex items-center justify-center text-on-primary">
+              <div className="w-10 h-10 rounded bg-primary flex items-center justify-center text-on-primary shrink-0">
                 <Shield className="w-5 h-5" />
               </div>
               <div>
                 <h2 className="text-sm font-bold text-on-surface tracking-tight leading-tight">
-                  Bảo vệ Sài Gòn
+                  SGCMP
                 </h2>
                 <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest mt-1">
-                  Giám đốc: Lê Văn Long
+                  Quản lý doanh nghiệp
                 </p>
               </div>
             </div>
@@ -263,9 +290,19 @@ export default function CompanyLayout({
                 <Menu className="w-6 h-6" />
               </button>
 
-              <h1 className="text-lg font-bold text-primary tracking-tight md:block hidden">
-                SGCMP - Quản lý doanh nghiệp
-              </h1>
+              <div className="md:flex flex-col items-start gap-0.5 hidden">
+                <h1
+                  className="text-sm font-bold text-on-surface tracking-tight leading-tight truncate max-w-[280px]"
+                  title={companyInfo?.name || ""}
+                >
+                  {companyInfo ? companyInfo.name : "Đang tải..."}
+                </h1>
+                {companyInfo?.ownerName && (
+                  <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest">
+                    Người đại diện: {companyInfo.ownerName}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Right Header Options */}

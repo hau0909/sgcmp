@@ -83,6 +83,8 @@ export interface CompanyDetailData {
   createdAt?: string;
   activityImgs?: string[];
   companyLicenseNo?: string;
+  ownerName?: string;
+  ownerId?: string;
 }
 
 export type UpdateCompanyProfileInput = {

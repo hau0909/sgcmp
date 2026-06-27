@@ -298,6 +298,7 @@ export const getCompanyByIdServiceInCustomer = async (
     createdAt: dbCompany.created_at,
     activityImgs,
     companyLicenseNo: dbCompany.business_license_no,
+    ownerId: dbCompany.owner_id,
   };
 };
 export const getCompanyByIdService = async (

@@ -23,6 +23,8 @@ import {
 import { getCurrentUserProfileService } from "@/features/auth/service/auth.service";
 import { ImageType } from "@/types/Enum";
 
+import { getProfileByUserIdService } from "@/features/profile/service/profile.service";
+
 export const handleGetCompanies = async (
   params: CompanyFilterParams,
 ): Promise<PaginatedCompaniesResponse> => {
@@ -41,6 +43,19 @@ export const handleGetCompanyById = async (
   id: string,
 ): Promise<CompanyDetailData | null> => {
   const result = await getCompanyByIdServiceInCustomer(id);
+  if (!result) return null;
+
+  if (result.ownerId) {
+    try {
+      const ownerProfile = await getProfileByUserIdService(result.ownerId);
+      if (ownerProfile) {
+        result.ownerName = ownerProfile.full_name;
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải thông tin người phụ trách:", err);
+    }
+  }
+
   return result;
 };
 
