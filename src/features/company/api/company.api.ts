@@ -134,3 +134,17 @@ export const requestGetCompanyActivityImages = async () => {
 
   return result.data;
 };
+
+export async function requestCreateCompanyPublishRequest(
+  companyId: string,
+  payload: { note?: string },
+): Promise<any> {
+  const url = `/api/companies/${companyId}/publish-requests`;
+  return await fetcher(url, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+}

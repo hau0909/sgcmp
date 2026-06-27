@@ -55,7 +55,7 @@ export const getAllActiveCompanies = async (): Promise<DbCompany[]> => {
       )
     `,
     )
-    .eq("status", "active")
+    .eq("status", "published")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -358,4 +358,41 @@ export const getCompanyActivityImages = async (company_id: string) => {
   }
 
   return data;
+};
+
+export const createCompanyPublishRequest = async (
+  companyId: string,
+  note?: string,
+): Promise<any> => {
+  const supabaseServer = await createClient();
+
+  // 1. Insert into company_publish_requests
+  const { data: requestData, error: requestError } = await supabaseServer
+    .from("company_publish_requests")
+    .insert({
+      company_id: companyId,
+      status: "pending",
+      note: note || null,
+      requested_at: new Date().toISOString(),
+    })
+    .select("request_id")
+    .single();
+
+  if (requestError) {
+    throw new Error(requestError.message);
+  }
+
+  // 2. Update company status to pending_publish
+  const { error: companyError } = await supabaseServer
+    .from("companies")
+    .update({
+      status: "pending_publish",
+    })
+    .eq("company_id", companyId);
+
+  if (companyError) {
+    throw new Error(companyError.message);
+  }
+
+  return requestData;
 };

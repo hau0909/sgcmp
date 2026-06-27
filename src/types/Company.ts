@@ -1,5 +1,5 @@
 import { CompanyAddress } from "../features/address/types";
-import { GeneralStatus } from "./Enum";
+import { CompanyStatus } from "./Enum";
 
 export interface Company {
   company_id: string;
@@ -12,6 +12,6 @@ export interface Company {
   phone: string;
   description: string | null;
   rating_average: number | null;
-  status: GeneralStatus;
+  status: CompanyStatus;
   created_at: string;
 }

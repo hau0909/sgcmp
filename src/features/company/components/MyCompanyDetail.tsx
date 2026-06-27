@@ -9,7 +9,9 @@ import {
   requestUpdateCompanyProfile,
   requestUploadCompanyImage,
   requestGetCompanyActivityImages,
+  requestCreateCompanyPublishRequest,
 } from "@/features/company/api/company.api";
+import { CompanyStatus } from "@/types/Enum";
 import { Service, CompanyServiceData } from "@/features/company/types";
 import { useAuthStore } from "@/store/auth.store";
 import {
@@ -75,6 +77,11 @@ export default function MyCompanyDetail() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+
+  const [status, setStatus] = useState<CompanyStatus | "">("");
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
+  const [publishNote, setPublishNote] = useState("");
+  const [submittingPublish, setSubmittingPublish] = useState(false);
 
   const [isActivityGalleryOpen, setIsActivityGalleryOpen] = useState(false);
   const [loadingActivityGallery, setLoadingActivityGallery] = useState(false);
@@ -522,6 +529,32 @@ export default function MyCompanyDetail() {
     }
   };
 
+  const handleSubmitPublishRequest = async () => {
+    if (!company_id) return;
+
+    try {
+      setSubmittingPublish(true);
+      hideToastImmediately();
+
+      await requestCreateCompanyPublishRequest(company_id, {
+        note: publishNote.trim() || undefined,
+      });
+
+      setStatus("pending_publish");
+      setIsConfirmModalOpen(false);
+      setPublishNote("");
+      showToast("success", "Gửi yêu cầu công khai thành công.");
+    } catch (err: any) {
+      console.error("Lỗi khi gửi yêu cầu công khai:", err);
+      showToast(
+        "error",
+        err.message || "Không thể gửi yêu cầu công khai. Vui lòng thử lại.",
+      );
+    } finally {
+      setSubmittingPublish(false);
+    }
+  };
+
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -609,6 +642,7 @@ export default function MyCompanyDetail() {
           if (data.licenseFileUrl) setLicenseImg(data.licenseFileUrl);
           if (data.activityImgs) setCompanyImgs(data.activityImgs);
           if (data.services) setCompanyServices(data.services);
+          if (data.status) setStatus(data.status);
         }
 
         if (servs) {
@@ -623,6 +657,16 @@ export default function MyCompanyDetail() {
 
     fetchCompanyData();
   }, [company_id]);
+
+  const DEFAULT_LOGO = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300";
+  const DEFAULT_BANNER = "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200";
+
+  const hasLogo = logoUrl && logoUrl !== DEFAULT_LOGO;
+  const hasBanner = bannerUrl && bannerUrl !== DEFAULT_BANNER;
+  const hasOtherImages = companyImgs && companyImgs.length >= 2;
+  const hasServices = companyServices && companyServices.length >= 1;
+
+  const isProfileComplete = hasLogo && hasBanner && hasOtherImages && hasServices;
 
   if (loading) {
     return (
@@ -707,6 +751,119 @@ export default function MyCompanyDetail() {
           )}
         </div>
       </div>
+
+      {status && (
+        <div
+          className={`p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs ${
+            status === "published"
+              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+              : status === "pending_publish"
+                ? "bg-amber-50 border-amber-200 text-amber-800"
+                : status === "active"
+                  ? "bg-blue-50 border-blue-200 text-blue-800"
+                  : status === "pending_register"
+                    ? "bg-purple-50 border-purple-200 text-purple-800"
+                    : status === "rejected"
+                      ? "bg-rose-50 border-rose-200 text-rose-800"
+                      : "bg-slate-50 border-slate-200 text-slate-800"
+          }`}
+        >
+          <div className="flex items-start gap-3">
+            <div
+              className={`p-2 rounded-xl mt-0.5 ${
+                status === "published"
+                  ? "bg-emerald-100 text-emerald-600"
+                  : status === "pending_publish"
+                    ? "bg-amber-100 text-amber-600"
+                    : status === "active"
+                      ? "bg-blue-100 text-blue-600"
+                      : status === "pending_register"
+                        ? "bg-purple-100 text-purple-600"
+                        : status === "rejected"
+                          ? "bg-rose-100 text-rose-600"
+                          : "bg-slate-100 text-slate-600"
+              }`}
+            >
+              <ShieldCheck className="w-5 h-5" />
+            </div>
+            <div className="space-y-2">
+              <h3 className="text-sm font-bold">
+                Trạng thái hoạt động:{" "}
+                {status === "published"
+                  ? "Đã công khai"
+                  : status === "pending_publish"
+                    ? "Đang chờ duyệt công khai"
+                    : status === "active"
+                      ? "Hoạt động (Chưa công khai)"
+                      : status === "pending_register"
+                        ? "Đang chờ duyệt đăng ký"
+                        : status === "rejected"
+                          ? "Bị từ chối"
+                          : "Nháp"}
+              </h3>
+              <p className="text-xs opacity-90 leading-relaxed">
+                {status === "published"
+                  ? "Doanh nghiệp của bạn đã được công khai trên hệ thống và khách hàng có thể tìm thấy bạn."
+                  : status === "pending_publish"
+                    ? "Yêu cầu công khai đang được Admin xét duyệt. Vui lòng chờ."
+                    : status === "active"
+                      ? "Hồ sơ đăng ký tài khoản đã được phê duyệt. Để gửi yêu cầu công khai doanh nghiệp lên hệ thống, vui lòng hoàn thiện các thông tin bắt buộc dưới đây:"
+                      : status === "pending_register"
+                        ? "Hồ sơ đăng ký tài khoản của bạn đang được xét duyệt bởi Admin."
+                        : status === "rejected"
+                          ? "Yêu cầu của bạn không được phê duyệt. Vui lòng liên hệ bộ phận hỗ trợ hoặc cập nhật lại hồ sơ doanh nghiệp."
+                          : "Hồ sơ đang ở dạng nháp."}
+              </p>
+
+              {status === "active" && (
+                <div className="bg-blue-100/50 border border-blue-200/60 rounded-xl p-3 mt-2 space-y-2 text-xs font-semibold text-blue-900 max-w-xl">
+                  <h4 className="font-bold text-[13px] text-blue-950">Checklist hoàn thiện hồ sơ để công khai:</h4>
+                  <ul className="space-y-1.5">
+                    <li className="flex items-center gap-2">
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasLogo ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}>
+                        {hasLogo ? "✓" : "○"}
+                      </span>
+                      <span>Ảnh đại diện (Logo) {hasLogo ? "(Đã hoàn thành)" : "(Chưa có)"}</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasBanner ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}>
+                        {hasBanner ? "✓" : "○"}
+                      </span>
+                      <span>Ảnh bìa (Banner) {hasBanner ? "(Đã hoàn thành)" : "(Chưa có)"}</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasOtherImages ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}>
+                        {hasOtherImages ? "✓" : "○"}
+                      </span>
+                      <span>Tải lên ít nhất 2 hình ảnh hoạt động {hasOtherImages ? `(Đã hoàn thành: ${companyImgs.length} ảnh)` : `(Hiện tại: ${companyImgs.length}/2 ảnh)`}</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasServices ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}>
+                        {hasServices ? "✓" : "○"}
+                      </span>
+                      <span>Cấu hình ít nhất 1 dịch vụ cung cấp {hasServices ? `(Đã hoàn thành: ${companyServices.length} dịch vụ)` : "(Chưa có dịch vụ nào)"}</span>
+                    </li>
+                  </ul>
+                </div>
+              )}
+            </div>
+          </div>
+          {status === "active" && (
+            <button
+              type="button"
+              disabled={!isProfileComplete}
+              onClick={() => setIsConfirmModalOpen(true)}
+              className={`lg:self-center px-4 py-2 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap self-start cursor-pointer ${
+                isProfileComplete
+                  ? "bg-blue-600 hover:bg-blue-700 text-white"
+                  : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
+              }`}
+            >
+              <Upload className="w-3.5 h-3.5" /> Gửi yêu cầu công khai
+            </button>
+          )}
+        </div>
+      )}
 
       <div className="flex flex-col space-y-6">
           {/* Section 1: Branding Images (Ảnh đại diện & Ảnh bìa) */}
@@ -1496,6 +1653,62 @@ export default function MyCompanyDetail() {
             >
               <X className="w-5 h-5" />
             </button>
+          </div>
+        </div>
+      )}
+
+      {isConfirmModalOpen && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center z-50 p-4 animate-fade-in">
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 transform transition-all scale-100">
+            <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
+              <h3 className="text-base font-extrabold text-on-surface flex items-center gap-2">
+                <ShieldCheck className="w-5 h-5 text-primary" />
+                Xác nhận gửi yêu cầu công khai
+              </h3>
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                className="text-on-surface-variant hover:text-on-surface hover:bg-surface-container-low rounded-lg p-1 transition-all cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
+                Khi gửi yêu cầu công khai, thông tin doanh nghiệp và các dịch vụ của bạn sẽ được gửi tới Ban quản trị hệ thống để xét duyệt trước khi hiển thị công khai trên trang Tìm kiếm.
+              </p>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-on-surface">Ghi chú gửi Admin (tùy chọn)</label>
+                <textarea
+                  rows={3}
+                  value={publishNote}
+                  onChange={(e) => setPublishNote(e.target.value)}
+                  placeholder="Nhập ghi chú hoặc lời nhắn gửi ban quản trị nếu có..."
+                  className="w-full text-sm border border-outline-variant rounded-xl px-3 py-2 font-medium text-on-surface bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary/20 outline-hidden resize-none"
+                />
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setIsConfirmModalOpen(false)}
+                disabled={submittingPublish}
+                className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low transition-all text-xs font-bold rounded-xl cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleSubmitPublishRequest}
+                disabled={submittingPublish}
+                className="px-4 py-2 bg-primary hover:bg-primary/95 text-on-primary font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {submittingPublish ? "Đang gửi..." : "Xác nhận gửi"}
+              </button>
+            </div>
           </div>
         </div>
       )}
