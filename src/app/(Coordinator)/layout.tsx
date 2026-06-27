@@ -1,9 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import RoleGuard from "@/components/auth/RoleGuard";
+import { useAuthStore } from "@/store/auth.store";
+import { requestGetCompanyById } from "@/features/company/api/company.api";
 import {
   Shield,
   HelpCircle,
@@ -28,6 +30,36 @@ export default function CoordinatorLayout({
 }>) {
   const pathname = usePathname();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const companyId = useAuthStore((state) => state.company_id);
+  const [companyInfo, setCompanyInfo] = useState<{
+    name: string;
+    ownerName?: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!companyId) return;
+    let active = true;
+    const fetchCompany = async () => {
+      try {
+        const data = await requestGetCompanyById(companyId);
+        if (active && data) {
+          setCompanyInfo({
+            name: data.name,
+            ownerName: data.ownerName,
+          });
+        }
+      } catch (err) {
+        console.error(
+          "Lỗi khi tải thông tin công ty trong Coordinator layout:",
+          err,
+        );
+      }
+    };
+    fetchCompany();
+    return () => {
+      active = false;
+    };
+  }, [companyId]);
 
   // Sidebar Items in Vietnamese
   const sidebarLinks = [
@@ -71,15 +103,15 @@ export default function CoordinatorLayout({
           {/* Sidebar Header */}
           <div className="flex items-center justify-between mb-6 px-2 shrink-0">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded bg-primary flex items-center justify-center text-on-primary">
+              <div className="w-10 h-10 rounded bg-primary flex items-center justify-center text-on-primary shrink-0">
                 <Shield className="w-5 h-5" />
               </div>
               <div>
                 <h2 className="text-sm font-bold text-on-surface tracking-tight leading-tight">
-                  Bảo vệ Sài Gòn
+                  SGCMP
                 </h2>
                 <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest mt-1">
-                  Giám đốc: Lê Văn Long
+                  Điều phối viên
                 </p>
               </div>
             </div>
@@ -153,9 +185,16 @@ export default function CoordinatorLayout({
               >
                 <Menu className="w-6 h-6" />
               </button>
-              <h1 className="text-lg font-bold text-primary tracking-tight md:block hidden">
-                SGCMP - Điều Phối Viên
-              </h1>
+              <div className="md:flex flex-col items-start gap-0.5 hidden">
+                <h1 className="text-sm font-bold text-on-surface tracking-tight leading-tight truncate max-w-[280px]" title={companyInfo?.name || ""}>
+                  {companyInfo ? companyInfo.name : "Đang tải..."}
+                </h1>
+                {companyInfo?.ownerName && (
+                  <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest">
+                    Giám đốc: {companyInfo.ownerName}
+                  </p>
+                )}
+              </div>
             </div>
 
             {/* Right Header Options */}
