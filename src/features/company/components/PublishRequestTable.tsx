@@ -169,13 +169,17 @@ const STATUS_CONFIG: Record<
   },
 };
 
-const getStatusConfig = (status: string) =>
-  STATUS_CONFIG[status] ?? {
-    label: status.toUpperCase(),
-    bg: "bg-[#f3f4f6]",
-    text: "text-[#374151]",
-    icon: <AlertCircle className="w-3.5 h-3.5" />,
-  };
+const getStatusConfig = (status: string) => {
+  const key = (status || "").toLowerCase();
+  return (
+    STATUS_CONFIG[key] ?? {
+      label: status.toUpperCase(),
+      bg: "bg-[#f3f4f6]",
+      text: "text-[#374151]",
+      icon: <AlertCircle className="w-3.5 h-3.5" />,
+    }
+  );
+};
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
@@ -185,11 +189,19 @@ export default function PublishRequestTable() {
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
-    // Simulation delay for smooth UI preview
-    setTimeout(() => {
-      setRequests(MOCK_PUBLISH_REQUESTS);
+    try {
+      const res = await fetch("/api/admin/publish-requests");
+      const data = await res.json();
+      if (res.ok && data.publish_requests) {
+        setRequests(data.publish_requests);
+      } else {
+        console.error("Lỗi khi tải danh sách yêu cầu công khai:", data.error);
+      }
+    } catch (err) {
+      console.error("Lỗi kết nối API:", err);
+    } finally {
       setLoading(false);
-    }, 400);
+    }
   }, []);
 
   React.useEffect(() => {
@@ -197,9 +209,15 @@ export default function PublishRequestTable() {
   }, [fetchData]);
 
   // ── Stats ────────────────────────────────────────────────────────────────
-  const pendingCount = requests.filter((r) => r.status === "pending").length;
-  const approvedCount = requests.filter((r) => r.status === "approved").length;
-  const rejectedCount = requests.filter((r) => r.status === "rejected").length;
+  const pendingCount = requests.filter(
+    (r) => (r.status || "").toLowerCase() === "pending"
+  ).length;
+  const approvedCount = requests.filter(
+    (r) => (r.status || "").toLowerCase() === "approved"
+  ).length;
+  const rejectedCount = requests.filter(
+    (r) => (r.status || "").toLowerCase() === "rejected"
+  ).length;
 
   // ── Loading ──────────────────────────────────────────────────────────────
   if (loading) {

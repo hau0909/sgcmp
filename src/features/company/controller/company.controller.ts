@@ -10,12 +10,14 @@ import {
   uploadCompanyImageService,
   getCompanyActivityImagesService,
   createCompanyPublishRequestService,
+  getCompanyPublishRequestsService,
 } from "../service/company.service";
 import {
   CompanyDetailData,
   UpdateCompanyProfileControllerParams,
   UpdateCompanyProfileInput,
   UploadCompanyImageControllerParams,
+  CompanyPublishRequestItem,
 } from "../types";
 import {
   validateUpdateCompanyProfileInput,
@@ -160,5 +162,10 @@ export const handleCreateCompanyPublishRequest = async (
   }
 
   const data = await createCompanyPublishRequestService(companyId, note);
+  return data;
+};
+
+export const handleGetCompanyPublishRequests = async (): Promise<CompanyPublishRequestItem[]> => {
+  const data = await getCompanyPublishRequestsService();
   return data;
 };
