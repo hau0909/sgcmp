@@ -9,6 +9,7 @@ import {
   uploadCompanyImage,
   getCompanyActivityImages,
   createCompanyPublishRequest,
+  getCompanyPublishRequests,
 } from "../repository/company.repository";
 import {
   getCitiesService as getCities,
@@ -24,6 +25,7 @@ import {
   CompanyServiceData,
   UpdateCompanyProfileInput,
   UploadCompanyImageServiceParams,
+  CompanyPublishRequestItem,
 } from "../types";
 import { Company } from "@/types/Company";
 import { CompanyStatus } from "@/types/Enum";
@@ -354,4 +356,8 @@ export const createCompanyPublishRequestService = async (
   note?: string,
 ): Promise<any> => {
   return await createCompanyPublishRequest(companyId, note);
+};
+
+export const getCompanyPublishRequestsService = async (): Promise<CompanyPublishRequestItem[]> => {
+  return await getCompanyPublishRequests();
 };

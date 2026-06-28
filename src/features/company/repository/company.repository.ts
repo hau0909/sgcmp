@@ -6,6 +6,7 @@ import {
   Service,
   UpdateCompanyProfileInput,
   UploadCompanyImageServiceParams,
+  CompanyPublishRequestItem,
 } from "../types";
 import type { Company } from "@/types/Company";
 
@@ -371,8 +372,8 @@ export const createCompanyPublishRequest = async (
     .from("company_publish_requests")
     .insert({
       company_id: companyId,
-      status: "pending",
-      note: note || null,
+      status: "PENDING",
+      notes: note || null,
       requested_at: new Date().toISOString(),
     })
     .select("request_id")
@@ -395,4 +396,18 @@ export const createCompanyPublishRequest = async (
   }
 
   return requestData;
+};
+
+export const getCompanyPublishRequests = async (): Promise<CompanyPublishRequestItem[]> => {
+  const supabaseServer = await createClient();
+  const { data, error } = await supabaseServer
+    .from("company_publish_requests")
+    .select("request_id, company_id, status, notes, requested_at, companies(company_name, owner_id)")
+    .order("requested_at", { ascending: false });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data as any) || [];
 };
