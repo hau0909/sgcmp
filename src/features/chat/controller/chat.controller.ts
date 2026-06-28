@@ -5,6 +5,8 @@ import {
   getConversationsService,
   getMessagesByConversationIdService,
   sendMessageService,
+  getOrCreateConversationService,
+  getConversationsByCustomerIdService,
 } from "../service/chat.service";
 
 export const handleGetConversations = async (
@@ -39,4 +41,21 @@ export const handleSendMessage = async (
 
   const result = await sendMessageService(payload);
   return result;
+};
+
+export const handleGetOrCreateConversation = async (
+  companyId: string,
+  customerId: string
+): Promise<Conversation> => {
+  if (!companyId || !customerId) {
+    throw new Error("companyId and customerId are required");
+  }
+  return await getOrCreateConversationService(companyId, customerId);
+};
+
+export const handleGetConversationsByCustomerId = async (
+  customerId: string
+): Promise<ConversationWithDetails[]> => {
+  if (!customerId) throw new Error("customerId is required");
+  return await getConversationsByCustomerIdService(customerId);
 };

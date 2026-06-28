@@ -39,6 +39,106 @@ export const getConversations = async (companyId: string, userId: string): Promi
   }));
 };
 
+/**
+ * Lấy tất cả conversations mà một customer đã tham gia (dùng cho widget phía khách hàng)
+ */
+export const getConversationsByCustomerId = async (
+  customerId: string
+): Promise<ConversationWithDetails[]> => {
+  const supabase = await createClient();
+
+  // Lấy tất cả conversation_id mà customer đã nhắn tin
+  const { data: msgRows, error: msgErr } = await supabase
+    .from("messages")
+    .select("conversation_id")
+    .eq("sender_id", customerId);
+
+  if (msgErr) throw msgErr;
+  if (!msgRows || msgRows.length === 0) return [];
+
+  const conversationIds = [...new Set(msgRows.map(r => r.conversation_id))];
+
+  // Lấy thông tin các conversation đó
+  const { data: convs, error } = await supabase
+    .from("conversations")
+    .select("conversation_id, company_id, created_at, updated_at")
+    .in("conversation_id", conversationIds)
+    .order("updated_at", { ascending: false });
+
+  if (error) throw error;
+  if (!convs || convs.length === 0) return [];
+
+  return Promise.all((convs as Conversation[]).map(async (conv) => {
+    // Tin nhắn mới nhất
+    const { data: latestData } = await supabase
+      .from("messages")
+      .select("content")
+      .eq("conversation_id", conv.conversation_id)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const latest = latestData?.[0];
+
+    // Lấy tên công ty và logo từ bảng companies
+    const { data: companyData } = await supabase
+      .from("companies")
+      .select("company_name, company_imgs (image_url, image_type)")
+      .eq("company_id", conv.company_id)
+      .maybeSingle();
+
+    let logoUrl: string | undefined;
+    if (companyData && companyData.company_imgs && Array.isArray(companyData.company_imgs)) {
+      const logo = companyData.company_imgs.find((img: any) => img.image_type === 'logo');
+      if (logo) logoUrl = logo.image_url;
+    }
+
+    const profileData = {
+      customer_name: companyData?.company_name || `Công ty`,
+      customer_avatar: logoUrl,
+    };
+
+    return { ...conv, latest_message: latest?.content, ...profileData };
+  }));
+};
+
+export const getOrCreateConversation = async (
+  companyId: string,
+  customerId: string
+): Promise<Conversation> => {
+  const supabase = await createClient();
+
+  // Tìm conversation đã tồn tại giữa khách hàng này và công ty
+  const { data: existing } = await supabase
+    .from("conversations")
+    .select("conversation_id, company_id, created_at, updated_at")
+    .eq("company_id", companyId)
+    .order("created_at", { ascending: false });
+
+  if (existing && existing.length > 0) {
+    // Kiểm tra xem có conversation nào mà customer đã từng nhắn không
+    for (const conv of existing) {
+      const { data: msg } = await supabase
+        .from("messages")
+        .select("message_id")
+        .eq("conversation_id", conv.conversation_id)
+        .eq("sender_id", customerId)
+        .limit(1);
+      if (msg && msg.length > 0) {
+        return conv as Conversation;
+      }
+    }
+  }
+
+  // Tạo conversation mới
+  const { data: newConv, error } = await supabase
+    .from("conversations")
+    .insert({ company_id: companyId })
+    .select("conversation_id, company_id, created_at, updated_at")
+    .single();
+
+  if (error) throw error;
+  return newConv as Conversation;
+};
+
 export const getMessagesByConversationId = async (
   conversationId: string
 ): Promise<Message[]> => {

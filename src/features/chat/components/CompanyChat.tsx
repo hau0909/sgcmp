@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Search, Send } from 'lucide-react';
+import { Search, Send, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useAuthStore } from '@/store/auth.store';
 import {
@@ -109,6 +109,59 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
     };
   }, [activeConversationId]);
 
+  // Realtime subscription cấp công ty — phát hiện hội thoại MỚI hoặc tin nhắn từ bất kỳ conversation
+  useEffect(() => {
+    if (!companyId) return;
+
+    const companyChannel = supabase
+      .channel(`company-inbox:${companyId}:${Date.now()}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'messages',
+        },
+        async (payload) => {
+          const newMsg = payload.new as Message;
+
+          setConversations((prev) => {
+            const convExists = prev.some(c => c.conversation_id === newMsg.conversation_id);
+            if (convExists) {
+              // Cập nhật tin nhắn mới nhất cho conversation đã có
+              return prev
+                .map((c) =>
+                  c.conversation_id === newMsg.conversation_id
+                    ? { ...c, latest_message: newMsg.content, updated_at: newMsg.created_at }
+                    : c
+                )
+                .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime());
+            }
+            // Conversation chưa có trong list → cần fetch mới
+            return prev;
+          });
+
+          // Nếu conversation chưa có trong list → fetch toàn bộ lại để lấy đủ thông tin
+          setConversations((prev) => {
+            const convExists = prev.some(c => c.conversation_id === newMsg.conversation_id);
+            if (!convExists) {
+              // Fetch lại danh sách
+              requestGetConversations(companyId, userId).then((data) => {
+                setConversations(data.conversations || []);
+              });
+            }
+            return prev;
+          });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(companyChannel);
+    };
+  }, [companyId, userId]);
+
+
   // Cuộn xuống tin nhắn mới nhất
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -162,10 +215,8 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
   );
 
   const formatTime = (dateStr: string) => {
-    return new Date(dateStr).toLocaleTimeString('vi-VN', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    if (!dateStr) return '';
+    return new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -190,7 +241,10 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
           {isLoadingConversations ? (
             <div className="p-6 text-center text-on-surface-variant text-sm">Đang tải...</div>
           ) : filteredConversations.length === 0 ? (
-            <div className="p-6 text-center text-on-surface-variant text-sm">Chưa có hội thoại nào.</div>
+            <div className="flex flex-col items-center justify-center p-8 text-on-surface-variant text-sm mt-10">
+              <MessageSquare className="w-10 h-10 mb-3 opacity-20" />
+              <p>Chưa có hội thoại nào.</p>
+            </div>
           ) : (
             filteredConversations.map((conv) => {
               const isActive = conv.conversation_id === activeConversationId;
@@ -236,8 +290,12 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col bg-surface-container-lowest">
         {!activeConversationId ? (
-          <div className="flex-1 flex items-center justify-center text-on-surface-variant text-sm">
-            Chọn một hội thoại để bắt đầu
+          <div className="flex-1 flex flex-col items-center justify-center text-on-surface-variant text-sm bg-surface">
+            <div className="w-16 h-16 bg-surface-container-highest/20 rounded-full flex items-center justify-center mb-4">
+              <MessageSquare className="w-8 h-8 opacity-40" />
+            </div>
+            <p className="text-base font-medium text-on-surface mb-1">Tin nhắn của công ty</p>
+            <p className="text-on-surface-variant text-sm">Chọn một hội thoại ở danh sách bên trái để bắt đầu</p>
           </div>
         ) : (
           <>
@@ -268,11 +326,22 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
               ) : messages.length === 0 ? (
                 <div className="text-center text-on-surface-variant text-sm py-8">Chưa có tin nhắn nào.</div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, index) => {
                   const isMyMessage = msg.sender_id === userId;
+                  const msgDate = new Date(msg.created_at).toLocaleDateString('vi-VN');
+                  const prevMsgDate = index > 0 ? new Date(messages[index - 1].created_at).toLocaleDateString('vi-VN') : null;
+                  const showDateSeparator = msgDate !== prevMsgDate;
+
                   return (
+                    <React.Fragment key={msg.message_id}>
+                      {showDateSeparator && (
+                        <div className="flex justify-center my-4">
+                          <span className="bg-surface-container-high text-on-surface-variant text-[11px] px-3 py-1 rounded-full font-medium shadow-sm">
+                            {msgDate === new Date().toLocaleDateString('vi-VN') ? 'Hôm nay' : msgDate}
+                          </span>
+                        </div>
+                      )}
                     <div
-                      key={msg.message_id}
                       className={`flex ${isMyMessage ? 'max-w-[85%] ml-auto flex-row-reverse' : 'gap-4 max-w-[85%]'}`}
                     >
                       {!isMyMessage && (
@@ -301,6 +370,7 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
                         </div>
                       </div>
                     </div>
+                    </React.Fragment>
                   );
                 })
               )}
