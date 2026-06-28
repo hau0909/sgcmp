@@ -5,6 +5,8 @@ import {
   getConversations,
   getMessagesByConversationId,
   insertMessage,
+  getOrCreateConversation,
+  getConversationsByCustomerId,
 } from "../repository/chat.repository";
 
 export const getConversationsService = async (companyId: string, userId: string): Promise<ConversationWithDetails[]> => {
@@ -24,4 +26,17 @@ export const sendMessageService = async (
 ): Promise<Message> => {
   const result = await insertMessage(payload);
   return result;
+};
+
+export const getOrCreateConversationService = async (
+  companyId: string,
+  customerId: string
+): Promise<Conversation> => {
+  return await getOrCreateConversation(companyId, customerId);
+};
+
+export const getConversationsByCustomerIdService = async (
+  customerId: string
+): Promise<ConversationWithDetails[]> => {
+  return await getConversationsByCustomerId(customerId);
 };
