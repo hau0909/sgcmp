@@ -17,6 +17,7 @@ import {
   History,
   Grid,
   X,
+  Globe,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
@@ -36,10 +37,16 @@ export default function AdminLayout({
       active: pathname === "/admin",
     },
     {
-      name: "Quản lý Doanh nghiệp",
+      name: "Yêu cầu phê duyệt",
       href: "/registrations",
       icon: Building2,
       active: pathname === "/registrations",
+    },
+    {
+      name: "Yêu cầu công khai",
+      href: "/publish-requests",
+      icon: Globe,
+      active: pathname === "/publish-requests",
     },
     {
       name: "Tuân thủ pháp lý",
