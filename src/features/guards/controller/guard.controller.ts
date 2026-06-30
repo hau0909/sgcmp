@@ -80,6 +80,8 @@ export const handleCreateGuardAccount = async (
       full_name: String(body.full_name ?? "").trim(),
 
       phone_number: String(body.phone_number ?? "").trim(),
+
+      identity_id: String(body.identity_id ?? "").trim(),
     };
 
     const validate_error = validateCreateGuardAccount(input);
@@ -97,6 +99,15 @@ export const handleCreateGuardAccount = async (
       return {
         success: false,
         message: "Email này đã được đăng ký.",
+      };
+    }
+
+    const identity_exists = await validateIdentityExists(input.identity_id);
+
+    if (identity_exists) {
+      return {
+        success: false,
+        message: "Số CCCD/CMND đã được sử dụng.",
       };
     }
 

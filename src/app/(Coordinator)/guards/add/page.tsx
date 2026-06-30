@@ -210,6 +210,7 @@ export default function AddGuardPage() {
         email: formData.email.trim().toLowerCase(),
         full_name: formData.fullName.trim(),
         phone_number: formData.phone.trim(),
+        identity_id: formData.identityNumber.trim(),
       });
 
       if (!accountResult.success || !accountResult.data?.user_id) {
