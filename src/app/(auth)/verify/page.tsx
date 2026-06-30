@@ -15,6 +15,7 @@ import { CheckCircle, XCircle, Loader2, MailCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
 import { UserRole } from "@/types/Enum";
+import { requestActivateProfile } from "@/features/auth/api/auth.api";
 
 type VerifyStatus = "loading" | "success" | "error";
 
@@ -74,6 +75,45 @@ function VerifyEmailContent() {
   const [status, setStatus] = useState<VerifyStatus>("loading");
   const [message, setMessage] = useState("Đang xác thực email của bạn...");
 
+  const [resendEmail, setResendEmail] = useState("");
+  const [resending, setResending] = useState(false);
+  const [resendMessage, setResendMessage] = useState("");
+
+  const handleResendVerifyEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resendEmail) {
+      setResendMessage("Vui lòng nhập email.");
+      return;
+    }
+    try {
+      setResending(true);
+      setResendMessage("");
+
+      const { error } = await supabase.auth.resend({
+        type: "signup",
+        email: resendEmail.trim().toLowerCase(),
+        options: {
+          emailRedirectTo: `${window.location.origin}/verify`,
+        },
+      });
+
+      if (error) {
+        throw error;
+      }
+
+      setResendMessage(
+        "Đã gửi lại email xác thực. Vui lòng kiểm tra hộp thư của bạn."
+      );
+    } catch (err: any) {
+      console.error("[Resend Verify] Error:", err);
+      setResendMessage(
+        err.message || "Gửi lại email thất bại. Vui lòng thử lại."
+      );
+    } finally {
+      setResending(false);
+    }
+  };
+
   const handleVerifyError = useCallback(
     async (logMessage: string, userMessage: string, error?: unknown) => {
       console.error(`[Verify Email] ${logMessage}`, error);
@@ -96,6 +136,17 @@ function VerifyEmailContent() {
   );
 
   const redirectAfterVerify = useCallback(async () => {
+    // Kích hoạt profile: unactive → active
+    try {
+      await requestActivateProfile();
+    } catch (activateErr: any) {
+      console.error(
+        "[Verify Email] Activate profile failed:",
+        activateErr?.message,
+      );
+      // Không throw – vẫn tiếp tục redirect để không block người dùng
+    }
+
     const response = await fetch("/api/auth/user", {
       method: "GET",
       credentials: "include",
@@ -316,10 +367,50 @@ function VerifyEmailContent() {
 
               <p className="mt-3 text-sm text-on-surface-variant">{message}</p>
 
+              <form onSubmit={handleResendVerifyEmail} className="mt-8 text-left space-y-3">
+                <label className="block text-sm font-semibold text-on-surface-variant">
+                  Gửi lại email xác thực
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    type="email"
+                    placeholder="Nhập email của bạn"
+                    value={resendEmail}
+                    onChange={(e) => setResendEmail(e.target.value)}
+                    disabled={resending}
+                    className="h-11 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-sm outline-none focus:border-primary focus:ring-1 focus:ring-primary disabled:opacity-50"
+                    required
+                  />
+                  <button
+                    type="submit"
+                    disabled={resending}
+                    className="h-11 rounded-xl bg-primary px-5 text-sm font-semibold text-on-primary transition hover:opacity-90 active:scale-95 disabled:opacity-50 flex items-center justify-center min-w-[70px]"
+                  >
+                    {resending ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-on-primary" />
+                    ) : (
+                      "Gửi"
+                    )}
+                  </button>
+                </div>
+                {resendMessage && (
+                  <p
+                    className={`text-xs font-semibold mt-1 ${
+                      resendMessage.includes("thành công") ||
+                      resendMessage.includes("Đã gửi")
+                        ? "text-green-600"
+                        : "text-red-500"
+                    }`}
+                  >
+                    {resendMessage}
+                  </p>
+                )}
+              </form>
+
               <div className="mt-8 space-y-3">
                 <Link
-                  href="/sign-up"
-                  className="block w-full rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold text-on-primary transition hover:bg-primary-container hover:shadow-md"
+                  href="/register"
+                  className="block w-full rounded-xl bg-primary px-5 py-3 text-center text-sm font-semibold text-on-primary transition hover:opacity-90 hover:shadow-md"
                 >
                   Đăng ký lại
                 </Link>

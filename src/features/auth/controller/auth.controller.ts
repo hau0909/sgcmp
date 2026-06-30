@@ -9,6 +9,7 @@ import {
   validateRegisterInput,
   validateLoginInput,
   checkPhoneNumberExists,
+  checkEmailExists,
 } from "../validator/auth.validator";
 import type { RegisterInput, LoginInput } from "../types";
 import type { AuthError } from "@supabase/supabase-js";
@@ -32,6 +33,15 @@ export const handleRegisterAccount = async ({
     return {
       success: false,
       message: validateError,
+    };
+  }
+
+  const emailExists = await checkEmailExists(email);
+
+  if (emailExists) {
+    return {
+      success: false,
+      message: "Email này đã được đăng ký",
     };
   }
 
