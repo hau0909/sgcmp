@@ -19,6 +19,8 @@ import {
   validateCreateGuardAccount,
   validateCreateGuardInput,
   checkGuardExistsByUserId,
+  checkPhoneNumberExists,
+  checkEmailExists,
 } from "../validator/guard.validate";
 
 import type {
@@ -86,6 +88,24 @@ export const handleCreateGuardAccount = async (
       return {
         success: false,
         message: validate_error,
+      };
+    }
+
+    const email_exists = await checkEmailExists(input.email);
+
+    if (email_exists) {
+      return {
+        success: false,
+        message: "Email này đã được đăng ký.",
+      };
+    }
+
+    const phone_number_exists = await checkPhoneNumberExists(input.phone_number);
+
+    if (phone_number_exists) {
+      return {
+        success: false,
+        message: "Số điện thoại này đã được đăng ký!.",
       };
     }
 
