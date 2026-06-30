@@ -96,6 +96,38 @@ export const checkIdentityExists = async (identity_id: string) => {
   return Boolean(data);
 };
 
+export const checkEmailExists = async (email: string) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("email", email)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return Boolean(data);
+};
+
+export const checkPhoneNumberExists = async (phone_number: string) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("phone_number", phone_number)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return Boolean(data);
+};
+
 export const validateCreateGuardAccount = (
   input: CreateGuardAccountInput,
 ): string | null => {
