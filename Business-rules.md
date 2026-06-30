@@ -14,5 +14,4 @@ Khi người dùng yêu cầu viết hoặc cập nhật các Quy tắc nghiệp
 | **BR-01** | Access to business features and data is restricted to authenticated users with a valid company profile. |
 | **BR-02** | A business organization (Company) is allowed only one active subscription plan at any given time. |
 | **BR-03** | System features and resources available to a company are determined by the limits and quotas of their active subscription plan. |
-| **BR-04** | The system supports automated billing and payments, with support for offline payments (e.g., bank transfer) and online transactions. |
-| **BR-05** | Changing, upgrading, or canceling active subscription plans must follow the organization's billing policy and may require support assistance. |
+| **BR-04** | Changing, upgrading, or canceling active subscription plans must follow the organization's billing policy and may require support assistance. |
