@@ -64,6 +64,22 @@ export const checkPhoneNumberExists = async (phoneNumber: string) => {
   return !!data;
 };
 
+export const checkEmailExists = async (email: string) => {
+  const trimmedEmail = email.trim().toLowerCase();
+
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("user_id")
+    .eq("email", trimmedEmail)
+    .maybeSingle();
+
+  if (error) {
+    throw error;
+  }
+
+  return !!data;
+};
+
 export const validatePassword = (password: string) => {
   if (!password) {
     return "Vui lòng nhập mật khẩu";
@@ -93,6 +109,38 @@ export const validateConfirmPassword = (
   return null;
 };
 
+export const isDisposableEmail = (email: string): boolean => {
+  const domain = email.trim().split("@")[1]?.toLowerCase();
+  if (!domain) return false;
+
+  const disposableDomains = new Set([
+    "yopmail.com",
+    "mailinator.com",
+    "10minutemail.com",
+    "tempmail.com",
+    "temp-mail.org",
+    "temp-mail.com",
+    "guerrillamail.com",
+    "sharklasers.com",
+    "dispostable.com",
+    "getairmail.com",
+    "maildrop.cc",
+    "mintemail.com",
+    "trashmail.com",
+    "mailnesia.com",
+    "mailcatch.com",
+    "emailondeck.com",
+    "generator.email",
+    "throwawaymail.com",
+    "guerrillamailblock.com",
+    "guerrillamail.net",
+    "guerrillamail.org",
+    "guerrillamail.biz",
+  ]);
+
+  return disposableDomains.has(domain);
+};
+
 export const validateRegisterInput = ({
   email,
   password,
@@ -105,6 +153,10 @@ export const validateRegisterInput = ({
 
   const emailError = validateEmail(email);
   if (emailError) return emailError;
+
+  if (isDisposableEmail(email)) {
+    return "Không cho phép sử dụng email tạm thời";
+  }
 
   const phoneNumberError = validatePhoneNumber(phoneNumber);
   if (phoneNumberError) return phoneNumberError;

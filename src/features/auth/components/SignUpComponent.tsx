@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { requestRegisterAccount } from "../api/auth.api";
+import { isDisposableEmail } from "../validator/auth.validator";
 
 type FormErrors = {
   fullName?: string;
@@ -41,6 +42,8 @@ export default function SignUp() {
       newErrors.email = "Vui lòng nhập email";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
       newErrors.email = "Email không hợp lệ";
+    } else if (isDisposableEmail(trimmedEmail)) {
+      newErrors.email = "Không cho phép sử dụng email tạm thời";
     }
 
     if (!normalizedPhoneNumber) {
@@ -92,9 +95,24 @@ export default function SignUp() {
       });
 
       if (!result.success) {
-        setErrors({
-          general: result.message || "Đăng ký thất bại. Vui lòng thử lại.",
-        });
+        const msg = result.message || "Đăng ký thất bại. Vui lòng thử lại.";
+        if (msg.toLowerCase().includes("email")) {
+          setErrors({
+            email: msg,
+          });
+        } else if (
+          msg.toLowerCase().includes("số điện thoại") ||
+          msg.toLowerCase().includes("sđt") ||
+          msg.toLowerCase().includes("phone")
+        ) {
+          setErrors({
+            phone: msg,
+          });
+        } else {
+          setErrors({
+            general: msg,
+          });
+        }
         return;
       }
 
