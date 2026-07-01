@@ -363,8 +363,9 @@ export const getCompanyActivityImages = async (company_id: string) => {
 
 export const createCompanyPublishRequest = async (
   companyId: string,
+  requestedBy: string,
   note?: string,
-): Promise<any> => {
+): Promise<{ request_id: string }> => {
   const supabaseServer = await createClient();
 
   // 1. Insert into company_publish_requests
@@ -372,6 +373,7 @@ export const createCompanyPublishRequest = async (
     .from("company_publish_requests")
     .insert({
       company_id: companyId,
+      requested_by: requestedBy,
       status: "PENDING",
       notes: note || null,
       requested_at: new Date().toISOString(),
@@ -402,7 +404,7 @@ export const getCompanyPublishRequests = async (): Promise<CompanyPublishRequest
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("company_publish_requests")
-    .select("request_id, company_id, status, notes, requested_at, companies(company_name, owner_id)")
+    .select("request_id, company_id, status, notes, requested_at, requested_by, approved_by, processed_at, companies(company_name, owner_id)")
     .order("requested_at", { ascending: false });
 
   if (error) {

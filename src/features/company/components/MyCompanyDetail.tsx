@@ -546,10 +546,7 @@ export default function MyCompanyDetail() {
       showToast("success", "Gửi yêu cầu công khai thành công.");
     } catch (err: any) {
       console.error("Lỗi khi gửi yêu cầu công khai:", err);
-      showToast(
-        "error",
-        err.message || "Không thể gửi yêu cầu công khai. Vui lòng thử lại.",
-      );
+      showToast("error", "Không thể gửi yêu cầu công khai. Vui lòng thử lại.");
     } finally {
       setSubmittingPublish(false);
     }
@@ -658,15 +655,18 @@ export default function MyCompanyDetail() {
     fetchCompanyData();
   }, [company_id]);
 
-  const DEFAULT_LOGO = "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300";
-  const DEFAULT_BANNER = "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200";
+  const DEFAULT_LOGO =
+    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300";
+  const DEFAULT_BANNER =
+    "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200";
 
   const hasLogo = logoUrl && logoUrl !== DEFAULT_LOGO;
   const hasBanner = bannerUrl && bannerUrl !== DEFAULT_BANNER;
   const hasOtherImages = companyImgs && companyImgs.length >= 2;
   const hasServices = companyServices && companyServices.length >= 1;
 
-  const isProfileComplete = hasLogo && hasBanner && hasOtherImages && hasServices;
+  const isProfileComplete =
+    hasLogo && hasBanner && hasOtherImages && hasServices;
 
   if (loading) {
     return (
@@ -714,7 +714,8 @@ export default function MyCompanyDetail() {
             QUẢN LÝ DOANH NGHIỆP
           </h1>
           <p className="text-xs md:text-sm text-on-surface-variant font-medium mt-1">
-            Cấu hình thông tin thương hiệu, hồ sơ pháp lý và danh mục dịch vụ cung cấp.
+            Cấu hình thông tin thương hiệu, hồ sơ pháp lý và danh mục dịch vụ
+            cung cấp.
           </p>
         </div>
 
@@ -746,7 +747,8 @@ export default function MyCompanyDetail() {
               onClick={handleStartEdit}
               className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low active:bg-surface-container-high transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
-              <Edit className="w-3.5 h-3.5 text-on-surface-variant" /> Chỉnh sửa thông tin
+              <Edit className="w-3.5 h-3.5 text-on-surface-variant" /> Chỉnh sửa
+              thông tin
             </button>
           )}
         </div>
@@ -817,31 +819,57 @@ export default function MyCompanyDetail() {
 
               {status === "active" && (
                 <div className="bg-blue-100/50 border border-blue-200/60 rounded-xl p-3 mt-2 space-y-2 text-xs font-semibold text-blue-900 max-w-xl">
-                  <h4 className="font-bold text-[13px] text-blue-950">Checklist hoàn thiện hồ sơ để công khai:</h4>
+                  <h4 className="font-bold text-[13px] text-blue-950">
+                    Checklist hoàn thiện hồ sơ để công khai:
+                  </h4>
                   <ul className="space-y-1.5">
                     <li className="flex items-center gap-2">
-                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasLogo ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}>
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasLogo ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
+                      >
                         {hasLogo ? "✓" : "○"}
                       </span>
-                      <span>Ảnh đại diện (Logo) {hasLogo ? "(Đã hoàn thành)" : "(Chưa có)"}</span>
+                      <span>
+                        Ảnh đại diện (Logo){" "}
+                        {hasLogo ? "(Đã hoàn thành)" : "(Chưa có)"}
+                      </span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasBanner ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}>
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasBanner ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
+                      >
                         {hasBanner ? "✓" : "○"}
                       </span>
-                      <span>Ảnh bìa (Banner) {hasBanner ? "(Đã hoàn thành)" : "(Chưa có)"}</span>
+                      <span>
+                        Ảnh bìa (Banner){" "}
+                        {hasBanner ? "(Đã hoàn thành)" : "(Chưa có)"}
+                      </span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasOtherImages ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}>
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasOtherImages ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
+                      >
                         {hasOtherImages ? "✓" : "○"}
                       </span>
-                      <span>Tải lên ít nhất 2 hình ảnh hoạt động {hasOtherImages ? `(Đã hoàn thành: ${companyImgs.length} ảnh)` : `(Hiện tại: ${companyImgs.length}/2 ảnh)`}</span>
+                      <span>
+                        Tải lên ít nhất 2 hình ảnh hoạt động{" "}
+                        {hasOtherImages
+                          ? `(Đã hoàn thành: ${companyImgs.length} ảnh)`
+                          : `(Hiện tại: ${companyImgs.length}/2 ảnh)`}
+                      </span>
                     </li>
                     <li className="flex items-center gap-2">
-                      <span className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasServices ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}>
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasServices ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
+                      >
                         {hasServices ? "✓" : "○"}
                       </span>
-                      <span>Cấu hình ít nhất 1 dịch vụ cung cấp {hasServices ? `(Đã hoàn thành: ${companyServices.length} dịch vụ)` : "(Chưa có dịch vụ nào)"}</span>
+                      <span>
+                        Cấu hình ít nhất 1 dịch vụ cung cấp{" "}
+                        {hasServices
+                          ? `(Đã hoàn thành: ${companyServices.length} dịch vụ)`
+                          : "(Chưa có dịch vụ nào)"}
+                      </span>
                     </li>
                   </ul>
                 </div>
@@ -866,546 +894,569 @@ export default function MyCompanyDetail() {
       )}
 
       <div className="flex flex-col space-y-6">
-          {/* Section 1: Branding Images (Ảnh đại diện & Ảnh bìa) */}
-          <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
-            <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-              Hình ảnh & Thương hiệu
-            </h2>
+        {/* Section 1: Branding Images (Ảnh đại diện & Ảnh bìa) */}
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
+          <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
+            Hình ảnh & Thương hiệu
+          </h2>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Ảnh đại diện (Avatar) */}
-              <div className="md:col-span-1 flex flex-col items-center justify-between border border-outline-variant rounded-xl p-4 bg-surface-container-low/50 relative group">
-                <div className="relative w-28 h-28 rounded-2xl overflow-hidden border-2 border-surface shadow-sm bg-surface">
-                  <img
-                    src={logoUrl}
-                    alt="Company Logo"
-                    className="w-full h-full object-cover"
-                  />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* Ảnh đại diện (Avatar) */}
+            <div className="md:col-span-1 flex flex-col items-center justify-between border border-outline-variant rounded-xl p-4 bg-surface-container-low/50 relative group">
+              <div className="relative w-28 h-28 rounded-2xl overflow-hidden border-2 border-surface shadow-sm bg-surface">
+                <img
+                  src={logoUrl}
+                  alt="Company Logo"
+                  className="w-full h-full object-cover"
+                />
 
-                  <button
-                    type="button"
-                    onClick={() => logoInputRef.current?.click()}
-                    disabled={uploadingLogo}
-                    className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
-                  >
-                    {uploadingLogo ? (
-                      <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                    ) : (
-                      <Upload className="w-5 h-5 text-white" />
-                    )}
-                  </button>
-                </div>
-
-                <div className="text-center mt-3">
-                  <span className="text-xs font-bold text-on-surface">Ảnh đại diện</span>
-                  <p className="text-[10px] text-on-surface-variant mt-0.5">JPG, PNG, WEBP. Tối đa 5MB</p>
-                </div>
-              </div>
-
-              {/* Ảnh bìa (Banner) */}
-              <div className="md:col-span-2 flex flex-col justify-between border border-outline-variant rounded-xl p-4 bg-surface-container-low/50 relative group">
-                <div className="relative h-28 w-full rounded-2xl overflow-hidden shadow-sm bg-slate-900">
-                  <div
-                    className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-102"
-                    style={{ backgroundImage: `url(${bannerUrl})` }}
-                  />
-
-                  <div className="absolute inset-0 bg-slate-950/20" />
-
-                  <button
-                    type="button"
-                    onClick={() => bannerInputRef.current?.click()}
-                    disabled={uploadingBanner}
-                    className="absolute top-2 right-2 bg-surface-container-lowest/90 hover:bg-surface-container-lowest text-on-surface rounded-lg p-1.5 text-xs shadow-sm transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    <Camera className="w-3.5 h-3.5 text-on-surface-variant" />
-                  </button>
-                </div>
-
-                <div className="mt-3">
-                  <span className="text-xs font-bold text-on-surface">Ảnh bìa doanh nghiệp</span>
-                  <p className="text-[10px] text-on-surface-variant mt-0.5">Hiển thị ở phần đầu trang chi tiết của khách hàng.</p>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          {/* Section 2: Giới thiệu doanh nghiệp */}
-          <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-3">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-                Giới thiệu doanh nghiệp
-              </h2>
-
-              {!isEditing && (
                 <button
                   type="button"
-                  onClick={handleStartEdit}
-                  className="text-on-surface-variant hover:text-primary border border-outline-variant rounded-lg p-1 hover:bg-surface-container-low transition-all cursor-pointer"
-                  title="Chỉnh sửa mô tả"
+                  onClick={() => logoInputRef.current?.click()}
+                  disabled={uploadingLogo}
+                  className="absolute inset-0 bg-slate-900/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all cursor-pointer disabled:cursor-not-allowed disabled:opacity-70"
                 >
-                  <Edit className="w-3.5 h-3.5" />
+                  {uploadingLogo ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                  ) : (
+                    <Upload className="w-5 h-5 text-white" />
+                  )}
                 </button>
+              </div>
+
+              <div className="text-center mt-3">
+                <span className="text-xs font-bold text-on-surface">
+                  Ảnh đại diện
+                </span>
+                <p className="text-[10px] text-on-surface-variant mt-0.5">
+                  JPG, PNG, WEBP. Tối đa 5MB
+                </p>
+              </div>
+            </div>
+
+            {/* Ảnh bìa (Banner) */}
+            <div className="md:col-span-2 flex flex-col justify-between border border-outline-variant rounded-xl p-4 bg-surface-container-low/50 relative group">
+              <div className="relative h-28 w-full rounded-2xl overflow-hidden shadow-sm bg-slate-900">
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-102"
+                  style={{ backgroundImage: `url(${bannerUrl})` }}
+                />
+
+                <div className="absolute inset-0 bg-slate-950/20" />
+
+                <button
+                  type="button"
+                  onClick={() => bannerInputRef.current?.click()}
+                  disabled={uploadingBanner}
+                  className="absolute top-2 right-2 bg-surface-container-lowest/90 hover:bg-surface-container-lowest text-on-surface rounded-lg p-1.5 text-xs shadow-sm transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
+                >
+                  <Camera className="w-3.5 h-3.5 text-on-surface-variant" />
+                </button>
+              </div>
+
+              <div className="mt-3">
+                <span className="text-xs font-bold text-on-surface">
+                  Ảnh bìa doanh nghiệp
+                </span>
+                <p className="text-[10px] text-on-surface-variant mt-0.5">
+                  Hiển thị ở phần đầu trang chi tiết của khách hàng.
+                </p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 2: Giới thiệu doanh nghiệp */}
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
+              Giới thiệu doanh nghiệp
+            </h2>
+
+            {!isEditing && (
+              <button
+                type="button"
+                onClick={handleStartEdit}
+                className="text-on-surface-variant hover:text-primary border border-outline-variant rounded-lg p-1 hover:bg-surface-container-low transition-all cursor-pointer"
+                title="Chỉnh sửa mô tả"
+              >
+                <Edit className="w-3.5 h-3.5" />
+              </button>
+            )}
+          </div>
+
+          {isEditing ? (
+            <div className="space-y-1">
+              <textarea
+                rows={5}
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  clearFieldError("description");
+                }}
+                placeholder="Nhập giới thiệu doanh nghiệp..."
+                className={getEditControlClassName(
+                  "description",
+                  "rounded-xl px-3.5 py-3 resize-none leading-relaxed",
+                )}
+              />
+
+              {renderFieldError("description")}
+            </div>
+          ) : (
+            <p className="text-sm text-on-surface leading-relaxed text-justify font-medium">
+              {description || "Chưa có giới thiệu doanh nghiệp."}
+            </p>
+          )}
+        </section>
+
+        {/* Section 3: Thông tin chi tiết */}
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
+          <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
+            Thông tin chi tiết
+          </h2>
+
+          <div className="space-y-3.5">
+            <div className="grid grid-cols-12 gap-2 text-sm items-start">
+              <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
+                <Building2 className="w-4 h-4 text-outline" /> Tên công ty
+              </span>
+
+              {isEditing ? (
+                <div className="col-span-8 space-y-1">
+                  <input
+                    value={fullName}
+                    onChange={(e) => {
+                      setFullName(e.target.value);
+                      clearFieldError("company_name");
+                    }}
+                    placeholder="Nhập tên công ty"
+                    className={getEditControlClassName("company_name")}
+                  />
+
+                  {renderFieldError("company_name")}
+                </div>
+              ) : (
+                <span className="col-span-8 text-on-surface font-bold uppercase">
+                  {fullName}
+                </span>
               )}
             </div>
 
-            {isEditing ? (
-              <div className="space-y-1">
-                <textarea
-                  rows={5}
-                  value={description}
-                  onChange={(e) => {
-                    setDescription(e.target.value);
-                    clearFieldError("description");
-                  }}
-                  placeholder="Nhập giới thiệu doanh nghiệp..."
-                  className={getEditControlClassName(
-                    "description",
-                    "rounded-xl px-3.5 py-3 resize-none leading-relaxed",
-                  )}
-                />
+            <div className="grid grid-cols-12 gap-2 text-sm items-start">
+              <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
+                <FileText className="w-4 h-4 text-outline" /> Mã số đăng ký
+              </span>
 
-                {renderFieldError("description")}
-              </div>
-            ) : (
-              <p className="text-sm text-on-surface leading-relaxed text-justify font-medium">
-                {description || "Chưa có giới thiệu doanh nghiệp."}
-              </p>
-            )}
-          </section>
-
-          {/* Section 3: Thông tin chi tiết */}
-          <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
-            <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-              Thông tin chi tiết
-            </h2>
-
-            <div className="space-y-3.5">
-              <div className="grid grid-cols-12 gap-2 text-sm items-start">
-                <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                  <Building2 className="w-4 h-4 text-outline" /> Tên công ty
-                </span>
-
-                {isEditing ? (
-                  <div className="col-span-8 space-y-1">
-                    <input
-                      value={fullName}
-                      onChange={(e) => {
-                        setFullName(e.target.value);
-                        clearFieldError("company_name");
-                      }}
-                      placeholder="Nhập tên công ty"
-                      className={getEditControlClassName("company_name")}
-                    />
-
-                    {renderFieldError("company_name")}
-                  </div>
-                ) : (
-                  <span className="col-span-8 text-on-surface font-bold uppercase">
-                    {fullName}
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-12 gap-2 text-sm items-start">
-                <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                  <FileText className="w-4 h-4 text-outline" /> Mã số đăng ký
-                </span>
-
-                {isEditing ? (
-                  <div className="col-span-8 space-y-1">
-                    <input
-                      value={businessLicense}
-                      onChange={(e) => {
-                        setBusinessLicense(e.target.value);
-                        clearFieldError("business_license_no");
-                      }}
-                      placeholder="Nhập mã số đăng ký"
-                      className={getEditControlClassName(
-                        "business_license_no",
-                      )}
-                    />
-
-                    {renderFieldError("business_license_no")}
-                  </div>
-                ) : (
-                  <span className="col-span-8 text-on-surface font-semibold">
-                    {businessLicense}
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-12 gap-2 text-sm items-start">
-                <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                  <Briefcase className="w-4 h-4 text-outline" /> Mã số giấy phép
-                </span>
-
-                {isEditing ? (
-                  <div className="col-span-8 space-y-1">
-                    <input
-                      value={companyLicense}
-                      onChange={(e) => {
-                        setCompanyLicense(e.target.value);
-                        clearFieldError("registration_code");
-                      }}
-                      placeholder="Nhập mã số giấy phép"
-                      className={getEditControlClassName("registration_code")}
-                    />
-
-                    {renderFieldError("registration_code")}
-                  </div>
-                ) : (
-                  <span className="col-span-8 text-on-surface font-mono font-bold">
-                    {companyLicense}
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-12 gap-2 text-sm items-start">
-                <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                  <Mail className="w-4 h-4 text-outline" /> Email
-                </span>
-
-                {isEditing ? (
-                  <div className="col-span-8 space-y-1">
-                    <input
-                      type="email"
-                      value={email}
-                      onChange={(e) => {
-                        setEmail(e.target.value);
-                        clearFieldError("email");
-                      }}
-                      placeholder="Nhập email"
-                      className={getEditControlClassName("email")}
-                    />
-
-                    {renderFieldError("email")}
-                  </div>
-                ) : (
-                  <span className="col-span-8 text-primary font-semibold hover:underline break-all">
-                    {email}
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-12 gap-2 text-sm items-start">
-                <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                  <Phone className="w-4 h-4 text-outline" /> Số điện thoại
-                </span>
-
-                {isEditing ? (
-                  <div className="col-span-8 space-y-1">
-                    <input
-                      value={phone}
-                      onChange={(e) => {
-                        setPhone(e.target.value);
-                        clearFieldError("phone");
-                      }}
-                      placeholder="Nhập số điện thoại"
-                      className={getEditControlClassName("phone")}
-                    />
-
-                    {renderFieldError("phone")}
-                  </div>
-                ) : (
-                  <span className="col-span-8 text-on-surface font-mono font-semibold">
-                    {phone}
-                  </span>
-                )}
-              </div>
-
-              <div className="grid grid-cols-12 gap-2 text-sm items-start">
-                <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                  <MapPin className="w-4 h-4 text-outline" /> Địa chỉ
-                </span>
-
-                {isEditing ? (
-                  <div className="col-span-8 space-y-1">
-                    <textarea
-                      rows={3}
-                      value={address}
-                      onChange={(e) => {
-                        setAddress(e.target.value);
-                        clearFieldError("address");
-                      }}
-                      placeholder="Nhập địa chỉ"
-                      className={getEditControlClassName(
-                        "address",
-                        "resize-none",
-                      )}
-                    />
-
-                    {renderFieldError("address")}
-                  </div>
-                ) : (
-                  <span className="col-span-8 text-on-surface font-semibold leading-relaxed">
-                    {address}
-                  </span>
-                )}
-              </div>
-            </div>
-          </section>
-
-          {/* Section 4: Giấy phép hoạt động (Business License Card Redesign) */}
-          <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
-            <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-              Hồ sơ pháp lý & Giấy phép
-            </h2>
-
-            {licenseImg ? (
-              <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4 w-full">
-                  {/* Thumbnail */}
-                  <div
-                    onClick={() => setActiveViewerImg(licenseImg)}
-                    className="w-16 h-20 shrink-0 border border-outline-variant rounded-lg overflow-hidden bg-surface-container-lowest shadow-3xs flex items-center justify-center relative group cursor-pointer hover:opacity-90"
-                  >
-                    <img
-                      src={licenseImg}
-                      alt="License Thumbnail"
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                      <Eye className="w-4 h-4 text-white" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-on-surface">
-                      Giấy phép hoạt động kinh doanh
-                    </h4>
-                    <p className="text-xs text-on-surface-variant font-medium">
-                      Tài liệu Hình ảnh • Đã tải lên
-                    </p>
-                  </div>
-                </div>
-
-                {/* Actions and Change Button Next To It */}
-                <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setActiveViewerImg(licenseImg)}
-                    className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface-container-low transition-all shadow-3xs cursor-pointer"
-                    title="Xem giấy phép"
-                  >
-                    <Eye className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (!licenseImg) return;
-                      const a = document.createElement("a");
-                      a.href = licenseImg;
-                      a.download = "giay_phep_kinh_doanh";
-                      a.target = "_blank";
-                      document.body.appendChild(a);
-                      a.click();
-                      document.body.removeChild(a);
+              {isEditing ? (
+                <div className="col-span-8 space-y-1">
+                  <input
+                    value={businessLicense}
+                    onChange={(e) => {
+                      setBusinessLicense(e.target.value);
+                      clearFieldError("business_license_no");
                     }}
-                    className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface-container-low transition-all shadow-3xs cursor-pointer"
-                    title="Tải xuống giấy phép"
-                  >
-                    <Download className="w-4 h-4" />
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={() => showToast("error", "Chức năng chỉnh sửa giấy phép trực tiếp yêu cầu quyền Admin.")}
-                    className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-error hover:border-error/35 rounded-lg hover:bg-error/5 transition-all shadow-3xs cursor-pointer"
-                    title="Xóa giấy phép"
-                  >
-                    <Trash className="w-4 h-4" />
-                  </button>
-
-                  <div className="h-6 w-px bg-outline-variant/60 mx-1" />
-
-                  <button
-                    type="button"
-                    onClick={() => showToast("error", "Để cập nhật giấy phép kinh doanh, vui lòng cập nhật trong hồ sơ đăng ký hoặc liên hệ admin.")}
-                    className="px-3.5 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary transition-all text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer"
-                    title="Thay đổi file giấy phép"
-                  >
-                    <Upload className="w-3.5 h-3.5" />
-                    Thay đổi
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div
-                onClick={() => showToast("error", "Để nộp giấy phép hoạt động doanh nghiệp, vui lòng liên hệ admin.")}
-                className="border-2 border-dashed border-outline-variant/60 hover:border-primary rounded-xl p-8 text-center cursor-pointer hover:bg-surface-container-low transition-all flex flex-col items-center justify-center group"
-              >
-                <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-                  <Upload className="w-5 h-5" />
-                </div>
-                <span className="text-sm font-bold text-on-surface">Tải lên giấy phép hoạt động</span>
-                <p className="text-xs text-on-surface-variant mt-1">Hồ sơ giấy phép hoạt động cần được phê duyệt bởi ban quản trị.</p>
-              </div>
-            )}
-          </section>
-
-          {/* Section 5: Hình ảnh hoạt động */}
-          <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-outline-variant/60 pb-2">
-              <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-                Hình ảnh hoạt động
-              </h2>
-
-              <div className="flex items-center gap-3">
-                <button
-                  type="button"
-                  onClick={handleOpenActivityGallery}
-                  className="text-[11px] font-bold text-on-surface-variant hover:text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
-                >
-                  Xem thêm <ChevronRight className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
-              {companyImgs.slice(0, 6).map((img, index) => (
-                <div
-                  key={`${img}-${index}`}
-                  onClick={() => setActiveViewerImg(img)}
-                  className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-all border border-outline-variant bg-surface-container-low group relative shadow-sm"
-                >
-                  <img
-                    src={img}
-                    alt={`Activity ${index + 1}`}
-                    className="w-full h-full object-cover"
+                    placeholder="Nhập mã số đăng ký"
+                    className={getEditControlClassName("business_license_no")}
                   />
 
+                  {renderFieldError("business_license_no")}
+                </div>
+              ) : (
+                <span className="col-span-8 text-on-surface font-semibold">
+                  {businessLicense}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-12 gap-2 text-sm items-start">
+              <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
+                <Briefcase className="w-4 h-4 text-outline" /> Mã số giấy phép
+              </span>
+
+              {isEditing ? (
+                <div className="col-span-8 space-y-1">
+                  <input
+                    value={companyLicense}
+                    onChange={(e) => {
+                      setCompanyLicense(e.target.value);
+                      clearFieldError("registration_code");
+                    }}
+                    placeholder="Nhập mã số giấy phép"
+                    className={getEditControlClassName("registration_code")}
+                  />
+
+                  {renderFieldError("registration_code")}
+                </div>
+              ) : (
+                <span className="col-span-8 text-on-surface font-mono font-bold">
+                  {companyLicense}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-12 gap-2 text-sm items-start">
+              <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
+                <Mail className="w-4 h-4 text-outline" /> Email
+              </span>
+
+              {isEditing ? (
+                <div className="col-span-8 space-y-1">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => {
+                      setEmail(e.target.value);
+                      clearFieldError("email");
+                    }}
+                    placeholder="Nhập email"
+                    className={getEditControlClassName("email")}
+                  />
+
+                  {renderFieldError("email")}
+                </div>
+              ) : (
+                <span className="col-span-8 text-primary font-semibold hover:underline break-all">
+                  {email}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-12 gap-2 text-sm items-start">
+              <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
+                <Phone className="w-4 h-4 text-outline" /> Số điện thoại
+              </span>
+
+              {isEditing ? (
+                <div className="col-span-8 space-y-1">
+                  <input
+                    value={phone}
+                    onChange={(e) => {
+                      setPhone(e.target.value);
+                      clearFieldError("phone");
+                    }}
+                    placeholder="Nhập số điện thoại"
+                    className={getEditControlClassName("phone")}
+                  />
+
+                  {renderFieldError("phone")}
+                </div>
+              ) : (
+                <span className="col-span-8 text-on-surface font-mono font-semibold">
+                  {phone}
+                </span>
+              )}
+            </div>
+
+            <div className="grid grid-cols-12 gap-2 text-sm items-start">
+              <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
+                <MapPin className="w-4 h-4 text-outline" /> Địa chỉ
+              </span>
+
+              {isEditing ? (
+                <div className="col-span-8 space-y-1">
+                  <textarea
+                    rows={3}
+                    value={address}
+                    onChange={(e) => {
+                      setAddress(e.target.value);
+                      clearFieldError("address");
+                    }}
+                    placeholder="Nhập địa chỉ"
+                    className={getEditControlClassName(
+                      "address",
+                      "resize-none",
+                    )}
+                  />
+
+                  {renderFieldError("address")}
+                </div>
+              ) : (
+                <span className="col-span-8 text-on-surface font-semibold leading-relaxed">
+                  {address}
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
+
+        {/* Section 4: Giấy phép hoạt động (Business License Card Redesign) */}
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
+          <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
+            Hồ sơ pháp lý & Giấy phép
+          </h2>
+
+          {licenseImg ? (
+            <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4 w-full">
+                {/* Thumbnail */}
+                <div
+                  onClick={() => setActiveViewerImg(licenseImg)}
+                  className="w-16 h-20 shrink-0 border border-outline-variant rounded-lg overflow-hidden bg-surface-container-lowest shadow-3xs flex items-center justify-center relative group cursor-pointer hover:opacity-90"
+                >
+                  <img
+                    src={licenseImg}
+                    alt="License Thumbnail"
+                    className="w-full h-full object-cover"
+                  />
                   <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
                     <Eye className="w-4 h-4 text-white" />
                   </div>
-
-                  <button
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      handleRemoveActivityImage(index);
-                    }}
-                    className="absolute top-1.5 right-1.5 rounded-full bg-surface-container-lowest/90 p-1 text-on-surface-variant opacity-0 shadow-sm transition-all hover:text-error group-hover:opacity-100 cursor-pointer"
-                    title="Xóa ảnh khỏi giao diện"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
                 </div>
-              ))}
 
-              <button
-                type="button"
-                onClick={() => activityInputRef.current?.click()}
-                disabled={uploadingActivity}
-                className="aspect-square rounded-xl border border-dashed border-primary/40 bg-primary/5 text-primary flex flex-col items-center justify-center gap-1 hover:bg-primary/10 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
-              >
-                {uploadingActivity ? (
-                  <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-                ) : (
-                  <Upload className="w-5 h-5" />
-                )}
+                <div className="space-y-1">
+                  <h4 className="text-sm font-bold text-on-surface">
+                    Giấy phép hoạt động kinh doanh
+                  </h4>
+                  <p className="text-xs text-on-surface-variant font-medium">
+                    Tài liệu Hình ảnh • Đã tải lên
+                  </p>
+                </div>
+              </div>
 
-                <span className="text-[10px] font-bold">
-                  {uploadingActivity ? "Đang tải" : "Thêm ảnh"}
-                </span>
-              </button>
+              {/* Actions and Change Button Next To It */}
+              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                <button
+                  type="button"
+                  onClick={() => setActiveViewerImg(licenseImg)}
+                  className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface-container-low transition-all shadow-3xs cursor-pointer"
+                  title="Xem giấy phép"
+                >
+                  <Eye className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!licenseImg) return;
+                    const a = document.createElement("a");
+                    a.href = licenseImg;
+                    a.download = "giay_phep_kinh_doanh";
+                    a.target = "_blank";
+                    document.body.appendChild(a);
+                    a.click();
+                    document.body.removeChild(a);
+                  }}
+                  className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface-container-low transition-all shadow-3xs cursor-pointer"
+                  title="Tải xuống giấy phép"
+                >
+                  <Download className="w-4 h-4" />
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    showToast(
+                      "error",
+                      "Chức năng chỉnh sửa giấy phép trực tiếp yêu cầu quyền Admin.",
+                    )
+                  }
+                  className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-error hover:border-error/35 rounded-lg hover:bg-error/5 transition-all shadow-3xs cursor-pointer"
+                  title="Xóa giấy phép"
+                >
+                  <Trash className="w-4 h-4" />
+                </button>
+
+                <div className="h-6 w-px bg-outline-variant/60 mx-1" />
+
+                <button
+                  type="button"
+                  onClick={() =>
+                    showToast(
+                      "error",
+                      "Để cập nhật giấy phép kinh doanh, vui lòng cập nhật trong hồ sơ đăng ký hoặc liên hệ admin.",
+                    )
+                  }
+                  className="px-3.5 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary transition-all text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer"
+                  title="Thay đổi file giấy phép"
+                >
+                  <Upload className="w-3.5 h-3.5" />
+                  Thay đổi
+                </button>
+              </div>
             </div>
-
-            {companyImgs.length === 0 && (
-              <p className="text-xs text-on-surface-variant font-medium text-center py-4">
-                Chưa có hình ảnh hoạt động.
+          ) : (
+            <div
+              onClick={() =>
+                showToast(
+                  "error",
+                  "Để nộp giấy phép hoạt động doanh nghiệp, vui lòng liên hệ admin.",
+                )
+              }
+              className="border-2 border-dashed border-outline-variant/60 hover:border-primary rounded-xl p-8 text-center cursor-pointer hover:bg-surface-container-low transition-all flex flex-col items-center justify-center group"
+            >
+              <div className="w-12 h-12 rounded-full bg-primary/10 text-primary flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                <Upload className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-bold text-on-surface">
+                Tải lên giấy phép hoạt động
+              </span>
+              <p className="text-xs text-on-surface-variant mt-1">
+                Hồ sơ giấy phép hoạt động cần được phê duyệt bởi ban quản trị.
               </p>
-            )}
-          </section>
+            </div>
+          )}
+        </section>
 
-          {/* Section 6: Dịch vụ cung cấp */}
-          <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
-            <div className="flex justify-between items-center border-b border-outline-variant/60 pb-4">
-              <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-                Dịch vụ cung cấp
-              </h2>
+        {/* Section 5: Hình ảnh hoạt động */}
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center border-b border-outline-variant/60 pb-2">
+            <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
+              Hình ảnh hoạt động
+            </h2>
 
+            <div className="flex items-center gap-3">
               <button
                 type="button"
-                onClick={() => setIsAddServiceOpen(true)}
-                className="px-3.5 py-1.5 border border-primary/20 bg-primary/10 hover:bg-primary/15 text-primary active:bg-primary/25 transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer font-sans"
+                onClick={handleOpenActivityGallery}
+                className="text-[11px] font-bold text-on-surface-variant hover:text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
               >
-                <Plus className="w-3.5 h-3.5" /> Thêm dịch vụ
+                Xem thêm <ChevronRight className="w-3 h-3" />
               </button>
             </div>
+          </div>
 
-            <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-outline-variant/60 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                    <th className="pb-3 pl-2 w-1/3">Tên dịch vụ</th>
-                    <th className="pb-3 w-5/12">Mô tả</th>
-                    <th className="pb-3 pr-2 w-1/4 text-right">Giá dịch vụ</th>
+          <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+            {companyImgs.slice(0, 6).map((img, index) => (
+              <div
+                key={`${img}-${index}`}
+                onClick={() => setActiveViewerImg(img)}
+                className="aspect-square rounded-xl overflow-hidden cursor-pointer hover:opacity-90 transition-all border border-outline-variant bg-surface-container-low group relative shadow-sm"
+              >
+                <img
+                  src={img}
+                  alt={`Activity ${index + 1}`}
+                  className="w-full h-full object-cover"
+                />
+
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                  <Eye className="w-4 h-4 text-white" />
+                </div>
+
+                <button
+                  type="button"
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    handleRemoveActivityImage(index);
+                  }}
+                  className="absolute top-1.5 right-1.5 rounded-full bg-surface-container-lowest/90 p-1 text-on-surface-variant opacity-0 shadow-sm transition-all hover:text-error group-hover:opacity-100 cursor-pointer"
+                  title="Xóa ảnh khỏi giao diện"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => activityInputRef.current?.click()}
+              disabled={uploadingActivity}
+              className="aspect-square rounded-xl border border-dashed border-primary/40 bg-primary/5 text-primary flex flex-col items-center justify-center gap-1 hover:bg-primary/10 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+            >
+              {uploadingActivity ? (
+                <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              ) : (
+                <Upload className="w-5 h-5" />
+              )}
+
+              <span className="text-[10px] font-bold">
+                {uploadingActivity ? "Đang tải" : "Thêm ảnh"}
+              </span>
+            </button>
+          </div>
+
+          {companyImgs.length === 0 && (
+            <p className="text-xs text-on-surface-variant font-medium text-center py-4">
+              Chưa có hình ảnh hoạt động.
+            </p>
+          )}
+        </section>
+
+        {/* Section 6: Dịch vụ cung cấp */}
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center border-b border-outline-variant/60 pb-4">
+            <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
+              Dịch vụ cung cấp
+            </h2>
+
+            <button
+              type="button"
+              onClick={() => setIsAddServiceOpen(true)}
+              className="px-3.5 py-1.5 border border-primary/20 bg-primary/10 hover:bg-primary/15 text-primary active:bg-primary/25 transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer font-sans"
+            >
+              <Plus className="w-3.5 h-3.5" /> Thêm dịch vụ
+            </button>
+          </div>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="border-b border-outline-variant/60 text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                  <th className="pb-3 pl-2 w-1/3">Tên dịch vụ</th>
+                  <th className="pb-3 w-5/12">Mô tả</th>
+                  <th className="pb-3 pr-2 w-1/4 text-right">Giá dịch vụ</th>
+                </tr>
+              </thead>
+
+              <tbody className="divide-y divide-outline-variant/40">
+                {companyServices.map((service) => (
+                  <tr
+                    key={service.serviceId}
+                    className="group hover:bg-surface-container-low transition-colors"
+                  >
+                    <td className="py-4 pl-2">
+                      <div className="font-bold text-on-surface text-sm">
+                        {service.name}
+                      </div>
+
+                      {service.baseDescription && (
+                        <div className="text-[11px] text-on-surface-variant font-medium mt-0.5 leading-normal max-w-[280px]">
+                          {service.baseDescription}
+                        </div>
+                      )}
+                    </td>
+
+                    <td className="py-4 pr-4">
+                      <p className="text-sm text-on-surface-variant font-medium leading-relaxed">
+                        {service.description}
+                      </p>
+                    </td>
+
+                    <td className="py-4 pr-2 text-right">
+                      <div className="flex items-center justify-end gap-3">
+                        <span className="text-sm font-extrabold text-primary">
+                          {typeof service.price === "number"
+                            ? service.price.toLocaleString("vi-VN") + "đ"
+                            : service.price}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveService(service.serviceId)}
+                          className="p-1 text-on-surface-variant/40 hover:text-error rounded-md transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                          title="Xóa dịch vụ"
+                        >
+                          <Trash className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </td>
                   </tr>
-                </thead>
+                ))}
 
-                <tbody className="divide-y divide-outline-variant/40">
-                  {companyServices.map((service) => (
-                    <tr
-                      key={service.serviceId}
-                      className="group hover:bg-surface-container-low transition-colors"
+                {companyServices.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={3}
+                      className="py-8 text-center text-sm text-on-surface-variant font-medium"
                     >
-                      <td className="py-4 pl-2">
-                        <div className="font-bold text-on-surface text-sm">
-                          {service.name}
-                        </div>
-
-                        {service.baseDescription && (
-                          <div className="text-[11px] text-on-surface-variant font-medium mt-0.5 leading-normal max-w-[280px]">
-                            {service.baseDescription}
-                          </div>
-                        )}
-                      </td>
-
-                      <td className="py-4 pr-4">
-                        <p className="text-sm text-on-surface-variant font-medium leading-relaxed">
-                          {service.description}
-                        </p>
-                      </td>
-
-                      <td className="py-4 pr-2 text-right">
-                        <div className="flex items-center justify-end gap-3">
-                          <span className="text-sm font-extrabold text-primary">
-                            {typeof service.price === "number"
-                              ? service.price.toLocaleString("vi-VN") + "đ"
-                              : service.price}
-                          </span>
-
-                          <button
-                            type="button"
-                            onClick={() =>
-                              handleRemoveService(service.serviceId)
-                            }
-                            className="p-1 text-on-surface-variant/40 hover:text-error rounded-md transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
-                            title="Xóa dịch vụ"
-                          >
-                            <Trash className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-
-                  {companyServices.length === 0 && (
-                    <tr>
-                      <td
-                        colSpan={3}
-                        className="py-8 text-center text-sm text-on-surface-variant font-medium"
-                      >
-                        Chưa có dịch vụ nào được đăng ký
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </section>
+                      Chưa có dịch vụ nào được đăng ký
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </div>
 
       {toast && (
@@ -1676,11 +1727,15 @@ export default function MyCompanyDetail() {
 
             <div className="space-y-3">
               <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
-                Khi gửi yêu cầu công khai, thông tin doanh nghiệp và các dịch vụ của bạn sẽ được gửi tới Ban quản trị hệ thống để xét duyệt trước khi hiển thị công khai trên trang Tìm kiếm.
+                Khi gửi yêu cầu công khai, thông tin doanh nghiệp và các dịch vụ
+                của bạn sẽ được gửi tới Ban quản trị hệ thống để xét duyệt trước
+                khi hiển thị công khai trên trang Tìm kiếm.
               </p>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-on-surface">Ghi chú gửi Admin (tùy chọn)</label>
+                <label className="text-xs font-bold text-on-surface">
+                  Ghi chú gửi Admin (tùy chọn)
+                </label>
                 <textarea
                   rows={3}
                   value={publishNote}

@@ -1,4 +1,6 @@
 import { fetcher } from "@/lib/fetcher";
+import { CreatePublishRequestInput, CreatePublishRequestResponse } from "@/types/PublishRequest";
+
 import {
   GetCompaniesRequestParams,
   GetCompaniesResponse,
@@ -137,8 +139,8 @@ export const requestGetCompanyActivityImages = async () => {
 
 export async function requestCreateCompanyPublishRequest(
   companyId: string,
-  payload: { note?: string },
-): Promise<any> {
+  payload: CreatePublishRequestInput,
+): Promise<CreatePublishRequestResponse> {
   const url = `/api/companies/${companyId}/publish-requests`;
   return await fetcher(url, {
     method: "POST",

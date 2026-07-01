@@ -148,7 +148,7 @@ export const handleGetCompanyActivityImages = async () => {
 export const handleCreateCompanyPublishRequest = async (
   companyId: string,
   note?: string,
-): Promise<any> => {
+): Promise<{ request_id: string }> => {
   const profile = await getCurrentUserProfileService();
 
   if (!profile) {
@@ -161,7 +161,11 @@ export const handleCreateCompanyPublishRequest = async (
     throw new Error("Bạn không có quyền thực hiện hành động này");
   }
 
-  const data = await createCompanyPublishRequestService(companyId, note);
+  const data = await createCompanyPublishRequestService(
+    companyId,
+    profile.user_id,
+    note,
+  );
   return data;
 };
 
