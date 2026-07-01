@@ -111,6 +111,7 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
         name={company.name}
         logoUrl={company.logoUrl}
         bannerUrl={company.bannerUrl}
+        companyId={company.id}
         onOpenBookingModal={() => setIsBookingModalOpen(true)}
       />
 

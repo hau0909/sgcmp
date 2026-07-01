@@ -82,7 +82,7 @@ export const updateRegistrationStatus = async (id: string, status: "approved" | 
   }
 
   if (regData.company_id) {
-    const companyStatus = status === "approved" ? "active" : "unactive";
+    const companyStatus = status === "approved" ? "active" : "rejected";
     const { error: updateCompanyError } = await supabase
       .from("companies")
       .update({ status: companyStatus })
@@ -184,7 +184,7 @@ export const createRegistrationFlow = async (payload: {
       email: payload.company.email,
       phone: payload.company.phone,
       description: payload.company.description,
-      status: "unactive",
+      status: "pending_register",
     })
     .select("company_id")
     .single();

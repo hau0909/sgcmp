@@ -9,12 +9,15 @@ import {
   updateCompanyProfileService,
   uploadCompanyImageService,
   getCompanyActivityImagesService,
+  createCompanyPublishRequestService,
+  getCompanyPublishRequestsService,
 } from "../service/company.service";
 import {
   CompanyDetailData,
   UpdateCompanyProfileControllerParams,
   UpdateCompanyProfileInput,
   UploadCompanyImageControllerParams,
+  CompanyPublishRequestItem,
 } from "../types";
 import {
   validateUpdateCompanyProfileInput,
@@ -22,6 +25,8 @@ import {
 } from "../validator/company.validate";
 import { getCurrentUserProfileService } from "@/features/auth/service/auth.service";
 import { ImageType } from "@/types/Enum";
+
+import { getProfileByUserIdService } from "@/features/profile/service/profile.service";
 
 export const handleGetCompanies = async (
   params: CompanyFilterParams,
@@ -41,6 +46,19 @@ export const handleGetCompanyById = async (
   id: string,
 ): Promise<CompanyDetailData | null> => {
   const result = await getCompanyByIdServiceInCustomer(id);
+  if (!result) return null;
+
+  if (result.ownerId) {
+    try {
+      const ownerProfile = await getProfileByUserIdService(result.ownerId);
+      if (ownerProfile) {
+        result.ownerName = ownerProfile.full_name;
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải thông tin người phụ trách:", err);
+    }
+  }
+
   return result;
 };
 
@@ -124,5 +142,34 @@ export const handleGetCompanyActivityImages = async () => {
 
   const data = await getCompanyActivityImagesService(company_id);
 
+  return data;
+};
+
+export const handleCreateCompanyPublishRequest = async (
+  companyId: string,
+  note?: string,
+): Promise<{ request_id: string }> => {
+  const profile = await getCurrentUserProfileService();
+
+  if (!profile) {
+    throw new Error("Bạn chưa đăng nhập");
+  }
+
+  // Validate ownership
+  const userCompanyId = await getCompanyByOwnerIdService(profile.user_id);
+  if (userCompanyId !== companyId) {
+    throw new Error("Bạn không có quyền thực hiện hành động này");
+  }
+
+  const data = await createCompanyPublishRequestService(
+    companyId,
+    profile.user_id,
+    note,
+  );
+  return data;
+};
+
+export const handleGetCompanyPublishRequests = async (): Promise<CompanyPublishRequestItem[]> => {
+  const data = await getCompanyPublishRequestsService();
   return data;
 };

@@ -79,12 +79,14 @@ export type CreateGuardAccountBody = {
   email?: unknown;
   full_name?: unknown;
   phone_number?: unknown;
+  identity_id?: unknown;
 };
 
 export type CreateGuardAccountInput = {
   email: string;
   full_name: string;
   phone_number: string;
+  identity_id: string;
 };
 
 export type CreateGuardAccountResponse = {

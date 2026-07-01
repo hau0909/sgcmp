@@ -1,12 +1,13 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck, Mail, Calendar } from "lucide-react";
+import { ShieldCheck, MessageSquare, Calendar } from "lucide-react";
 
 interface CompanyDetailHeaderProps {
   name: string;
   logoUrl?: string;
   bannerUrl?: string;
+  companyId: string;
   onOpenBookingModal?: () => void;
 }
 
@@ -14,11 +15,20 @@ export default function CompanyDetailHeader({
   name,
   logoUrl,
   bannerUrl,
+  companyId,
   onOpenBookingModal,
 }: CompanyDetailHeaderProps) {
+  const handleOpenChat = () => {
+    window.dispatchEvent(
+      new CustomEvent("open-customer-chat", {
+        detail: { companyId, companyName: name },
+      })
+    );
+  };
+
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-xs">
-      {/* cover banner - subtle, premium gradient with overlay */}
+      {/* cover banner */}
       <div className="relative h-48 sm:h-72 w-full bg-linear-to-r from-primary via-primary/90 to-secondary/80 overflow-hidden">
         {bannerUrl ? (
           <img
@@ -28,7 +38,6 @@ export default function CompanyDetailHeader({
           />
         ) : (
           <>
-            {/* Abstract pattern lines overlay */}
             <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
             <div className="absolute inset-0 bg-linear-to-t from-black/30 via-transparent to-transparent" />
           </>
@@ -63,9 +72,10 @@ export default function CompanyDetailHeader({
 
         <div className="flex items-center gap-2 w-full sm:w-auto mt-3 sm:mt-0 shrink-0">
           <button
+            onClick={handleOpenChat}
             className="flex-1 sm:flex-none px-2.5 py-1.5 sm:px-3.5 sm:py-2 border border-primary text-primary font-semibold rounded-lg hover:bg-surface-container transition-colors text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
           >
-            <Mail className="w-4 h-4" /> Liên hệ
+            <MessageSquare className="w-4 h-4" /> Nhắn tin
           </button>
           <button
             onClick={onOpenBookingModal}

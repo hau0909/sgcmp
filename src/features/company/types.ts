@@ -1,4 +1,6 @@
-import { ImageType } from "@/types/Enum";
+import { ImageType, CompanyStatus } from "@/types/Enum";
+import { PublishRequest } from "@/types/PublishRequest";
+
 
 export interface MarketplaceCompany {
   id: string;
@@ -79,10 +81,12 @@ export interface CompanyDetailData {
   services: CompanyServiceData[];
   businessLicenseNo?: string;
   licenseFileUrl?: string;
-  status?: string;
+  status?: CompanyStatus;
   createdAt?: string;
   activityImgs?: string[];
   companyLicenseNo?: string;
+  ownerName?: string;
+  ownerId?: string;
 }
 
 export type UpdateCompanyProfileInput = {
@@ -122,3 +126,6 @@ export type CompanyActivityImage = {
   image_type: "other";
   created_at: string;
 };
+
+export type CompanyPublishRequestItem = PublishRequest;
+
