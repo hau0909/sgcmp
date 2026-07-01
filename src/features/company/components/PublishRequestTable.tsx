@@ -14,23 +14,7 @@ import {
   ExternalLink,
 } from "lucide-react";
 
-// ─── Types ──────────────────────────────────────────────────────────────────
-
-interface PublishRequest {
-  request_id: string;
-  company_id: string;
-  status: string;
-  note: string | null;
-  requested_at: string;
-  companies: {
-    company_name: string;
-    owner_id: string;
-    profiles: {
-      full_name: string | null;
-      email: string | null;
-    } | null;
-  } | null;
-}
+import { PublishRequest } from "@/types/PublishRequest";
 
 // ─── Mock Data ──────────────────────────────────────────────────────────────
 
@@ -38,9 +22,12 @@ const MOCK_PUBLISH_REQUESTS: PublishRequest[] = [
   {
     request_id: "REQ-2026-001",
     company_id: "COMP-001",
-    status: "pending",
-    note: "Yêu cầu phê duyệt công khai công ty dịch vụ bảo vệ Bảo An. Đã hoàn thiện hồ sơ.",
+    status: "PENDING",
+    notes: "Yêu cầu phê duyệt công khai công ty dịch vụ bảo vệ Bảo An. Đã hoàn thiện hồ sơ.",
     requested_at: "2026-06-28T08:30:00Z",
+    requested_by: "USER-001",
+    approved_by: null,
+    processed_at: null,
     companies: {
       company_name: "Công ty TNHH Dịch vụ Bảo vệ Bảo An",
       owner_id: "USER-001",
@@ -53,9 +40,12 @@ const MOCK_PUBLISH_REQUESTS: PublishRequest[] = [
   {
     request_id: "REQ-2026-002",
     company_id: "COMP-002",
-    status: "approved",
-    note: "Đã kiểm tra đầy đủ giấy phép kinh doanh và chứng chỉ nghiệp vụ.",
+    status: "APPROVED",
+    notes: "Đã kiểm tra đầy đủ giấy phép kinh doanh và chứng chỉ nghiệp vụ.",
     requested_at: "2026-06-27T14:15:00Z",
+    requested_by: "USER-002",
+    approved_by: "ADMIN-001",
+    processed_at: "2026-06-27T15:00:00Z",
     companies: {
       company_name: "Công ty Cổ phần Thăng Long Security",
       owner_id: "USER-002",
@@ -68,9 +58,12 @@ const MOCK_PUBLISH_REQUESTS: PublishRequest[] = [
   {
     request_id: "REQ-2026-003",
     company_id: "COMP-003",
-    status: "pending",
-    note: "Cập nhật lại hình ảnh hoạt động và giấy phép mới cấp lại.",
+    status: "PENDING",
+    notes: "Cập nhật lại hình ảnh hoạt động và giấy phép mới cấp lại.",
     requested_at: "2026-06-27T09:45:00Z",
+    requested_by: "USER-003",
+    approved_by: null,
+    processed_at: null,
     companies: {
       company_name: "Tập đoàn Vệ sĩ Toàn Cầu Global Guard",
       owner_id: "USER-003",
@@ -83,9 +76,12 @@ const MOCK_PUBLISH_REQUESTS: PublishRequest[] = [
   {
     request_id: "REQ-2026-004",
     company_id: "COMP-004",
-    status: "rejected",
-    note: "Thiếu giấy chứng nhận đủ điều kiện về an ninh trật tự.",
+    status: "REJECTED",
+    notes: "Thiếu giấy chứng nhận đủ điều kiện về an ninh trật tự.",
     requested_at: "2026-06-25T16:20:00Z",
+    requested_by: "USER-004",
+    approved_by: "ADMIN-001",
+    processed_at: "2026-06-26T09:00:00Z",
     companies: {
       company_name: "Công ty TNHH Vệ sĩ Sài Gòn 247",
       owner_id: "USER-004",
@@ -98,9 +94,12 @@ const MOCK_PUBLISH_REQUESTS: PublishRequest[] = [
   {
     request_id: "REQ-2026-005",
     company_id: "COMP-005",
-    status: "approved",
-    note: "Hồ sơ hợp lệ, yêu cầu đăng tải công khai lên hệ thống.",
+    status: "APPROVED",
+    notes: "Hồ sơ hợp lệ, yêu cầu đăng tải công khai lên hệ thống.",
     requested_at: "2026-06-24T11:00:00Z",
+    requested_by: "USER-005",
+    approved_by: "ADMIN-001",
+    processed_at: "2026-06-24T14:30:00Z",
     companies: {
       company_name: "Công ty Dịch vụ Vệ sĩ Đại Việt",
       owner_id: "USER-005",

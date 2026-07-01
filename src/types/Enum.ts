@@ -15,6 +15,8 @@ export type CompanyStatus =
   | "published"
   | "rejected";
 
+export type CompanyPublishRequestStatus = "PENDING" | "APPROVED" | "REJECTED";
+
 export type PaymentMethod = "bank_transfer" | "credit_card" | "e_wallet";
 
 export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";

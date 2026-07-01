@@ -353,9 +353,10 @@ export const getCompanyActivityImagesService = async (company_id: string) => {
 
 export const createCompanyPublishRequestService = async (
   companyId: string,
+  requestedBy: string,
   note?: string,
-): Promise<any> => {
-  return await createCompanyPublishRequest(companyId, note);
+): Promise<{ request_id: string }> => {
+  return await createCompanyPublishRequest(companyId, requestedBy, note);
 };
 
 export const getCompanyPublishRequestsService = async (): Promise<CompanyPublishRequestItem[]> => {
