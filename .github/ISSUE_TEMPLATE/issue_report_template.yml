@@ -1,6 +1,6 @@
 name: "Issue Report"
 description: "Create a feat, refactor, or bug issue"
-title: ""
+title: "[Iteration] [Type] Short description"
 labels: ["triage"]
 body:
   - type: dropdown
