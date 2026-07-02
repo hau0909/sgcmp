@@ -10,6 +10,7 @@ import {
   getCompanyActivityImages,
   createCompanyPublishRequest,
   getCompanyPublishRequests,
+  getCompanyPublishRequestById,
 } from "../repository/company.repository";
 import {
   getCitiesService as getCities,
@@ -26,7 +27,9 @@ import {
   UpdateCompanyProfileInput,
   UploadCompanyImageServiceParams,
   CompanyPublishRequestItem,
+  PublishRequestDetailData,
 } from "../types";
+import { getProfileByUserId } from "@/features/profile/repository/profile.repository";
 import { Company } from "@/types/Company";
 import { CompanyStatus } from "@/types/Enum";
 
@@ -361,4 +364,60 @@ export const createCompanyPublishRequestService = async (
 
 export const getCompanyPublishRequestsService = async (): Promise<CompanyPublishRequestItem[]> => {
   return await getCompanyPublishRequests();
+};
+
+export const getCompanyPublishRequestByIdService = async (
+  requestId: string,
+): Promise<PublishRequestDetailData | null> => {
+  const publishRequest = await getCompanyPublishRequestById(requestId);
+  if (!publishRequest) return null;
+
+  const companyDetails = await getCompanyByIdServiceInCustomer(publishRequest.company_id);
+  if (!companyDetails) return null;
+
+  let requesterInfo: any = undefined;
+  if (publishRequest.requested_by) {
+    try {
+      const profile = await getProfileByUserId(publishRequest.requested_by);
+      if (profile) {
+        requesterInfo = {
+          full_name: profile.full_name,
+          role: profile.role,
+          phone: profile.phone_number || "",
+          email: profile.email,
+        };
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải thông tin người gửi yêu cầu:", err);
+    }
+  }
+
+  return {
+    request_id: publishRequest.request_id,
+    company_id: publishRequest.company_id,
+    status: publishRequest.status.toLowerCase(),
+    note: publishRequest.notes,
+    requested_at: publishRequest.requested_at,
+    requested_by: requesterInfo,
+    company: {
+      company_name: companyDetails.name,
+      description: companyDetails.description,
+      logo_url: companyDetails.logoUrl,
+      banner_url: companyDetails.bannerUrl,
+      email: companyDetails.email,
+      phone: companyDetails.phone,
+      address: companyDetails.address,
+      business_license_no: companyDetails.companyLicenseNo || companyDetails.businessLicenseNo || "",
+      registration_code: companyDetails.businessLicenseNo || "",
+      license_file_url: companyDetails.licenseFileUrl,
+      activity_images: companyDetails.activityImgs || [],
+      services: companyDetails.services.map((s) => ({
+        service_id: s.serviceId,
+        name: s.name,
+        sub_description: s.description || undefined,
+        description: s.baseDescription || "",
+        price: s.price,
+      })),
+    },
+  };
 };
