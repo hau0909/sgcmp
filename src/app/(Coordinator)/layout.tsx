@@ -67,7 +67,7 @@ export default function CoordinatorLayout({
       name: "Ca trực",
       href: "/schedules",
       icon: CalendarDays,
-      active: pathname === "/schedules",
+      active: pathname === "/schedules" || pathname.startsWith("/schedules/"),
     },
     {
       name: "Đơn yêu cầu",

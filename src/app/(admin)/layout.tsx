@@ -40,13 +40,13 @@ export default function AdminLayout({
       name: "Yêu cầu phê duyệt",
       href: "/registrations",
       icon: Building2,
-      active: pathname === "/registrations",
+      active: pathname === "/registrations" || pathname.startsWith("/registrations/"),
     },
     {
       name: "Yêu cầu công khai",
       href: "/publish-requests",
       icon: Globe,
-      active: pathname === "/publish-requests",
+      active: pathname === "/publish-requests" || pathname.startsWith("/publish-requests/"),
     },
     {
       name: "Tuân thủ pháp lý",

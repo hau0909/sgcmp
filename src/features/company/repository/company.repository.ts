@@ -413,3 +413,20 @@ export const getCompanyPublishRequests = async (): Promise<CompanyPublishRequest
 
   return (data as any) || [];
 };
+
+export const getCompanyPublishRequestById = async (
+  requestId: string,
+): Promise<any | null> => {
+  const supabaseServer = await createClient();
+  const { data, error } = await supabaseServer
+    .from("company_publish_requests")
+    .select("request_id, company_id, status, notes, requested_at, requested_by, approved_by, processed_at")
+    .eq("request_id", requestId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data;
+};
