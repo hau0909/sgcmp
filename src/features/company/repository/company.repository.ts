@@ -430,3 +430,51 @@ export const getCompanyPublishRequestById = async (
 
   return data;
 };
+
+export const updateCompanyPublishRequestStatus = async (
+  requestId: string,
+  status: "APPROVED" | "REJECTED",
+  approvedBy?: string,
+): Promise<void> => {
+  const supabaseServer = await createClient();
+
+  // 1. Get the publish request details to find the company_id
+  const { data: requestData, error: fetchError } = await supabaseServer
+    .from("company_publish_requests")
+    .select("company_id")
+    .eq("request_id", requestId)
+    .maybeSingle();
+
+  if (fetchError || !requestData) {
+    throw new Error(fetchError?.message || "Không tìm thấy yêu cầu phát hành.");
+  }
+
+  const { company_id } = requestData;
+
+  // 2. Update the publish request status
+  const { error: updateError } = await supabaseServer
+    .from("company_publish_requests")
+    .update({
+      status,
+      approved_by: approvedBy || null,
+      processed_at: new Date().toISOString(),
+    })
+    .eq("request_id", requestId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  // 3. Update the company status
+  const companyStatus = status === "APPROVED" ? "published" : "active";
+  const { error: companyError } = await supabaseServer
+    .from("companies")
+    .update({
+      status: companyStatus,
+    })
+    .eq("company_id", company_id);
+
+  if (companyError) {
+    throw new Error(companyError.message);
+  }
+};

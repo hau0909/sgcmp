@@ -12,6 +12,7 @@ import {
   createCompanyPublishRequestService,
   getCompanyPublishRequestsService,
   getCompanyPublishRequestByIdService,
+  updateCompanyPublishRequestStatusService,
 } from "../service/company.service";
 import {
   CompanyDetailData,
@@ -181,4 +182,14 @@ export const handleGetCompanyPublishRequestById = async (
 ): Promise<PublishRequestDetailData | null> => {
   const data = await getCompanyPublishRequestByIdService(requestId);
   return data;
+};
+
+export const handleUpdateCompanyPublishRequestStatus = async (
+  requestId: string,
+  status: "APPROVED" | "REJECTED",
+): Promise<void> => {
+  const profile = await getCurrentUserProfileService();
+  const adminId = profile ? profile.user_id : undefined;
+
+  await updateCompanyPublishRequestStatusService(requestId, status, adminId);
 };

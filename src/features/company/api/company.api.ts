@@ -160,3 +160,17 @@ export async function requestGetCompanyPublishRequestById(
     method: "GET",
   });
 }
+
+export async function requestUpdateCompanyPublishRequestStatus(
+  id: string,
+  status: "APPROVED" | "REJECTED",
+): Promise<{ success: boolean; message: string }> {
+  const url = `/api/admin/publish-requests/${id}`;
+  return await fetcher(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
+  });
+}
