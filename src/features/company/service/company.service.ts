@@ -11,6 +11,7 @@ import {
   createCompanyPublishRequest,
   getCompanyPublishRequests,
   getCompanyPublishRequestById,
+  updateCompanyPublishRequestStatus,
 } from "../repository/company.repository";
 import {
   getCitiesService as getCities,
@@ -420,4 +421,12 @@ export const getCompanyPublishRequestByIdService = async (
       })),
     },
   };
+};
+
+export const updateCompanyPublishRequestStatusService = async (
+  requestId: string,
+  status: "APPROVED" | "REJECTED",
+  approvedBy?: string,
+): Promise<void> => {
+  await updateCompanyPublishRequestStatus(requestId, status, approvedBy);
 };

@@ -3,7 +3,10 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { requestGetCompanyPublishRequestById } from "../api/company.api";
+import {
+  requestGetCompanyPublishRequestById,
+  requestUpdateCompanyPublishRequestStatus,
+} from "../api/company.api";
 import { PublishRequestDetailData } from "../types";
 import {
   ChevronRight,
@@ -25,6 +28,7 @@ import {
   Eye,
   User,
   MessageSquare,
+  AlertTriangle,
 } from "lucide-react";
 
 const STATUS_CONFIG: Record<
@@ -68,6 +72,15 @@ export default function PublishRequestDetail() {
   // State for PDF Lightbox Preview
   const [previewPdf, setPreviewPdf] = useState<string | null>(null);
 
+  // State for Rejection Modal
+  const [rejectModalOpen, setRejectModalOpen] = useState(false);
+
+  // State for Approval Modal
+  const [approveModalOpen, setApproveModalOpen] = useState(false);
+
+  // Processing state
+  const [actionLoading, setActionLoading] = useState(false);
+
   useEffect(() => {
     if (!requestId) return;
 
@@ -94,6 +107,56 @@ export default function PublishRequestDetail() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 3500);
+  };
+
+  const handleApprove = async () => {
+    if (!requestId) return;
+    try {
+      setActionLoading(true);
+      const res = await requestUpdateCompanyPublishRequestStatus(requestId, "APPROVED");
+      if (res.success) {
+        if (request) {
+          setRequest({
+            ...request,
+            status: "approved",
+          });
+        }
+        showToast("Phê duyệt yêu cầu công khai thông tin công ty thành công!");
+      } else {
+        showToast(res.message || "Không thể phê duyệt yêu cầu");
+      }
+      setApproveModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Không thể phê duyệt yêu cầu");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleReject = async () => {
+    if (!requestId) return;
+    try {
+      setActionLoading(true);
+      const res = await requestUpdateCompanyPublishRequestStatus(requestId, "REJECTED");
+      if (res.success) {
+        if (request) {
+          setRequest({
+            ...request,
+            status: "rejected",
+          });
+        }
+        showToast("Từ chối yêu cầu công khai thông tin công ty thành công!");
+      } else {
+        showToast(res.message || "Không thể từ chối yêu cầu");
+      }
+      setRejectModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      showToast(err.message || "Không thể từ chối yêu cầu");
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   if (loading) {
@@ -190,7 +253,22 @@ export default function PublishRequestDetail() {
             </span>
           </p>
         </div>
-
+        {statusKey === "pending" && (
+          <div className="flex items-center gap-3 w-full md:w-auto">
+            <button
+              onClick={() => setRejectModalOpen(true)}
+              className="flex-1 md:flex-initial px-5 py-2.5 border-2 border-[#ff0c3b] text-[#ff0c3b] hover:bg-red-50 active:scale-95 transition-all rounded-xl text-sm font-bold tracking-wide cursor-pointer"
+            >
+              TỪ CHỐI HỒ SƠ
+            </button>
+            <button
+              onClick={() => setApproveModalOpen(true)}
+              className="flex-1 md:flex-initial px-5 py-2.5 bg-[#024594] text-white hover:bg-[#023b7e] active:scale-95 transition-all rounded-xl text-sm font-bold tracking-wide shadow-md cursor-pointer"
+            >
+              PHÊ DUYỆT ĐĂNG KÝ
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── SECTION 1: THÔNG TIN NGƯỜI GỬI & GHI CHÚ YÊU CẦU ───────────────────── */}
@@ -610,6 +688,92 @@ export default function PublishRequestDetail() {
                 className="w-full h-full border-none"
                 title="Giấy phép kinh doanh PDF"
               />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* REJECT MODAL (DIALOG) */}
+      {rejectModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in font-body">
+          <div className="bg-white rounded-2xl border border-[#c3c6d3] max-w-md w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-red-50 border-b border-red-100 px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#ff0c3b]">
+                <AlertTriangle className="w-5 h-5 shrink-0" />
+                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">Từ chối yêu cầu công khai</h3>
+              </div>
+              <button onClick={() => setRejectModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <p className="text-sm text-on-surface-variant leading-relaxed">
+                Bạn có chắc chắn muốn từ chối yêu cầu công khai thông tin của doanh nghiệp <span className="font-bold text-[#0b1c30]">{request.company.company_name}</span> không?
+              </p>
+              <p className="text-xs text-[#b91c1c] bg-[#fef2f2] border border-[#fca5a5] p-3 rounded-lg leading-normal flex gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444] mt-0.5" />
+                Lưu ý: Hành động này sẽ chuyển trạng thái của doanh nghiệp về hoạt động bình thường (không hiển thị trên marketplace) và thông báo từ chối sẽ được ghi nhận.
+              </p>
+            </div>
+            <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setRejectModalOpen(false)}
+                disabled={actionLoading}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded-xl text-sm font-semibold text-slate-700 disabled:opacity-50"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleReject}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-[#ff0c3b] hover:bg-[#d80a32] active:scale-95 text-white transition-all rounded-xl text-sm font-bold shadow-md disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                {actionLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                Từ chối yêu cầu
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* APPROVE MODAL (DIALOG) */}
+      {approveModalOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50 animate-in fade-in font-body">
+          <div className="bg-white rounded-2xl border border-[#c3c6d3] max-w-md w-full overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200">
+            <div className="bg-[#eff4ff] border-b border-[#acc7ff] px-6 py-4 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-[#024594]">
+                <CheckCircle2 className="w-5 h-5 shrink-0" />
+                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">Phê duyệt yêu cầu</h3>
+              </div>
+              <button onClick={() => setApproveModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <p className="text-sm text-on-surface-variant leading-relaxed">
+                Bạn có chắc chắn muốn phê duyệt yêu cầu công khai thông tin của doanh nghiệp <span className="font-bold text-[#0b1c30]">{request.company.company_name}</span> không?
+              </p>
+              <p className="text-xs text-[#b45309] bg-[#fffbeb] border border-[#fde68a] p-3 rounded-lg leading-normal flex gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-[#d97706] mt-0.5" />
+                Lưu ý: Hành động này sẽ chuyển trạng thái của doanh nghiệp sang "published", cho phép hiển thị và tìm kiếm trên trang chủ (Marketplace).
+              </p>
+            </div>
+            <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
+              <button
+                onClick={() => setApproveModalOpen(false)}
+                disabled={actionLoading}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded-xl text-sm font-semibold text-slate-700 disabled:opacity-50"
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleApprove}
+                disabled={actionLoading}
+                className="px-4 py-2 bg-[#024594] hover:bg-[#023b7e] active:scale-95 text-white transition-all rounded-xl text-sm font-bold shadow-md disabled:opacity-50 flex items-center gap-2 cursor-pointer"
+              >
+                {actionLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
+                Đồng ý phê duyệt
+              </button>
             </div>
           </div>
         </div>
