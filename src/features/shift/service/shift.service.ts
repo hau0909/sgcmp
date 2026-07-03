@@ -9,6 +9,7 @@ import type {
 
 import type { Shifts } from "@/types/Shift";
 import type { Shift_Assignment } from "@/types/ShiftAssignment";
+import type { Shift_Img } from "@/types/ShiftImg";
 
 import { groupShiftsByDate } from "../utils/shift.utils";
 
@@ -27,6 +28,8 @@ import {
   getShiftById,
   updateShiftAssignmentStatusByShiftAndGuard,
   updateAssignedShiftAssignmentsToAbsentByShiftId,
+  createShiftImage,
+  getShiftImageByAssignmentId,
 } from "../repository/shift.repository";
 
 export const getShiftContractOptionsService = async (
@@ -151,4 +154,20 @@ export const updateAssignedShiftAssignmentsToAbsentByShiftIdService = async (
   shiftId: string,
 ) => {
   return await updateAssignedShiftAssignmentsToAbsentByShiftId(shiftId);
+};
+
+export const createShiftImageService = async (params: {
+  assignmentId: string;
+  imageUrl: string;
+  imagePath: string | null;
+  imageType: string;
+  note?: string | null;
+}): Promise<Shift_Img | null> => {
+  return await createShiftImage(params);
+};
+
+export const getShiftImageByAssignmentIdService = async (
+  assignmentId: string,
+): Promise<Shift_Img | null> => {
+  return await getShiftImageByAssignmentId(assignmentId);
 };

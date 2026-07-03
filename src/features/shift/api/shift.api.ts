@@ -99,10 +99,18 @@ export const requestGetGuardShiftDetail = async ({
 
 export const requestCheckinGuardShift = async ({
   shiftId,
+  imageUrl,
+  imagePath,
 }: {
   shiftId: string;
+  imageUrl?: string;
+  imagePath?: string;
 }): Promise<CheckinGuardShiftResponse> => {
   return await fetcher(`/api/shifts/${encodeURIComponent(shiftId)}/checkin`, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ imageUrl, imagePath }),
   });
 };

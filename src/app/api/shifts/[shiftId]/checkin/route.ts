@@ -10,12 +10,25 @@ type RouteParams = {
   }>;
 };
 
-export async function POST(_request: Request, { params }: RouteParams) {
+export async function POST(request: Request, { params }: RouteParams) {
   try {
     const { shiftId } = await params;
 
+    let imageUrl: string | undefined;
+    let imagePath: string | undefined;
+
+    try {
+      const body = await request.json();
+      imageUrl = body.imageUrl;
+      imagePath = body.imagePath;
+    } catch {
+      // Body can be empty (e.g. auto absent updates)
+    }
+
     const result = await handleCheckinGuardShift({
       shiftId,
+      imageUrl,
+      imagePath,
     });
 
     const status = result.assignment.status;

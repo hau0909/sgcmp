@@ -17,6 +17,7 @@ import {
   requestGetGuardShiftDetail,
 } from "@/features/shift/api/shift.api";
 import type { GuardShiftDetailItem } from "@/features/shift/type";
+import { createClient } from "@/lib/supabase/client";
 
 const CHECKIN_BEFORE_MINUTES = 5;
 const CHECKIN_AFTER_MINUTES = 5;
@@ -346,8 +347,38 @@ export default function GuardShiftCheckinPage() {
       setCheckingIn(true);
       setCheckinPopup(null);
 
+      let imageUrl: string | undefined;
+      let imagePath: string | undefined;
+
+      if (checkinImageFile) {
+        const id = shift.assignment_id;
+        const uploadPath = `shifts/${id}/check-in/img.png`;
+        
+        const supabase = createClient();
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("shifts")
+          .upload(uploadPath, checkinImageFile, {
+            contentType: checkinImageFile.type,
+            cacheControl: "3600",
+            upsert: true,
+          });
+
+        if (uploadError) {
+          throw new Error(`Tải ảnh check-in lên storage thất bại: ${uploadError.message}`);
+        }
+
+        imagePath = uploadData.path;
+        const { data: publicUrlData } = supabase.storage
+          .from("shifts")
+          .getPublicUrl(uploadData.path);
+        
+        imageUrl = publicUrlData.publicUrl;
+      }
+
       const response = await requestCheckinGuardShift({
         shiftId: shift.id,
+        imageUrl,
+        imagePath,
       });
 
       setShift((currentShift) => {
