@@ -175,7 +175,7 @@ function VerifyEmailContent() {
     setTimeout(() => {
       router.refresh();
       router.replace(redirectPath);
-    }, 3000);
+    }, 2000);
   }, [router, setAuth]);
 
   useEffect(() => {
@@ -395,12 +395,11 @@ function VerifyEmailContent() {
                 </div>
                 {resendMessage && (
                   <p
-                    className={`text-xs font-semibold mt-1 ${
-                      resendMessage.includes("thành công") ||
-                      resendMessage.includes("Đã gửi")
+                    className={`text-xs font-semibold mt-1 ${resendMessage.includes("thành công") ||
+                        resendMessage.includes("Đã gửi")
                         ? "text-green-600"
                         : "text-red-500"
-                    }`}
+                      }`}
                   >
                     {resendMessage}
                   </p>

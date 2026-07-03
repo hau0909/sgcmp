@@ -15,3 +15,5 @@ Khi người dùng yêu cầu viết hoặc cập nhật các Quy tắc nghiệp
 | **BR-02** | A business organization (Company) is allowed only one active subscription plan at any given time. |
 | **BR-03** | System features and resources available to a company are determined by the limits and quotas of their active subscription plan. |
 | **BR-04** | Changing, upgrading, or canceling active subscription plans must follow the organization's billing policy and may require support assistance. |
+| **BR-05** | User accounts must have a verified/confirmed email address to log in to the system. |
+| **BR-06** | Successful login redirects users to their role-specific dashboard (Customer to `/`, Company Admin to `/dashboard`, Admin to `/registrations`, Guard to `/overview`, Coordinator to `/schedules`). |
