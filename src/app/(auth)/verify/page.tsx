@@ -25,19 +25,18 @@ type AuthProfile = {
   company_id: string | null;
 };
 
-const GUARD_HOME_PATH = "/overview";
-const COORDINATOR_HOME_PATH = "/schedules";
+const LOGIN_PATH = "/login"
 const DEFAULT_HOME_PATH = "/";
 
 const getRedirectPathByRole = (role: UserRole) => {
   const roleValue = String(role);
 
   if (roleValue === "guard") {
-    return GUARD_HOME_PATH;
+    return LOGIN_PATH;
   }
 
   if (roleValue === "Coordinator") {
-    return COORDINATOR_HOME_PATH;
+    return LOGIN_PATH;
   }
 
   return DEFAULT_HOME_PATH;
@@ -396,9 +395,9 @@ function VerifyEmailContent() {
                 {resendMessage && (
                   <p
                     className={`text-xs font-semibold mt-1 ${resendMessage.includes("thành công") ||
-                        resendMessage.includes("Đã gửi")
-                        ? "text-green-600"
-                        : "text-red-500"
+                      resendMessage.includes("Đã gửi")
+                      ? "text-green-600"
+                      : "text-red-500"
                       }`}
                   >
                     {resendMessage}
