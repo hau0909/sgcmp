@@ -4,6 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { requestRegisterAccount } from "../api/auth.api";
 import { isDisposableEmail } from "../validator/auth.validator";
+import { Eye, EyeOff } from "lucide-react";
 
 type FormErrors = {
   fullName?: string;
@@ -20,6 +21,8 @@ export default function SignUp() {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
@@ -240,18 +243,31 @@ export default function SignUp() {
             <label className="mb-2 block text-base font-semibold text-slate-950">
               Mật khẩu
             </label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              disabled={loading}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setErrors((prev) => ({ ...prev, password: undefined }));
-                setSuccessMessage("");
-              }}
-              className={inputClass(!!errors.password)}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                disabled={loading}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setErrors((prev) => ({ ...prev, password: undefined }));
+                  setSuccessMessage("");
+                }}
+                className={`${inputClass(!!errors.password)} pr-12`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-600 focus:outline-none"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
             {errors.password && (
               <p className="mt-1 text-sm font-medium text-red-600">
                 {errors.password}
@@ -263,21 +279,34 @@ export default function SignUp() {
             <label className="mb-2 block text-base font-semibold text-slate-950">
               Xác nhận mật khẩu
             </label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={confirmPassword}
-              disabled={loading}
-              onChange={(e) => {
-                setConfirmPassword(e.target.value);
-                setErrors((prev) => ({
-                  ...prev,
-                  confirmPassword: undefined,
-                }));
-                setSuccessMessage("");
-              }}
-              className={inputClass(!!errors.confirmPassword)}
-            />
+            <div className="relative">
+              <input
+                type={showConfirmPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={confirmPassword}
+                disabled={loading}
+                onChange={(e) => {
+                  setConfirmPassword(e.target.value);
+                  setErrors((prev) => ({
+                    ...prev,
+                    confirmPassword: undefined,
+                  }));
+                  setSuccessMessage("");
+                }}
+                className={`${inputClass(!!errors.confirmPassword)} pr-12`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-4 text-slate-400 hover:text-slate-600 focus:outline-none"
+              >
+                {showConfirmPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
             {errors.confirmPassword && (
               <p className="mt-1 text-sm font-medium text-red-600">
                 {errors.confirmPassword}

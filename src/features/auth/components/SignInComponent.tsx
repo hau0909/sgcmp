@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { requestLoginAccount } from "../api/auth.api";
 import { getRedirectPathByRole } from "../utils/redirectByRole";
 import { useAuthStore } from "@/store/auth.store";
+import { Eye, EyeOff } from "lucide-react";
 
 type FormErrors = {
   email?: string;
@@ -68,6 +69,7 @@ const getErrorMessage = (error: unknown) => {
 export default function SignInComponent() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const router = useRouter();
 
@@ -224,22 +226,35 @@ export default function SignInComponent() {
               </Link>
             </div>
 
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              disabled={loading}
-              onChange={(e) => {
-                setPassword(e.target.value);
-                setSuccessMessage("");
-                setErrors((prev) => ({
-                  ...prev,
-                  password: undefined,
-                  general: undefined,
-                }));
-              }}
-              className={inputClass(!!errors.password)}
-            />
+            <div className="relative">
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="••••••••"
+                value={password}
+                disabled={loading}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  setSuccessMessage("");
+                  setErrors((prev) => ({
+                    ...prev,
+                    password: undefined,
+                    general: undefined,
+                  }));
+                }}
+                className={`${inputClass(!!errors.password)} pr-10`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+              >
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
+              </button>
+            </div>
 
             {errors.password && (
               <p className="mt-1 text-sm font-medium text-red-600">
