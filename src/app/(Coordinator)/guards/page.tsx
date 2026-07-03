@@ -274,7 +274,7 @@ export default function GuardListScreen() {
                           onClick={() =>
                             router.push(`/guards/${guard.guard_id}`)
                           }
-                          className="cursor-pointer text-sm font-semibold text-blue-700 hover:underline"
+                          className="cursor-disabled text-sm font-semibold text-blue-700 hover:underline"
                         >
                           Chi tiết
                         </button>
