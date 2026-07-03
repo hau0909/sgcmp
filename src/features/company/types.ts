@@ -95,8 +95,8 @@ export type UpdateCompanyProfileInput = {
   email: string;
   phone: string;
   address: string;
-  business_license_no: string;
-  registration_code: string;
+  business_license_no?: string;
+  registration_code?: string;
 };
 
 export type UpdateCompanyProfileControllerParams = {
