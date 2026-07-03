@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { handleUploadGuardAvatar } from "@/features/guards/controller/guard.controller";
+import { handleUploadGuardFile } from "@/features/guards/controller/guard.controller";
 
 export const POST = async (request: Request) => {
   try {
@@ -9,16 +9,18 @@ export const POST = async (request: Request) => {
 
     console.log("UPLOAD USER ID:", form_data.get("user_id"));
 
-    const avatar_file = form_data.get("avatar_file");
+    const file = form_data.get("file") || form_data.get("avatar_file");
+    const type = form_data.get("type") || "avatar";
 
     console.log("UPLOAD FILE:", {
-      is_file: avatar_file instanceof File,
-      name: avatar_file instanceof File ? avatar_file.name : null,
-      type: avatar_file instanceof File ? avatar_file.type : null,
-      size: avatar_file instanceof File ? avatar_file.size : null,
+      is_file: file instanceof File,
+      name: file instanceof File ? file.name : null,
+      type: file instanceof File ? file.type : null,
+      size: file instanceof File ? file.size : null,
+      upload_type: type,
     });
 
-    const result = await handleUploadGuardAvatar(form_data);
+    const result = await handleUploadGuardFile(form_data);
 
     return NextResponse.json(result, {
       status: result.success ? 201 : 400,
