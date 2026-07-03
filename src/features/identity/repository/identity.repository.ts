@@ -6,6 +6,8 @@ export const createIdentity = async (
   identityId: string,
   issueDate: string,
   issuePlace: string,
+  frontUrl?: string,
+  backUrl?: string,
 ): Promise<void> => {
   const supabase = await createClient();
 
@@ -14,6 +16,8 @@ export const createIdentity = async (
     identity_id: identityId,
     issue_date: issueDate,
     issue_place: issuePlace,
+    front_url: frontUrl ?? null,
+    back_url: backUrl ?? null,
   });
 
   if (error) throw error;

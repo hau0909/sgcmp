@@ -5,6 +5,8 @@ interface CreateIdentityPayload {
   identityId: string;
   issueDate: string;
   issuePlace: string;
+  frontUrl?: string;
+  backUrl?: string;
 }
 
 export const requestCreateIdentity = async (
