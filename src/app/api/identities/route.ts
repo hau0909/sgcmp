@@ -4,9 +4,9 @@ import { handleCreateIdentity } from "@/features/identity/controller/identity.co
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, identityId, issueDate, issuePlace } = body;
+    const { userId, identityId, issueDate, issuePlace, frontUrl, backUrl } = body;
 
-    const result = await handleCreateIdentity(userId, identityId, issueDate, issuePlace);
+    const result = await handleCreateIdentity(userId, identityId, issueDate, issuePlace, frontUrl, backUrl);
 
     if (!result.success) {
       return NextResponse.json({ message: result.message }, { status: 400 });

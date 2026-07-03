@@ -34,6 +34,7 @@ export const handleUpdateProfile = async (
     gender?: string;
     dateOfBirth?: string;
     address?: string;
+    avatarUrl?: string;
   }
 ): Promise<{ success: boolean; message: string }> => {
   if (!userId) {

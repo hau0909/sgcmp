@@ -7,6 +7,7 @@ interface UpdateProfilePayload {
   gender?: string;
   dateOfBirth?: string;
   address?: string;
+  avatarUrl?: string;
 }
 
 export const requestUpdateProfile = async (
