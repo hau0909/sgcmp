@@ -353,7 +353,7 @@ export default function GuardShiftCheckinPage() {
       if (checkinImageFile) {
         const id = shift.assignment_id;
         const uploadPath = `shifts/${id}/check-in/img.png`;
-        
+
         const supabase = createClient();
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("shifts")
@@ -371,7 +371,7 @@ export default function GuardShiftCheckinPage() {
         const { data: publicUrlData } = supabase.storage
           .from("shifts")
           .getPublicUrl(uploadData.path);
-        
+
         imageUrl = publicUrlData.publicUrl;
       }
 
@@ -509,7 +509,7 @@ export default function GuardShiftCheckinPage() {
             <div className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-[#0754a6]" />
               <h2 className="text-sm font-extrabold text-slate-800">
-                Ảnh chụp Check-in
+                Ảnh chụp điểm danh
               </h2>
             </div>
             {checkinImagePreview && (
