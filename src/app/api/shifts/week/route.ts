@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { connection } from "next/server";
 import { handleGetAllShiftsByWeek } from "@/features/shift/controller/shift.controller";
 
 export async function GET(request: Request) {
+  await connection();
   try {
     const response = await handleGetAllShiftsByWeek(request);
 

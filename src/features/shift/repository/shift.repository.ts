@@ -21,6 +21,7 @@ import type {
 } from "../type";
 import { Shifts } from "@/types/Shift";
 import { Shift_Assignment } from "@/types/ShiftAssignment";
+import { Shift_Img } from "@/types/ShiftImg";
 
 const toStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
@@ -322,6 +323,7 @@ const mapShiftAssignment = (
   assignment: ShiftAssignmentQuery,
 ): ShiftAssignment => {
   const profile = getSingleRelation(assignment.profiles);
+  const shiftImg = getSingleRelation(assignment.shift_img);
 
   return {
     assignment_id: assignment.assignment_id,
@@ -332,6 +334,12 @@ const mapShiftAssignment = (
     created_at: assignment.created_at,
     updated_at: assignment.updated_at,
     guard_name: profile?.full_name ?? "Chưa cập nhật",
+    checkin_image: shiftImg
+      ? {
+          image_url: shiftImg.image_url,
+          image_path: shiftImg.image_path,
+        }
+      : null,
   };
 };
 
@@ -393,6 +401,10 @@ export const getAllShiftsByDateRange = async ({
           updated_at,
           profiles!shift_assignments_guard_id_fkey (
             full_name
+          ),
+          shift_img (
+            image_url,
+            image_path
           )
         )
       `,
@@ -650,4 +662,61 @@ export const updateAssignedShiftAssignmentsToAbsentByShiftId = async (
   }
 
   return data ?? [];
+};
+
+export const createShiftImage = async ({
+  assignmentId,
+  imageUrl,
+  imagePath,
+  imageType,
+  note,
+}: {
+  assignmentId: string;
+  imageUrl: string;
+  imagePath: string | null;
+  imageType: string;
+  note?: string | null;
+}): Promise<Shift_Img | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shift_img")
+    .insert({
+      shift_img_id: crypto.randomUUID(),
+      assignment_id: assignmentId,
+      image_url: imageUrl,
+      image_path: imagePath,
+      image_type: imageType,
+      note: note || null,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
+    })
+    .select("*")
+    .maybeSingle();
+
+  if (error) {
+    console.error("Create Shift Image Error:", error);
+    throw new Error(error.message);
+  }
+
+  return data;
+};
+
+export const getShiftImageByAssignmentId = async (
+  assignmentId: string,
+): Promise<Shift_Img | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shift_img")
+    .select("*")
+    .eq("assignment_id", assignmentId)
+    .maybeSingle();
+
+  if (error) {
+    console.error("Get Shift Image by Assignment ID Error:", error);
+    return null;
+  }
+
+  return data;
 };
