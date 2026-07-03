@@ -298,6 +298,16 @@ export default function ProfileForm() {
               </div>
             </div>
 
+            <div className="flex justify-end pt-4 border-t border-outline-variant/30">
+              <button
+                type="submit"
+                disabled={isSaving}
+                className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-medium shadow-sm hover:bg-primary/90 hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
+              >
+                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+              </button>
+            </div>
           </form>
         </div>
       </div>
