@@ -80,3 +80,17 @@ export const updatePaymentStatus = async (
   return (data as Payment) || null;
 };
 
+export const getPaymentByTransactionCode = async (transactionCode: string): Promise<Payment | null> => {
+  const { data, error } = await supabase
+    .from("payments")
+    .select("*")
+    .eq("transaction_code", transactionCode)
+    .single();
+
+  if (error) {
+    if (error.code === "PGRST116") return null;
+    throw error;
+  }
+
+  return (data as Payment) || null;
+};

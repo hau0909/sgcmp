@@ -5,6 +5,7 @@ import {
   createPayment,
   getPaymentById,
   updatePaymentStatus,
+  getPaymentByTransactionCode,
 } from "../repository/payment.repository";
 import {
   createSubscription,
@@ -66,7 +67,7 @@ export const createPaymentService = async (
   // 2. Generate unique transaction code
   const timestamp = Date.now();
   const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-  const transactionCode = `TXN-${timestamp}-${randomSuffix}`;
+  const transactionCode = `TXN${timestamp}${randomSuffix}`;
 
   // 3. Create the payment record in 'pending' status
   const payment = await createPayment({
@@ -142,4 +143,30 @@ export const getPaymentByIdService = async (paymentId: string): Promise<Payment 
   return payment;
 };
 
+export const handleSePayWebhookService = async (payload: any): Promise<boolean> => {
+  const { transferAmount, content } = payload;
+  if (!content) return false;
+
+  const match = content.toUpperCase().match(/TXN\d+/);
+  if (!match) {
+    console.log("No transaction code found in content:", content);
+    return false;
+  }
+  
+  const transactionCode = match[0];
+  const payment = await getPaymentByTransactionCode(transactionCode);
+  
+  if (!payment) {
+    console.log("Payment not found for transaction code:", transactionCode);
+    return false;
+  }
+  
+  if (payment.payment_status === "pending" && transferAmount >= payment.amount) {
+    await updatePaymentStatusService(payment.payment_id, "completed");
+    return true;
+  }
+  
+  console.log(`Webhook condition not met. Transfer: ${transferAmount}, Expected: ${payment.amount}, Status: ${payment.payment_status}`);
+  return false;
+};
 
