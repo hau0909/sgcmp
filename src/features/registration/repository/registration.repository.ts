@@ -180,6 +180,7 @@ export const createRegistrationFlow = async (payload: {
       company_name: payload.company.companyName,
       business_license_no: payload.company.businessLicenseNo,
       license_file_url: payload.company.licenseFileUrl,
+      director: payload.profile.fullName,
       address: payload.company.address,
       email: payload.company.email,
       phone: payload.company.phone,
