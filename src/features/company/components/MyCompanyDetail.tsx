@@ -258,8 +258,6 @@ export default function MyCompanyDetail() {
 
     const trimmedFullName = fullName.trim();
     const trimmedDescription = description.trim();
-    const trimmedBusinessLicense = businessLicense.trim();
-    const trimmedCompanyLicense = companyLicense.trim();
     const trimmedEmail = email.trim();
     const trimmedPhone = phone.trim();
     const trimmedAddress = address.trim();
@@ -270,14 +268,6 @@ export default function MyCompanyDetail() {
 
     if (!trimmedDescription) {
       nextErrors.description = "Vui lòng nhập giới thiệu doanh nghiệp.";
-    }
-
-    if (!trimmedBusinessLicense) {
-      nextErrors.business_license_no = "Vui lòng nhập mã số đăng ký.";
-    }
-
-    if (!trimmedCompanyLicense) {
-      nextErrors.registration_code = "Vui lòng nhập mã số giấy phép.";
     }
 
     if (!trimmedEmail) {
@@ -500,8 +490,6 @@ export default function MyCompanyDetail() {
         email: email.trim(),
         phone: phone.trim(),
         address: address.trim(),
-        business_license_no: businessLicense.trim(),
-        registration_code: companyLicense.trim(),
       });
 
       setCompanyName(fullName.trim());
@@ -1052,15 +1040,11 @@ export default function MyCompanyDetail() {
                 <div className="col-span-8 space-y-1">
                   <input
                     value={businessLicense}
-                    onChange={(e) => {
-                      setBusinessLicense(e.target.value);
-                      clearFieldError("business_license_no");
-                    }}
-                    placeholder="Nhập mã số đăng ký"
-                    className={getEditControlClassName("business_license_no")}
+                    readOnly
+                    disabled
+                    placeholder="Chưa có mã số đăng ký"
+                    className={`${getEditControlClassName("business_license_no")} bg-surface-variant/50 cursor-not-allowed opacity-60`}
                   />
-
-                  {renderFieldError("business_license_no")}
                 </div>
               ) : (
                 <span className="col-span-8 text-on-surface font-semibold">
@@ -1078,15 +1062,11 @@ export default function MyCompanyDetail() {
                 <div className="col-span-8 space-y-1">
                   <input
                     value={companyLicense}
-                    onChange={(e) => {
-                      setCompanyLicense(e.target.value);
-                      clearFieldError("registration_code");
-                    }}
-                    placeholder="Nhập mã số giấy phép"
-                    className={getEditControlClassName("registration_code")}
+                    readOnly
+                    disabled
+                    placeholder="Chưa có mã số giấy phép"
+                    className={`${getEditControlClassName("registration_code")} bg-surface-variant/50 cursor-not-allowed opacity-60`}
                   />
-
-                  {renderFieldError("registration_code")}
                 </div>
               ) : (
                 <span className="col-span-8 text-on-surface font-mono font-bold">

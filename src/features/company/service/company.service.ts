@@ -324,14 +324,9 @@ export const updateCompanyProfileService = async ({
 }) => {
   const company = await updateCompanyprofile({ company_id, input });
 
-  const registration = await updateRegistrationCodeByCompanyId({
-    company_id,
-    registration_code: input.registration_code,
-  });
-
   return {
     company,
-    registration,
+    registration: null,
   };
 };
 
