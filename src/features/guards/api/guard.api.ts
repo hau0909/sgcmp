@@ -90,3 +90,49 @@ export const requestGetAllGuards = ({
     method: "GET",
   });
 };
+
+export const requestUploadGuardFile = async (
+  file: File,
+  user_id: string,
+  type: "avatar" | "cccd_front" | "cccd_back",
+): Promise<UploadGuardAvatarResponse> => {
+  const form_data = new FormData();
+
+  form_data.append("user_id", user_id);
+  form_data.append("file", file);
+  form_data.append("type", type);
+
+  const response = await fetch("/api/guard/upload", {
+    method: "POST",
+    body: form_data,
+    credentials: "include",
+  });
+
+  const content_type = response.headers.get("content-type");
+
+  if (!content_type?.includes("application/json")) {
+    throw new Error("Phản hồi từ server không hợp lệ.");
+  }
+
+  const data: UploadGuardAvatarResponse = await response.json();
+
+  if (!response.ok) {
+    throw new Error(data.message || "Không thể tải file lên.");
+  }
+
+  return data;
+};
+
+export const requestCheckGuardQuota = async (): Promise<{
+  success: boolean;
+  message: string;
+  data?: {
+    isExceeded: boolean;
+    maxGuards: number | null;
+    currentGuards: number;
+  };
+}> => {
+  return fetcher("/api/guard/quota", {
+    method: "GET",
+  });
+};

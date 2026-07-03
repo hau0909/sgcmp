@@ -16,6 +16,8 @@ import {
   requestCreateGuardAccount,
   requestInsertGuardInformation,
   requestUploadGuardAvatar,
+  requestUploadGuardFile,
+  requestCheckGuardQuota,
 } from "@/features/guards/api/guard.api";
 
 type Gender = "male" | "female";
@@ -49,18 +51,58 @@ const INITIAL_FORM_DATA: GuardFormData = {
 export default function AddGuardPage() {
   const router = useRouter();
   const avatarInputRef = useRef<HTMLInputElement>(null);
+  const cccdFrontInputRef = useRef<HTMLInputElement>(null);
+  const cccdBackInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState<GuardFormData>(INITIAL_FORM_DATA);
 
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
 
+  const [cccdFrontFile, setCccdFrontFile] = useState<File | null>(null);
+  const [cccdFrontPreview, setCccdFrontPreview] = useState<string | null>(null);
+
+  const [cccdBackFile, setCccdBackFile] = useState<File | null>(null);
+  const [cccdBackPreview, setCccdBackPreview] = useState<string | null>(null);
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+  const [quotaExceeded, setQuotaExceeded] = useState(false);
+  const [quotaMessage, setQuotaMessage] = useState("");
+
+  useEffect(() => {
+    const checkQuota = async () => {
+      try {
+        const res = await requestCheckGuardQuota();
+        if (res.success && res.data?.isExceeded) {
+          setQuotaExceeded(true);
+          const max = res.data.maxGuards;
+          const curr = res.data.currentGuards;
+          setQuotaMessage(
+            `Công ty đã đạt giới hạn số lượng bảo vệ được phép (${curr}/${max}). Vui lòng nâng cấp gói sử dụng dịch vụ trước khi thêm bảo vệ mới.`
+          );
+        }
+      } catch (error) {
+        console.error("Lỗi kiểm tra giới hạn bảo vệ:", error);
+      }
+    };
+    checkQuota();
+  }, []);
+
+  const isFormDisabled = isSubmitting || quotaExceeded;
 
   const employeeCode = useMemo(() => {
     return "BV-004";
+  }, []);
+
+  const todayStr = useMemo(() => {
+    const today = new Date();
+    const yyyy = today.getFullYear();
+    const mm = String(today.getMonth() + 1).padStart(2, '0');
+    const dd = String(today.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   }, []);
 
   const resetForm = () => {
@@ -69,13 +111,30 @@ export default function AddGuardPage() {
     if (avatarPreview) {
       URL.revokeObjectURL(avatarPreview);
     }
+    if (cccdFrontPreview) {
+      URL.revokeObjectURL(cccdFrontPreview);
+    }
+    if (cccdBackPreview) {
+      URL.revokeObjectURL(cccdBackPreview);
+    }
 
     setAvatarFile(null);
     setAvatarPreview(null);
+    setCccdFrontFile(null);
+    setCccdFrontPreview(null);
+    setCccdBackFile(null);
+    setCccdBackPreview(null);
     setErrorMessage("");
+    setFieldErrors({});
 
     if (avatarInputRef.current) {
       avatarInputRef.current.value = "";
+    }
+    if (cccdFrontInputRef.current) {
+      cccdFrontInputRef.current.value = "";
+    }
+    if (cccdBackInputRef.current) {
+      cccdBackInputRef.current.value = "";
     }
   };
 
@@ -87,12 +146,33 @@ export default function AddGuardPage() {
     };
   }, [avatarPreview]);
 
+  useEffect(() => {
+    return () => {
+      if (cccdFrontPreview) {
+        URL.revokeObjectURL(cccdFrontPreview);
+      }
+    };
+  }, [cccdFrontPreview]);
+
+  useEffect(() => {
+    return () => {
+      if (cccdBackPreview) {
+        URL.revokeObjectURL(cccdBackPreview);
+      }
+    };
+  }, [cccdBackPreview]);
+
   const handleChange = (field: keyof GuardFormData, value: string) => {
     setFormData((previous) => ({
       ...previous,
       [field]: value,
     }));
 
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next[field];
+      return next;
+    });
     setErrorMessage("");
   };
 
@@ -124,6 +204,11 @@ export default function AddGuardPage() {
 
     setAvatarFile(file);
     setAvatarPreview(URL.createObjectURL(file));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.avatar;
+      return next;
+    });
     setErrorMessage("");
   };
 
@@ -140,48 +225,217 @@ export default function AddGuardPage() {
     }
   };
 
-  const validateForm = (): string | null => {
-    if (!formData.fullName.trim()) {
-      return "Vui lòng nhập họ và tên.";
+  const handleCccdFrontChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const acceptedTypes = ["image/jpeg", "image/png"];
+    const maximumSize = 2 * 1024 * 1024;
+
+    if (!acceptedTypes.includes(file.type)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        cccdFront: "Ảnh CCCD chỉ hỗ trợ định dạng JPG hoặc PNG.",
+      }));
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > maximumSize) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        cccdFront: "Kích thước ảnh tối đa là 2MB.",
+      }));
+      event.target.value = "";
+      return;
+    }
+
+    if (cccdFrontPreview) {
+      URL.revokeObjectURL(cccdFrontPreview);
+    }
+
+    setCccdFrontFile(file);
+    setCccdFrontPreview(URL.createObjectURL(file));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.cccdFront;
+      return next;
+    });
+    setErrorMessage("");
+  };
+
+  const handleRemoveCccdFront = () => {
+    if (cccdFrontPreview) {
+      URL.revokeObjectURL(cccdFrontPreview);
+    }
+
+    setCccdFrontFile(null);
+    setCccdFrontPreview(null);
+
+    if (cccdFrontInputRef.current) {
+      cccdFrontInputRef.current.value = "";
+    }
+  };
+
+  const handleCccdBackChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    const acceptedTypes = ["image/jpeg", "image/png"];
+    const maximumSize = 2 * 1024 * 1024;
+
+    if (!acceptedTypes.includes(file.type)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        cccdBack: "Ảnh CCCD chỉ hỗ trợ định dạng JPG hoặc PNG.",
+      }));
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > maximumSize) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        cccdBack: "Kích thước ảnh tối đa là 2MB.",
+      }));
+      event.target.value = "";
+      return;
+    }
+
+    if (cccdBackPreview) {
+      URL.revokeObjectURL(cccdBackPreview);
+    }
+
+    setCccdBackFile(file);
+    setCccdBackPreview(URL.createObjectURL(file));
+    setFieldErrors((prev) => {
+      const next = { ...prev };
+      delete next.cccdBack;
+      return next;
+    });
+    setErrorMessage("");
+  };
+
+  const handleRemoveCccdBack = () => {
+    if (cccdBackPreview) {
+      URL.revokeObjectURL(cccdBackPreview);
+    }
+
+    setCccdBackFile(null);
+    setCccdBackPreview(null);
+
+    if (cccdBackInputRef.current) {
+      cccdBackInputRef.current.value = "";
+    }
+  };
+
+  const validateForm = (): boolean => {
+    const nextErrors: Record<string, string> = {};
+
+    if (!formData.fullName) {
+      nextErrors.fullName = "Vui lòng nhập họ và tên.";
+    } else {
+      const name = formData.fullName;
+      const nameRegex = /^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u;
+
+      if (name.startsWith(" ") || name.endsWith(" ")) {
+        nextErrors.fullName = "Họ và tên không được chứa khoảng trắng ở đầu hoặc cuối.";
+      } else if (/\s{2,}/.test(name)) {
+        nextErrors.fullName = "Họ và tên không được chứa nhiều khoảng trắng liên tiếp.";
+      } else if (!nameRegex.test(name)) {
+        nextErrors.fullName = "Họ và tên chỉ được chứa chữ cái và khoảng trắng giữa các từ.";
+      }
     }
 
     if (!formData.dateOfBirth) {
-      return "Vui lòng chọn ngày sinh.";
+      nextErrors.dateOfBirth = "Vui lòng chọn ngày sinh.";
+    } else {
+      const dobDate = new Date(formData.dateOfBirth);
+      const today = new Date();
+
+      // Reset hours to compare dates only
+      today.setHours(0, 0, 0, 0);
+      dobDate.setHours(0, 0, 0, 0);
+
+      if (dobDate > today) {
+        nextErrors.dateOfBirth = "Ngày sinh không được ở tương lai.";
+      } else {
+        let age = today.getFullYear() - dobDate.getFullYear();
+        const monthDiff = today.getMonth() - dobDate.getMonth();
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) {
+          age--;
+        }
+
+        if (age < 18) {
+          nextErrors.dateOfBirth = "Nhân viên bảo vệ phải từ 18 tuổi trở lên.";
+        }
+      }
     }
 
     if (!formData.identityNumber.trim()) {
-      return "Vui lòng nhập số CCCD/CMND.";
-    }
-
-    if (!/^(\d{9}|\d{12})$/.test(formData.identityNumber.trim())) {
-      return "CCCD/CMND phải gồm 9 hoặc 12 chữ số.";
+      nextErrors.identityNumber = "Vui lòng nhập số CCCD/CMND.";
+    } else if (!/^(\d{9}|\d{12})$/.test(formData.identityNumber.trim())) {
+      nextErrors.identityNumber = "CCCD/CMND phải gồm 9 hoặc 12 chữ số.";
     }
 
     if (!formData.identityIssueDate) {
-      return "Vui lòng chọn ngày cấp CCCD/CMND.";
+      nextErrors.identityIssueDate = "Vui lòng chọn ngày cấp CCCD/CMND.";
+    } else {
+      const issueDate = new Date(formData.identityIssueDate);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      issueDate.setHours(0, 0, 0, 0);
+      if (issueDate > today) {
+        nextErrors.identityIssueDate = "Ngày cấp CCCD/CMND không được ở tương lai.";
+      }
     }
 
     if (!formData.identityIssuePlace.trim()) {
-      return "Vui lòng nhập nơi cấp CCCD/CMND.";
+      nextErrors.identityIssuePlace = "Vui lòng nhập nơi cấp CCCD/CMND.";
     }
 
     if (!formData.address.trim()) {
-      return "Vui lòng nhập địa chỉ thường trú.";
+      nextErrors.address = "Vui lòng nhập địa chỉ thường trú.";
     }
 
-    if (!/^(0|\+84)[0-9]{9,10}$/.test(formData.phone.trim())) {
-      return "Số điện thoại không hợp lệ.";
+    if (!formData.phone.trim()) {
+      nextErrors.phone = "Vui lòng nhập số điện thoại.";
+    } else if (!/^(0|\+84)[0-9]{9,10}$/.test(formData.phone.trim())) {
+      nextErrors.phone = "Số điện thoại không hợp lệ.";
     }
 
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      return "Email không hợp lệ.";
+    if (!formData.email.trim()) {
+      nextErrors.email = "Vui lòng nhập email.";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
+      nextErrors.email = "Email không hợp lệ.";
     }
 
     if (!avatarFile) {
-      return "Vui lòng tải ảnh thẻ nhân viên.";
+      nextErrors.avatar = "Vui lòng tải ảnh thẻ nhân viên.";
     }
 
-    return null;
+    if (!cccdFrontFile) {
+      nextErrors.cccdFront = "Vui lòng tải ảnh mặt trước CCCD.";
+    }
+
+    if (!cccdBackFile) {
+      nextErrors.cccdBack = "Vui lòng tải ảnh mặt sau CCCD.";
+    }
+
+    setFieldErrors(nextErrors);
+
+    if (Object.keys(nextErrors).length > 0) {
+      setErrorMessage("Vui lòng kiểm tra lại các thông tin chưa hợp lệ.");
+      return false;
+    }
+
+    return true;
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -191,10 +445,9 @@ export default function AddGuardPage() {
       return;
     }
 
-    const validationError = validateForm();
+    const isValid = validateForm();
 
-    if (validationError) {
-      setErrorMessage(validationError);
+    if (!isValid) {
       return;
     }
 
@@ -240,6 +493,44 @@ export default function AddGuardPage() {
       }
 
       /*
+       * Bước 2.5: upload CCCD images
+       */
+      let frontUrl: string | null = null;
+      let backUrl: string | null = null;
+
+      if (cccdFrontFile) {
+        const uploadResult = await requestUploadGuardFile(
+          cccdFrontFile,
+          guardUserId,
+          "cccd_front",
+        );
+
+        if (!uploadResult.success || !uploadResult.data?.public_url) {
+          throw new Error(
+            uploadResult.message || "Không thể tải ảnh mặt trước CCCD.",
+          );
+        }
+
+        frontUrl = uploadResult.data.public_url;
+      }
+
+      if (cccdBackFile) {
+        const uploadResult = await requestUploadGuardFile(
+          cccdBackFile,
+          guardUserId,
+          "cccd_back",
+        );
+
+        if (!uploadResult.success || !uploadResult.data?.public_url) {
+          throw new Error(
+            uploadResult.message || "Không thể tải ảnh mặt sau CCCD.",
+          );
+        }
+
+        backUrl = uploadResult.data.public_url;
+      }
+
+      /*
        * Bước 3: insert profiles, guards, identities
        */
       const informationResult = await requestInsertGuardInformation({
@@ -258,6 +549,8 @@ export default function AddGuardPage() {
         identity_id: formData.identityNumber.trim(),
         identity_issue_date: formData.identityIssueDate,
         identity_issue_place: formData.identityIssuePlace.trim(),
+        front_url: frontUrl,
+        back_url: backUrl,
       });
 
       if (!informationResult.success) {
@@ -312,8 +605,29 @@ export default function AddGuardPage() {
           </div>
         </div>
 
+        {quotaExceeded && (
+          <div className="mb-6 rounded-md border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-800 shadow-sm flex items-center gap-2 animate-fade-in">
+            <svg
+              className="h-5 w-5 text-red-600 flex-shrink-0"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+              xmlns="http://www.w3.org/2000/svg"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+              />
+            </svg>
+            <span>{quotaMessage}</span>
+          </div>
+        )}
+
         <form
           onSubmit={handleSubmit}
+          noValidate
           className="grid gap-5 lg:grid-cols-[300px_1fr]"
         >
           <div className="space-y-5">
@@ -325,13 +639,14 @@ export default function AddGuardPage() {
                   accept="image/jpeg,image/png"
                   onChange={handleAvatarChange}
                   className="hidden"
+                  disabled={isFormDisabled}
                 />
 
                 <div className="relative">
                   <button
                     type="button"
-                    disabled={isSubmitting}
-                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isFormDisabled}
+                    onClick={() => !isFormDisabled && avatarInputRef.current?.click()}
                     className="flex h-32 w-32 flex-col items-center justify-center overflow-hidden rounded-full border-2 border-dashed border-blue-700 bg-blue-50/40 text-blue-800 transition hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {avatarPreview ? (
@@ -353,9 +668,9 @@ export default function AddGuardPage() {
                   {avatarPreview && (
                     <button
                       type="button"
-                      disabled={isSubmitting}
+                      disabled={isFormDisabled}
                       onClick={handleRemoveAvatar}
-                      className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow transition hover:bg-red-600"
+                      className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                       aria-label="Xóa ảnh"
                     >
                       <X className="h-4 w-4" />
@@ -370,6 +685,12 @@ export default function AddGuardPage() {
                 <p className="mt-1 text-sm leading-6 text-slate-600">
                   Định dạng JPG, PNG. Kích thước tối đa 2MB.
                 </p>
+
+                {fieldErrors.avatar && (
+                  <p className="mt-2 text-xs font-semibold text-red-500">
+                    {fieldErrors.avatar}
+                  </p>
+                )}
               </div>
             </section>
           </div>
@@ -386,8 +707,9 @@ export default function AddGuardPage() {
                   required
                   value={formData.fullName}
                   placeholder="Nhập họ và tên đầy đủ"
-                  disabled={isSubmitting}
+                  disabled={isFormDisabled}
                   onChange={(value) => handleChange("fullName", value)}
+                  error={fieldErrors.fullName}
                 />
 
                 <div className="grid gap-4 md:grid-cols-2">
@@ -396,8 +718,10 @@ export default function AddGuardPage() {
                     required
                     type="date"
                     value={formData.dateOfBirth}
-                    disabled={isSubmitting}
+                    disabled={isFormDisabled}
                     onChange={(value) => handleChange("dateOfBirth", value)}
+                    error={fieldErrors.dateOfBirth}
+                    max={todayStr}
                   />
 
                   <div>
@@ -405,7 +729,7 @@ export default function AddGuardPage() {
 
                     <select
                       value={formData.gender}
-                      disabled={isSubmitting}
+                      disabled={isFormDisabled}
                       onChange={(event) =>
                         handleChange("gender", event.target.value)
                       }
@@ -422,10 +746,11 @@ export default function AddGuardPage() {
                   required
                   value={formData.identityNumber}
                   placeholder="Nhập 9 hoặc 12 số"
-                  disabled={isSubmitting}
+                  disabled={isFormDisabled}
                   onChange={(value) =>
                     handleChange("identityNumber", value.replace(/\D/g, ""))
                   }
+                  error={fieldErrors.identityNumber}
                 />
 
                 <div className="grid gap-4 md:grid-cols-2">
@@ -434,10 +759,12 @@ export default function AddGuardPage() {
                     required
                     type="date"
                     value={formData.identityIssueDate}
-                    disabled={isSubmitting}
+                    disabled={isFormDisabled}
                     onChange={(value) =>
                       handleChange("identityIssueDate", value)
                     }
+                    error={fieldErrors.identityIssueDate}
+                    max={todayStr}
                   />
 
                   <InputField
@@ -445,11 +772,115 @@ export default function AddGuardPage() {
                     required
                     value={formData.identityIssuePlace}
                     placeholder="Nhập nơi cấp"
-                    disabled={isSubmitting}
+                    disabled={isFormDisabled}
                     onChange={(value) =>
                       handleChange("identityIssuePlace", value)
                     }
+                    error={fieldErrors.identityIssuePlace}
                   />
+                </div>
+
+                <div>
+                  <Label text="Ảnh CCCD/CMND" />
+                  <div className="mt-2 grid gap-4 sm:grid-cols-2">
+                    {/* Front CCCD Image */}
+                    <div>
+                      <div className="flex flex-col items-center justify-center rounded-lg border border-slate-300 bg-slate-50 p-4">
+                        <input
+                          ref={cccdFrontInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png"
+                          onChange={handleCccdFrontChange}
+                          className="hidden"
+                          disabled={isFormDisabled}
+                        />
+                        <div className={`relative w-full aspect-video flex items-center justify-center overflow-hidden rounded-md border-2 border-dashed bg-white ${fieldErrors.cccdFront ? "border-red-500" : "border-slate-300"
+                          }`}>
+                          {cccdFrontPreview ? (
+                            <>
+                              <img
+                                src={cccdFrontPreview}
+                                alt="Mặt trước CCCD"
+                                className="h-full w-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                disabled={isFormDisabled}
+                                onClick={handleRemoveCccdFront}
+                                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600 transition disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={isFormDisabled}
+                              onClick={() => !isFormDisabled && cccdFrontInputRef.current?.click()}
+                              className="flex flex-col items-center text-slate-500 hover:text-blue-800 transition disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <Camera className="h-6 w-6" />
+                              <span className="mt-1 text-xs font-semibold">Mặt trước CCCD</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {fieldErrors.cccdFront && (
+                        <p className="mt-1 text-xs font-semibold text-red-500">
+                          {fieldErrors.cccdFront}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Back CCCD Image */}
+                    <div>
+                      <div className="flex flex-col items-center justify-center rounded-lg border border-slate-300 bg-slate-50 p-4">
+                        <input
+                          ref={cccdBackInputRef}
+                          type="file"
+                          accept="image/jpeg,image/png"
+                          onChange={handleCccdBackChange}
+                          className="hidden"
+                          disabled={isFormDisabled}
+                        />
+                        <div className={`relative w-full aspect-video flex items-center justify-center overflow-hidden rounded-md border-2 border-dashed bg-white ${fieldErrors.cccdBack ? "border-red-500" : "border-slate-300"
+                          }`}>
+                          {cccdBackPreview ? (
+                            <>
+                              <img
+                                src={cccdBackPreview}
+                                alt="Mặt sau CCCD"
+                                className="h-full w-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                disabled={isFormDisabled}
+                                onClick={handleRemoveCccdBack}
+                                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600 transition disabled:cursor-not-allowed disabled:opacity-60"
+                              >
+                                <X className="h-3.5 w-3.5" />
+                              </button>
+                            </>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={isFormDisabled}
+                              onClick={() => !isFormDisabled && cccdBackInputRef.current?.click()}
+                              className="flex flex-col items-center text-slate-500 hover:text-blue-800 transition disabled:cursor-not-allowed disabled:opacity-60"
+                            >
+                              <Camera className="h-6 w-6" />
+                              <span className="mt-1 text-xs font-semibold">Mặt sau CCCD</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                      {fieldErrors.cccdBack && (
+                        <p className="mt-1 text-xs font-semibold text-red-500">
+                          {fieldErrors.cccdBack}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </div>
 
                 <InputField
@@ -457,8 +888,9 @@ export default function AddGuardPage() {
                   required
                   value={formData.address}
                   placeholder="Số nhà, đường, phường/xã, quận/huyện, tỉnh/thành phố"
-                  disabled={isSubmitting}
+                  disabled={isFormDisabled}
                   onChange={(value) => handleChange("address", value)}
+                  error={fieldErrors.address}
                 />
               </div>
             </section>
@@ -474,10 +906,11 @@ export default function AddGuardPage() {
                   required
                   value={formData.phone}
                   placeholder="09xx xxx xxx"
-                  disabled={isSubmitting}
+                  disabled={isFormDisabled}
                   onChange={(value) =>
                     handleChange("phone", value.replace(/[^\d+]/g, ""))
                   }
+                  error={fieldErrors.phone}
                 />
 
                 <InputField
@@ -486,8 +919,9 @@ export default function AddGuardPage() {
                   type="email"
                   value={formData.email}
                   placeholder="email@example.com"
-                  disabled={isSubmitting}
+                  disabled={isFormDisabled}
                   onChange={(value) => handleChange("email", value)}
+                  error={fieldErrors.email}
                 />
               </div>
             </section>
@@ -517,7 +951,7 @@ export default function AddGuardPage() {
 
               <button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={isFormDisabled}
                 className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-blue-800 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {isSubmitting ? (
@@ -578,6 +1012,8 @@ function InputField({
   placeholder,
   disabled = false,
   onChange,
+  error,
+  max,
 }: {
   label: string;
   required?: boolean;
@@ -586,6 +1022,8 @@ function InputField({
   placeholder?: string;
   disabled?: boolean;
   onChange: (value: string) => void;
+  error?: string;
+  max?: string;
 }) {
   return (
     <div>
@@ -597,9 +1035,14 @@ function InputField({
         value={value}
         placeholder={placeholder}
         disabled={disabled}
+        max={max}
         onChange={(event) => onChange(event.target.value)}
-        className="mt-2 h-10 w-full rounded border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:cursor-not-allowed disabled:bg-slate-100"
+        className={`mt-2 h-10 w-full rounded border bg-white px-3 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:ring-2 disabled:cursor-not-allowed disabled:bg-slate-100 ${error
+          ? "border-red-500 focus:border-red-500 focus:ring-red-100"
+          : "border-slate-300 focus:border-blue-700 focus:ring-blue-100"
+          }`}
       />
+      {error && <p className="mt-1 text-xs font-semibold text-red-500">{error}</p>}
     </div>
   );
 }

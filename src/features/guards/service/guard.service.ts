@@ -5,6 +5,7 @@ import {
   getCompanyByOwnerId,
   getGuardDetail,
 } from "../repository/guard.repository";
+import { getCurrentActivePlanService } from "@/features/subscription/service/subscription.service";
 import type {
   InsertGuardInformationRepositoryParams,
   UploadGuardAvatarRepositoryParams,
@@ -19,6 +20,8 @@ import {
   getGuardIdByUserId,
   getGuardByUserId,
   getGuardsByIds,
+  uploadGuardFile,
+  getGuardCountByCompanyId,
 } from "../repository/guard.repository";
 
 const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"];
@@ -91,6 +94,44 @@ export const uploadGuardAvatarService = async ({
   });
 };
 
+export const uploadGuardFileService = async ({
+  user_id,
+  file,
+  type,
+}: {
+  user_id: string;
+  file: File;
+  type: "avatar" | "cccd_front" | "cccd_back";
+}) => {
+  const normalizedUserId = user_id.trim();
+
+  if (!normalizedUserId) {
+    throw new Error("Không tìm thấy tài khoản bảo vệ.");
+  }
+
+  if (!(file instanceof File)) {
+    throw new Error("Vui lòng chọn file ảnh.");
+  }
+
+  if (file.size <= 0) {
+    throw new Error("File ảnh không hợp lệ.");
+  }
+
+  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
+    throw new Error("Ảnh chỉ hỗ trợ định dạng JPG hoặc PNG.");
+  }
+
+  if (file.size > MAXIMUM_IMAGE_SIZE) {
+    throw new Error("Kích thước ảnh tối đa là 2MB.");
+  }
+
+  return uploadGuardFile({
+    user_id: normalizedUserId,
+    file,
+    type,
+  });
+};
+
 export const getCompanyByOwnerIdService = async (
   owner_id: string,
 ): Promise<string> => {
@@ -120,4 +161,36 @@ export const getGuardsByIdsService = async (
   guardIds: string[],
 ): Promise<Guard[]> => {
   return await getGuardsByIds(guardIds);
+};
+
+export const checkGuardQuotaService = async (
+  company_id: string,
+): Promise<{ isExceeded: boolean; maxGuards: number | null; currentGuards: number }> => {
+  const currentPlanResult = await getCurrentActivePlanService(company_id);
+  const currentGuards = await getGuardCountByCompanyId(company_id);
+
+  if (!currentPlanResult) {
+    return {
+      isExceeded: true,
+      maxGuards: 0,
+      currentGuards,
+    };
+  }
+
+  const { plan } = currentPlanResult;
+  const maxGuards = plan.max_guards;
+
+  if (maxGuards === null) {
+    return {
+      isExceeded: false,
+      maxGuards: null,
+      currentGuards,
+    };
+  }
+
+  return {
+    isExceeded: currentGuards >= maxGuards,
+    maxGuards,
+    currentGuards,
+  };
 };

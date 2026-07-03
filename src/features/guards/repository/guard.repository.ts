@@ -167,6 +167,101 @@ export const uploadGuardAvatar = async ({
   };
 };
 
+export const uploadGuardFile = async ({
+  user_id,
+  file,
+  type,
+}: {
+  user_id: string;
+  file: File;
+  type: "avatar" | "cccd_front" | "cccd_back";
+}): Promise<UploadGuardAvatarResult> => {
+  const authSupabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await authSupabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("Bạn chưa đăng nhập.");
+  }
+
+  const { data: currentProfile, error: profileError } = await authSupabase
+    .from("profiles")
+    .select("user_id, role")
+    .eq("user_id", user.id)
+    .single();
+
+  if (profileError || !currentProfile) {
+    throw new Error("Không tìm thấy hồ sơ người dùng hiện tại.");
+  }
+
+  if (currentProfile.role !== "Coordinator") {
+    throw new Error("Bạn không có quyền tải ảnh bảo vệ.");
+  }
+
+  const bucket_name = "profiles";
+
+  const file_extension = file.name.split(".").pop()?.toLowerCase();
+
+  if (!file_extension) {
+    throw new Error("Không xác định được định dạng ảnh.");
+  }
+
+  const allowedExtensions = ["jpg", "jpeg", "png"];
+
+  if (!allowedExtensions.includes(file_extension)) {
+    throw new Error("Chỉ hỗ trợ ảnh JPG, JPEG hoặc PNG.");
+  }
+
+  if (!file.type.startsWith("image/")) {
+    throw new Error("File tải lên không phải là ảnh.");
+  }
+
+  if (file.size > 2 * 1024 * 1024) {
+    throw new Error("Ảnh không được vượt quá 2MB.");
+  }
+
+  let file_name = "";
+  let file_path = "";
+
+  if (type === "avatar") {
+    file_name = `avatar-${Date.now()}.${file_extension}`;
+    file_path = `${user_id}/avatar/${file_name}`;
+  } else if (type === "cccd_front") {
+    file_name = `cccd-front-${Date.now()}.${file_extension}`;
+    file_path = `${user_id}/identity/${file_name}`;
+  } else if (type === "cccd_back") {
+    file_name = `cccd-back-${Date.now()}.${file_extension}`;
+    file_path = `${user_id}/identity/${file_name}`;
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  const { data: upload_data, error: upload_error } = await supabaseAdmin.storage
+    .from(bucket_name)
+    .upload(file_path, file, {
+      contentType: file.type,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (upload_error) {
+    console.error("Upload Guard File Error:", upload_error);
+    throw new Error(upload_error.message);
+  }
+
+  const {
+    data: { publicUrl: public_url },
+  } = supabaseAdmin.storage.from(bucket_name).getPublicUrl(file_path);
+
+  return {
+    file_path: upload_data.path,
+    public_url,
+  };
+};
+
 export const getAllGuards = async ({
   company_id,
   page,
@@ -355,4 +450,21 @@ export const getGuardsByIds = async (guardIds: string[]): Promise<Guard[]> => {
   }
 
   return (data as Guard[]) || [];
+};
+
+export const getGuardCountByCompanyId = async (
+  company_id: string,
+): Promise<number> => {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("guards")
+    .select("*", { count: "exact", head: true })
+    .eq("company_id", company_id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
 };
