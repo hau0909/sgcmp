@@ -7,11 +7,9 @@ import {
   Camera,
   CheckCircle2,
   Clock3,
-  IdCard,
-  LocateFixed,
   MapPin,
-  MapPinned,
   UserCheck,
+  X,
 } from "lucide-react";
 
 import {
@@ -111,6 +109,43 @@ export default function GuardShiftCheckinPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [checkinPopup, setCheckinPopup] = useState<CheckinPopup | null>(null);
 
+  const [checkinImageFile, setCheckinImageFile] = useState<File | null>(null);
+  const [checkinImagePreview, setCheckinImagePreview] = useState<string | null>(null);
+  const checkinImageInputRef = useRef<HTMLInputElement>(null);
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) {
+      return;
+    }
+
+    const acceptedTypes = ["image/jpeg", "image/png"];
+    if (!acceptedTypes.includes(file.type)) {
+      setError("Ảnh check-in chỉ hỗ trợ định dạng JPG hoặc PNG.");
+      event.target.value = "";
+      return;
+    }
+
+    if (checkinImagePreview) {
+      URL.revokeObjectURL(checkinImagePreview);
+    }
+
+    setCheckinImageFile(file);
+    setCheckinImagePreview(URL.createObjectURL(file));
+    setError("");
+  };
+
+  const handleRemoveImage = () => {
+    if (checkinImagePreview) {
+      URL.revokeObjectURL(checkinImagePreview);
+    }
+    setCheckinImageFile(null);
+    setCheckinImagePreview(null);
+    if (checkinImageInputRef.current) {
+      checkinImageInputRef.current.value = "";
+    }
+  };
+
   const hasAutoMarkedAbsentRef = useRef(false);
 
   const shiftDuration = useMemo(() => {
@@ -158,6 +193,7 @@ export default function GuardShiftCheckinPage() {
 
   const canCheckin =
     Boolean(checkinState?.canCheckinByTime) &&
+    Boolean(checkinImageFile) &&
     !checkingIn &&
     !autoUpdatingAbsent;
 
@@ -180,8 +216,12 @@ export default function GuardShiftCheckinPage() {
       )}.`;
     }
 
-    return "Đã đến thời gian điểm danh. Bạn có thể xác nhận ca làm việc.";
-  }, [shift, checkinState]);
+    if (!checkinImageFile) {
+      return "Vui lòng chụp/tải ảnh check-in để hoàn tất điểm danh.";
+    }
+
+    return "Ảnh check-in đã sẵn sàng. Bạn có thể xác nhận ca làm việc.";
+  }, [shift, checkinState, checkinImageFile]);
 
   const checkinButtonLabel = useMemo(() => {
     if (checkingIn) {
@@ -436,72 +476,73 @@ export default function GuardShiftCheckinPage() {
         <section className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-300 bg-[#f8f8fa] px-3 py-3">
             <div className="flex items-center gap-2">
-              <LocateFixed className="h-5 w-5 text-[#0754a6]" />
-
+              <Camera className="h-5 w-5 text-[#0754a6]" />
               <h2 className="text-sm font-extrabold text-slate-800">
-                Xác thực GPS
+                Ảnh chụp Check-in
               </h2>
             </div>
-
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+            {checkinImagePreview && (
+              <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 className="h-4 w-4" />
+                Đã chọn ảnh
+              </span>
+            )}
           </div>
 
-          <div className="relative h-[280px] overflow-hidden bg-[#b8b8bb]">
-            <div className="absolute inset-0 bg-gradient-to-br from-[#c7c7ca] via-[#b7b7bb] to-[#a9aaae]" />
-            <div className="absolute inset-0 opacity-25 [background-image:radial-gradient(circle_at_center,white_1px,transparent_1px)] [background-size:28px_28px]" />
-            <div className="absolute left-1/2 top-1/2 h-24 w-36 -translate-x-1/2 -translate-y-1/2 rounded-xl bg-white/15 blur-sm" />
-            <div className="absolute inset-0 backdrop-blur-[1px]" />
+          <div className="p-4">
+            <input
+              ref={checkinImageInputRef}
+              type="file"
+              accept="image/jpeg,image/png"
+              onChange={handleImageChange}
+              className="hidden"
+              disabled={checkingIn || autoUpdatingAbsent || !checkinState?.canCheckinByTime}
+            />
 
-            <div className="relative flex h-full flex-col items-center justify-center px-4 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-full bg-[#0754a6] text-white shadow-md">
-                <MapPinned className="h-8 w-8" />
-              </div>
-
-              <p className="mt-4 text-sm font-extrabold text-white">
-                Giao diện xác thực GPS
-              </p>
-
-              <p className="mt-1 max-w-[260px] text-xs font-bold text-white/70">
-                Phần này chỉ hiển thị UI, không lấy vị trí thực tế.
-              </p>
-            </div>
-
-            <div className="absolute bottom-3 left-3 right-3 rounded bg-emerald-50 px-3 py-2 text-center text-[11px] font-bold text-emerald-700">
-              <p>GPS đã sẵn sàng</p>
-            </div>
-          </div>
-        </section>
-
-        <section className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
-          <div className="flex items-center justify-between border-b border-slate-300 bg-[#f8f8fa] px-3 py-3">
-            <div className="flex items-center gap-2">
-              <IdCard className="h-5 w-5 text-[#0754a6]" />
-
-              <h2 className="text-sm font-extrabold text-slate-800">
-                Xác thực ID
-              </h2>
-            </div>
-
-            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-          </div>
-
-          <div className="relative h-[250px] overflow-hidden bg-[#25292e]">
-            <div className="absolute inset-0 bg-black/20" />
-
-            <div className="relative flex h-full flex-col items-center justify-center px-4 text-center">
-              <Camera className="h-20 w-20 text-white/45" />
-
-              <p className="mt-3 text-sm font-bold text-white/55">
-                Giao diện xác thực ID
-              </p>
-
-              <div className="mt-6 rounded bg-white px-5 py-3 text-sm font-extrabold text-slate-800 shadow-sm">
-                Ảnh ID
-              </div>
-            </div>
-
-            <div className="absolute bottom-3 left-3 right-3 rounded bg-emerald-50 px-3 py-2 text-center text-[11px] font-bold text-emerald-700">
-              <p>ID đã sẵn sàng</p>
+            <div
+              onClick={() => {
+                if (checkinState?.canCheckinByTime && !checkingIn && !autoUpdatingAbsent) {
+                  checkinImageInputRef.current?.click();
+                }
+              }}
+              className={`relative aspect-video w-full flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition ${checkinImagePreview ? "border-slate-300" : "border-blue-700 bg-blue-50/10"
+                } ${checkinState?.canCheckinByTime && !checkingIn && !autoUpdatingAbsent
+                  ? "cursor-pointer hover:border-blue-800 hover:bg-blue-50/20"
+                  : "cursor-not-allowed opacity-60 bg-slate-50"
+                }`}
+            >
+              {checkinImagePreview ? (
+                <>
+                  <img
+                    src={checkinImagePreview}
+                    alt="Ảnh Check-in"
+                    className="h-full w-full object-cover"
+                  />
+                  <button
+                    type="button"
+                    disabled={checkingIn || autoUpdatingAbsent}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleRemoveImage();
+                    }}
+                    className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-md hover:bg-red-600 transition disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </>
+              ) : (
+                <div className="flex flex-col items-center text-slate-500">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                    <Camera className="h-6 w-6" />
+                  </div>
+                  <span className="mt-3 text-sm font-bold text-slate-700">
+                    Chụp hoặc tải ảnh check-in
+                  </span>
+                  <span className="mt-1 text-xs text-slate-500">
+                    Chỉ nhận định dạng JPG, PNG
+                  </span>
+                </div>
+              )}
             </div>
           </div>
         </section>
@@ -512,11 +553,10 @@ export default function GuardShiftCheckinPage() {
           type="button"
           onClick={handleCheckin}
           disabled={!canCheckin}
-          className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-4 text-[15px] font-extrabold uppercase transition-all active:scale-[0.98] ${
-            canCheckin
-              ? "bg-[#0754a6] text-white shadow-md"
-              : "cursor-not-allowed bg-[#e5e5e7] text-slate-500"
-          }`}
+          className={`flex w-full items-center justify-center gap-2 rounded-lg px-4 py-4 text-[15px] font-extrabold uppercase transition-all active:scale-[0.98] ${canCheckin
+            ? "bg-[#0754a6] text-white shadow-md"
+            : "cursor-not-allowed bg-[#e5e5e7] text-slate-500"
+            }`}
         >
           <UserCheck className="h-5 w-5" />
           {checkinButtonLabel}
@@ -532,21 +572,19 @@ export default function GuardShiftCheckinPage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/30 px-4">
           <div className="w-full max-w-[340px] rounded-2xl bg-white p-5 text-center shadow-xl">
             <div
-              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${
-                checkinPopup.type === "success"
-                  ? "bg-emerald-50 text-emerald-600"
-                  : "bg-red-50 text-red-600"
-              }`}
+              className={`mx-auto flex h-14 w-14 items-center justify-center rounded-full ${checkinPopup.type === "success"
+                ? "bg-emerald-50 text-emerald-600"
+                : "bg-red-50 text-red-600"
+                }`}
             >
               <CheckCircle2 className="h-8 w-8" />
             </div>
 
             <h3
-              className={`mt-4 text-base font-black ${
-                checkinPopup.type === "success"
-                  ? "text-emerald-700"
-                  : "text-red-600"
-              }`}
+              className={`mt-4 text-base font-black ${checkinPopup.type === "success"
+                ? "text-emerald-700"
+                : "text-red-600"
+                }`}
             >
               {checkinPopup.type === "success"
                 ? "Điểm danh thành công"
