@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
@@ -8,7 +8,9 @@ import {
   CheckCircle2,
   Clock3,
   MapPin,
+  RefreshCw,
   UserCheck,
+  VideoOff,
   X,
 } from "lucide-react";
 
@@ -110,30 +112,117 @@ export default function GuardShiftCheckinPage() {
   const [currentTime, setCurrentTime] = useState(new Date());
   const [checkinPopup, setCheckinPopup] = useState<CheckinPopup | null>(null);
 
+  // Camera states
   const [checkinImageFile, setCheckinImageFile] = useState<File | null>(null);
   const [checkinImagePreview, setCheckinImagePreview] = useState<string | null>(null);
-  const checkinImageInputRef = useRef<HTMLInputElement>(null);
+  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [facingMode, setFacingMode] = useState<"user" | "environment">("environment");
 
-  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+
+  const stopCamera = useCallback(() => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
     }
-
-    const acceptedTypes = ["image/jpeg", "image/png"];
-    if (!acceptedTypes.includes(file.type)) {
-      setError("Ảnh check-in chỉ hỗ trợ định dạng JPG hoặc PNG.");
-      event.target.value = "";
-      return;
+    if (videoRef.current) {
+      videoRef.current.srcObject = null;
     }
+    setCameraActive(false);
+  }, []);
 
+  const startCamera = useCallback(async () => {
+    setCameraError(null);
+    try {
+      // Stop any existing stream first
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+      }
+
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: false,
+      });
+
+      streamRef.current = stream;
+
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        await videoRef.current.play();
+      }
+
+      setCameraActive(true);
+    } catch (err) {
+      const msg =
+        err instanceof DOMException && err.name === "NotAllowedError"
+          ? "Quyền truy cập camera bị từ chối. Vui lòng cấp quyền trong cài đặt trình duyệt."
+          : "Không thể mở camera. Vui lòng kiểm tra thiết bị.";
+      setCameraError(msg);
+      setCameraActive(false);
+    }
+  }, [facingMode]);
+
+  // Restart camera when facingMode changes (only if camera is already active)
+  useEffect(() => {
+    if (cameraActive) {
+      startCamera();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [facingMode]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      stopCamera();
+    };
+  }, [stopCamera]);
+
+  const handleOpenCamera = () => {
+    setCheckinImageFile(null);
+    setCheckinImagePreview(null);
+    startCamera();
+  };
+
+  const handleCapturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+
+    canvas.width = video.videoWidth || 1280;
+    canvas.height = video.videoHeight || 720;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+    canvas.toBlob(
+      (blob) => {
+        if (!blob) return;
+        const file = new File([blob], "checkin.jpg", { type: "image/jpeg" });
+        const previewUrl = URL.createObjectURL(blob);
+
+        setCheckinImageFile(file);
+        setCheckinImagePreview(previewUrl);
+        stopCamera();
+      },
+      "image/jpeg",
+      0.92,
+    );
+  };
+
+  const handleRetakePhoto = () => {
     if (checkinImagePreview) {
       URL.revokeObjectURL(checkinImagePreview);
     }
-
-    setCheckinImageFile(file);
-    setCheckinImagePreview(URL.createObjectURL(file));
-    setError("");
+    setCheckinImageFile(null);
+    setCheckinImagePreview(null);
+    startCamera();
   };
 
   const handleRemoveImage = () => {
@@ -142,9 +231,7 @@ export default function GuardShiftCheckinPage() {
     }
     setCheckinImageFile(null);
     setCheckinImagePreview(null);
-    if (checkinImageInputRef.current) {
-      checkinImageInputRef.current.value = "";
-    }
+    stopCamera();
   };
 
   const hasAutoMarkedAbsentRef = useRef(false);
@@ -218,7 +305,7 @@ export default function GuardShiftCheckinPage() {
     }
 
     if (!checkinImageFile) {
-      return "Vui lòng chụp/tải ảnh check-in để hoàn tất điểm danh.";
+      return "Vui lòng chụp ảnh check-in để hoàn tất điểm danh.";
     }
 
     return "Ảnh check-in đã sẵn sàng. Bạn có thể xác nhận ca làm việc.";
@@ -335,6 +422,7 @@ export default function GuardShiftCheckinPage() {
   }, [shift, checkinState]);
 
   const handleBack = () => {
+    stopCamera();
     router.back();
   };
 
@@ -352,13 +440,13 @@ export default function GuardShiftCheckinPage() {
 
       if (checkinImageFile) {
         const id = shift.assignment_id;
-        const uploadPath = `shifts/${id}/check-in/img.png`;
+        const uploadPath = `shifts/${id}/check-in/img.jpg`;
 
         const supabase = createClient();
         const { data: uploadData, error: uploadError } = await supabase.storage
           .from("shifts")
           .upload(uploadPath, checkinImageFile, {
-            contentType: checkinImageFile.type,
+            contentType: "image/jpeg",
             cacheControl: "3600",
             upsert: true,
           });
@@ -443,8 +531,70 @@ export default function GuardShiftCheckinPage() {
     );
   }
 
+  const canUseCamera = checkinState?.canCheckinByTime && !checkingIn && !autoUpdatingAbsent;
+
   return (
     <div className="mx-auto w-full max-w-[430px] bg-[#f3f3f5]">
+      {/* Hidden canvas for capturing photo */}
+      <canvas ref={canvasRef} className="hidden" />
+
+      {/* Fullscreen camera overlay */}
+      {cameraActive && !checkinImagePreview && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black">
+          {/* Video */}
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="h-full w-full object-cover"
+          />
+
+          {/* Top controls */}
+          <div className="absolute left-0 right-0 top-0 flex items-center justify-between px-4 pt-10 pb-4">
+            {/* Close */}
+            <button
+              type="button"
+              onClick={() => stopCamera()}
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition active:scale-95"
+              title="Đóng camera"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
+              Chụp ảnh điểm danh
+            </span>
+
+            {/* Flip camera */}
+            <button
+              type="button"
+              onClick={() =>
+                setFacingMode((prev) =>
+                  prev === "environment" ? "user" : "environment",
+                )
+              }
+              className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition active:scale-95"
+              title="Đổi camera"
+            >
+              <RefreshCw className="h-5 w-5" />
+            </button>
+          </div>
+
+          {/* Bottom — shutter button */}
+          <div className="absolute bottom-0 left-0 right-0 flex items-center justify-center pb-12 pt-4">
+            <button
+              type="button"
+              onClick={handleCapturePhoto}
+              className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur-sm transition active:scale-90"
+              title="Chụp ảnh"
+            >
+              <div className="h-14 w-14 rounded-full bg-white" />
+            </button>
+          </div>
+        </div>
+      )}
+
       <main className="space-y-3 px-3 pb-3 pt-3">
         <div className="flex items-center justify-between">
           <button
@@ -504,6 +654,7 @@ export default function GuardShiftCheckinPage() {
           </div>
         </section>
 
+        {/* Camera / Photo section */}
         <section className="overflow-hidden rounded-2xl border border-slate-300 bg-white shadow-sm">
           <div className="flex items-center justify-between border-b border-slate-300 bg-[#f8f8fa] px-3 py-3">
             <div className="flex items-center gap-2">
@@ -515,66 +666,78 @@ export default function GuardShiftCheckinPage() {
             {checkinImagePreview && (
               <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
                 <CheckCircle2 className="h-4 w-4" />
-                Đã chọn ảnh
+                Đã chụp ảnh
               </span>
             )}
+
           </div>
 
-          <div className="p-4">
-            <input
-              ref={checkinImageInputRef}
-              type="file"
-              accept="image/jpeg,image/png"
-              onChange={handleImageChange}
-              className="hidden"
-              disabled={checkingIn || autoUpdatingAbsent || !checkinState?.canCheckinByTime}
-            />
+          <div className="p-4 space-y-3">
+            {/* Camera error */}
+            {cameraError && (
+              <div className="rounded-xl border border-red-100 bg-red-50 px-4 py-3 text-center">
+                <VideoOff className="mx-auto mb-1 h-5 w-5 text-red-500" />
+                <p className="text-xs font-bold text-red-600">{cameraError}</p>
+              </div>
+            )}
 
-            <div
-              onClick={() => {
-                if (checkinState?.canCheckinByTime && !checkingIn && !autoUpdatingAbsent) {
-                  checkinImageInputRef.current?.click();
-                }
-              }}
-              className={`relative aspect-video w-full flex flex-col items-center justify-center overflow-hidden rounded-xl border-2 border-dashed transition ${checkinImagePreview ? "border-slate-300" : "border-blue-700 bg-blue-50/10"
-                } ${checkinState?.canCheckinByTime && !checkingIn && !autoUpdatingAbsent
-                  ? "cursor-pointer hover:border-blue-800 hover:bg-blue-50/20"
-                  : "cursor-not-allowed opacity-60 bg-slate-50"
-                }`}
-            >
-              {checkinImagePreview ? (
-                <>
-                  <img
-                    src={checkinImagePreview}
-                    alt="Ảnh Check-in"
-                    className="h-full w-full object-cover"
-                  />
+
+
+            {/* Captured photo preview */}
+            {checkinImagePreview && !cameraActive && (
+              <div className="relative overflow-hidden rounded-xl aspect-video w-full">
+                <img
+                  src={checkinImagePreview}
+                  alt="Ảnh Check-in"
+                  className="h-full w-full object-cover"
+                />
+                <div className="absolute bottom-2 right-2 flex gap-2">
                   <button
                     type="button"
                     disabled={checkingIn || autoUpdatingAbsent}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleRemoveImage();
-                    }}
-                    className="absolute right-2 top-2 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-md hover:bg-red-600 transition disabled:cursor-not-allowed disabled:opacity-60"
+                    onClick={handleRetakePhoto}
+                    className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    Chụp lại
+                  </button>
+                  <button
+                    type="button"
+                    disabled={checkingIn || autoUpdatingAbsent}
+                    onClick={handleRemoveImage}
+                    className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-md transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <X className="h-4 w-4" />
                   </button>
-                </>
-              ) : (
-                <div className="flex flex-col items-center text-slate-500">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700">
-                    <Camera className="h-6 w-6" />
-                  </div>
-                  <span className="mt-3 text-sm font-bold text-slate-700">
-                    Chụp hoặc tải ảnh check-in
+                </div>
+              </div>
+            )}
+
+            {/* Open camera button (no photo taken yet, camera not active) */}
+            {!cameraActive && !checkinImagePreview && (
+              <button
+                type="button"
+                disabled={!canUseCamera}
+                onClick={handleOpenCamera}
+                className={`flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition ${
+                  canUseCamera
+                    ? "cursor-pointer border-blue-700 bg-blue-50/10 hover:border-blue-800 hover:bg-blue-50/20"
+                    : "cursor-not-allowed border-slate-300 bg-slate-50 opacity-60"
+                }`}
+              >
+                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700">
+                  <Camera className="h-6 w-6" />
+                </div>
+                <div className="text-center">
+                  <span className="block text-sm font-bold text-slate-700">
+                    Mở camera để chụp ảnh
                   </span>
-                  <span className="mt-1 text-xs text-slate-500">
-                    Chỉ nhận định dạng JPG, PNG
+                  <span className="mt-0.5 block text-xs text-slate-500">
+                    Nhấn để truy cập camera
                   </span>
                 </div>
-              )}
-            </div>
+              </button>
+            )}
           </div>
         </section>
       </main>
