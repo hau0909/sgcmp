@@ -120,6 +120,7 @@ export type GuardProfileItem = {
   phone_number: string | null;
   avatar_url: string | null;
   email: string | null;
+  status: string | null;
 };
 
 export type GuardListItem = {

@@ -24,8 +24,8 @@ const getErrorMessage = (error: unknown) => {
       return "Email hoặc mật khẩu không đúng";
     }
 
-    if (error.includes("Email not confirmed")) {
-      return "Email chưa được xác thực. Vui lòng kiểm tra email.";
+    if (error.includes("Email not confirmed") || error.includes("Email chưa được xác thực")) {
+      return "Email chưa được xác thực. Vui lòng kiểm tra email";
     }
 
     return error;
@@ -47,8 +47,8 @@ const getErrorMessage = (error: unknown) => {
       return "Email hoặc mật khẩu không đúng";
     }
 
-    if (message.includes("Email not confirmed")) {
-      return "Email chưa được xác thực. Vui lòng kiểm tra email.";
+    if (message.includes("Email not confirmed") || message.includes("Email chưa được xác thực")) {
+      return "Email chưa được xác thực. Vui lòng kiểm tra email";
     }
 
     return message;

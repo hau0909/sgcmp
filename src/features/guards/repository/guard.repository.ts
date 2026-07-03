@@ -217,7 +217,8 @@ export const getAllGuards = async ({
         full_name,
         phone_number,
         avatar_url,
-        email
+        email,
+        status
       )
     `,
       {

@@ -58,20 +58,31 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
     throw new Error("Không tìm thấy thông tin tài khoản.");
   }
 
+  let tempUserProfile: Awaited<ReturnType<typeof getUserProfile>> | null = null;
+  try {
+    tempUserProfile = await getUserProfile(userId);
+  } catch (err) {
+    // Bỏ qua lỗi nếu không tìm thấy profile để tránh block việc kiểm tra xác thực email
+  }
+
   if (!loginData.user.email_confirmed_at) {
     await supabase.auth.signOut();
+
+    if (tempUserProfile && tempUserProfile.status === "unactive") {
+      throw new Error("Email chưa được xác thực. Vui lòng kiểm tra email");
+    }
 
     throw new Error(
       "Email chưa được xác thực. Vui lòng kiểm tra email trước khi đăng nhập.",
     );
   }
 
-  const userProfile = await getUserProfile(userId);
+  const activeProfile = tempUserProfile || (await getUserProfile(userId));
 
   let companyId: string | null = null;
   let company = null;
 
-  if (userProfile.role === "company-admin") {
+  if (activeProfile.role === "company-admin") {
     const { data, error } = await supabase
       .from("companies")
       .select(
@@ -101,7 +112,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
     companyId = data.company_id;
   }
 
-  if (userProfile.role === "Coordinator") {
+  if (activeProfile.role === "Coordinator") {
     const { data, error } = await supabase
       .from("coordinators")
       .select("company_id")
@@ -119,7 +130,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
     companyId = data.company_id;
   }
 
-  if (userProfile.role === "guard") {
+  if (activeProfile.role === "guard") {
     const { data, error } = await supabase
       .from("guards")
       .select("company_id")
@@ -136,7 +147,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
   }
 
   return {
-    ...userProfile,
+    ...activeProfile,
     user_id: userId,
     company_id: companyId,
     company,

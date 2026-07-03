@@ -51,6 +51,10 @@ const GuardTableSkeleton = () => {
             <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
           </td>
 
+          <td className="px-4 py-3">
+            <div className="h-4 w-24 animate-pulse rounded bg-slate-200" />
+          </td>
+
           <td className="px-4 py-3 text-center">
             <div className="mx-auto h-4 w-14 animate-pulse rounded bg-slate-200" />
           </td>
@@ -199,6 +203,7 @@ export default function GuardListScreen() {
                 <th className="w-[120px] px-4 py-3">Ảnh bảo vệ</th>
                 <th className="w-[240px] px-4 py-3">Họ và tên</th>
                 <th className="w-[180px] px-4 py-3">Số điện thoại</th>
+                <th className="w-[160px] px-4 py-3">Trạng thái</th>
                 <th className="w-[110px] px-4 py-3 text-center">Hành động</th>
               </tr>
             </thead>
@@ -209,7 +214,7 @@ export default function GuardListScreen() {
               ) : errorMessage ? (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-sm text-red-600"
                   >
                     {errorMessage}
@@ -230,9 +235,8 @@ export default function GuardListScreen() {
                         {profile?.avatar_url ? (
                           <Image
                             src={profile.avatar_url}
-                            alt={`Ảnh của ${
-                              profile.full_name ?? "nhân viên bảo vệ"
-                            }`}
+                            alt={`Ảnh của ${profile.full_name ?? "nhân viên bảo vệ"
+                              }`}
                             width={44}
                             height={44}
                             className="h-11 w-11 rounded-full object-cover"
@@ -252,13 +256,25 @@ export default function GuardListScreen() {
                         {profile?.phone_number ?? "Chưa cập nhật"}
                       </td>
 
+                      <td className="px-4 py-3">
+                        {profile?.status === "active" ? (
+                          <span className="inline-flex items-center rounded-md bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
+                            HOẠT ĐỘNG
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
+                            VÔ HIỆU HÓA
+                          </span>
+                        )}
+                      </td>
+
                       <td className="px-4 py-3 text-center">
                         <button
                           type="button"
                           onClick={() =>
                             router.push(`/guards/${guard.guard_id}`)
                           }
-                          className="cursor-pointer text-sm font-semibold text-blue-700 hover:underline"
+                          className="cursor-disabled text-sm font-semibold text-blue-700 hover:underline"
                         >
                           Chi tiết
                         </button>
@@ -269,7 +285,7 @@ export default function GuardListScreen() {
               ) : (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-4 py-10 text-center text-sm text-slate-500"
                   >
                     {debouncedSearchValue
