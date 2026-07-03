@@ -11,6 +11,7 @@ import {
   ShieldCheck,
   UserRound,
   UserCheck,
+  Camera,
 } from "lucide-react";
 import { requestGetGuardShiftDetail } from "@/features/shift/api/shift.api";
 import type { GuardShiftDetailItem } from "@/features/shift/type";
@@ -334,6 +335,31 @@ export default function GuardShiftDetailPage() {
               <p className="mt-1 text-sm font-black text-slate-900">
                 {shift.assigned_by?.full_name || "Điều phối viên SGCMP"}
               </p>
+            </div>
+          </div>
+
+          <div className="flex items-start gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-[#0754a6]">
+              <Camera className="h-4 w-4" />
+            </div>
+
+            <div className="w-full">
+              <p className="text-xs font-bold text-slate-500">Ảnh điểm danh</p>
+
+              {shift.checkin_image ? (
+                <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-xl border border-slate-200">
+                  <img
+                    src={shift.checkin_image.image_url}
+                    alt="Ảnh Check-in ca trực"
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="mt-2 flex aspect-video w-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-400">
+                  <Camera className="h-8 w-8 text-slate-300" />
+                  <span className="mt-2 text-xs font-bold text-slate-500">Chưa có ảnh điểm danh</span>
+                </div>
+              )}
             </div>
           </div>
         </div>

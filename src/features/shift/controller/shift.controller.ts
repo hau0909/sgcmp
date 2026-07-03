@@ -5,6 +5,7 @@ import {
   getOverlappingGuardShiftsService,
   getAllShiftsByDateRangeService,
   updateAssignedShiftAssignmentsToAbsentByShiftIdService,
+  createShiftImageService,
 } from "../service/shift.service";
 import { handleGetUserProfile } from "@/features/auth/controller/auth.controller";
 import {
@@ -33,6 +34,7 @@ import {
   getShiftAssignmentsByShiftIdService,
   getShiftByIdService,
   updateShiftAssignmentStatusByShiftAndGuardService,
+  getShiftImageByAssignmentIdService,
 } from "../service/shift.service";
 import {
   startOfWeekMondayDateKey,
@@ -636,6 +638,8 @@ export const handleGetGuardShiftDetail = async ({
     };
   });
 
+  const shiftImage = await getShiftImageByAssignmentIdService(assignment.assignment_id);
+
   return {
     id: shift.shift_id,
     shift_id: shift.shift_id,
@@ -677,13 +681,24 @@ export const handleGetGuardShiftDetail = async ({
         }
       : null,
     guards: guardList,
+    checkin_image: shiftImage
+      ? {
+          image_url: shiftImage.image_url,
+          image_path: shiftImage.image_path,
+          created_at: shiftImage.created_at,
+        }
+      : null,
   };
 };
 
 export const handleCheckinGuardShift = async ({
   shiftId,
+  imageUrl,
+  imagePath,
 }: {
   shiftId: string;
+  imageUrl?: string;
+  imagePath?: string;
 }) => {
   if (!shiftId || !isValidUuid(shiftId)) {
     throw new ShiftApiError("Mã ca trực không hợp lệ.", 400);
@@ -795,6 +810,19 @@ export const handleCheckinGuardShift = async ({
 
   if (!updatedAssignment) {
     throw new ShiftApiError("Không thể điểm danh ca trực.", 500);
+  }
+
+  if (imageUrl) {
+    try {
+      await createShiftImageService({
+        assignmentId: updatedAssignment.assignment_id,
+        imageUrl,
+        imagePath: imagePath || null,
+        imageType: "checkin",
+      });
+    } catch (imgError) {
+      console.error("Lỗi khi lưu thông tin ảnh check-in vào DB:", imgError);
+    }
   }
 
   return {

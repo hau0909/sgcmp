@@ -28,3 +28,10 @@ export type BookingStatus = "pending" | "quoted" | "accepted" | "rejected";
 export type ImageType = 'logo' | 'banner' | 'other';
 
 export type ShiftAssignmentStatus = "assigned" | "completed" | "absent";
+
+export enum ShiftImgType {
+  checkin = "checkin",
+  checkout = "checkout",
+  incident = "incident",
+  other = "other",
+}

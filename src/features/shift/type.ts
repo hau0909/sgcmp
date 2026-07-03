@@ -24,6 +24,10 @@ export type ShiftAssignment = {
   updated_at: string;
   guard_name: string;
   note?: string;
+  checkin_image?: {
+    image_url: string;
+    image_path: string | null;
+  } | null;
 };
 
 export type ShiftWithAssignments = Shift & {
@@ -277,6 +281,16 @@ export type ShiftAssignmentQuery = {
         full_name: string | null;
       }[]
     | null;
+  shift_img?:
+    | {
+        image_url: string;
+        image_path: string | null;
+      }
+    | {
+        image_url: string;
+        image_path: string | null;
+      }[]
+    | null;
 };
 
 export type ShiftContractQuery = {
@@ -473,6 +487,11 @@ export type GuardShiftDetailItem = {
     avatar_url: string | null;
     status: ShiftAssignmentStatus;
   }[];
+  checkin_image?: {
+    image_url: string;
+    image_path: string | null;
+    created_at: string;
+  } | null;
 };
 
 export type GuardShiftDetailResponse = {
