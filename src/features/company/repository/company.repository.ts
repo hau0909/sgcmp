@@ -193,7 +193,6 @@ export const updateCompanyprofile = async ({
       description: input.description,
       email: input.email,
       phone: input.phone,
-      business_license_no: input.business_license_no,
       address: input.address,
     })
     .eq("company_id", company_id)

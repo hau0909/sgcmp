@@ -39,16 +39,6 @@ export const validateUpdateCompanyProfileInput = (
   }
 
   validateRequiredString(input.address, "Địa chỉ không hợp lệ.");
-
-  validateRequiredString(
-    input.business_license_no,
-    "Mã số đăng ký kinh doanh không hợp lệ.",
-  );
-
-  validateRequiredString(
-    input.registration_code,
-    "Mã đăng ký hồ sơ không hợp lệ.",
-  );
 };
 
 export const validateUploadCompanyImageInput = ({

@@ -88,8 +88,6 @@ export const handleUpdateCompanyProfile = async ({
     email: input.email.trim(),
     phone: input.phone.trim(),
     address: input.address.trim(),
-    business_license_no: input.business_license_no.trim(),
-    registration_code: input.registration_code.trim(),
   };
 
   const data = await updateCompanyProfileService({
