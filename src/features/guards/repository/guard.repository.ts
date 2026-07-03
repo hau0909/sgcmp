@@ -219,7 +219,7 @@ export const uploadGuardFile = async ({
     throw new Error("File tải lên không phải là ảnh.");
   }
 
-  if (file.size > 2 * 1024 * 1024) {
+  if (type === "avatar" && file.size > 2 * 1024 * 1024) {
     throw new Error("Ảnh không được vượt quá 2MB.");
   }
 

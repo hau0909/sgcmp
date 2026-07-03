@@ -233,21 +233,11 @@ export default function AddGuardPage() {
     }
 
     const acceptedTypes = ["image/jpeg", "image/png"];
-    const maximumSize = 2 * 1024 * 1024;
 
     if (!acceptedTypes.includes(file.type)) {
       setFieldErrors((prev) => ({
         ...prev,
         cccdFront: "Ảnh CCCD chỉ hỗ trợ định dạng JPG hoặc PNG.",
-      }));
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > maximumSize) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        cccdFront: "Kích thước ảnh tối đa là 2MB.",
       }));
       event.target.value = "";
       return;
@@ -288,21 +278,11 @@ export default function AddGuardPage() {
     }
 
     const acceptedTypes = ["image/jpeg", "image/png"];
-    const maximumSize = 2 * 1024 * 1024;
 
     if (!acceptedTypes.includes(file.type)) {
       setFieldErrors((prev) => ({
         ...prev,
         cccdBack: "Ảnh CCCD chỉ hỗ trợ định dạng JPG hoặc PNG.",
-      }));
-      event.target.value = "";
-      return;
-    }
-
-    if (file.size > maximumSize) {
-      setFieldErrors((prev) => ({
-        ...prev,
-        cccdBack: "Kích thước ảnh tối đa là 2MB.",
       }));
       event.target.value = "";
       return;
@@ -794,8 +774,12 @@ export default function AddGuardPage() {
                           className="hidden"
                           disabled={isFormDisabled}
                         />
-                        <div className={`relative w-full aspect-video flex items-center justify-center overflow-hidden rounded-md border-2 border-dashed bg-white ${fieldErrors.cccdFront ? "border-red-500" : "border-slate-300"
-                          }`}>
+                        <div
+                          onClick={() => !isFormDisabled && cccdFrontInputRef.current?.click()}
+                          className={`relative w-full aspect-video flex items-center justify-center overflow-hidden rounded-md border-2 border-dashed bg-white cursor-pointer hover:border-blue-700 transition ${
+                            fieldErrors.cccdFront ? "border-red-500" : "border-slate-300"
+                          } ${isFormDisabled ? "cursor-not-allowed opacity-60" : ""}`}
+                        >
                           {cccdFrontPreview ? (
                             <>
                               <img
@@ -806,22 +790,20 @@ export default function AddGuardPage() {
                               <button
                                 type="button"
                                 disabled={isFormDisabled}
-                                onClick={handleRemoveCccdFront}
-                                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600 transition disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveCccdFront();
+                                }}
+                                className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600 transition disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 <X className="h-3.5 w-3.5" />
                               </button>
                             </>
                           ) : (
-                            <button
-                              type="button"
-                              disabled={isFormDisabled}
-                              onClick={() => !isFormDisabled && cccdFrontInputRef.current?.click()}
-                              className="flex flex-col items-center text-slate-500 hover:text-blue-800 transition disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <Camera className="h-6 w-6" />
+                            <div className="flex flex-col items-center text-slate-500 hover:text-blue-800 transition">
+                              <Camera className="h-8 w-8" />
                               <span className="mt-1 text-xs font-semibold">Mặt trước CCCD</span>
-                            </button>
+                            </div>
                           )}
                         </div>
                       </div>
@@ -843,8 +825,12 @@ export default function AddGuardPage() {
                           className="hidden"
                           disabled={isFormDisabled}
                         />
-                        <div className={`relative w-full aspect-video flex items-center justify-center overflow-hidden rounded-md border-2 border-dashed bg-white ${fieldErrors.cccdBack ? "border-red-500" : "border-slate-300"
-                          }`}>
+                        <div
+                          onClick={() => !isFormDisabled && cccdBackInputRef.current?.click()}
+                          className={`relative w-full aspect-video flex items-center justify-center overflow-hidden rounded-md border-2 border-dashed bg-white cursor-pointer hover:border-blue-700 transition ${
+                            fieldErrors.cccdBack ? "border-red-500" : "border-slate-300"
+                          } ${isFormDisabled ? "cursor-not-allowed opacity-60" : ""}`}
+                        >
                           {cccdBackPreview ? (
                             <>
                               <img
@@ -855,22 +841,20 @@ export default function AddGuardPage() {
                               <button
                                 type="button"
                                 disabled={isFormDisabled}
-                                onClick={handleRemoveCccdBack}
-                                className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600 transition disabled:cursor-not-allowed disabled:opacity-60"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleRemoveCccdBack();
+                                }}
+                                className="absolute right-1 top-1 z-10 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white shadow hover:bg-red-600 transition disabled:cursor-not-allowed disabled:opacity-60"
                               >
                                 <X className="h-3.5 w-3.5" />
                               </button>
                             </>
                           ) : (
-                            <button
-                              type="button"
-                              disabled={isFormDisabled}
-                              onClick={() => !isFormDisabled && cccdBackInputRef.current?.click()}
-                              className="flex flex-col items-center text-slate-500 hover:text-blue-800 transition disabled:cursor-not-allowed disabled:opacity-60"
-                            >
-                              <Camera className="h-6 w-6" />
+                            <div className="flex flex-col items-center text-slate-500 hover:text-blue-800 transition">
+                              <Camera className="h-8 w-8" />
                               <span className="mt-1 text-xs font-semibold">Mặt sau CCCD</span>
-                            </button>
+                            </div>
                           )}
                         </div>
                       </div>

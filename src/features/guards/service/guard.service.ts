@@ -121,7 +121,7 @@ export const uploadGuardFileService = async ({
     throw new Error("Ảnh chỉ hỗ trợ định dạng JPG hoặc PNG.");
   }
 
-  if (file.size > MAXIMUM_IMAGE_SIZE) {
+  if (type === "avatar" && file.size > MAXIMUM_IMAGE_SIZE) {
     throw new Error("Kích thước ảnh tối đa là 2MB.");
   }
 
