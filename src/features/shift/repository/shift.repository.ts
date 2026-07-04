@@ -43,6 +43,11 @@ const getSingleRelation = <T>(value: T | T[] | null | undefined): T | null => {
   return value;
 };
 
+const DAY_LABEL_MAP: Record<string, number> = {
+  "thứ 2": 1, "thứ 3": 2, "thứ 4": 3, "thứ 5": 4, "thứ 6": 5, "thứ 7": 6, "chủ nhật": 0,
+  monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6, sunday: 0,
+};
+
 export const getShiftContractsByCompanyId = async (
   companyId: string,
 ): Promise<ContractOption[]> => {
@@ -87,33 +92,113 @@ export const getShiftContractsByCompanyId = async (
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as unknown as ContractQueryResult[]).map(
-    (contract, index) => {
-      const booking = getSingleRelation(contract.booking);
-      const customer = getSingleRelation(booking?.customer);
-      const company = getSingleRelation(booking?.company);
-      const service = getSingleRelation(booking?.service);
+  const contractsData = (data ?? []) as unknown as ContractQueryResult[];
+  if (contractsData.length === 0) return [];
 
-      return {
-        contract_id: contract.contract_id,
-        code: `HD-${String(index + 1).padStart(3, "0")}`,
-        customer_name: customer?.full_name ?? "Chưa cập nhật",
-        company_name: company?.company_name ?? "Chưa cập nhật",
-        service_name: service?.name ?? "Chưa cập nhật",
-        address: booking?.address ?? "Chưa cập nhật",
-        guards_per_slot: booking?.guards_per_slot ?? 1,
-        description: booking?.description ?? "Chưa cập nhật",
-        start_date: contract.start_date,
-        end_date: contract.end_date,
-        time_slots: toStringArray(booking?.time_slots) ?? "Chưa cập nhật",
-        day_per_week: toStringArray(booking?.day_per_week) ?? "Chưa cập nhật",
-      };
-    },
-  );
+  // Fetch unique start dates for all shifts of these contracts
+  const contractIds = contractsData.map((c) => c.contract_id);
+  const { data: shiftsData, error: shiftsError } = await supabase
+    .from("shifts")
+    .select("contract_id, start_time")
+    .in("contract_id", contractIds);
+
+  if (shiftsError) {
+    throw new Error(shiftsError.message);
+  }
+
+  // Map contractId -> Set of unique local date strings
+  const contractScheduledDatesMap: Record<string, Set<string>> = {};
+  for (const shift of shiftsData || []) {
+    if (shift.contract_id && shift.start_time) {
+      if (!contractScheduledDatesMap[shift.contract_id]) {
+        contractScheduledDatesMap[shift.contract_id] = new Set<string>();
+      }
+      contractScheduledDatesMap[shift.contract_id].add(shift.start_time.split(/[T ]/)[0]);
+    }
+  }
+
+  return contractsData.map((contract, index) => {
+    const booking = getSingleRelation(contract.booking);
+    const customer = getSingleRelation(booking?.customer);
+    const company = getSingleRelation(booking?.company);
+    const service = getSingleRelation(booking?.service);
+
+    const time_slots = toStringArray(booking?.time_slots) ?? [];
+    const day_per_week = toStringArray(booking?.day_per_week) ?? [];
+
+    // Calculate totalContractWorkingDays
+    const targetDays = day_per_week
+      .map((d) => DAY_LABEL_MAP[d.toLowerCase().trim()])
+      .filter((n): n is number => n !== undefined);
+
+    let totalWorkingDays = 0;
+    if (contract.start_date && contract.end_date && targetDays.length > 0) {
+      const cStart = new Date(`${contract.start_date}T00:00:00`);
+      const cEnd = new Date(`${contract.end_date}T00:00:00`);
+      const cur = new Date(cStart);
+      while (cur <= cEnd) {
+        if (targetDays.includes(cur.getDay())) {
+          totalWorkingDays++;
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    // Calculate scheduledCount within target days and contract bounds
+    const scheduledDatesSet = contractScheduledDatesMap[contract.contract_id] || new Set();
+    let scheduledDays = 0;
+    if (contract.start_date && contract.end_date && targetDays.length > 0) {
+      const cStart = new Date(`${contract.start_date}T00:00:00`);
+      const cEnd = new Date(`${contract.end_date}T00:00:00`);
+      for (const dStr of Array.from(scheduledDatesSet)) {
+        try {
+          const dObj = new Date(`${dStr}T00:00:00`);
+          if (dObj >= cStart && dObj <= cEnd && targetDays.includes(dObj.getDay())) {
+            scheduledDays++;
+          }
+        } catch {}
+      }
+    }
+
+    return {
+      contract_id: contract.contract_id,
+      code: `HD-${String(index + 1).padStart(3, "0")}`,
+      customer_name: customer?.full_name ?? "Chưa cập nhật",
+      company_name: company?.company_name ?? "Chưa cập nhật",
+      service_name: service?.name ?? "Chưa cập nhật",
+      address: booking?.address ?? "Chưa cập nhật",
+      guards_per_slot: booking?.guards_per_slot ?? 1,
+      description: booking?.description ?? "Chưa cập nhật",
+      start_date: contract.start_date,
+      end_date: contract.end_date,
+      time_slots,
+      day_per_week,
+      scheduled_days_count: scheduledDays,
+      total_working_days_count: totalWorkingDays,
+    };
+  });
 };
 
 export const createShift = async (input: CreateShiftInput): Promise<Shift> => {
   const supabase = await createClient();
+
+  // Check if a shift with the same contract, start/end time, and location already exists
+  const { data: existing, error: checkError } = await supabase
+    .from("shifts")
+    .select("shift_id, shift_name")
+    .eq("contract_id", input.contract_id)
+    .eq("start_time", input.start_time)
+    .eq("end_time", input.end_time)
+    .eq("location", input.location)
+    .limit(1);
+
+  if (checkError) {
+    throw new Error(checkError.message);
+  }
+
+  if (existing && existing.length > 0) {
+    throw new Error(`Ca trực "${existing[0].shift_name}" cho khung giờ này đã tồn tại.`);
+  }
 
   const { data, error } = await supabase
     .from("shifts")
@@ -719,4 +804,52 @@ export const getShiftImageByAssignmentId = async (
   }
 
   return data;
+};
+
+export const getLatestShiftByContract = async (
+  contractId: string,
+): Promise<string | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shifts")
+    .select("start_time")
+    .eq("contract_id", contractId)
+    .order("start_time", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data?.start_time) return null;
+
+  return data.start_time.split(/[T ]/)[0];
+};
+
+export const getScheduledShiftDatesByContract = async (
+  contractId: string,
+): Promise<string[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("shifts")
+    .select("start_time")
+    .eq("contract_id", contractId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) return [];
+
+  const uniqueDates = new Set<string>();
+  for (const row of data) {
+    if (row.start_time) {
+      uniqueDates.add(row.start_time.split(/[T ]/)[0]);
+    }
+  }
+
+  return Array.from(uniqueDates).sort();
 };

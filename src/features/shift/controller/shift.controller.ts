@@ -6,6 +6,8 @@ import {
   getAllShiftsByDateRangeService,
   updateAssignedShiftAssignmentsToAbsentByShiftIdService,
   createShiftImageService,
+  getLatestShiftDateService,
+  getScheduledShiftDatesService,
 } from "../service/shift.service";
 import { handleGetUserProfile } from "@/features/auth/controller/auth.controller";
 import {
@@ -18,6 +20,8 @@ import {
   validateCreateShiftInput,
   validateShiftDateInContract,
 } from "../validator/shift.validate";
+import { deleteShift } from "../repository/shift.repository";
+import { parseBookingSlot, calculateDurationMinutes } from "../utils/shift.utils";
 import { getContractIdsByCompanyService } from "@/features/contract/service/contract.service";
 import {
   getDayDateRange,
@@ -222,6 +226,8 @@ export const handleCreateWorkShift = async (request: Request) => {
       required_guards: Number(body.required_guards),
       location: body.location,
       guard_id: body.guard_id,
+      original_slot: body.original_slot,
+      splits: body.splits,
     };
 
     validateCreateShiftInput(input);
@@ -261,45 +267,173 @@ export const handleCreateWorkShift = async (request: Request) => {
       );
     }
 
-    validateShiftDateInContract({
-      startTime: input.start_time,
-      endTime: input.end_time,
-      contractStartDate: contractRule.start_date,
-      contractEndDate: contractRule.end_date,
-    });
+    if (input.splits && input.splits.length > 0) {
+      // 1. Mỗi ca nhỏ không quá 8 tiếng
+      for (const split of input.splits) {
+        const start = new Date(split.start_time);
+        const end = new Date(split.end_time);
+        const durationMin = (end.getTime() - start.getTime()) / (1000 * 60);
+        if (durationMin > 8 * 60) {
+          return Response.json(
+            { message: "Ca trực không được vượt quá 8 tiếng." },
+            { status: 400 }
+          );
+        }
+      }
 
-    const overlappingShifts = await getOverlappingGuardShiftsService({
-      guardId: input.guard_id,
-      startTime: input.start_time,
-      endTime: input.end_time,
-    });
+      // 2. Tổng duration bằng ca gốc
+      const parsedSlot = parseBookingSlot(input.original_slot!);
+      if (!parsedSlot) {
+        return Response.json(
+          { message: "Khung giờ gốc không hợp lệ." },
+          { status: 400 }
+        );
+      }
+      const originalDurationMin = calculateDurationMinutes(parsedSlot.start, parsedSlot.end);
+      
+      const totalSplitDurationMin = input.splits.reduce((sum, split) => {
+        const start = new Date(split.start_time);
+        const end = new Date(split.end_time);
+        return sum + (end.getTime() - start.getTime()) / (1000 * 60);
+      }, 0);
 
-    if (overlappingShifts.length > 0) {
+      if (totalSplitDurationMin !== originalDurationMin) {
+        return Response.json(
+          { message: "Tổng thời gian sau khi tách phải bằng tổng thời gian ca ban đầu." },
+          { status: 400 }
+        );
+      }
+
+      // 3. Các ca nối tiếp nhau & 4. Không overlap
+      const sortedSplits = [...input.splits].sort(
+        (a, b) => new Date(a.start_time).getTime() - new Date(b.start_time).getTime()
+      );
+
+      for (let i = 1; i < sortedSplits.length; i++) {
+        const prevEnd = new Date(sortedSplits[i - 1].end_time).getTime();
+        const currStart = new Date(sortedSplits[i].start_time).getTime();
+        if (currStart > prevEnd) {
+          return Response.json(
+            { message: "Các ca tách phải liên tục, không được bị hở thời gian." },
+            { status: 400 }
+          );
+        }
+        if (currStart < prevEnd) {
+          return Response.json(
+            { message: "Các ca tách không được trùng thời gian." },
+            { status: 400 }
+          );
+        }
+      }
+
+      // 5. Không vượt quá contract end date
+      for (const split of input.splits) {
+        validateShiftDateInContract({
+          startTime: split.start_time,
+          endTime: split.end_time,
+          contractStartDate: contractRule.start_date,
+          contractEndDate: contractRule.end_date,
+        });
+      }
+
+      // Check overlapping shifts for each segment
+      for (const split of input.splits) {
+        const overlappingShifts = await getOverlappingGuardShiftsService({
+          guardId: input.guard_id,
+          startTime: split.start_time,
+          endTime: split.end_time,
+        });
+
+        if (overlappingShifts.length > 0) {
+          return Response.json(
+            {
+              message: "Một hoặc nhiều bảo vệ đã có ca trực trong khung giờ này",
+              data: overlappingShifts,
+            },
+            {
+              status: 400,
+            },
+          );
+        }
+      }
+
+      // 6. Create all split shifts
+      const createdShifts = [];
+      try {
+        for (const split of input.splits) {
+          const splitInput = {
+            ...input,
+            start_time: split.start_time,
+            end_time: split.end_time,
+          };
+          const result = await createWorkShiftService({
+            input: splitInput,
+            assignedBy: user.id,
+          });
+          createdShifts.push(result);
+        }
+      } catch (error) {
+        // Rollback
+        for (const res of createdShifts) {
+          try {
+            await deleteShift(res.shift.shift_id);
+          } catch (delError) {
+            console.error("Lỗi rollback xóa ca trực:", delError);
+          }
+        }
+        throw error;
+      }
+
       return Response.json(
         {
-          message: "Một hoặc nhiều bảo vệ đã có ca trực trong khung giờ này",
-          data: overlappingShifts,
+          message: "Tạo ca trực thành công",
+          data: createdShifts,
         },
         {
-          status: 400,
+          status: 201,
+        },
+      );
+    } else {
+      validateShiftDateInContract({
+        startTime: input.start_time,
+        endTime: input.end_time,
+        contractStartDate: contractRule.start_date,
+        contractEndDate: contractRule.end_date,
+      });
+
+      const overlappingShifts = await getOverlappingGuardShiftsService({
+        guardId: input.guard_id,
+        startTime: input.start_time,
+        endTime: input.end_time,
+      });
+
+      if (overlappingShifts.length > 0) {
+        return Response.json(
+          {
+            message: "Một hoặc nhiều bảo vệ đã có ca trực trong khung giờ này",
+            data: overlappingShifts,
+          },
+          {
+            status: 400,
+          },
+        );
+      }
+
+      const result = await createWorkShiftService({
+        input,
+        assignedBy: user.id,
+      });
+
+      return Response.json(
+        {
+          message: "Tạo ca trực thành công",
+          data: result,
+        },
+        {
+          status: 201,
         },
       );
     }
-
-    const result = await createWorkShiftService({
-      input,
-      assignedBy: user.id,
-    });
-
-    return Response.json(
-      {
-        message: "Tạo ca trực thành công",
-        data: result,
-      },
-      {
-        status: 201,
-      },
-    );
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Tạo ca trực thất bại";
@@ -834,3 +968,156 @@ export const handleCheckinGuardShift = async ({
     },
   };
 };
+
+export const handleGetGuardAvailability = async (request: Request) => {
+  try {
+    const user = await getUser();
+
+    if (!user) {
+      return Response.json(
+        { message: "Người dùng chưa đăng nhập" },
+        { status: 401 },
+      );
+    }
+
+    const profileResponse = await handleGetUserProfile(user.id);
+    const profile = profileResponse.data;
+
+    if (!profile) {
+      return Response.json(
+        { message: "Không tìm thấy thông tin người dùng" },
+        { status: 404 },
+      );
+    }
+
+    if (profile.role !== "Coordinator" && profile.role !== "company-admin") {
+      return Response.json(
+        { message: "Bạn không có quyền kiểm tra lịch bảo vệ" },
+        { status: 403 },
+      );
+    }
+
+    const body = (await request.json()) as {
+      guardIds: string[];
+      startTime: string;
+      endTime: string;
+    };
+
+    if (
+      !Array.isArray(body.guardIds) ||
+      !body.startTime ||
+      !body.endTime
+    ) {
+      return Response.json(
+        { message: "Thiếu thông tin kiểm tra lịch bảo vệ" },
+        { status: 400 },
+      );
+    }
+
+    const overlapping = await getOverlappingGuardShiftsService({
+      guardId: body.guardIds,
+      startTime: body.startTime,
+      endTime: body.endTime,
+    });
+
+    // Build a conflict map: guardId -> true means conflict exists
+    const conflictMap: Record<string, boolean> = {};
+
+    for (const guardId of body.guardIds) {
+      conflictMap[guardId] = false;
+    }
+
+    for (const overlap of overlapping) {
+      conflictMap[overlap.guard_id] = true;
+    }
+
+    return Response.json(
+      {
+        message: "Kiểm tra lịch bảo vệ thành công",
+        data: conflictMap,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Kiểm tra lịch bảo vệ thất bại";
+
+    return Response.json({ message }, { status: 400 });
+  }
+};
+
+export const handleGetLatestShiftDate = async (contractId: string) => {
+  const user = await getUser();
+
+  if (!user) {
+    return Response.json(
+      {
+        message: "Người dùng chưa đăng nhập",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  try {
+    const date = await getLatestShiftDateService(contractId);
+    return Response.json(
+      {
+        message: "Lấy ngày ca trực cuối cùng thành công",
+        data: date,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Lấy ngày ca trực cuối cùng thất bại",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+};
+
+export const handleGetScheduledShiftDates = async (contractId: string) => {
+  const user = await getUser();
+
+  if (!user) {
+    return Response.json(
+      {
+        message: "Người dùng chưa đăng nhập",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  try {
+    const dates = await getScheduledShiftDatesService(contractId);
+    return Response.json({
+      message: "Lấy danh sách ngày đã phân công thành công",
+      data: dates,
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Lấy danh sách ngày đã phân công thất bại",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+};
+

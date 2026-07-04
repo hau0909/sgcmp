@@ -50,6 +50,7 @@ export const getContractsService = async (
       status: item.status,
       created_at: item.created_at,
       updated_at: item.updated_at,
+      guard_assigned: item.guard_assigned || [],
 
       // Virtual/mapped fields for UI rendering
       contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
@@ -279,6 +280,7 @@ export const getCustomerContractsService = async (
       created_at: item.created_at,
       start_date: item.start_date || null,
       end_date: item.end_date || null,
+      guard_assigned: item.guard_assigned || [],
 
       // Secondary fields: provided as defaults per Contract interface but excluded from DB query
       booking_id: "",

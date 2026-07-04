@@ -11,7 +11,8 @@ export interface Contract {
   status: ContractStatus;
   created_at: string;
   updated_at: string;
-  
+  guard_assigned: string[];
+
   // Custom joined fields for frontend/API lists and detail representations
   contract_code?: string;
   customer_name?: string;
