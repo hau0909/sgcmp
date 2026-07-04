@@ -54,6 +54,8 @@ export type ContractOption = {
   description: string | null;
   start_date: string;
   end_date: string;
+  scheduled_days_count?: number;
+  total_working_days_count?: number;
 };
 
 export type GuardOption = {
@@ -73,6 +75,33 @@ export type CreateShiftInput = {
   required_guards: number;
   location: string;
   guard_id: string[];
+};
+
+export type ShiftSlotConfigStatus =
+  | "configured"     // slot is valid (≤8h) and ready to generate
+  | "needs_adjustment" // slot exceeds 8h and must be split or edited
+  | "invalid";       // slot is outside booking rules or has invalid time
+
+export type ShiftSlot = {
+  slotIndex: number;
+  bookingTimeSlot: string;        // raw value from contract time_slots, e.g. "06:00-10:00"
+  bookingStart: string;           // HH:mm — original booking slot start
+  bookingEnd: string;             // HH:mm — original booking slot end
+  startTime: string;              // HH:mm — auto-set (= bookingStart)
+  endTime: string;                // HH:mm — auto-set if ≤8h, else Coordinator fills
+  configStatus: ShiftSlotConfigStatus;
+};
+
+export type GuardShiftStatus =
+  | "available"
+  | "selected"
+  | "assigned"    // guard designated for the current generation batch
+  | "conflict"
+  | "unavailable";
+
+export type GuardAvailabilityResponse = {
+  message: string;
+  data: Record<string, boolean>; // guardId -> true means conflict exists
 };
 
 export type ShiftOptionResponse = {

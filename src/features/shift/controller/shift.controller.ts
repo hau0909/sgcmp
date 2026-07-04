@@ -6,6 +6,8 @@ import {
   getAllShiftsByDateRangeService,
   updateAssignedShiftAssignmentsToAbsentByShiftIdService,
   createShiftImageService,
+  getLatestShiftDateService,
+  getScheduledShiftDatesService,
 } from "../service/shift.service";
 import { handleGetUserProfile } from "@/features/auth/controller/auth.controller";
 import {
@@ -834,3 +836,156 @@ export const handleCheckinGuardShift = async ({
     },
   };
 };
+
+export const handleGetGuardAvailability = async (request: Request) => {
+  try {
+    const user = await getUser();
+
+    if (!user) {
+      return Response.json(
+        { message: "Người dùng chưa đăng nhập" },
+        { status: 401 },
+      );
+    }
+
+    const profileResponse = await handleGetUserProfile(user.id);
+    const profile = profileResponse.data;
+
+    if (!profile) {
+      return Response.json(
+        { message: "Không tìm thấy thông tin người dùng" },
+        { status: 404 },
+      );
+    }
+
+    if (profile.role !== "Coordinator" && profile.role !== "company-admin") {
+      return Response.json(
+        { message: "Bạn không có quyền kiểm tra lịch bảo vệ" },
+        { status: 403 },
+      );
+    }
+
+    const body = (await request.json()) as {
+      guardIds: string[];
+      startTime: string;
+      endTime: string;
+    };
+
+    if (
+      !Array.isArray(body.guardIds) ||
+      !body.startTime ||
+      !body.endTime
+    ) {
+      return Response.json(
+        { message: "Thiếu thông tin kiểm tra lịch bảo vệ" },
+        { status: 400 },
+      );
+    }
+
+    const overlapping = await getOverlappingGuardShiftsService({
+      guardId: body.guardIds,
+      startTime: body.startTime,
+      endTime: body.endTime,
+    });
+
+    // Build a conflict map: guardId -> true means conflict exists
+    const conflictMap: Record<string, boolean> = {};
+
+    for (const guardId of body.guardIds) {
+      conflictMap[guardId] = false;
+    }
+
+    for (const overlap of overlapping) {
+      conflictMap[overlap.guard_id] = true;
+    }
+
+    return Response.json(
+      {
+        message: "Kiểm tra lịch bảo vệ thành công",
+        data: conflictMap,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Kiểm tra lịch bảo vệ thất bại";
+
+    return Response.json({ message }, { status: 400 });
+  }
+};
+
+export const handleGetLatestShiftDate = async (contractId: string) => {
+  const user = await getUser();
+
+  if (!user) {
+    return Response.json(
+      {
+        message: "Người dùng chưa đăng nhập",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  try {
+    const date = await getLatestShiftDateService(contractId);
+    return Response.json(
+      {
+        message: "Lấy ngày ca trực cuối cùng thành công",
+        data: date,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    return Response.json(
+      {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Lấy ngày ca trực cuối cùng thất bại",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+};
+
+export const handleGetScheduledShiftDates = async (contractId: string) => {
+  const user = await getUser();
+
+  if (!user) {
+    return Response.json(
+      {
+        message: "Người dùng chưa đăng nhập",
+      },
+      {
+        status: 401,
+      },
+    );
+  }
+
+  try {
+    const dates = await getScheduledShiftDatesService(contractId);
+    return Response.json({
+      message: "Lấy danh sách ngày đã phân công thành công",
+      data: dates,
+    });
+  } catch (error) {
+    return Response.json(
+      {
+        message:
+          error instanceof Error
+            ? error.message
+            : "Lấy danh sách ngày đã phân công thất bại",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+};
+
