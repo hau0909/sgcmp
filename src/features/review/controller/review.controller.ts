@@ -15,6 +15,7 @@ import {
   getRatingDistributionByCompanyIdService,
 } from "../service/review.service";
 import { isValidUuid } from "@/features/shift/utils/shift.utils";
+import { validateCreateReviewPayload } from "../validator/review.validator";
 
 const validateCompanyId = (company_id: string) => {
   if (!company_id || !isValidUuid(company_id)) {
@@ -25,6 +26,7 @@ const validateCompanyId = (company_id: string) => {
 export async function handleCreateReview(
   payload: CreateReviewPayload,
 ): Promise<Review> {
+  validateCreateReviewPayload(payload);
   try {
     const review = await createReviewService(payload);
     return review;
