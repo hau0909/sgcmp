@@ -9,27 +9,58 @@ export const validateCreateShiftInput = (input: CreateShiftInput) => {
     throw new Error("Vui lòng nhập tên ca trực");
   }
 
-  if (!input.start_time) {
-    throw new Error("Vui lòng chọn thời gian bắt đầu");
-  }
+  if (input.splits && input.splits.length > 0) {
+    if (!input.original_slot) {
+      throw new Error("Thiếu thông tin khung giờ gốc");
+    }
 
-  if (!input.end_time) {
-    throw new Error("Vui lòng chọn thời gian kết thúc");
-  }
+    for (const split of input.splits) {
+      if (!split.start_time) {
+        throw new Error("Vui lòng chọn thời gian bắt đầu");
+      }
 
-  const startTime = new Date(input.start_time);
-  const endTime = new Date(input.end_time);
+      if (!split.end_time) {
+        throw new Error("Vui lòng chọn thời gian kết thúc");
+      }
 
-  if (Number.isNaN(startTime.getTime())) {
-    throw new Error("Thời gian bắt đầu không hợp lệ");
-  }
+      const startTime = new Date(split.start_time);
+      const endTime = new Date(split.end_time);
 
-  if (Number.isNaN(endTime.getTime())) {
-    throw new Error("Thời gian kết thúc không hợp lệ");
-  }
+      if (Number.isNaN(startTime.getTime())) {
+        throw new Error("Thời gian bắt đầu không hợp lệ");
+      }
 
-  if (endTime <= startTime) {
-    throw new Error("Thời gian kết thúc phải sau thời gian bắt đầu");
+      if (Number.isNaN(endTime.getTime())) {
+        throw new Error("Thời gian kết thúc không hợp lệ");
+      }
+
+      if (endTime <= startTime) {
+        throw new Error("Thời gian kết thúc phải sau thời gian bắt đầu");
+      }
+    }
+  } else {
+    if (!input.start_time) {
+      throw new Error("Vui lòng chọn thời gian bắt đầu");
+    }
+
+    if (!input.end_time) {
+      throw new Error("Vui lòng chọn thời gian kết thúc");
+    }
+
+    const startTime = new Date(input.start_time);
+    const endTime = new Date(input.end_time);
+
+    if (Number.isNaN(startTime.getTime())) {
+      throw new Error("Thời gian bắt đầu không hợp lệ");
+    }
+
+    if (Number.isNaN(endTime.getTime())) {
+      throw new Error("Thời gian kết thúc không hợp lệ");
+    }
+
+    if (endTime <= startTime) {
+      throw new Error("Thời gian kết thúc phải sau thời gian bắt đầu");
+    }
   }
 
   if (!Number.isInteger(input.required_guards) || input.required_guards <= 0) {

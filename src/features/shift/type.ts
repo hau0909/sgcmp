@@ -67,6 +67,15 @@ export type GuardOption = {
   status: "active" | "unactive";
 };
 
+export type SplitShiftSegment = {
+  id: string;
+  startTime: string;
+  endTime: string;
+  startMinutes: number;
+  endMinutes: number;
+  durationMinutes: number;
+};
+
 export type CreateShiftInput = {
   contract_id: string;
   shift_name: string;
@@ -75,6 +84,8 @@ export type CreateShiftInput = {
   required_guards: number;
   location: string;
   guard_id: string[];
+  original_slot?: string;
+  splits?: { start_time: string; end_time: string }[];
 };
 
 export type ShiftSlotConfigStatus =
@@ -90,6 +101,7 @@ export type ShiftSlot = {
   startTime: string;              // HH:mm — auto-set (= bookingStart)
   endTime: string;                // HH:mm — auto-set if ≤8h, else Coordinator fills
   configStatus: ShiftSlotConfigStatus;
+  segments?: SplitShiftSegment[];
 };
 
 export type GuardShiftStatus =

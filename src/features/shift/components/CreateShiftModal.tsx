@@ -33,7 +33,15 @@ import type {
   ShiftSlot,
   ShiftSlotConfigStatus,
   GuardShiftStatus,
+  SplitShiftSegment,
 } from "../type";
+import {
+  toMinutes,
+  formatMinutesToTime,
+  calculateDurationMinutes,
+  validateSplitSegments,
+  parseBookingSlot,
+} from "../utils/shift.utils";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -73,25 +81,7 @@ const getGuardProfile = (profiles: GuardListItem["profiles"]) => {
   return profiles;
 };
 
-/** Parse "HH:mm-HH:mm" → { start, end } or null */
-const parseBookingSlot = (raw: string): { start: string; end: string } | null => {
-  const parts = raw.split("-");
-  if (parts.length < 2) return null;
-  const start = parts[0].trim();
-  const end = parts[1].trim();
-  if (!/^\d{2}:\d{2}$/.test(start) || !/^\d{2}:\d{2}$/.test(end)) return null;
-  return { start, end };
-};
-
-/** Duration in minutes between two "HH:mm" strings (handles overnight) */
-const diffMinutes = (start: string, end: string): number => {
-  const [sh, sm] = start.split(":").map(Number);
-  const [eh, em] = end.split(":").map(Number);
-  let endMin = eh * 60 + em;
-  const startMin = sh * 60 + sm;
-  if (endMin <= startMin) endMin += 24 * 60; // overnight
-  return endMin - startMin;
-};
+const diffMinutes = calculateDurationMinutes;
 
 /** Add N minutes to "HH:mm" → "HH:mm" (wraps past midnight) */
 const addMinutes = (time: string, minutes: number): string => {
@@ -192,11 +182,25 @@ const buildSlot = (raw: string, index: number): ShiftSlot => {
       startTime: "",
       endTime: "",
       configStatus: "invalid",
+      segments: [],
     };
   }
 
   const dur = diffMinutes(parsed.start, parsed.end);
   const exceedsMax = dur > MAX_SHIFT_HOURS * 60;
+
+  const startMin = toMinutes(parsed.start);
+  let endMin = toMinutes(parsed.end);
+  if (endMin <= startMin) endMin += 24 * 60;
+
+  const initialSegment: SplitShiftSegment = {
+    id: Math.random().toString(36).substr(2, 9),
+    startTime: parsed.start,
+    endTime: exceedsMax ? "" : parsed.end,
+    startMinutes: startMin,
+    endMinutes: exceedsMax ? startMin : endMin,
+    durationMinutes: exceedsMax ? 0 : dur,
+  };
 
   return {
     slotIndex: index,
@@ -206,6 +210,7 @@ const buildSlot = (raw: string, index: number): ShiftSlot => {
     startTime: parsed.start,            // always auto-set from booking
     endTime: exceedsMax ? "" : parsed.end, // blank when coordinator must adjust
     configStatus: exceedsMax ? "needs_adjustment" : "configured",
+    segments: [initialSegment],
   };
 };
 
@@ -511,11 +516,15 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
   }, [selectedContract, generationStartDate, periodValue, periodUnit, generatedDates, isFullyScheduled]);
 
   const readySlots = useMemo(
-    () => slots.filter((s) => s.configStatus === "configured" && s.startTime && s.endTime),
+    () => slots.filter((s) => s.configStatus === "configured" && s.segments && s.segments.length > 0),
     [slots],
   );
 
-  const totalShiftsToCreate = generatedDates.length * readySlots.length;
+  const totalSegmentsCount = useMemo(() => {
+    return readySlots.reduce((sum, slot) => sum + (slot.segments?.length || 0), 0);
+  }, [readySlots]);
+
+  const totalShiftsToCreate = generatedDates.length * totalSegmentsCount;
 
   const guardStartResult = guardTotal > 0 ? (guardPage - 1) * GUARD_PAGE_SIZE + 1 : 0;
   const guardEndResult =
@@ -533,36 +542,27 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
   );
 
   // ── Slot validation errors ─────────────────────────────────────────────────
-  const slotErrors = useMemo<Record<number, string>>(() => {
-    const errs: Record<number, string> = {};
+  const slotErrors = useMemo<Record<number, string[]>>(() => {
+    const errs: Record<number, string[]> = {};
     slots.forEach((slot, i) => {
-      if (!slot.startTime || !slot.endTime) return;
-
-      const dur = diffMinutes(slot.startTime, slot.endTime);
-      if (dur > MAX_SHIFT_HOURS * 60) {
-        errs[i] = `Thời lượng ca vượt quá ${MAX_SHIFT_HOURS} giờ.`;
-        return;
-      }
-
-      // Adjusted end must stay inside the original booking window
-      // Only check this for manually-adjusted slots (needs_adjustment)
-      if (slot.configStatus === "needs_adjustment" && slot.bookingEnd && slot.bookingStart) {
-        // Use actual wall-clock minutes within booking window
-        const bookingDur = diffMinutes(slot.bookingStart, slot.bookingEnd);
-        const adjustedDur = diffMinutes(slot.bookingStart, slot.endTime);
-        if (adjustedDur > bookingDur) {
-          errs[i] = `Giờ kết thúc vượt quá giới hạn booking (${slot.bookingEnd}).`;
-        }
+      const validation = validateSplitSegments(slot.bookingTimeSlot, slot.segments || []);
+      if (!validation.isValid) {
+        errs[i] = validation.errors;
       }
 
       // Overnight contract boundary validation:
-      // If the slot is overnight, and the generated dates include the contract's end date,
-      // the generated shift for that last date will end on nextDate(cEnd) which is outside the contract range.
-      const isOvernight = slot.startTime && slot.endTime && slot.endTime <= slot.startTime;
-      if (isOvernight && selectedContract && generatedDates.length > 0) {
+      if (slot.segments && selectedContract && generatedDates.length > 0) {
         const lastGeneratedDate = generatedDates[generatedDates.length - 1];
         if (lastGeneratedDate === selectedContract.end_date) {
-          errs[i] = `Ca qua đêm bắt đầu vào ngày cuối hợp đồng (${formatDateVN(selectedContract.end_date)}) sẽ kết thúc sau khi hợp đồng hết hạn.`;
+          const hasOvernightSegment = slot.segments.some(
+            (seg) => seg.startTime && seg.endTime && seg.endTime <= seg.startTime
+          );
+          if (hasOvernightSegment) {
+            if (!errs[i]) errs[i] = [];
+            errs[i].push(
+              `Ca qua đêm bắt đầu vào ngày cuối hợp đồng (${formatDateVN(selectedContract.end_date)}) sẽ kết thúc sau khi hợp đồng hết hạn.`
+            );
+          }
         }
       }
     });
@@ -575,6 +575,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     shiftName.trim() &&
     location.trim() &&
     readySlots.length > 0 &&
+    slots.every((s) => s.configStatus === "configured") &&
     Object.keys(slotErrors).length === 0 &&
     selectedGuardIds.length === requiredGuards &&
     generatedDates.length > 0 &&
@@ -676,12 +677,12 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       const refDate = generatedDates[0] ?? formatLocalDate(new Date());
 
       if (freeTimeMode === "shift") {
-        if (!activeSlot?.startTime || !activeSlot?.endTime) return;
-        startISO = toISO(refDate, activeSlot.startTime);
+        if (!activeSlot?.bookingStart || !activeSlot?.bookingEnd) return;
+        startISO = toISO(refDate, activeSlot.bookingStart);
         endISO =
-          activeSlot.endTime <= activeSlot.startTime
-            ? toISO(nextDate(refDate), activeSlot.endTime)
-            : toISO(refDate, activeSlot.endTime);
+          activeSlot.bookingEnd <= activeSlot.bookingStart
+            ? toISO(nextDate(refDate), activeSlot.bookingEnd)
+            : toISO(refDate, activeSlot.bookingEnd);
       } else if (freeTimeMode === "day") {
         startISO = toISO(refDate, "00:00");
         endISO = toISO(refDate, "23:59");
@@ -737,8 +738,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     customStartTime,
     customEndDate,
     customEndTime,
-    activeSlot?.startTime,
-    activeSlot?.endTime,
+    activeSlot?.bookingStart,
+    activeSlot?.bookingEnd,
     guards,
     generatedDates,
   ]);
@@ -822,23 +823,120 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     setActiveSlotIndex(0);
   };
 
-  // ── Slot end-time edit (for needs_adjustment slots) ────────────────────────
-  const handleSlotEndTime = (value: string, slotIdx: number) => {
+  // ── Segment time edit & split shifts ──────────────────────────────────────
+  const handleSegmentTimeChange = (
+    slotIdx: number,
+    segIdx: number,
+    field: "startTime" | "endTime",
+    value: string
+  ) => {
     setSlots((prev) => {
       const updated = [...prev];
       const slot = updated[slotIdx];
       if (!slot) return prev;
 
-      // Re-evaluate configStatus when Coordinator provides end time
-      const dur = value ? diffMinutes(slot.startTime, value) : 0;
-      const newStatus: ShiftSlotConfigStatus =
-        !value
-          ? "needs_adjustment"
-          : dur > MAX_SHIFT_HOURS * 60
-            ? "needs_adjustment"
-            : "configured";
+      const segments = [...(slot.segments || [])];
+      const segment = segments[segIdx];
+      if (!segment) return prev;
 
-      updated[slotIdx] = { ...slot, endTime: value, configStatus: newStatus };
+      const updatedSeg = { ...segment, [field]: value };
+
+      const startMin = toMinutes(updatedSeg.startTime);
+      let endMin = toMinutes(updatedSeg.endTime);
+      if (updatedSeg.endTime) {
+        if (endMin <= startMin) endMin += 24 * 60;
+        updatedSeg.startMinutes = startMin;
+        updatedSeg.endMinutes = endMin;
+        updatedSeg.durationMinutes = endMin - startMin;
+      } else {
+        updatedSeg.startMinutes = startMin;
+        updatedSeg.endMinutes = startMin;
+        updatedSeg.durationMinutes = 0;
+      }
+
+      segments[segIdx] = updatedSeg;
+
+      const validation = validateSplitSegments(slot.bookingTimeSlot, segments);
+
+      updated[slotIdx] = {
+        ...slot,
+        segments,
+        configStatus: validation.isValid ? "configured" : "needs_adjustment",
+      };
+      return updated;
+    });
+    setSubmitError("");
+  };
+
+  const handleAddSegment = (slotIdx: number) => {
+    setSlots((prev) => {
+      const updated = [...prev];
+      const slot = updated[slotIdx];
+      if (!slot) return prev;
+
+      const segments = [...(slot.segments || [])];
+      if (segments.length === 0) return prev;
+
+      const lastSeg = segments[segments.length - 1];
+      if (!lastSeg.endTime) return prev;
+
+      const newStart = lastSeg.endTime;
+
+      const parsedOriginal = parseBookingSlot(slot.bookingTimeSlot);
+      if (!parsedOriginal) return prev;
+
+      const origEnd = parsedOriginal.end;
+
+      const remainingMin = calculateDurationMinutes(newStart, origEnd);
+      if (remainingMin <= 0) return prev;
+
+      let newEnd = "";
+      if (remainingMin > 8 * 60) {
+        newEnd = addMinutes(newStart, 8 * 60);
+      } else {
+        newEnd = origEnd;
+      }
+
+      const startMin = toMinutes(newStart);
+      let endMin = toMinutes(newEnd);
+      if (endMin <= startMin) endMin += 24 * 60;
+
+      const newSeg: SplitShiftSegment = {
+        id: Math.random().toString(36).substr(2, 9),
+        startTime: newStart,
+        endTime: newEnd,
+        startMinutes: startMin,
+        endMinutes: endMin,
+        durationMinutes: calculateDurationMinutes(newStart, newEnd),
+      };
+
+      const newSegments = [...segments, newSeg];
+      const validation = validateSplitSegments(slot.bookingTimeSlot, newSegments);
+
+      updated[slotIdx] = {
+        ...slot,
+        segments: newSegments,
+        configStatus: validation.isValid ? "configured" : "needs_adjustment",
+      };
+      return updated;
+    });
+    setSubmitError("");
+  };
+
+  const handleRemoveSegment = (slotIdx: number, segIdx: number) => {
+    setSlots((prev) => {
+      const updated = [...prev];
+      const slot = updated[slotIdx];
+      if (!slot) return prev;
+
+      const segments = (slot.segments || []).filter((_, idx) => idx !== segIdx);
+      const validation = validateSplitSegments(slot.bookingTimeSlot, segments);
+
+      updated[slotIdx] = {
+        ...slot,
+        segments,
+        configStatus: validation.isValid ? "configured" : "needs_adjustment",
+      };
       return updated;
     });
     setSubmitError("");
@@ -875,6 +973,16 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       setSubmitSuccess("");
       setGenerationWarnings([]);
 
+      const addDays = (dStr: string, days: number): string => {
+        if (days === 0) return dStr;
+        const d = new Date(`${dStr}T00:00:00`);
+        d.setDate(d.getDate() + days);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${yyyy}-${mm}-${dd}`;
+      };
+
       // Full pool of active, non-conflicting guards (for auto-replacement)
       const allActiveIds = guards
         .map((g) => {
@@ -887,17 +995,17 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       const warnings: string[] = [];
       let created = 0;
       let skipped = 0;
-      const total = generatedDates.length * readySlots.length;
+      const total = totalShiftsToCreate;
 
       setGenerationProgress({ current: 0, total });
 
       for (const date of generatedDates) {
         for (const slot of readySlots) {
-          const startISO = toISO(date, slot.startTime);
+          const startISO = toISO(date, slot.bookingStart);
           const endISO =
-            slot.endTime <= slot.startTime
-              ? toISO(nextDate(date), slot.endTime)
-              : toISO(date, slot.endTime);
+            slot.bookingEnd <= slot.bookingStart
+              ? toISO(nextDate(date), slot.bookingEnd)
+              : toISO(date, slot.bookingEnd);
 
           // Per-date conflict check
           let assignedIds = [...selectedGuardIds];
@@ -924,7 +1032,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
               if (assignedIds.length < requiredGuards) {
                 warnings.push(
-                  `${formatDateVN(date)} (${slot.startTime}–${slot.endTime}): ` +
+                  `${formatDateVN(date)} (${slot.bookingStart}–${slot.bookingEnd}): ` +
                   `Không đủ bảo vệ (${assignedIds.length}/${requiredGuards}).`,
                 );
               }
@@ -936,43 +1044,83 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
           }
 
           // Strict date-range validation for the shift
-          const shiftEndDateStr = slot.endTime <= slot.startTime ? nextDate(date) : date;
+          const lastSeg = slot.segments && slot.segments.length > 0
+            ? slot.segments[slot.segments.length - 1]
+            : null;
+
+          if (!lastSeg) continue;
+
+          const origStartMin = toMinutes(slot.bookingStart);
+          const sMin = toMinutes(lastSeg.startTime);
+          const dur = calculateDurationMinutes(lastSeg.startTime, lastSeg.endTime);
+          const startRel = (sMin - origStartMin + 24 * 60) % (24 * 60);
+          const endOffsetDays = Math.floor((origStartMin + startRel + dur) / (24 * 60));
+          const shiftEndDateStr = addDays(date, endOffsetDays);
+
           if (date < selectedContract.start_date) {
             warnings.push(
-              `${formatDateVN(date)} (${slot.startTime}–${slot.endTime}): ` +
+              `${formatDateVN(date)} (${slot.bookingStart}–${slot.bookingEnd}): ` +
               `Ca trực bắt đầu trước ngày hiệu lực hợp đồng (${formatDateVN(selectedContract.start_date)}).`,
             );
+            skipped += slot.segments?.length || 1;
             continue;
           }
           if (shiftEndDateStr > selectedContract.end_date) {
             warnings.push(
-              `${formatDateVN(date)} (${slot.startTime}–${slot.endTime}): ` +
+              `${formatDateVN(date)} (${slot.bookingStart}–${slot.bookingEnd}): ` +
               `Ca trực kết thúc vào ngày ${formatDateVN(shiftEndDateStr)}, vượt quá ngày kết thúc hợp đồng (${formatDateVN(selectedContract.end_date)}).`,
             );
+            skipped += slot.segments?.length || 1;
             continue;
           }
 
           try {
-            await requestCreateWorkShift({
+            // Build the segments splits payload
+            const splitsPayload = (slot.segments || []).map((seg) => {
+              const segSMin = toMinutes(seg.startTime);
+              const segDur = calculateDurationMinutes(seg.startTime, seg.endTime);
+              const segStartRel = (segSMin - origStartMin + 24 * 60) % (24 * 60);
+
+              const startOffsetDays = Math.floor((origStartMin + segStartRel) / (24 * 60));
+              const endOffsetDays = Math.floor((origStartMin + segStartRel + segDur) / (24 * 60));
+
+              const segStartDate = addDays(date, startOffsetDays);
+              const segEndDate = addDays(date, endOffsetDays);
+
+              return {
+                start_time: toISO(segStartDate, seg.startTime),
+                end_time: toISO(segEndDate, seg.endTime),
+              };
+            });
+
+            const res = await requestCreateWorkShift({
               contract_id: contractId,
               shift_name: shiftName.trim(),
-              start_time: startISO,
-              end_time: endISO,
+              start_time: splitsPayload[0].start_time,
+              end_time: splitsPayload[0].end_time,
               required_guards: requiredGuards,
               location,
               guard_id: assignedIds,
+              original_slot: slot.bookingTimeSlot,
+              splits: splitsPayload,
             });
-            created++;
+
+            if (res.data && Array.isArray(res.data)) {
+              created += res.data.length;
+            } else {
+              created++;
+            }
           } catch (err) {
             const errMsg = err instanceof Error ? err.message : "";
             if (errMsg.includes("đã tồn tại") || errMsg.includes("already exists")) {
-              skipped++;
+              skipped += slot.segments?.length || 1;
               continue;
             }
             warnings.push(
-              `${formatDateVN(date)} (${slot.startTime}–${slot.endTime}): ` +
+              `${formatDateVN(date)} (${slot.bookingStart}–${slot.bookingEnd}): ` +
               (errMsg || "Tạo thất bại"),
             );
+            skipped += slot.segments?.length || 1;
           }
 
           setGenerationProgress({ current: created + skipped, total });
@@ -1266,11 +1414,17 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                               : "border-emerald-500 bg-emerald-50 text-emerald-700 hover:bg-emerald-100";
 
                           const timeLabel =
-                            slot.startTime && slot.endTime
-                              ? `${slot.startTime} – ${slot.endTime}`
-                              : slot.startTime
-                                ? `${slot.startTime} – ?`
-                                : slot.bookingTimeSlot;
+                            slot.segments && slot.segments.length > 0
+                              ? slot.segments
+                                  .map((seg) =>
+                                    seg.startTime && seg.endTime
+                                      ? `${seg.startTime}–${seg.endTime}`
+                                      : seg.startTime
+                                        ? `${seg.startTime}–?`
+                                        : "?"
+                                  )
+                                  .join(" | ")
+                              : slot.bookingTimeSlot;
 
                           return (
                             <button
@@ -1310,18 +1464,23 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                       {/* ── Inline edit panel ── */}
                       {activeSlotIndex >= 0 && slots[activeSlotIndex] && (() => {
                         const slot = slots[activeSlotIndex];
-                        const err = slotErrors[activeSlotIndex];
-                        const isAdjustable =
-                          slot.configStatus === "needs_adjustment";
+                        const errs = slotErrors[activeSlotIndex] || [];
                         const bookingDurMin =
                           slot.bookingStart && slot.bookingEnd
                             ? diffMinutes(slot.bookingStart, slot.bookingEnd)
                             : 0;
+                        const exceedsMax = bookingDurMin > 8 * 60;
+
+                        // Calculate split duration and validation
+                        const validation = validateSplitSegments(slot.bookingTimeSlot, slot.segments || []);
+                        const canAddMore = validation.splitDurationMinutes < validation.originalDurationMinutes && 
+                          slot.segments && slot.segments.length > 0 && 
+                          slot.segments[slot.segments.length - 1].endTime !== "";
 
                         return (
-                          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+                          <div className="mt-3 rounded-xl border border-slate-200 bg-white p-4 shadow-sm space-y-4">
                             {/* Panel header */}
-                            <div className="mb-3 flex items-center justify-between">
+                            <div className="flex items-center justify-between">
                               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
                                 Ca {activeSlotIndex + 1} · Booking:{" "}
                                 <span className="font-bold text-slate-700">
@@ -1334,94 +1493,146 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                 )}
                               </p>
                               <span
-                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${slot.configStatus === "configured" && !err
+                                className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${slot.configStatus === "configured" && errs.length === 0
                                   ? "bg-emerald-100 text-emerald-700"
-                                  : slot.configStatus === "needs_adjustment"
-                                    ? "bg-amber-100 text-amber-700"
-                                    : "bg-red-100 text-red-600"
+                                  : "bg-amber-100 text-amber-700"
                                   }`}
                               >
-                                {slot.configStatus === "configured" && !err ? (
+                                {slot.configStatus === "configured" && errs.length === 0 ? (
                                   <CheckCircle2 size={10} />
                                 ) : (
                                   <AlertTriangle size={10} />
                                 )}
-                                {slot.configStatus === "configured" && !err
+                                {slot.configStatus === "configured" && errs.length === 0
                                   ? "Hợp lệ"
-                                  : slot.configStatus === "needs_adjustment"
-                                    ? "Cần điều chỉnh"
-                                    : "Không hợp lệ"}
+                                  : "Cần điều chỉnh"}
                               </span>
                             </div>
 
-                            {/* Time inputs */}
-                            <div className="grid grid-cols-[1fr_auto_1fr] items-end gap-3">
-                              {/* Start — always read-only */}
-                              <div>
-                                <p className="mb-1 text-xs text-slate-400">
-                                  Bắt đầu (tự động)
-                                </p>
-                                <div className="relative">
-                                  <Clock
-                                    size={13}
-                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400"
-                                  />
-                                  <input
-                                    type="time"
-                                    value={slot.startTime}
-                                    readOnly
-                                    className="w-full cursor-not-allowed rounded-md border border-slate-200 bg-slate-50 px-3 py-2 pr-8 text-sm text-slate-600 outline-none"
-                                  />
+                            {/* Warning alert if exceeds 8h */}
+                            {exceedsMax && (
+                              <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 flex items-start gap-2">
+                                <AlertTriangle size={16} className="shrink-0 mt-0.5" />
+                                <div>
+                                  <p className="font-bold">Cảnh báo: Ca trực gốc vượt quá 8 tiếng ({Math.round(bookingDurMin / 60)} tiếng).</p>
+                                  <p className="mt-1">Vui lòng điều chỉnh thời gian và bấm nút <strong className="font-bold">+</strong> để tách thành các ca nhỏ ≤ 8 tiếng.</p>
                                 </div>
                               </div>
-
-                              <span className="mb-2 text-slate-400">—</span>
-
-                              {/* End — editable only when needs_adjustment */}
-                              <div>
-                                <p className="mb-1 text-xs text-slate-400">
-                                  {isAdjustable
-                                    ? `Kết thúc (điều chỉnh ≤${MAX_SHIFT_HOURS}h)`
-                                    : "Kết thúc (tự động)"}
-                                </p>
-                                <div className="relative">
-                                  <Clock size={13} className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
-                                  <input
-                                    type="time"
-                                    value={slot.endTime}
-                                    readOnly={!isAdjustable}
-                                    max={slot.startTime ? maxEnd(slot.startTime) : undefined}
-                                    onChange={(e) => handleSlotEndTime(e.target.value, activeSlotIndex)}
-                                    className={`w-full rounded-md border px-3 py-2 pr-8 text-sm outline-none ${isAdjustable
-                                      ? err
-                                        ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-100"
-                                        : "border-slate-300 bg-white focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
-                                      : "cursor-not-allowed border-slate-200 bg-white/70 text-slate-600"
-                                      }`}
-                                  />
-                                </div>
-                              </div>
-                            </div>
-
-                            {/* Adjustment hint */}
-                            {isAdjustable && !slot.endTime && (
-                              <p className="mt-2 flex items-center gap-1.5 text-xs text-amber-600">
-                                <AlertTriangle size={11} />
-                                Khung giờ booking dài hơn {MAX_SHIFT_HOURS}h. Vui lòng chọn giờ kết thúc (tối đa {maxEnd(slot.startTime)}, nằm trong {slot.bookingEnd}).
-                              </p>
                             )}
 
-                            {/* Validation error */}
-                            {err && (
-                              <p className="mt-2 flex items-center gap-1.5 text-xs text-red-500">
-                                <AlertTriangle size={11} />
-                                {err}
-                              </p>
+                            {/* Segments List */}
+                            <div className="space-y-3">
+                              {(slot.segments || []).map((seg, segIdx) => {
+                                return (
+                                  <div key={seg.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200">
+                                    <span className="text-xs font-semibold text-slate-500 w-16">
+                                      Ca nhỏ {segIdx + 1}
+                                    </span>
+                                    
+                                    {/* Start time input */}
+                                    <div className="flex-1">
+                                      <div className="relative">
+                                        <Clock size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                          type="time"
+                                          value={seg.startTime}
+                                          onChange={(e) => handleSegmentTimeChange(activeSlotIndex, segIdx, "startTime", e.target.value)}
+                                          className="w-full rounded border border-slate-300 bg-white px-2 py-1 pr-6 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    <span className="text-slate-400">—</span>
+
+                                    {/* End time input */}
+                                    <div className="flex-1">
+                                      <div className="relative">
+                                        <Clock size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <input
+                                          type="time"
+                                          value={seg.endTime}
+                                          onChange={(e) => handleSegmentTimeChange(activeSlotIndex, segIdx, "endTime", e.target.value)}
+                                          className="w-full rounded border border-slate-300 bg-white px-2 py-1 pr-6 text-xs outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-100"
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Duration Badge */}
+                                    {seg.startTime && seg.endTime && (
+                                      <span className="text-xs font-medium text-slate-500 bg-slate-200/60 px-2 py-1 rounded">
+                                        {Math.round(calculateDurationMinutes(seg.startTime, seg.endTime) / 6) / 10}h
+                                      </span>
+                                    )}
+
+                                    {/* Delete button (only for index > 0) */}
+                                    {segIdx > 0 && (
+                                      <button
+                                        key={`del-${seg.id}`}
+                                        type="button"
+                                        onClick={() => handleRemoveSegment(activeSlotIndex, segIdx)}
+                                        className="p-1 rounded text-red-500 hover:bg-red-50"
+                                        title="Xóa ca nhỏ này"
+                                      >
+                                        <X size={15} />
+                                      </button>
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+
+                            {/* Add segment button and status */}
+                            <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                              <div className="text-xs text-slate-500">
+                                Tổng thời gian đã chia:{" "}
+                                <span className="font-semibold text-slate-700">
+                                  {Math.round(validation.splitDurationMinutes / 6) / 10}h
+                                </span>{" "}
+                                / {Math.round(validation.originalDurationMinutes / 6) / 10}h
+                              </div>
+
+                              {!canAddMore && validation.splitDurationMinutes >= validation.originalDurationMinutes ? (
+                                <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+                                  Đã chia đủ thời gian
+                                </span>
+                              ) : !canAddMore ? (
+                                <button
+                                  type="button"
+                                  disabled
+                                  title="Không thể thêm ca mới vì đã đủ tổng thời gian hoặc ca trước chưa hợp lệ"
+                                  className="flex items-center gap-1 rounded bg-slate-100 text-slate-400 px-2.5 py-1 text-xs font-semibold cursor-not-allowed border border-slate-200"
+                                >
+                                  + Thêm ca tách
+                                </button>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleAddSegment(activeSlotIndex)}
+                                  className="flex items-center gap-1 rounded bg-blue-50 text-blue-700 px-2.5 py-1 text-xs font-semibold hover:bg-blue-100 border border-blue-200 transition"
+                                >
+                                  <span className="font-bold text-sm">+</span> Thêm ca tách
+                                </button>
+                              )}
+                            </div>
+
+                            {/* Validation errors */}
+                            {errs.length > 0 && (
+                              <div className="mt-2 space-y-1 rounded bg-red-50 border border-red-100 p-2.5">
+                                {errs.map((msg, idx) => (
+                                  <p key={idx} className="flex items-start gap-1.5 text-xs text-red-600">
+                                    <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+                                    <span>{msg}</span>
+                                  </p>
+                                ))}
+                              </div>
                             )}
 
                             {/* Overnight note */}
-                            {slot.startTime && slot.endTime && slot.endTime <= slot.startTime && (
-                              <p className="mt-2 text-xs text-amber-600">Ca trực kết thúc vào ngày hôm sau.</p>
+                            {slot.segments && slot.segments.some(seg => seg.startTime && seg.endTime && seg.endTime <= seg.startTime) && (
+                              <p className="text-xs text-amber-600 flex items-center gap-1.5">
+                                <Clock size={12} />
+                                Có ca nhỏ kết thúc vào ngày hôm sau.
+                              </p>
                             )}
                           </div>
                         );
@@ -1488,7 +1699,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                   ) : generatedDates.length > 0 && readySlots.length > 0 ? (
                     <div className="mt-2 flex items-center gap-2">
                       <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                        ✓ {totalShiftsToCreate} ca trực · {generatedDates.length} ngày × {readySlots.length} ca
+                        ✓ {totalShiftsToCreate} ca trực · {generatedDates.length} ngày × {totalSegmentsCount} ca
                       </span>
                       <span className="text-xs text-slate-400">
                         trong {periodValue} {periodUnit === "week" ? "tuần" : periodUnit === "month" ? "tháng" : "năm"}
