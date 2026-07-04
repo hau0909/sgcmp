@@ -20,7 +20,7 @@ import {
 } from "lucide-react";
 
 import type { GuardListItem } from "@/features/guards/type";
-import { requestGetAllGuards } from "@/features/guards/api/guard.api";
+import { requestGetGuardsByContract } from "@/features/guards/api/guard.api";
 import {
   requestCreateWorkShift,
   requestGetShiftContracts,
@@ -621,7 +621,15 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
         setIsLoadingGuards(true);
         setGuardErrorMessage("");
 
-        const res = await requestGetAllGuards({
+        if (!contractId) {
+          setGuards([]);
+          setGuardTotal(0);
+          setGuardTotalPages(1);
+          return;
+        }
+
+        const res = await requestGetGuardsByContract({
+          contractId,
           page: guardPage,
           limit: GUARD_PAGE_SIZE,
           search: debouncedSearch,
@@ -650,7 +658,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     return () => {
       cancelled = true;
     };
-  }, [open, guardPage, debouncedSearch]);
+  }, [open, guardPage, debouncedSearch, contractId]);
 
   useEffect(() => {
     if (generatedDates.length > 0) {
