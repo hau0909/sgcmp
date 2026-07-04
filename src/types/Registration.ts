@@ -3,6 +3,8 @@ export interface Registration {
   registration_code: string;
   company_id: string | null;
   status: string;
+  note?: string | null;
   created_at: string;
   updated_at: string;
 }
+
