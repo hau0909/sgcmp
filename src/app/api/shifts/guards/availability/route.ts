@@ -3,22 +3,30 @@ import { handleGetGuardAvailability } from "@/features/shift/controller/shift.co
 
 export const POST = async (request: Request) => {
   try {
-    const result = await handleGetGuardAvailability(request);
+    const response = await handleGetGuardAvailability(request);
 
-    return NextResponse.json(
-      {
-        success: true,
-        data: result,
-      },
-      { status: 200 },
-    );
+    if (!response) {
+      return NextResponse.json(
+        {
+          message: "Không nhận được phản hồi từ controller",
+        },
+        {
+          status: 500,
+        },
+      );
+    }
+
+    const body = await response.json();
+
+    return NextResponse.json(body, {
+      status: response.status,
+    });
   } catch (error) {
     const message =
       error instanceof Error ? error.message : "Failed to get guard availability";
 
     return NextResponse.json(
       {
-        success: false,
         message,
       },
       { status: 500 },

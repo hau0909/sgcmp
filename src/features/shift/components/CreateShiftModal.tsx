@@ -1518,7 +1518,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             </div>
 
                             {/* Warning alert if exceeds 8h */}
-                            {exceedsMax && (
+                            {exceedsMax && !validation.isValid && (
                               <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 flex items-start gap-2">
                                 <AlertTriangle size={16} className="shrink-0 mt-0.5" />
                                 <div>
