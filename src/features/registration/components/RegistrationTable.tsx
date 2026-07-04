@@ -9,11 +9,9 @@ import {
   Download,
   FileClock,
   ShieldCheck,
-  Clock,
   ShieldAlert,
   ExternalLink,
-  Lightbulb,
-  ArrowRight
+  Files
 } from "lucide-react";
 import { requestGetRegistrations } from "../api/registration.api";
 import { RegistrationWithCompany } from "../types";
@@ -31,19 +29,51 @@ const formatDate = (dateStr: string) => {
   }
 };
 
-const getLogoShort = (name: string) => {
-  if (!name) return "CO";
-  const parts = name.split(" ").filter(p => p && p[0] !== p[0].toLowerCase());
-  if (parts.length >= 2) {
-    return (parts[0][0] + parts[1][0]).toUpperCase();
-  }
-  return name.substring(0, 2).toUpperCase();
-};
+
 
 export default function RegistrationTable() {
   const [registrations, setRegistrations] = React.useState<RegistrationWithCompany[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [currentPage, setCurrentPage] = React.useState(1);
+  const [activeFilter, setActiveFilter] = React.useState<"all" | "pending" | "approved" | "error">("all");
+
+  // Filter registrations based on activeFilter
+  const filteredRegistrations = React.useMemo(() => {
+    switch (activeFilter) {
+      case "pending":
+        return registrations.filter((r) => r.status === "pending");
+      case "approved":
+        return registrations.filter((r) => r.status === "approved");
+      case "error":
+        return registrations.filter((r) => r.status === "rejected" || r.status === "action_required");
+      case "all":
+      default:
+        return registrations;
+    }
+  }, [registrations, activeFilter]);
+
+  const itemsPerPage = 10;
+  const totalPages = Math.ceil(filteredRegistrations.length / itemsPerPage);
+
+  // Reset currentPage to 1 if activeFilter/totalPages changes and currentPage exceeds new totalPages
+  React.useEffect(() => {
+    if (currentPage > totalPages && totalPages > 0) {
+      setCurrentPage(1);
+    }
+  }, [totalPages, currentPage]);
+
+  const paginatedRegistrations = React.useMemo(() => {
+    return filteredRegistrations.slice(
+      (currentPage - 1) * itemsPerPage,
+      currentPage * itemsPerPage
+    );
+  }, [filteredRegistrations, currentPage, itemsPerPage]);
+
+  // Calculate dynamic stats
+  const pendingCount = React.useMemo(() => registrations.filter((r) => r.status === "pending").length, [registrations]);
+  const approvedCount = React.useMemo(() => registrations.filter((r) => r.status === "approved").length, [registrations]);
+  const errorCount = React.useMemo(() => registrations.filter((r) => r.status === "rejected" || r.status === "action_required").length, [registrations]);
 
   React.useEffect(() => {
     const fetchRegistrations = async () => {
@@ -81,108 +111,106 @@ export default function RegistrationTable() {
     );
   }
 
-  // Calculate dynamic stats
-  const pendingCount = registrations.filter((r) => r.status === "pending").length;
-  const approvedCount = registrations.filter((r) => r.status === "approved").length;
-  const errorCount = registrations.filter((r) => r.status === "rejected" || r.status === "action_required").length;
-
-  const approvedList = registrations.filter((r) => r.status === "approved");
-  let avgDaysStr = "1.5d";
-  if (approvedList.length > 0) {
-    const totalDiff = approvedList.reduce((acc, r) => {
-      const created = new Date(r.created_at).getTime();
-      const updated = new Date(r.updated_at).getTime();
-      const diffDays = (updated - created) / (1000 * 60 * 60 * 24);
-      return acc + (diffDays > 0 ? diffDays : 0.5);
-    }, 0);
-    const avg = totalDiff / approvedList.length;
-    avgDaysStr = `${avg.toFixed(1)}d`;
-  }
+  // Calculations and hooks are declared above
 
   return (
-    <div className="max-w-7xl mx-auto p-6 space-y-6">
-      {/* Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-on-surface-variant text-sm font-medium">
-        <span className="hover:text-primary cursor-pointer transition-colors">Doanh nghiệp</span>
-        <ChevronRight className="w-4 h-4 text-on-surface-variant/70 shrink-0" />
-        <span className="text-primary font-bold">Đăng ký doanh nghiệp</span>
-      </nav>
-
+    <div className="max-w-7xl mx-auto p-6 space-y-5">
       {/* Header Section */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-end gap-4 border-b border-outline-variant pb-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2">
         <div>
+          <nav className="flex items-center gap-1 text-on-surface-variant/80 text-xs font-medium mb-1">
+            <span className="hover:text-primary cursor-pointer transition-colors">Doanh nghiệp</span>
+            <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant/50 shrink-0" />
+            <span className="text-primary font-bold">Đăng ký doanh nghiệp</span>
+          </nav>
           <h2 className="text-2xl font-bold text-primary tracking-tight font-headline">
             Danh sách đăng ký doanh nghiệp
           </h2>
-          <p className="text-sm text-on-surface-variant mt-1 font-body">
+          <p className="text-xs text-on-surface-variant mt-0.5">
             Quản lý và xét duyệt hồ sơ đăng ký mới của các tổ chức.
           </p>
         </div>
-        <div className="flex gap-2 w-full sm:w-auto">
-          <button className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-surface-container-lowest border border-outline-variant rounded text-sm font-medium hover:bg-surface-container-low transition-colors text-on-surface">
-            <Filter className="text-on-surface-variant w-4 h-4" />
+        <div className="flex gap-2 shrink-0">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-xs font-semibold hover:bg-surface-container-low transition-all text-on-surface cursor-pointer shadow-sm">
+            <Filter className="text-on-surface-variant w-3.5 h-3.5" />
             <span>Bộ lọc</span>
-          </button>
-          <button className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-secondary hover:bg-secondary/90 text-on-secondary rounded text-sm font-medium transition-colors">
-            <Download className="w-4 h-4 text-white" />
-            <span>Xuất báo cáo</span>
           </button>
         </div>
       </div>
 
-      {/* Stats Bar */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-        {/* Pending Card */}
-        <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-lg bg-surface-container-low flex items-center justify-center shrink-0">
-            <FileClock className="w-6 h-6 text-primary" />
-          </div>
-          <div>
-            <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
-              Tổng chờ duyệt
-            </p>
-            <p className="text-2xl font-bold text-on-surface mt-1">{pendingCount}</p>
-          </div>
-        </div>
+      {/* Status Filter Buttons */}
+      <div className="flex flex-wrap gap-2.5 items-center justify-center bg-surface-container-lowest p-3 rounded-xl border border-outline-variant shadow-sm">
+        {/* Chờ duyệt */}
+        <button
+          onClick={() => { setActiveFilter("pending"); setCurrentPage(1); }}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all cursor-pointer shadow-sm hover:shadow-md ${
+            activeFilter === "pending"
+              ? "bg-[#fef3c7] text-[#b45309] border-[#b45309]"
+              : "bg-white border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+          }`}
+        >
+          <FileClock className={`w-4.5 h-4.5 shrink-0 ${activeFilter === "pending" ? "text-[#b45309]" : "text-primary"}`} />
+          <span>Chờ duyệt</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+            activeFilter === "pending" ? "bg-[#b45309] text-white" : "bg-surface-container-high text-on-surface"
+          }`}>
+            {pendingCount}
+          </span>
+        </button>
 
-        {/* Approved Card */}
-        <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-lg bg-[#dcfce7] flex items-center justify-center shrink-0">
-            <ShieldCheck className="w-6 h-6 text-[#166534]" />
-          </div>
-          <div>
-            <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
-              Đã duyệt (Tháng)
-            </p>
-            <p className="text-2xl font-bold text-on-surface mt-1">{approvedCount}</p>
-          </div>
-        </div>
+        {/* Đã duyệt */}
+        <button
+          onClick={() => { setActiveFilter("approved"); setCurrentPage(1); }}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all cursor-pointer shadow-sm hover:shadow-md ${
+            activeFilter === "approved"
+              ? "bg-[#dcfce7] text-[#166534] border-[#22c55e]"
+              : "bg-white border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+          }`}
+        >
+          <ShieldCheck className="w-4.5 h-4.5 shrink-0 text-[#166534]" />
+          <span>Đã duyệt</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+            activeFilter === "approved" ? "bg-[#166534] text-white" : "bg-surface-container-high text-on-surface"
+          }`}>
+            {approvedCount}
+          </span>
+        </button>
 
-        {/* Avg Time Card */}
-        <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-lg bg-[#fef3c7] flex items-center justify-center shrink-0">
-            <Clock className="w-6 h-6 text-[#b45309]" />
-          </div>
-          <div>
-            <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
-              Thời gian TB
-            </p>
-            <p className="text-2xl font-bold text-on-surface mt-1">{avgDaysStr}</p>
-          </div>
-        </div>
+        {/* Hồ sơ lỗi */}
+        <button
+          onClick={() => { setActiveFilter("error"); setCurrentPage(1); }}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all cursor-pointer shadow-sm hover:shadow-md ${
+            activeFilter === "error"
+              ? "bg-error-container text-error border-error"
+              : "bg-white border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+          }`}
+        >
+          <ShieldAlert className="w-4.5 h-4.5 shrink-0 text-error" />
+          <span>Hồ sơ lỗi</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+            activeFilter === "error" ? "bg-error text-white" : "bg-surface-container-high text-on-surface"
+          }`}>
+            {errorCount}
+          </span>
+        </button>
 
-        {/* Error Card */}
-        <div className="bg-surface-container-lowest p-5 rounded-xl border border-outline-variant flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
-          <div className="w-12 h-12 rounded-lg bg-error-container flex items-center justify-center shrink-0">
-            <ShieldAlert className="w-6 h-6 text-error" />
-          </div>
-          <div>
-            <p className="text-on-surface-variant text-xs font-semibold uppercase tracking-wider">
-              Hồ sơ lỗi
-            </p>
-            <p className="text-2xl font-bold text-on-surface mt-1">{errorCount}</p>
-          </div>
-        </div>
+        {/* Tất cả hồ sơ */}
+        <button
+          onClick={() => { setActiveFilter("all"); setCurrentPage(1); }}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all cursor-pointer shadow-sm hover:shadow-md ${
+            activeFilter === "all"
+              ? "bg-[#eff4ff] text-primary border-primary"
+              : "bg-white border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+          }`}
+        >
+          <Files className={`w-4.5 h-4.5 shrink-0 ${activeFilter === "all" ? "text-primary" : "text-on-surface-variant"}`} />
+          <span>Tất cả hồ sơ</span>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
+            activeFilter === "all" ? "bg-primary text-white" : "bg-surface-container-high text-on-surface"
+          }`}>
+            {registrations.length}
+          </span>
+        </button>
       </div>
 
       {/* Data Table Card */}
@@ -209,11 +237,9 @@ export default function RegistrationTable() {
               </tr>
             </thead>
             <tbody className="text-sm divide-y divide-outline-variant bg-white">
-              {registrations.map((reg) => {
+              {paginatedRegistrations.map((reg) => {
                 const isError = reg.status === "rejected" || reg.status === "action_required";
                 const companyName = reg.companies?.company_name || "N/A";
-                const logoShort = getLogoShort(companyName);
-                const desc = reg.companies?.description || "N/A";
 
                 return (
                   <tr
@@ -231,30 +257,17 @@ export default function RegistrationTable() {
                       {reg.registration_code}
                     </td>
                     <td className="px-6 py-4 min-w-[240px]">
-                      <div className="flex items-center gap-3">
-                        <div
-                          className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 bg-[#e8ebee] ${
-                            isError ? "text-error" : "text-[#43474e]"
-                          }`}
-                        >
-                          {logoShort}
-                        </div>
-                        <div>
-                          <Link 
-                            href={`/registrations/${reg.registration_id}`}
-                            className="font-semibold text-[#1f1f1f] hover:text-primary transition-colors cursor-pointer block"
-                          >
-                            {companyName}
-                          </Link>
-                          <p
-                            className={`text-[11px] mt-0.5 ${
-                              isError ? "text-error font-medium" : "text-on-surface-variant"
-                            }`}
-                          >
-                            {isError ? "Hồ sơ có lỗi cần bổ sung" : `Lĩnh vực: ${desc}`}
-                          </p>
-                        </div>
-                      </div>
+                      <Link 
+                        href={`/registrations/${reg.registration_id}`}
+                        className="font-semibold text-[#1f1f1f] hover:text-primary transition-colors cursor-pointer block"
+                      >
+                        {companyName}
+                      </Link>
+                      {isError && (
+                        <p className="text-[11px] mt-0.5 text-error font-medium">
+                          Hồ sơ có lỗi cần bổ sung
+                        </p>
+                      )}
                     </td>
 
                     <td className="px-6 py-4 font-mono text-on-surface-variant text-[13px] whitespace-nowrap">
@@ -300,80 +313,44 @@ export default function RegistrationTable() {
 
         {/* Pagination */}
         <div className="px-6 py-4 border-t border-outline-variant flex justify-between items-center bg-surface-container-low">
-          <p className="text-on-surface-variant text-sm">
-            Hiển thị 1 - {registrations.length} trên {registrations.length} kết quả
+          <p className="text-on-surface-variant text-sm font-medium">
+            Hiển thị {filteredRegistrations.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredRegistrations.length)} trên {filteredRegistrations.length} kết quả
           </p>
           <div className="flex gap-1">
             <button
-              className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high disabled:opacity-50 transition-colors"
-              disabled
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1 || filteredRegistrations.length === 0}
+              className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high disabled:opacity-50 transition-colors cursor-pointer"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-primary bg-primary text-white text-sm font-medium">
-              1
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high text-sm transition-colors" disabled>
-              2
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high text-sm transition-colors" disabled>
-              3
-            </button>
-            <button className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high transition-colors" disabled>
+            
+            {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+              <button
+                key={num}
+                onClick={() => setCurrentPage(num)}
+                className={`w-8 h-8 flex items-center justify-center rounded border text-sm font-medium transition-colors cursor-pointer ${
+                  currentPage === num
+                    ? "border-primary bg-primary text-white"
+                    : "border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high"
+                }`}
+              >
+                {num}
+              </button>
+            ))}
+
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages || totalPages <= 1}
+              className="w-8 h-8 flex items-center justify-center rounded border border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high disabled:opacity-50 transition-colors cursor-pointer"
+            >
               <ChevronRight className="w-4 h-4" />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Contextual Help / Sidebar Activity (Asymmetric Layout) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Asymmetric Left Card (2/3 width) */}
-        <div className="lg:col-span-2 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 relative overflow-hidden flex flex-col justify-center min-h-[160px] shadow-sm">
-          <div className="absolute right-0 top-0 h-full w-1/3 opacity-5 flex items-center justify-center pointer-events-none overflow-visible">
-            <ShieldCheck className="text-on-surface shrink-0" strokeWidth={0.5} style={{ width: "200px", height: "200px" }} />
-          </div>
-          <div className="relative z-10 space-y-2">
-            <h3 className="text-lg font-bold text-on-surface font-headline">
-              Quy trình xét duyệt nhanh
-            </h3>
-            <p className="text-on-surface-variant text-sm max-w-xl leading-relaxed">
-              Sử dụng hệ thống xác thực tự động để kiểm tra mã số doanh nghiệp và giấy phép kinh
-              doanh trước khi phê duyệt thủ công.
-            </p>
-            <button className="px-4 py-2 bg-secondary hover:bg-secondary/95 text-on-secondary rounded text-sm font-semibold transition-colors mt-2">
-              Hướng dẫn chi tiết
-            </button>
-          </div>
-        </div>
 
-        {/* Asymmetric Right Card (1/3 width, solid primary) */}
-        <div className="bg-primary rounded-xl p-6 text-white shadow-sm flex flex-col justify-between min-h-[160px] hover:bg-primary/95 transition-colors">
-          <div>
-            <div className="flex items-center gap-2 mb-3">
-              <Lightbulb className="w-4 h-4 text-primary-fixed" />
-              <span className="text-[10px] font-bold uppercase tracking-wider text-primary-fixed">
-                Mẹo quản trị
-              </span>
-            </div>
-            <h3 className="text-lg font-bold text-white font-headline leading-tight mb-2">
-              Ưu tiên hồ sơ đã xác thực số
-            </h3>
-            <p className="text-primary-fixed-dim text-xs leading-relaxed">
-              Hồ sơ có chữ ký số được kiểm tra nhanh hơn 60% so với hồ sơ quét văn bản thông thường.
-            </p>
-          </div>
-          <div className="mt-4 pt-4 border-t border-white/20">
-            <a
-              className="text-white font-medium text-sm flex items-center gap-2 group hover:text-primary-fixed transition-colors"
-              href="#"
-            >
-              <span>Tìm hiểu thêm</span>
-              <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform shrink-0" />
-            </a>
-          </div>
-        </div>
-      </div>
     </div>
   );
 }

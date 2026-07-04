@@ -33,7 +33,11 @@ export const getRegistrationDetail = async (id: string): Promise<RegistrationDet
   const company = registration.companies;
 
   let profiles = null;
+  let identities = null;
+  let companyImgs: any[] = [];
+
   if (company && company.owner_id) {
+    // Fetch profile
     const { data: profileData, error: profileError } = await supabase
       .from("profiles")
       .select("*")
@@ -44,6 +48,34 @@ export const getRegistrationDetail = async (id: string): Promise<RegistrationDet
       throw profileError;
     }
     profiles = profileData;
+
+    // Fetch identity
+    const { data: identityData, error: identityError } = await supabase
+      .from("identities")
+      .select("*")
+      .eq("user_id", company.owner_id)
+      .maybeSingle();
+
+    if (identityError) {
+      // Don't throw if not found, but throw on database error
+      if (identityError.code !== "PGRST116") {
+        throw identityError;
+      }
+    }
+    identities = identityData;
+  }
+
+  if (company && company.company_id) {
+    // Fetch company images
+    const { data: imgsData, error: imgsError } = await supabase
+      .from("company_imgs")
+      .select("*")
+      .eq("company_id", company.company_id);
+
+    if (imgsError) {
+      throw imgsError;
+    }
+    companyImgs = imgsData || [];
   }
 
   return {
@@ -52,12 +84,14 @@ export const getRegistrationDetail = async (id: string): Promise<RegistrationDet
       ? {
           ...company,
           profiles,
+          identities,
+          companyImgs,
         }
       : null,
   } as RegistrationDetail;
 };
 
-export const updateRegistrationStatus = async (id: string, status: "approved" | "rejected"): Promise<void> => {
+export const updateRegistrationStatus = async (id: string, status: "approved" | "rejected", note?: string): Promise<void> => {
   const { data: regData, error: regError } = await supabase
     .from("registrations")
     .select("company_id")
@@ -72,9 +106,14 @@ export const updateRegistrationStatus = async (id: string, status: "approved" | 
     throw new Error("Không tìm thấy hồ sơ đăng ký");
   }
 
+  const updatePayload: any = { status, updated_at: new Date().toISOString() };
+  if (note !== undefined) {
+    updatePayload.note = note;
+  }
+
   const { error: updateRegError } = await supabase
     .from("registrations")
-    .update({ status, updated_at: new Date().toISOString() })
+    .update(updatePayload)
     .eq("registration_id", id);
 
   if (updateRegError) {
