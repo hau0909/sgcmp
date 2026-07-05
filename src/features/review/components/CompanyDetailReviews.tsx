@@ -1,9 +1,11 @@
 "use client";
 
 import React, { useState } from "react";
-import { Star, MessageSquareQuote } from "lucide-react";
+import { Star, StarHalf } from "lucide-react";
 
 import { useAuthStore } from "@/store/auth.store";
+import { requestGetReviewsByCompany, requestGetAverageRatingByCompanyId, requestGetRatingDistributionByCompanyId } from "../api/review.api";
+import { RatingDistributionItem } from "../types";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface CompanyReview {
@@ -48,14 +50,14 @@ function getInitials(name: string) {
 }
 
 // ─── Component ───────────────────────────────────────────────────────────────
-import { requestGetReviewsByCompany } from "../api/review.api";
-import { Review } from "@/types/Review";
-
 export default function CompanyDetailReviews({
   companyId,
 }: CompanyDetailReviewsProps) {
   const [showAll, setShowAll] = useState(false);
   const [reviews, setReviews] = useState<CompanyReview[]>([]);
+  const [avgRatingNumber, setAvgRatingNumber] = useState<number>(0);
+  const [totalReviews, setTotalReviews] = useState<number>(0);
+  const [distribution, setDistribution] = useState<RatingDistributionItem[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
@@ -63,14 +65,23 @@ export default function CompanyDetailReviews({
 
   React.useEffect(() => {
     let isMounted = true;
-    const fetchReviews = async () => {
+    const fetchData = async () => {
       if (!companyId) return;
       setIsLoading(true);
       setError(null);
       try {
-        const data = await requestGetReviewsByCompany(companyId);
-        if (isMounted && data.reviews) {
-          const mappedReviews: CompanyReview[] = data.reviews.map((r: any) => {
+        // Fetch tất cả 3 API song song
+        const [reviewsData, avgData, distData] = await Promise.all([
+          requestGetReviewsByCompany(companyId),
+          requestGetAverageRatingByCompanyId(companyId),
+          requestGetRatingDistributionByCompanyId(companyId),
+        ]);
+
+        if (!isMounted) return;
+
+        // Map danh sách reviews cho các card hiển thị
+        if (reviewsData.reviews) {
+          const mappedReviews: CompanyReview[] = reviewsData.reviews.map((r: any) => {
             const profile = Array.isArray(r.profiles) ? r.profiles[0] : r.profiles;
             const customerName = profile?.full_name || "Khách hàng";
             const avatarUrl = profile?.avatar_url || null;
@@ -86,6 +97,16 @@ export default function CompanyDetailReviews({
           });
           setReviews(mappedReviews);
         }
+
+        // Lấy điểm trung bình và phân bổ trực tiếp từ DB
+        setAvgRatingNumber(avgData?.data?.average_rating ?? 0);
+        setTotalReviews(distData?.data?.total_reviews ?? 0);
+        // Sắp xếp distribution từ 5 sao xuống 1 sao
+        const sortedDist = [...(distData?.data?.rating_distribution ?? [])].sort(
+          (a, b) => b.star - a.star
+        );
+        setDistribution(sortedDist);
+
       } catch (err: any) {
         if (isMounted) {
           setError(err.message || "Failed to load reviews");
@@ -96,9 +117,16 @@ export default function CompanyDetailReviews({
         }
       }
     };
-    fetchReviews();
+    fetchData();
+    
+    const handleReviewSubmitted = () => {
+      if (isMounted) fetchData();
+    };
+    window.addEventListener("reviewSubmitted", handleReviewSubmitted);
+    
     return () => {
       isMounted = false;
+      window.removeEventListener("reviewSubmitted", handleReviewSubmitted);
     };
   }, [companyId]);
 
@@ -120,7 +148,7 @@ export default function CompanyDetailReviews({
      );
   }
 
-  if (reviews.length === 0) {
+  if (totalReviews === 0) {
     return (
       <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs w-full">
         <h2 className="text-headline-sm font-semibold text-on-surface mb-4 uppercase tracking-wider text-[12px] border-b border-outline-variant pb-2 text-left">
@@ -137,15 +165,7 @@ export default function CompanyDetailReviews({
     ? reviews
     : reviews.slice(0, INITIAL_DISPLAY);
 
-  const avgRatingNumber = reviews.reduce((acc, r) => acc + r.rating, 0) / reviews.length;
-  const avgRating = avgRatingNumber.toFixed(1); 
-
-  // Calculate percentages for 5, 4, 3, 2, 1 stars
-  const distribution = [5, 4, 3, 2, 1].map((level) => {
-    const count = reviews.filter(r => r.rating === level).length;
-    const percent = Math.round((count / reviews.length) * 100);
-    return { level, percent };
-  });
+  const avgRating = avgRatingNumber.toFixed(1);
 
   return (
     <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs w-full">
@@ -163,12 +183,34 @@ export default function CompanyDetailReviews({
             {avgRating}
           </div>
           <div className="flex items-center gap-1 text-amber-500 mb-1">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <Star key={s} className={`w-4 h-4 ${s <= Math.round(avgRatingNumber) ? "fill-amber-500" : "fill-transparent"}`} />
-            ))}
+            {[1, 2, 3, 4, 5].map((s) => {
+              const diff = avgRatingNumber - s + 1;
+              if (diff >= 0.75) {
+                return (
+                  <Star
+                    key={s}
+                    className="w-4 h-4 fill-amber-500"
+                  />
+                );
+              } else if (diff >= 0.25) {
+                return (
+                  <div key={s} className="relative w-4 h-4">
+                    <Star className="absolute top-0 left-0 w-4 h-4 fill-transparent" />
+                    <StarHalf className="absolute top-0 left-0 w-4 h-4 fill-amber-500" />
+                  </div>
+                );
+              } else {
+                return (
+                  <Star
+                    key={s}
+                    className="w-4 h-4 fill-transparent"
+                  />
+                );
+              }
+            })}
           </div>
           <p className="text-[13px] text-on-surface-variant font-medium">
-            {reviews.length} bài đánh giá
+            {totalReviews} bài đánh giá
           </p>
         </div>
 
@@ -178,9 +220,9 @@ export default function CompanyDetailReviews({
         {/* Distribution Bars */}
         <div className="flex-1 w-full flex flex-col gap-2.5">
           {distribution.map((item) => (
-            <div key={item.level} className="flex items-center gap-3">
+            <div key={item.star} className="flex items-center gap-3">
               <span className="text-[13px] font-medium text-on-surface-variant w-3 shrink-0">
-                {item.level}
+                {item.star}
               </span>
               <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />
               <div className="flex-1 h-[6px] bg-outline-variant/30 rounded-full overflow-hidden">
@@ -189,6 +231,9 @@ export default function CompanyDetailReviews({
                   style={{ width: `${item.percent}%` }}
                 />
               </div>
+              <span className="text-[12px] font-medium text-on-surface-variant w-8 shrink-0 text-right">
+                {item.percent}%
+              </span>
             </div>
           ))}
         </div>

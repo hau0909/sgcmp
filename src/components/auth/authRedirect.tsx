@@ -55,7 +55,7 @@ export default function AuthRedirect() {
         if (!profile?.role) return;
 
         if (profile.status && profile.status !== "active") {
-          router.replace("/unauthorized");
+          router.replace("/unauthorized?reason=inactive");
           return;
         }
 

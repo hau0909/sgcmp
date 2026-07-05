@@ -13,6 +13,7 @@ import {
   getGuardDetailService,
   uploadGuardFileService,
   checkGuardQuotaService,
+  getGuardsByContractService,
 } from "../service/guard.service";
 
 import { getIdentityByUserIdService } from "@/features/identity/service/identity.service";
@@ -616,3 +617,104 @@ export const handleCheckGuardQuota = async () => {
     };
   }
 };
+
+export const handleGetGuardsByContract = async ({
+  contract_id,
+  page,
+  limit,
+  search,
+}: {
+  contract_id: string;
+  page?: string | null;
+  limit?: string | null;
+  search?: string | null;
+}): Promise<HandleGetAllGuardsResult> => {
+  try {
+    const profile = await getCurrentUserProfileService();
+
+    if (!profile) {
+      return {
+        success: false,
+        message: "Bạn chưa đăng nhập",
+        data: createEmptyGuardListData(),
+      };
+    }
+
+    const normalizedRole = profile.role?.trim().toLowerCase();
+
+    let company_id = "";
+
+    if (normalizedRole === "company-admin") {
+      const companyIdResult = await getCompanyByOwnerIdService(profile.user_id);
+
+      if (!companyIdResult) {
+        return {
+          success: false,
+          message: "Không tìm thấy công ty của tài khoản",
+          data: createEmptyGuardListData(),
+        };
+      }
+
+      company_id = companyIdResult;
+    } else if (normalizedRole === "coordinator") {
+      const coordinatorCompanyId = await getCoordinatorByCompanyIdService(
+        profile.user_id,
+      );
+
+      if (!coordinatorCompanyId) {
+        return {
+          success: false,
+          message: "Điều phối viên chưa được liên kết với công ty",
+          data: createEmptyGuardListData(),
+        };
+      }
+
+      company_id = coordinatorCompanyId;
+    } else {
+      return {
+        success: false,
+        message: "Bạn không có quyền xem danh sách bảo vệ",
+        data: createEmptyGuardListData(),
+      };
+    }
+
+    const pageNumber = Number(page ?? "1");
+    const limitNumber = Number(limit ?? "10");
+
+    const validPage =
+      Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1;
+
+    const validLimit =
+      Number.isInteger(limitNumber) && limitNumber > 0 && limitNumber <= 50
+        ? limitNumber
+        : 10;
+
+    const keyword = search?.trim() ?? "";
+
+    const data = await getGuardsByContractService({
+      contract_id,
+      company_id,
+      page: validPage,
+      limit: validLimit,
+      search: keyword,
+    });
+
+    return {
+      success: true,
+      message: "Lấy danh sách bảo vệ theo hợp đồng thành công",
+      data,
+    };
+  } catch (error: unknown) {
+    console.error("handleGetGuardsByContract error:", error);
+
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Lấy danh sách bảo vệ theo hợp đồng thất bại",
+      data: createEmptyGuardListData(),
+    };
+  }
+};
+

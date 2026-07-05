@@ -77,15 +77,20 @@ const isContinuousShift = (
   previousShift: ShiftWithAssignments,
   currentShift: ShiftWithAssignments,
 ) => {
-  const previousAssignment = previousShift.assignments[0];
-  const currentAssignment = currentShift.assignments[0];
+  const prevGuardIds = previousShift.assignments.map((a) => a.guard_id).sort();
+  const currGuardIds = currentShift.assignments.map((a) => a.guard_id).sort();
 
-  if (!previousAssignment || !currentAssignment) {
+  if (prevGuardIds.length === 0 || currGuardIds.length === 0) {
     return false;
   }
 
-  const isSameGuard =
-    previousAssignment.guard_id === currentAssignment.guard_id;
+  if (prevGuardIds.length !== currGuardIds.length) {
+    return false;
+  }
+
+  const areGuardsIdentical = prevGuardIds.every(
+    (id, index) => id === currGuardIds[index],
+  );
 
   const isSameContractAddress =
     getShiftContractAddress(previousShift) ===
@@ -98,7 +103,7 @@ const isContinuousShift = (
   const currentStartTime = getDateTimeValue(currentShift.start_time);
 
   return (
-    isSameGuard &&
+    areGuardsIdentical &&
     isSameContractAddress &&
     isSameSpecificLocation &&
     previousEndTime === currentStartTime
@@ -217,10 +222,28 @@ export function ShiftScheduleTable({
   selectedLocation = "all",
   weekStartDate,
 }: ShiftScheduleTableProps) {
+  const uniqueShiftMap = new Map<string, ShiftWithAssignments>();
+  shifts.forEach((shift) => {
+    if (!uniqueShiftMap.has(shift.shift_id)) {
+      uniqueShiftMap.set(shift.shift_id, {
+        ...shift,
+        assignments: [...shift.assignments],
+      });
+    } else {
+      const existing = uniqueShiftMap.get(shift.shift_id)!;
+      shift.assignments.forEach((newAss) => {
+        if (!existing.assignments.some((a) => a.guard_id === newAss.guard_id)) {
+          existing.assignments.push(newAss);
+        }
+      });
+    }
+  });
+  const uniqueShifts = Array.from(uniqueShiftMap.values());
+
   if (viewMode === "week") {
     return (
       <ShiftWeekScheduleTable
-        shifts={shifts}
+        shifts={uniqueShifts}
         selectedLocation={selectedLocation}
         weekStartDate={weekStartDate}
       />
@@ -232,7 +255,7 @@ export function ShiftScheduleTable({
       ? locations
       : locations.filter((location) => location === selectedLocation);
 
-  const visibleShifts = shifts.filter((shift) =>
+  const visibleShifts = uniqueShifts.filter((shift) =>
     displayLocations.includes(getShiftContractAddress(shift)),
   );
 
@@ -248,10 +271,13 @@ export function ShiftScheduleTable({
     );
   }
 
-  const tableWidth =
-    LOCATION_COLUMN_WIDTH + displayTimeSlots.length * TIME_SLOT_COLUMN_WIDTH;
+  const gridTemplateColumns = `${LOCATION_COLUMN_WIDTH}px repeat(${displayTimeSlots.length}, minmax(${TIME_SLOT_COLUMN_WIDTH}px, max-content))`;
 
-  const gridTemplateColumns = `${LOCATION_COLUMN_WIDTH}px repeat(${displayTimeSlots.length}, ${TIME_SLOT_COLUMN_WIDTH}px)`;
+  const isRightBorderCovered = (index: number, segments: ShiftSegment[]) => {
+    return segments.some(
+      (segment) => index >= segment.startIndex && index < segment.startIndex + segment.span - 1
+    );
+  };
 
   const emptyShiftMap = new Map<string, ShiftWithAssignments>();
 
@@ -271,7 +297,7 @@ export function ShiftScheduleTable({
 
   return (
     <div className="relative overflow-x-auto rounded-sm border border-slate-300 bg-white">
-      <div style={{ width: `${tableWidth}px` }}>
+      <div className="min-w-max">
         <div
           className="grid bg-blue-100"
           style={{
@@ -299,19 +325,84 @@ export function ShiftScheduleTable({
             displayTimeSlots,
           );
 
+          const locationEmptyShifts: { key: string; slotIndex: number; shift: ShiftWithAssignments }[] = [];
+          displayTimeSlots.forEach((slot, index) => {
+            const key = getShiftCellKey(contractAddress, slot.id);
+            const emptyShift = emptyShiftMap.get(key);
+            if (emptyShift) {
+              locationEmptyShifts.push({
+                key,
+                slotIndex: index,
+                shift: emptyShift,
+              });
+            }
+          });
+
+          // Partition into non-overlapping tracks
+          const items = [
+            ...segments.map((s) => ({
+              type: "segment" as const,
+              id: s.id,
+              start: s.startIndex,
+              end: s.startIndex + s.span,
+              data: s,
+            })),
+            ...locationEmptyShifts.map((e) => ({
+              type: "empty" as const,
+              id: e.key,
+              start: e.slotIndex,
+              end: e.slotIndex + 1,
+              data: e,
+            })),
+          ];
+
+          items.sort((a, b) => {
+            if (a.start !== b.start) {
+              return a.start - b.start;
+            }
+            return (b.end - b.start) - (a.end - a.start);
+          });
+
+          const tracks: typeof items[] = [];
+          items.forEach((item) => {
+            let assignedTrackIndex = -1;
+            for (let t = 0; t < tracks.length; t++) {
+              const track = tracks[t];
+              const hasOverlap = track.some((existing) => {
+                return item.start < existing.end && existing.start < item.end;
+              });
+              if (!hasOverlap) {
+                assignedTrackIndex = t;
+                break;
+              }
+            }
+            if (assignedTrackIndex === -1) {
+              tracks.push([item]);
+            } else {
+              tracks[assignedTrackIndex].push(item);
+            }
+          });
+
+          if (tracks.length === 0) {
+            tracks.push([]);
+          }
+
+          const trackCount = tracks.length;
+
           return (
             <div
               key={contractAddress}
               className="grid border-t border-slate-300"
               style={{
                 gridTemplateColumns,
+                gridTemplateRows: `repeat(${trackCount}, auto)`,
               }}
             >
               <div
                 className="sticky left-0 z-20 min-h-[130px] border-r border-slate-300 bg-white p-4"
                 style={{
                   gridColumn: 1,
-                  gridRow: 1,
+                  gridRow: `1 / span ${trackCount}`,
                 }}
               >
                 <p className="font-semibold text-slate-900">
@@ -321,37 +412,61 @@ export function ShiftScheduleTable({
               </div>
 
               {displayTimeSlots.map((slot, index) => {
-                const key = getShiftCellKey(contractAddress, slot.id);
-                const emptyShift = emptyShiftMap.get(key);
+                const hideRightBorder = isRightBorderCovered(index, segments);
 
                 return (
                   <div
                     key={slot.id}
-                    className="min-h-[130px] border-r border-slate-300 p-2 last:border-r-0"
+                    className={`min-h-[130px] p-2 ${
+                      hideRightBorder ? "" : "border-r border-slate-300"
+                    } last:border-r-0`}
                     style={{
                       gridColumn: index + 2,
-                      gridRow: 1,
+                      gridRow: `1 / span ${trackCount}`,
                     }}
-                  >
-                    {emptyShift ? <ShiftCard shift={emptyShift} /> : null}
-                  </div>
+                  />
                 );
               })}
 
-              {segments.map((segment) => (
-                <div
-                  key={segment.id}
-                  className="z-10 p-2"
-                  style={{
-                    gridColumn: `${segment.startIndex + 2} / span ${
-                      segment.span
-                    }`,
-                    gridRow: 1,
-                  }}
-                >
-                  <ShiftCard shift={segment.shift} />
-                </div>
-              ))}
+              {tracks.map((track, trackIndex) =>
+                track.map((item) => {
+                  if (item.type === "segment") {
+                    const segment = item.data as ShiftSegment;
+                    return (
+                      <div
+                        key={segment.id}
+                        className="z-10 p-2"
+                        style={{
+                          gridColumn: `${segment.startIndex + 2} / span ${
+                            segment.span
+                          }`,
+                          gridRow: trackIndex + 1,
+                        }}
+                      >
+                        <ShiftCard shift={segment.shift} />
+                      </div>
+                    );
+                  } else {
+                    const empty = item.data as {
+                      key: string;
+                      slotIndex: number;
+                      shift: ShiftWithAssignments;
+                    };
+                    return (
+                      <div
+                        key={empty.key}
+                        className="p-2"
+                        style={{
+                          gridColumn: empty.slotIndex + 2,
+                          gridRow: trackIndex + 1,
+                        }}
+                      >
+                        <ShiftCard shift={empty.shift} />
+                      </div>
+                    );
+                  }
+                }),
+              )}
             </div>
           );
         })}

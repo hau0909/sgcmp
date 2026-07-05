@@ -4,6 +4,7 @@ import {
   getAllGuards,
   getCompanyByOwnerId,
   getGuardDetail,
+  getGuardsByContract,
 } from "../repository/guard.repository";
 import { getCurrentActivePlanService } from "@/features/subscription/service/subscription.service";
 import type {
@@ -192,5 +193,37 @@ export const checkGuardQuotaService = async (
     isExceeded: currentGuards >= maxGuards,
     maxGuards,
     currentGuards,
+  };
+};
+
+export const getGuardsByContractService = async ({
+  contract_id,
+  company_id,
+  page,
+  limit,
+  search,
+}: {
+  contract_id: string;
+  company_id: string;
+  page: number;
+  limit: number;
+  search?: string;
+}): Promise<GuardListPaginatedData> => {
+  const { guards, total } = await getGuardsByContract({
+    contract_id,
+    company_id,
+    page,
+    limit,
+    search,
+  });
+
+  return {
+    guards,
+    pagination: {
+      page,
+      limit,
+      total,
+      totalPages: Math.ceil(total / limit),
+    },
   };
 };

@@ -29,6 +29,7 @@ export const getContracts = async (
     end_date,
     updated_at,
     booking_id,
+    guard_assigned,
     bookings!inner (
       booking_id,
       address,
@@ -180,6 +181,7 @@ export const getCustomerContracts = async (
         created_at,
         start_date,
         end_date,
+        guard_assigned,
         bookings!inner (
           customer_id,
           companies!inner (

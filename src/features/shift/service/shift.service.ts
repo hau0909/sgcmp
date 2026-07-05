@@ -30,6 +30,8 @@ import {
   updateAssignedShiftAssignmentsToAbsentByShiftId,
   createShiftImage,
   getShiftImageByAssignmentId,
+  getLatestShiftByContract,
+  getScheduledShiftDatesByContract,
 } from "../repository/shift.repository";
 
 export const getShiftContractOptionsService = async (
@@ -170,4 +172,16 @@ export const getShiftImageByAssignmentIdService = async (
   assignmentId: string,
 ): Promise<Shift_Img | null> => {
   return await getShiftImageByAssignmentId(assignmentId);
+};
+
+export const getLatestShiftDateService = async (
+  contractId: string,
+): Promise<string | null> => {
+  return await getLatestShiftByContract(contractId);
+};
+
+export const getScheduledShiftDatesService = async (
+  contractId: string,
+): Promise<string[]> => {
+  return await getScheduledShiftDatesByContract(contractId);
 };
