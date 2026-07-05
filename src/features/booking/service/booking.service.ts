@@ -1,5 +1,5 @@
 import { Booking, BookingWithCustomerProfile, BookingStatus } from "../types";
-import { getBookings, getBookingDetail, getBookingById, createBooking, updateBookingStatusAndPrice, getCustomerBookings } from "../repository/booking.repository";
+import { getBookings, getBookingDetail, getBookingById, createBooking, updateBookingStatusAndPrice, getCustomerBookings, getActiveBookingsByAddress } from "../repository/booking.repository";
 import { formatAddressService } from "@/features/address/service/address.service";
 
 
@@ -29,7 +29,7 @@ export const getBookingsService = async (
       created_at: item.created_at,
       updated_at: item.updated_at,
       day_per_week: (item.day_per_week as string[]) || [],
-      
+
       // Virtual/mapped fields for UI rendering
       customer_name: Array.isArray(item.profiles)
         ? (item.profiles[0]?.full_name || "Khách hàng không tên")
@@ -73,7 +73,7 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
     created_at: item.created_at,
     updated_at: item.updated_at,
     day_per_week: (item.day_per_week as string[]) || [],
-    
+
     // Virtual/mapped fields for UI rendering
     customer_name: Array.isArray(profile)
       ? (profile[0]?.full_name || "Khách hàng không tên")
@@ -127,6 +127,50 @@ export const createBookingService = async (
   }
   if (!bookingData.day_per_week || bookingData.day_per_week.length === 0) {
     throw new Error("Vui lòng chọn ít nhất một ngày làm việc trong tuần.");
+  }
+
+  const activeBookings = await getActiveBookingsByAddress(bookingData.address);
+
+  const checkTimeOverlap = (slot1: string, slot2: string) => {
+    const [s1, e1] = slot1.split(" - ");
+    const [s2, e2] = slot2.split(" - ");
+
+    const timeToMins = (t: string) => {
+      const [h, m] = t.trim().split(":").map(Number);
+      return h * 60 + m;
+    };
+
+    const start1 = timeToMins(s1);
+    const end1 = timeToMins(e1);
+    const start2 = timeToMins(s2);
+    const end2 = timeToMins(e2);
+
+    return Math.max(start1, start2) < Math.min(end1, end2);
+  };
+
+  const checkDateOverlap = (start1: string, end1: string, start2: string, end2: string) => {
+    return new Date(start1) <= new Date(end2) && new Date(end1) >= new Date(start2);
+  };
+
+  for (const existing of activeBookings) {
+    if (!checkDateOverlap(bookingData.start_date, bookingData.end_date, existing.start_date, existing.end_date)) {
+      continue;
+    }
+
+    const existingDays = existing.day_per_week as string[] || [];
+    const daysOverlap = bookingData.day_per_week.some(d => existingDays.includes(d));
+    if (!daysOverlap) {
+      continue;
+    }
+
+    const existingTimeSlots = existing.time_slots as string[] || [];
+    const timeOverlap = bookingData.time_slots.some(newSlot =>
+      existingTimeSlots.some(existSlot => checkTimeOverlap(newSlot, existSlot))
+    );
+
+    if (timeOverlap) {
+      throw new Error("Địa chỉ này đã có lịch đặt dịch vụ trùng ngày và khung giờ");
+    }
   }
 
   return await createBooking(bookingData);

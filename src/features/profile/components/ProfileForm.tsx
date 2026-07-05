@@ -62,7 +62,7 @@ export default function ProfileForm() {
         }
       }
     };
-    
+
     if (userId) {
       fetchProfile();
     } else {
@@ -87,7 +87,7 @@ export default function ProfileForm() {
         const supabase = createClient();
         const ext = avatarFile.name.split(".").pop()?.toLowerCase() || "";
         const path = `${userId}/avatar-${Date.now()}.${ext}`;
-        
+
         const { data, error } = await supabase.storage
           .from("profiles")
           .upload(path, avatarFile, {
@@ -189,7 +189,7 @@ export default function ProfileForm() {
                       <UserCircle className="w-20 h-20 text-on-surface-variant/50" />
                     )}
                   </div>
-                  <input 
+                  <input
                     type="file"
                     accept="image/*"
                     className="hidden"
@@ -216,7 +216,7 @@ export default function ProfileForm() {
                     {profile?.full_name || "Chưa cập nhật"}
                   </h3>
                   {/* Link Xem Hồ Sơ */}
-                  <Link 
+                  <Link
                     href="/profile"
                     className="text-sm font-medium text-primary hover:underline"
                   >
@@ -296,17 +296,6 @@ export default function ProfileForm() {
                   />
                 </div>
               </div>
-            </div>
-
-            <div className="flex justify-end pt-4 border-t border-outline-variant/30">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-medium shadow-sm hover:bg-primary/90 hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
-              </button>
             </div>
           </form>
         </div>

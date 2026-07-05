@@ -142,6 +142,20 @@ export const getBookingById = async (
   return (data as Booking) || null;
 };
 
+export const getActiveBookingsByAddress = async (address: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("start_date, end_date, day_per_week, time_slots, status")
+    .eq("address", address)
+    .in("status", ["pending", "quoted", "accepted"]);
+
+  if (error) {
+    throw error;
+  }
+  return data;
+};
+
 export const createBooking = async (
   booking: Omit<Booking, "booking_id" | "created_at" | "updated_at" | "quoted_price" | "status" | "customer_name" | "service_name">
 ): Promise<Booking> => {
@@ -197,7 +211,7 @@ export const updateBookingStatusAndPrice = async (
   const currentStatus = booking.status;
   const targetStatus = updates.status;
 
-  const isValidTransition = 
+  const isValidTransition =
     (currentStatus === "pending" && (targetStatus === "quoted" || targetStatus === "rejected")) ||
     (currentStatus === "quoted" && (targetStatus === "accepted" || targetStatus === "rejected"));
 

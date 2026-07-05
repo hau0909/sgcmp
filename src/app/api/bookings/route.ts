@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
     const result = await handleCreateBooking(bookingData);
     return NextResponse.json(result, { status: 201 });
   } catch (error: any) {
-    console.error("[POST /api/bookings] Error:", error);
+    console.error("[POST /api/bookings] Error:", error?.message || error);
     return NextResponse.json(
       { error: error?.message || "Internal Server Error" },
       { status: 400 }

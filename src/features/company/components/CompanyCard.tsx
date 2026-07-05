@@ -13,7 +13,10 @@ export default function CompanyCard({ company }: CompanyCardProps) {
   const isNew = company.rating === null;
 
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded p-4 flex flex-col gap-3 hover:border-primary/40 hover:shadow-md hover:scale-[1.01] transition-all duration-200 group">
+    <Link
+      href={`/companies/${company.id}`}
+      className="bg-surface-container-lowest border border-outline-variant rounded p-4 flex flex-col gap-3 hover:border-primary/40 hover:shadow-md hover:scale-[1.01] transition-all duration-200 group block cursor-pointer"
+    >
       {/* Header Info */}
       <div className="flex gap-3">
         {/* Logo or Initials */}
@@ -97,13 +100,12 @@ export default function CompanyCard({ company }: CompanyCardProps) {
           </p>
         </div>
 
-        <Link
-          href={`/companies/${company.id}`}
-          className="h-8 px-4 border border-outline-variant rounded bg-surface-container-lowest text-primary text-xs font-bold hover:bg-primary/5 hover:border-primary/30 transition-all duration-150 cursor-pointer shadow-sm active:scale-[0.98] inline-flex items-center justify-center"
+        <div
+          className="h-8 px-4 border border-outline-variant rounded bg-surface-container-lowest text-primary text-xs font-bold hover:bg-primary/5 hover:border-primary/30 transition-all duration-150 cursor-pointer shadow-sm active:scale-[0.98] inline-flex items-center justify-center group-hover:bg-primary/5 group-hover:border-primary/30"
         >
           Xem hồ sơ
-        </Link>
+        </div>
       </div>
-    </div>
+    </Link>
   );
 }

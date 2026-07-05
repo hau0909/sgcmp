@@ -148,6 +148,32 @@ export default function NewBookingModal({
     }
     const start24 = formatTo24h(startTime);
     const end24 = formatTo24h(endTime);
+    
+    const timeToMins = (t: string) => {
+      const [h, m] = t.split(":").map(Number);
+      return h * 60 + m;
+    };
+    
+    const newStartMins = timeToMins(start24);
+    const newEndMins = timeToMins(end24);
+
+    if (newStartMins >= newEndMins) {
+      setTimeSlotError("Giờ bắt đầu phải trước giờ kết thúc");
+      return;
+    }
+
+    const hasOverlap = timeSlots.some(slot => {
+      const [s, e] = slot.split(" - ");
+      const existingStartMins = timeToMins(s);
+      const existingEndMins = timeToMins(e);
+      return Math.max(newStartMins, existingStartMins) < Math.min(newEndMins, existingEndMins);
+    });
+
+    if (hasOverlap) {
+      setTimeSlotError("Khung giờ này bị trùng lặp với các khung giờ đã thêm trước đó");
+      return;
+    }
+
     const cleanSlot = `${start24} - ${end24}`;
 
     if (timeSlots.includes(cleanSlot)) {
@@ -196,6 +222,26 @@ export default function NewBookingModal({
 
     if (selectedDays.length === 0) {
       newErrors.day_per_week = "Vui lòng chọn ít nhất một ngày làm việc";
+    } else if (startDate && endDate && (!newErrors.startDate && !newErrors.endDate)) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const diffTime = Math.abs(end.getTime() - start.getTime());
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays < 7) {
+        const validDays = new Set<string>();
+        for (let i = 0; i <= diffDays; i++) {
+          const d = new Date(start);
+          d.setDate(start.getDate() + i);
+          const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
+          validDays.add(dayName);
+        }
+        const invalidSelectedDays = selectedDays.filter(day => !validDays.has(day));
+        if (invalidSelectedDays.length > 0) {
+          const dayLabels = invalidSelectedDays.map(d => DAYS_OF_WEEK.find(x => x.value === d)?.label).join(", ");
+          newErrors.day_per_week = `Các thứ đã chọn (${dayLabels}) không nằm trong khoảng ngày bắt đầu và kết thúc`;
+        }
+      }
     }
 
     if (timeSlots.length === 0) {
