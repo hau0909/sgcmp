@@ -241,6 +241,32 @@ const InfoRow = ({ label, value }: InfoRowProps) => (
   </div>
 );
 
+const getContractStatusLabel = (status: string) => {
+  switch (status) {
+    case "active":
+      return "Hoạt động";
+    case "completed":
+      return "Hoàn thành";
+    case "cancelled":
+      return "Hủy bỏ";
+    default:
+      return status;
+  }
+};
+
+const getContractStatusColor = (status: string) => {
+  switch (status) {
+    case "active":
+      return "#16a34a"; // green-600
+    case "completed":
+      return "#2563eb"; // blue-600
+    case "cancelled":
+      return "#dc2626"; // red-600
+    default:
+      return "inherit";
+  }
+};
+
 // Status config for guard badges
 const GUARD_STATUS_CFG: Record<
   GuardShiftStatus,
@@ -1250,8 +1276,12 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                     {isLoadingContracts ? "Đang tải hợp đồng..." : "Chọn hợp đồng"}
                   </option>
                   {contracts.map((c) => (
-                    <option key={c.contract_id} value={c.contract_id}>
-                      {c.code} — {c.address} ({c.scheduled_days_count ?? 0}/{c.total_working_days_count ?? 0} ngày trực)
+                    <option
+                      key={c.contract_id}
+                      value={c.contract_id}
+                      style={{ color: getContractStatusColor(c.status) }}
+                    >
+                      {c.code} — {c.address} ({c.scheduled_days_count ?? 0}/{c.total_working_days_count ?? 0} ngày trực) [{getContractStatusLabel(c.status)}]
                     </option>
                   ))}
                 </select>
@@ -1265,6 +1295,15 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 <div className="rounded-md border border-blue-100 bg-blue-50 p-4">
                   <p className="mb-3 text-sm font-semibold text-blue-800">Thông tin hợp đồng</p>
                   <div className="space-y-2 text-sm text-slate-700">
+                    <div className="grid grid-cols-[130px_1fr] gap-4">
+                      <span className="whitespace-nowrap text-slate-500">Trạng thái:</span>
+                      <span
+                        className="text-right font-semibold leading-5"
+                        style={{ color: getContractStatusColor(selectedContract.status) }}
+                      >
+                        {getContractStatusLabel(selectedContract.status)}
+                      </span>
+                    </div>
                     <InfoRow label="Khách hàng" value={selectedContract.customer_name} />
                     <InfoRow label="Công ty" value={selectedContract.company_name} />
                     <InfoRow label="Dịch vụ" value={selectedContract.service_name} />
