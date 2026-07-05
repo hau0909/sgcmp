@@ -54,6 +54,7 @@ export type ContractOption = {
   description: string | null;
   start_date: string;
   end_date: string;
+  status: string;
   scheduled_days_count?: number;
   total_working_days_count?: number;
 };
@@ -131,6 +132,7 @@ export type ContractQueryResult = {
   contract_id: string;
   start_date: string;
   end_date: string;
+  status: string;
   booking:
     | {
         booking_id: string;

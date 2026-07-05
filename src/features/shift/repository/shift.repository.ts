@@ -81,7 +81,7 @@ export const getShiftContractsByCompanyId = async (
       )
     `,
     )
-    .eq("status", "active") // status của contracts
+    .in("status", ["active", "completed", "cancelled"]) // status của contracts
     .eq("booking.company_id", companyId)
     .eq("booking.status", "accepted") // status của bookings
     .order("created_at", {
@@ -171,6 +171,7 @@ export const getShiftContractsByCompanyId = async (
       description: booking?.description ?? "Chưa cập nhật",
       start_date: contract.start_date,
       end_date: contract.end_date,
+      status: contract.status,
       time_slots,
       day_per_week,
       scheduled_days_count: scheduledDays,
