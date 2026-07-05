@@ -11,6 +11,8 @@ export interface MarketplaceCompany {
   location: string;
   tags: string[];
   pricePerHour: number;
+  maxPrice?: number;
+  serviceCount?: number;
   description?: string;
 }
 
@@ -24,6 +26,8 @@ export interface GetCompanyFiltersRequestParams {
   location?: string;
   tags?: string[];
   sortBy?: string;
+  minPrice?: number;
+  maxPrice?: number;
   page?: number;
   limit?: number;
 }
