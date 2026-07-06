@@ -6,15 +6,6 @@ import {
   MapPin, 
   ChevronDown, 
   SlidersHorizontal,
-  Compass,
-  Building,
-  Building2,
-  Waves,
-  Anchor,
-  Factory,
-  Map,
-  Sun,
-  Mountain,
   Navigation
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -22,96 +13,7 @@ import { Service, City, Ward } from "../types";
 import { requestGetCompanyFilters } from "../api/company.api";
 import { requestGetWards } from "@/features/address";
 
-interface CityMetadata {
-  description: string;
-  icon: React.ComponentType<{ className?: string }>;
-  iconColor: string;
-  bgColor: string;
-}
 
-const getCityMetadata = (cityName: string): CityMetadata => {
-  const normalized = cityName.toLowerCase();
-  
-  if (normalized.includes("hồ chí minh") || normalized.includes("hcm") || normalized.includes("sài gòn")) {
-    return {
-      description: "Trung tâm kinh tế sầm uất và năng động nhất",
-      icon: Building2,
-      iconColor: "text-indigo-600",
-      bgColor: "bg-indigo-50 border border-indigo-100",
-    };
-  }
-  if (normalized.includes("hà nội")) {
-    return {
-      description: "Thủ đô hành chính & văn hóa nghìn năm văn hiến",
-      icon: Building,
-      iconColor: "text-red-600",
-      bgColor: "bg-red-50 border border-red-100",
-    };
-  }
-  if (normalized.includes("đà nẵng")) {
-    return {
-      description: "Thành phố biển miền Trung xinh đẹp và đáng sống",
-      icon: Waves,
-      iconColor: "text-cyan-600",
-      bgColor: "bg-cyan-50 border border-cyan-100",
-    };
-  }
-  if (normalized.includes("bình dương")) {
-    return {
-      description: "Thủ phủ công nghiệp với nhiều doanh nghiệp lớn",
-      icon: Factory,
-      iconColor: "text-amber-600",
-      bgColor: "bg-amber-50 border border-amber-100",
-    };
-  }
-  if (normalized.includes("đồng nai")) {
-    return {
-      description: "Đầu mối sản xuất chế xuất phát triển mạnh Đông Nam Bộ",
-      icon: Map,
-      iconColor: "text-emerald-600",
-      bgColor: "bg-emerald-50 border border-emerald-100",
-    };
-  }
-  if (normalized.includes("hải phòng")) {
-    return {
-      description: "Thành phố cảng công nghiệp trọng điểm phía Bắc",
-      icon: Anchor,
-      iconColor: "text-sky-600",
-      bgColor: "bg-sky-50 border border-sky-100",
-    };
-  }
-  if (normalized.includes("khánh hòa") || normalized.includes("nha trang")) {
-    return {
-      description: "Đô thị du lịch biển Nha Trang xinh đẹp",
-      icon: Sun,
-      iconColor: "text-orange-600",
-      bgColor: "bg-orange-50 border border-orange-100",
-    };
-  }
-  if (normalized.includes("quảng ninh")) {
-    return {
-      description: "Trọng điểm kinh tế biển kỳ quan thế giới Hạ Long",
-      icon: Mountain,
-      iconColor: "text-teal-600",
-      bgColor: "bg-teal-50 border border-teal-100",
-    };
-  }
-  if (normalized.includes("cần thơ")) {
-    return {
-      description: "Trọng điểm kinh tế miền Tây sông nước gạo trắng nước trong",
-      icon: Compass,
-      iconColor: "text-purple-600",
-      bgColor: "bg-purple-50 border border-purple-100",
-    };
-  }
-  
-  return {
-    description: "Khu vực tiềm năng có nhiều đơn vị bảo vệ uy tín",
-    icon: MapPin,
-    iconColor: "text-slate-600",
-    bgColor: "bg-slate-50 border border-slate-100",
-  };
-};
 
 function normalizeText(text: string): string {
   return text
@@ -249,6 +151,8 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
   const cityRef = useRef<HTMLDivElement>(null);
   const wardRef = useRef<HTMLDivElement>(null);
   const filterRef = useRef<HTMLDivElement>(null);
+
+  const isAnyDropdownOpen = cityDropdownOpen || wardDropdownOpen || filterDropdownOpen;
 
   // Load available filters on mount
   useEffect(() => {
@@ -447,21 +351,11 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
   const getDropdownOptions = () => {
     const options: Array<{
       name: string;
-      description: string;
       icon: React.ComponentType<{ className?: string }>;
       iconColor: string;
       bgColor: string;
       isNearby: boolean;
-    }> = [
-      {
-        name: "Gần tôi",
-        description: "Tìm kiếm các đơn vị bảo vệ xung quanh bạn",
-        icon: Navigation,
-        iconColor: "text-outline",
-        bgColor: "bg-transparent",
-        isNearby: true,
-      }
-    ];
+    }> = [];
 
     const query = cityInput.trim().toLowerCase();
     const filteredCities = availableCities.filter(c => 
@@ -471,10 +365,8 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
     const citiesToDisplay = query ? filteredCities : availableCities;
 
     citiesToDisplay.forEach(c => {
-      const meta = getCityMetadata(c.city_name);
       options.push({
         name: c.city_name,
-        description: meta.description,
         icon: MapPin,
         iconColor: "text-outline",
         bgColor: "bg-transparent",
@@ -490,7 +382,11 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
   if (variant === "mini") {
     return (
       <div
-        className="flex items-center bg-white border border-outline-variant/40 rounded-full shadow-sm h-10 w-full max-w-md divide-x divide-outline-variant/30 text-on-surface pr-1.5"
+        className={`flex items-center bg-white border rounded-full h-10 w-full max-w-md divide-x divide-outline-variant/30 text-on-surface pr-1.5 transition-all duration-300 ${
+          isAnyDropdownOpen
+            ? "border-primary ring-4 ring-primary/10 shadow-[0_4px_20px_rgba(59,130,246,0.12)]"
+            : "border-outline-variant/40 hover:border-primary/50 hover:ring-4 hover:ring-primary/[0.04] shadow-sm hover:shadow-md"
+        }`}
       >
         {/* City Input & Airbnb-style Dropdown */}
         <div ref={cityRef} className="relative flex-1 flex items-center px-3 py-1 rounded-l-full min-w-0">
@@ -603,7 +499,9 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
             <span className="truncate flex items-center gap-1">
               <SlidersHorizontal className="w-3 h-3 text-outline shrink-0" />
               {selectedServices.length > 0 ? (
-                <span className="text-on-surface font-medium">{selectedServices.join(", ")}</span>
+                <span className="text-on-surface font-medium">
+                  {selectedServices.length <= 2 ? selectedServices.join(", ") : `${selectedServices.slice(0, 2).join(", ")}, ...`}
+                </span>
               ) : (
                 <span className="text-outline">Bộ lọc</span>
               )}
@@ -701,7 +599,11 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
   // Variant: Large (Hero search bar)
   return (
     <div
-      className="flex items-center h-14 bg-white border border-slate-100 rounded-full shadow-[0_4px_20px_rgba(0,0,0,0.05)] hover:shadow-[0_4px_25px_rgba(0,0,0,0.08)] transition-all duration-300 divide-x divide-outline-variant/30 text-on-surface pl-2 pr-2"
+      className={`flex items-center h-14 bg-white border rounded-full text-on-surface pl-2 pr-2 transition-all duration-300 divide-x divide-outline-variant/30 ${
+        isAnyDropdownOpen
+          ? "border-primary ring-4 ring-primary/10 shadow-[0_4px_20px_rgba(59,130,246,0.12)]"
+          : "border-outline-variant/40 hover:border-primary/50 hover:ring-4 hover:ring-primary/[0.04] shadow-sm hover:shadow-md"
+      }`}
     >
       {/* City field & Dropdown */}
       <div ref={cityRef} className="relative flex-1 h-full flex items-center gap-2 px-4 rounded-l-full">
@@ -753,10 +655,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                   className="w-full text-left px-4.5 py-2.5 hover:bg-surface-container-low transition-colors flex items-center gap-3 border-b border-outline-variant/10 last:border-b-0"
                 >
                   <IconComponent className="w-4.5 h-4.5 text-outline shrink-0 ml-1" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-semibold text-on-surface leading-tight">{dest.name}</div>
-                    <div className="text-xs text-outline leading-normal mt-0.5 truncate">{dest.description}</div>
-                  </div>
+                  <div className="text-sm font-semibold text-on-surface leading-tight">{dest.name}</div>
                 </button>
               );
             })}
@@ -838,7 +737,9 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
           <span className="truncate flex items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-primary shrink-0" />
             {selectedServices.length > 0 ? (
-              <span className="text-on-surface font-medium">{selectedServices.join(", ")}</span>
+              <span className="text-on-surface font-medium">
+                {selectedServices.length <= 2 ? selectedServices.join(", ") : `${selectedServices.slice(0, 2).join(", ")}, ...`}
+              </span>
             ) : (
               <span className="text-outline">Bộ lọc</span>
             )}
