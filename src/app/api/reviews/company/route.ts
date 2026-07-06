@@ -1,7 +1,8 @@
-import { NextResponse } from 'next/server';
+import { NextResponse, connection } from 'next/server';
 import { handleGetReviewsByCompany } from '@/features/review/controller/review.controller';
 
 export async function GET(request: Request) {
+  await connection();
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get('companyId');

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import RoleGuard from "@/components/auth/RoleGuard";
@@ -230,7 +230,9 @@ export default function CoordinatorLayout({
 
           {/* Page Content Viewport */}
           <main className="flex-1 overflow-y-auto bg-surface-bright">
-            {children}
+            <Suspense fallback={<div className="p-6 text-center text-sm text-on-surface-variant">Đang tải...</div>}>
+              {children}
+            </Suspense>
           </main>
         </div>
       </div>
