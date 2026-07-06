@@ -38,6 +38,8 @@ export async function requestGetCompanyFilters(
     queryParams.set("tags", params.tags.join(","));
   }
   if (params.sortBy) queryParams.set("sortBy", params.sortBy);
+  if (params.minPrice !== undefined) queryParams.set("minPrice", params.minPrice.toString());
+  if (params.maxPrice !== undefined) queryParams.set("maxPrice", params.maxPrice.toString());
   if (params.page) queryParams.set("page", params.page.toString());
   if (params.limit) queryParams.set("limit", params.limit.toString());
 
