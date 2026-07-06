@@ -32,13 +32,18 @@ const getVietnamTodayKey = () => {
 };
 
 const getUniqueLocationsFromContracts = (contracts: ContractOption[]) => {
-  return Array.from(
-    new Set(
-      contracts
-        .map((contract) => contract.address)
-        .filter((address): address is string => Boolean(address)),
-    ),
-  );
+  const seen = new Set<string>();
+  const results: { address: string; status: string }[] = [];
+  for (const contract of contracts) {
+    if (contract.address && !seen.has(contract.address)) {
+      seen.add(contract.address);
+      results.push({
+        address: contract.address,
+        status: contract.status,
+      });
+    }
+  }
+  return results;
 };
 
 type ShiftScheduleSkeletonProps = {
@@ -213,7 +218,7 @@ export default function ShiftSchedulePage() {
   }, [contracts]);
 
   const tableLocations = useMemo(() => {
-    const contractLocations = getUniqueLocationsFromContracts(contracts);
+    const contractLocations = getUniqueLocationsFromContracts(contracts).map((c) => c.address);
 
     if (selectedLocation === "all") {
       return Array.from(

@@ -19,3 +19,17 @@ export type CreateCoordinatorPayload = {
   issueDate: string;
   issuePlace: string;
 };
+
+// ─── Form ─────────────────────────────────────────────────────────────────────
+
+export interface City {
+  city_id: number;
+  city_name: string;
+}
+
+export interface Ward {
+  ward_id: number;
+  ward_name: string;
+  city_id: number;
+}
+

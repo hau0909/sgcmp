@@ -258,8 +258,6 @@ export default function MyCompanyDetail() {
 
     const trimmedFullName = fullName.trim();
     const trimmedDescription = description.trim();
-    const trimmedBusinessLicense = businessLicense.trim();
-    const trimmedCompanyLicense = companyLicense.trim();
     const trimmedEmail = email.trim();
     const trimmedPhone = phone.trim();
     const trimmedAddress = address.trim();
@@ -270,14 +268,6 @@ export default function MyCompanyDetail() {
 
     if (!trimmedDescription) {
       nextErrors.description = "Vui lòng nhập giới thiệu doanh nghiệp.";
-    }
-
-    if (!trimmedBusinessLicense) {
-      nextErrors.business_license_no = "Vui lòng nhập mã số đăng ký.";
-    }
-
-    if (!trimmedCompanyLicense) {
-      nextErrors.registration_code = "Vui lòng nhập mã số giấy phép.";
     }
 
     if (!trimmedEmail) {
@@ -500,8 +490,6 @@ export default function MyCompanyDetail() {
         email: email.trim(),
         phone: phone.trim(),
         address: address.trim(),
-        business_license_no: businessLicense.trim(),
-        registration_code: companyLicense.trim(),
       });
 
       setCompanyName(fullName.trim());
@@ -756,35 +744,33 @@ export default function MyCompanyDetail() {
 
       {status && (
         <div
-          className={`p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs ${
-            status === "published"
-              ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-              : status === "pending_publish"
-                ? "bg-amber-50 border-amber-200 text-amber-800"
-                : status === "active"
-                  ? "bg-blue-50 border-blue-200 text-blue-800"
-                  : status === "pending_register"
-                    ? "bg-purple-50 border-purple-200 text-purple-800"
-                    : status === "rejected"
-                      ? "bg-rose-50 border-rose-200 text-rose-800"
-                      : "bg-slate-50 border-slate-200 text-slate-800"
-          }`}
+          className={`p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs ${status === "published"
+            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+            : status === "pending_publish"
+              ? "bg-amber-50 border-amber-200 text-amber-800"
+              : status === "active"
+                ? "bg-blue-50 border-blue-200 text-blue-800"
+                : status === "pending_register"
+                  ? "bg-purple-50 border-purple-200 text-purple-800"
+                  : status === "rejected"
+                    ? "bg-rose-50 border-rose-200 text-rose-800"
+                    : "bg-slate-50 border-slate-200 text-slate-800"
+            }`}
         >
           <div className="flex items-start gap-3">
             <div
-              className={`p-2 rounded-xl mt-0.5 ${
-                status === "published"
-                  ? "bg-emerald-100 text-emerald-600"
-                  : status === "pending_publish"
-                    ? "bg-amber-100 text-amber-600"
-                    : status === "active"
-                      ? "bg-blue-100 text-blue-600"
-                      : status === "pending_register"
-                        ? "bg-purple-100 text-purple-600"
-                        : status === "rejected"
-                          ? "bg-rose-100 text-rose-600"
-                          : "bg-slate-100 text-slate-600"
-              }`}
+              className={`p-2 rounded-xl mt-0.5 ${status === "published"
+                ? "bg-emerald-100 text-emerald-600"
+                : status === "pending_publish"
+                  ? "bg-amber-100 text-amber-600"
+                  : status === "active"
+                    ? "bg-blue-100 text-blue-600"
+                    : status === "pending_register"
+                      ? "bg-purple-100 text-purple-600"
+                      : status === "rejected"
+                        ? "bg-rose-100 text-rose-600"
+                        : "bg-slate-100 text-slate-600"
+                }`}
             >
               <ShieldCheck className="w-5 h-5" />
             </div>
@@ -881,11 +867,10 @@ export default function MyCompanyDetail() {
               type="button"
               disabled={!isProfileComplete}
               onClick={() => setIsConfirmModalOpen(true)}
-              className={`lg:self-center px-4 py-2 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap self-start cursor-pointer ${
-                isProfileComplete
-                  ? "bg-blue-600 hover:bg-blue-700 text-white"
-                  : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
-              }`}
+              className={`lg:self-center px-4 py-2 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap self-start cursor-pointer ${isProfileComplete
+                ? "bg-blue-600 hover:bg-blue-700 text-white"
+                : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
+                }`}
             >
               <Upload className="w-3.5 h-3.5" /> Gửi yêu cầu công khai
             </button>
@@ -1052,15 +1037,11 @@ export default function MyCompanyDetail() {
                 <div className="col-span-8 space-y-1">
                   <input
                     value={businessLicense}
-                    onChange={(e) => {
-                      setBusinessLicense(e.target.value);
-                      clearFieldError("business_license_no");
-                    }}
-                    placeholder="Nhập mã số đăng ký"
-                    className={getEditControlClassName("business_license_no")}
+                    readOnly
+                    disabled
+                    placeholder="Chưa có mã số đăng ký"
+                    className={`${getEditControlClassName("business_license_no")} bg-surface-variant/50 cursor-not-allowed opacity-60`}
                   />
-
-                  {renderFieldError("business_license_no")}
                 </div>
               ) : (
                 <span className="col-span-8 text-on-surface font-semibold">
@@ -1078,15 +1059,11 @@ export default function MyCompanyDetail() {
                 <div className="col-span-8 space-y-1">
                   <input
                     value={companyLicense}
-                    onChange={(e) => {
-                      setCompanyLicense(e.target.value);
-                      clearFieldError("registration_code");
-                    }}
-                    placeholder="Nhập mã số giấy phép"
-                    className={getEditControlClassName("registration_code")}
+                    readOnly
+                    disabled
+                    placeholder="Chưa có mã số giấy phép"
+                    className={`${getEditControlClassName("registration_code")} bg-surface-variant/50 cursor-not-allowed opacity-60`}
                   />
-
-                  {renderFieldError("registration_code")}
                 </div>
               ) : (
                 <span className="col-span-8 text-on-surface font-mono font-bold">
@@ -1309,9 +1286,9 @@ export default function MyCompanyDetail() {
               <button
                 type="button"
                 onClick={handleOpenActivityGallery}
-                className="text-[11px] font-bold text-on-surface-variant hover:text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
+                className="text-[11px] transition-all duration-300 font-bold text-on-surface-variant hover:text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
               >
-                Xem thêm <ChevronRight className="w-3 h-3" />
+                Xem thêm
               </button>
             </div>
           </div>
@@ -1461,24 +1438,21 @@ export default function MyCompanyDetail() {
 
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-[80] w-[320px] rounded-2xl border bg-white px-4 py-3 shadow-2xl transition-all duration-300 ease-out ${
-            toastVisible
-              ? "translate-x-0 opacity-100"
-              : "translate-x-[120%] opacity-0"
-          } ${toast.type === "success" ? "border-green-200" : "border-red-200"}`}
+          className={`fixed bottom-6 right-6 z-[80] w-[320px] rounded-2xl border bg-white px-4 py-3 shadow-2xl transition-all duration-300 ease-out ${toastVisible
+            ? "translate-x-0 opacity-100"
+            : "translate-x-[120%] opacity-0"
+            } ${toast.type === "success" ? "border-green-200" : "border-red-200"}`}
         >
           <div className="flex items-start gap-3">
             <div
-              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
-                toast.type === "success" ? "bg-green-500" : "bg-red-500"
-              }`}
+              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${toast.type === "success" ? "bg-green-500" : "bg-red-500"
+                }`}
             />
 
             <div className="flex-1">
               <p
-                className={`text-xs font-extrabold uppercase tracking-wide ${
-                  toast.type === "success" ? "text-green-700" : "text-red-600"
-                }`}
+                className={`text-xs font-extrabold uppercase tracking-wide ${toast.type === "success" ? "text-green-700" : "text-red-600"
+                  }`}
               >
                 {toast.type === "success" ? "Thành công" : "Thất bại"}
               </p>

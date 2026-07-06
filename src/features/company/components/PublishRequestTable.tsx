@@ -386,7 +386,7 @@ export default function PublishRequestTable() {
                     {/* Action */}
                     <td className="px-6 py-4.5 text-right whitespace-nowrap">
                       <Link
-                        href={`#`}
+                        href={`/publish-requests/${req.request_id}`}
                         className="text-secondary font-semibold text-xs hover:text-primary inline-flex items-center gap-1 transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-surface-container-high"
                       >
                         Xem chi tiết <ExternalLink className="w-3.5 h-3.5" />

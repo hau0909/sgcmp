@@ -16,3 +16,4 @@ Khi người dùng yêu cầu viết hoặc cập nhật danh sách Thông báo 
 | **3** | MSG03 | Toast Error | Payment creation failed | *Không thể khởi tạo giao dịch thanh toán* |
 | **4** | MSG04 | Toast Error | System exception | *Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.* |
 | **5** | MSG05 | Table Info | Empty transaction history | *Không có giao dịch nào* |
+

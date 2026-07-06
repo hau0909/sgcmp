@@ -4,6 +4,7 @@ import {
   createPaymentService,
   updatePaymentStatusService,
   getPaymentByIdService,
+  handleSePayWebhookService,
 } from "../service/payment.service";
 import { PaymentMethod, PaymentStatus } from "@/types/Enum";
 
@@ -37,5 +38,10 @@ export const handleGetPaymentById = async (
   paymentId: string,
 ): Promise<Payment | null> => {
   const result = await getPaymentByIdService(paymentId);
+  return result;
+};
+
+export const handleSePayWebhook = async (payload: any): Promise<boolean> => {
+  const result = await handleSePayWebhookService(payload);
   return result;
 };

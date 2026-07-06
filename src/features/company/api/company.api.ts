@@ -9,6 +9,7 @@ import {
   CompanyDetailData,
   Service,
   UpdateCompanyProfileInput,
+  PublishRequestDetailData,
 } from "../types";
 import { ImageType } from "@/types/Enum";
 
@@ -148,5 +149,28 @@ export async function requestCreateCompanyPublishRequest(
       "Content-Type": "application/json",
     },
     body: JSON.stringify(payload),
+  });
+}
+
+export async function requestGetCompanyPublishRequestById(
+  id: string,
+): Promise<{ success: boolean; data: PublishRequestDetailData }> {
+  const url = `/api/admin/publish-requests/${id}`;
+  return await fetcher(url, {
+    method: "GET",
+  });
+}
+
+export async function requestUpdateCompanyPublishRequestStatus(
+  id: string,
+  status: "APPROVED" | "REJECTED",
+): Promise<{ success: boolean; message: string }> {
+  const url = `/api/admin/publish-requests/${id}`;
+  return await fetcher(url, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ status }),
   });
 }

@@ -9,6 +9,7 @@ export { default as CompanyDetailSidebar } from "./components/CompanyDetailSideb
 export { default as CompanyDetailDirector } from "./components/CompanyDetailDirector";
 export { default as MyCompanyDetail } from "./components/MyCompanyDetail";
 export { default as PublishRequestTable } from "./components/PublishRequestTable";
+export { default as PublishRequestDetail } from "./components/PublishRequestDetail";
 export * from "./api/company.api";
 export * from "./controller/company.controller";
 export * from "./service/company.service";

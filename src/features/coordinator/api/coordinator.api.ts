@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { fetcher } from "@/lib/fetcher";
 import { CoordinatorWithUser } from "../types";
 

@@ -83,7 +83,7 @@ export default function RouteGuard({
         }
 
         if (profile.status !== "active") {
-          router.replace("/unauthorized");
+          router.replace("/unauthorized?reason=inactive");
           return;
         }
 

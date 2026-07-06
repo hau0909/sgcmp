@@ -2,15 +2,22 @@ import {
   getCoordinatorsService,
   addCoordinatorToCompanyService,
 } from "../service/coordinator.service";
-import { checkCompanySubscriptionService } from "@/features/subscription/service/subscription.service";
+import { checkCompanySubscriptionService, getPlanByIdService } from "@/features/subscription/service/subscription.service";
 import { registerAccountService } from "@/features/auth/service/auth.service";
 import {
   validateEmail,
   validateFullName,
   validatePhoneNumber,
   checkPhoneNumberExists,
+  checkEmailExists,
 } from "@/features/auth/validator/auth.validator";
 import { validateIdentityExists } from "@/features/identity/validator/identity.validator";
+import {
+  validateIdentityNumber,
+  validateCoordinatorAge,
+  validateIdentityIssueDate,
+  validateIdentityIssuePlace,
+} from "../validator/coordinator.validator";
 import { CoordinatorWithUser, CreateCoordinatorPayload } from "../types";
 
 export const handleGetCoordinators = async (
@@ -28,7 +35,7 @@ export const handleGetCoordinators = async (
 export const handleCreateCoordinator = async (
   payload: CreateCoordinatorPayload,
 ): Promise<{ success: boolean; message: string; userId?: string }> => {
-  // Validate cơ bản
+  // ── Validate cơ bản (auth) ──────────────────────────────────────────────────
   const emailError = validateEmail(payload.email);
   if (emailError) return { success: false, message: emailError };
 
@@ -42,6 +49,26 @@ export const handleCreateCoordinator = async (
     return { success: false, message: "Company ID là bắt buộc" };
   }
 
+  // ── Validate định danh ──────────────────────────────────────────────────────
+  const idNumberError = validateIdentityNumber(payload.identityId);
+  if (idNumberError) return { success: false, message: idNumberError };
+
+  const issueDateError = validateIdentityIssueDate(
+    payload.issueDate,
+    payload.dateOfBirth ?? ""
+  );
+  if (issueDateError) return { success: false, message: issueDateError };
+
+  const issuePlaceError = validateIdentityIssuePlace(payload.issuePlace);
+  if (issuePlaceError) return { success: false, message: issuePlaceError };
+
+  // ── Validate tuổi ───────────────────────────────────────────────────────────
+  if (payload.dateOfBirth) {
+    const ageError = validateCoordinatorAge(payload.dateOfBirth);
+    if (ageError) return { success: false, message: ageError };
+  }
+
+  // ── Kiểm tra subscription và giới hạn ──────────────────────────────────────
   const subCheck = await checkCompanySubscriptionService(payload.companyId);
   if (!subCheck.isActive) {
     return {
@@ -50,19 +77,34 @@ export const handleCreateCoordinator = async (
     };
   }
 
-  if (!payload.issueDate || !payload.issuePlace) {
-    return {
-      success: false,
-      message: "Vui lòng nhập đầy đủ ngày và nơi cấp của CMND/CCCD",
-    };
+  if (subCheck.subscription?.plan_id) {
+    const plan = await getPlanByIdService(subCheck.subscription.plan_id);
+    if (plan && plan.max_coordinators !== null) {
+      const currentCoordinators = await getCoordinatorsService(payload.companyId, 1, 1);
+      if (currentCoordinators.total >= plan.max_coordinators) {
+        return {
+          success: false,
+          message: `Gói dịch vụ hiện tại (Tối đa ${plan.max_coordinators} Điều phối viên) đã đạt giới hạn. Vui lòng nâng cấp gói để tạo thêm.`,
+        };
+      }
+    }
   }
 
   try {
+    // ── Kiểm tra trùng lặp (Asynchronous) theo thứ tự: Email -> SĐT -> CCCD ───
+    const isEmailTaken = await checkEmailExists(payload.email);
+    if (isEmailTaken) {
+      return {
+        success: false,
+        message: "Email này đã được sử dụng trên hệ thống.",
+      };
+    }
+
     const isPhoneTaken = await checkPhoneNumberExists(payload.phoneNumber);
     if (isPhoneTaken) {
       return {
         success: false,
-        message: "Số điện thoại này đã được đăng ký bởi một người dùng khác.",
+        message: "Số điện thoại này đã được sử dụng.",
       };
     }
 
@@ -70,7 +112,7 @@ export const handleCreateCoordinator = async (
     if (isIdentityTaken) {
       return {
         success: false,
-        message: "Số CMND/CCCD này đã tồn tại trong hệ thống.",
+        message: "Số CMND/CCCD này đã được sử dụng.",
       };
     }
 

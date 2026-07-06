@@ -11,6 +11,9 @@ import {
   getAllGuardService,
   getCompanyByOwnerIdService,
   getGuardDetailService,
+  uploadGuardFileService,
+  checkGuardQuotaService,
+  getGuardsByContractService,
 } from "../service/guard.service";
 
 import { getIdentityByUserIdService } from "@/features/identity/service/identity.service";
@@ -70,14 +73,34 @@ export const handleCreateGuardAccount = async (
   body: CreateGuardAccountBody,
 ) => {
   try {
-    await checkCoordinatorPermission();
+    const current_profile = await checkCoordinatorPermission();
+
+    const company_id = await getCoordinatorByCompanyIdService(
+      current_profile.user_id,
+    );
+
+    if (!company_id) {
+      return {
+        success: false,
+        message: "Không tìm thấy công ty của Coordinator.",
+      };
+    }
+
+    const quota = await checkGuardQuotaService(company_id);
+
+    if (quota.isExceeded) {
+      return {
+        success: false,
+        message: "Số lượng nhân viên bảo vệ của công ty đã đạt giới hạn tối đa cho phép của gói dịch vụ.",
+      };
+    }
 
     const input: CreateGuardAccountInput = {
       email: String(body.email ?? "")
         .trim()
         .toLowerCase(),
 
-      full_name: String(body.full_name ?? "").trim(),
+      full_name: String(body.full_name ?? ""),
 
       phone_number: String(body.phone_number ?? "").trim(),
 
@@ -222,6 +245,51 @@ export const handleUploadGuardAvatar = async (form_data: FormData) => {
   }
 };
 
+export const handleUploadGuardFile = async (form_data: FormData) => {
+  try {
+    await checkCoordinatorPermission();
+
+    const user_id = String(form_data.get("user_id") ?? "").trim();
+
+    if (!user_id) {
+      return {
+        success: false,
+        message: "Không tìm thấy ID tài khoản bảo vệ.",
+      };
+    }
+
+    const type = String(form_data.get("type") ?? "avatar").trim() as "avatar" | "cccd_front" | "cccd_back";
+    const file_entry = form_data.get("file") || form_data.get("avatar_file");
+
+    if (!(file_entry instanceof File) || file_entry.size <= 0) {
+      return {
+        success: false,
+        message: type === "avatar" ? "Vui lòng chọn ảnh bảo vệ." : "Vui lòng chọn ảnh CCCD.",
+      };
+    }
+
+    const result = await uploadGuardFileService({
+      user_id,
+      file: file_entry,
+      type,
+    });
+
+    return {
+      success: true,
+      message: type === "avatar" ? "Tải ảnh bảo vệ thành công." : "Tải ảnh CCCD thành công.",
+      data: result,
+    };
+  } catch (error) {
+    console.error("handleUploadGuardFile error:", error);
+
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Không thể tải file lên.",
+    };
+  }
+};
+
 export const handleInsertGuardInformation = async (
   body: InsertGuardInformationBody,
 ) => {
@@ -242,7 +310,7 @@ export const handleInsertGuardInformation = async (
     const input: InsertGuardInformationInput = {
       user_id: String(body.user_id ?? "").trim(),
 
-      full_name: String(body.full_name ?? "").trim(),
+      full_name: String(body.full_name ?? ""),
 
       phone_number: String(body.phone_number ?? "").trim(),
 
@@ -266,6 +334,16 @@ export const handleInsertGuardInformation = async (
       identity_issue_date: String(body.identity_issue_date ?? "").trim(),
 
       identity_issue_place: String(body.identity_issue_place ?? "").trim(),
+
+      front_url:
+        typeof body.front_url === "string"
+          ? body.front_url.trim() || null
+          : null,
+
+      back_url:
+        typeof body.back_url === "string"
+          ? body.back_url.trim() || null
+          : null,
     };
 
     const validate_error = validateCreateGuardInput(input);
@@ -299,6 +377,8 @@ export const handleInsertGuardInformation = async (
       input.identity_id,
       input.identity_issue_date,
       input.identity_issue_place,
+      input.front_url ?? undefined,
+      input.back_url ?? undefined,
     );
 
     return {
@@ -505,3 +585,136 @@ export const handleGetGuardDetail = async (
     };
   }
 };
+
+export const handleCheckGuardQuota = async () => {
+  try {
+    const current_profile = await checkCoordinatorPermission();
+
+    const company_id = await getCoordinatorByCompanyIdService(
+      current_profile.user_id,
+    );
+
+    if (!company_id) {
+      return {
+        success: false,
+        message: "Không tìm thấy công ty của Coordinator.",
+      };
+    }
+
+    const quota = await checkGuardQuotaService(company_id);
+
+    return {
+      success: true,
+      message: "Kiểm tra giới hạn bảo vệ thành công.",
+      data: quota,
+    };
+  } catch (error) {
+    console.error("handleCheckGuardQuota error:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error ? error.message : "Không thể kiểm tra giới hạn bảo vệ.",
+    };
+  }
+};
+
+export const handleGetGuardsByContract = async ({
+  contract_id,
+  page,
+  limit,
+  search,
+}: {
+  contract_id: string;
+  page?: string | null;
+  limit?: string | null;
+  search?: string | null;
+}): Promise<HandleGetAllGuardsResult> => {
+  try {
+    const profile = await getCurrentUserProfileService();
+
+    if (!profile) {
+      return {
+        success: false,
+        message: "Bạn chưa đăng nhập",
+        data: createEmptyGuardListData(),
+      };
+    }
+
+    const normalizedRole = profile.role?.trim().toLowerCase();
+
+    let company_id = "";
+
+    if (normalizedRole === "company-admin") {
+      const companyIdResult = await getCompanyByOwnerIdService(profile.user_id);
+
+      if (!companyIdResult) {
+        return {
+          success: false,
+          message: "Không tìm thấy công ty của tài khoản",
+          data: createEmptyGuardListData(),
+        };
+      }
+
+      company_id = companyIdResult;
+    } else if (normalizedRole === "coordinator") {
+      const coordinatorCompanyId = await getCoordinatorByCompanyIdService(
+        profile.user_id,
+      );
+
+      if (!coordinatorCompanyId) {
+        return {
+          success: false,
+          message: "Điều phối viên chưa được liên kết với công ty",
+          data: createEmptyGuardListData(),
+        };
+      }
+
+      company_id = coordinatorCompanyId;
+    } else {
+      return {
+        success: false,
+        message: "Bạn không có quyền xem danh sách bảo vệ",
+        data: createEmptyGuardListData(),
+      };
+    }
+
+    const pageNumber = Number(page ?? "1");
+    const limitNumber = Number(limit ?? "10");
+
+    const validPage =
+      Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1;
+
+    const validLimit =
+      Number.isInteger(limitNumber) && limitNumber > 0 && limitNumber <= 50
+        ? limitNumber
+        : 10;
+
+    const keyword = search?.trim() ?? "";
+
+    const data = await getGuardsByContractService({
+      contract_id,
+      company_id,
+      page: validPage,
+      limit: validLimit,
+      search: keyword,
+    });
+
+    return {
+      success: true,
+      message: "Lấy danh sách bảo vệ theo hợp đồng thành công",
+      data,
+    };
+  } catch (error: unknown) {
+    console.error("handleGetGuardsByContract error:", error);
+
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Lấy danh sách bảo vệ theo hợp đồng thất bại",
+      data: createEmptyGuardListData(),
+    };
+  }
+};
+

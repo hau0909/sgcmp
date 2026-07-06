@@ -8,6 +8,7 @@ import {
   MoreVertical,
   UserRound,
   SquarePen,
+  Camera,
 } from "lucide-react";
 import type {
   ShiftAssignment,
@@ -29,7 +30,139 @@ type ShiftTooltipProps = {
   shift: ShiftWithAssignments;
   statusLabel: string;
   position: TooltipPosition;
+  onMouseEnter: () => void;
+  onMouseLeave: () => void;
 };
+
+function GuardSubTooltip({
+  assignment,
+  shift,
+  position,
+}: {
+  assignment: ShiftAssignment;
+  shift: ShiftWithAssignments;
+  position: TooltipPosition;
+}) {
+  return createPortal(
+    <div
+      className="pointer-events-none fixed z-[10000] w-[300px] rounded-md border border-slate-200 bg-white p-4 text-left shadow-2xl"
+      style={{
+        top: position.top,
+        left: position.left,
+      }}
+    >
+      <div className="space-y-3">
+        <div>
+          <p className="text-xs font-semibold uppercase text-slate-400">
+            Tên ca trực
+          </p>
+          <p className="mt-1 text-sm font-bold text-slate-800">
+            {shift.shift_name || "Chưa cập nhật"}
+          </p>
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase text-slate-400">
+            Địa điểm
+          </p>
+          <p className="mt-1 text-sm font-medium text-slate-700">
+            {shift.contract_address || "Chưa cập nhật"}
+          </p>
+          {shift.location && (
+            <p className="mt-0.5 text-xs text-slate-500">
+              Vị trí: {shift.location}
+            </p>
+          )}
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold uppercase text-slate-400">
+            Ảnh điểm danh
+          </p>
+          {assignment.checkin_image ? (
+            <div className="mt-2 relative aspect-video w-full overflow-hidden rounded border border-slate-200">
+              <img
+                src={assignment.checkin_image.image_url}
+                alt="Ảnh điểm danh"
+                className="h-full w-full object-cover"
+              />
+            </div>
+          ) : (
+            <div className="mt-2 flex aspect-video w-full flex-col items-center justify-center rounded border border-dashed border-slate-200 bg-slate-50 text-slate-400">
+              <Camera size={24} className="text-slate-300" />
+              <span className="mt-1.5 text-xs text-slate-500 font-medium">Chưa có ảnh điểm danh</span>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>,
+    document.body,
+  );
+}
+
+function GuardRow({
+  assignment,
+  shift,
+}: {
+  assignment: ShiftAssignment;
+  shift: ShiftWithAssignments;
+}) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const [showSubTooltip, setShowSubTooltip] = useState(false);
+  const [subTooltipPosition, setSubTooltipPosition] = useState<TooltipPosition | null>(null);
+
+  const handleMouseEnter = () => {
+    if (!rowRef.current) return;
+    const rect = rowRef.current.getBoundingClientRect();
+    
+    let left = rect.right + 12;
+    let top = rect.top;
+    if (left + 300 > window.innerWidth - 12) {
+      left = rect.left - 300 - 12;
+    }
+    setSubTooltipPosition({ top, left });
+    setShowSubTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowSubTooltip(false);
+  };
+
+  return (
+    <>
+      <div
+        ref={rowRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="flex items-center justify-between gap-3 rounded bg-slate-50 px-2 py-1.5 hover:bg-blue-50 cursor-pointer transition-colors"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <UserRound size={15} className="shrink-0 text-slate-500" />
+
+          <p className="truncate text-sm font-medium text-slate-800">
+            {assignment.guard_name || "Chưa cập nhật"}
+          </p>
+        </div>
+
+        <span
+          className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusStyle(
+            assignment.status,
+          )}`}
+        >
+          {getStatusLabel(assignment.status)}
+        </span>
+      </div>
+
+      {showSubTooltip && subTooltipPosition && (
+        <GuardSubTooltip
+          assignment={assignment}
+          shift={shift}
+          position={subTooltipPosition}
+        />
+      )}
+    </>
+  );
+}
 
 const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
 const TOOLTIP_WIDTH = 340;
@@ -100,10 +233,12 @@ const getTooltipPosition = (element: HTMLDivElement): TooltipPosition => {
   };
 };
 
-function ShiftTooltip({ shift, statusLabel, position }: ShiftTooltipProps) {
+function ShiftTooltip({ shift, statusLabel, position, onMouseEnter, onMouseLeave }: ShiftTooltipProps) {
   return createPortal(
     <div
-      className="pointer-events-none fixed z-[9999] w-[340px] rounded-md border border-slate-200 bg-white p-4 text-left shadow-2xl"
+      onMouseEnter={onMouseEnter}
+      onMouseLeave={onMouseLeave}
+      className="pointer-events-auto fixed z-[9999] w-[340px] rounded-md border border-slate-200 bg-white p-4 text-left shadow-2xl"
       style={{
         top: position.top,
         left: position.left,
@@ -138,26 +273,11 @@ function ShiftTooltip({ shift, statusLabel, position }: ShiftTooltipProps) {
 
           <div className="mt-2 space-y-1.5">
             {shift.assignments.map((assignment) => (
-              <div
+              <GuardRow
                 key={assignment.assignment_id}
-                className="flex items-center justify-between gap-3 rounded bg-slate-50 px-2 py-1.5"
-              >
-                <div className="flex min-w-0 items-center gap-2">
-                  <UserRound size={15} className="shrink-0 text-slate-500" />
-
-                  <p className="truncate text-sm font-medium text-slate-800">
-                    {assignment.guard_name || "Chưa cập nhật"}
-                  </p>
-                </div>
-
-                <span
-                  className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusStyle(
-                    assignment.status,
-                  )}`}
-                >
-                  {getStatusLabel(assignment.status)}
-                </span>
-              </div>
+                assignment={assignment}
+                shift={shift}
+              />
             ))}
           </div>
         </div>
@@ -201,6 +321,8 @@ export function ShiftCard({ shift }: ShiftCardProps) {
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [tooltipPosition, setTooltipPosition] =
     useState<TooltipPosition | null>(null);
+  const [showTooltip, setShowTooltip] = useState(false);
+  const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isEmpty = shift.assignments.length < shift.required_guards;
 
@@ -220,15 +342,34 @@ export function ShiftCard({ shift }: ShiftCardProps) {
   const statusLabel = getStatusLabel(firstAssignment.status);
 
   const handleMouseEnter = () => {
-    if (!cardRef.current) {
-      return;
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
     }
-
-    setTooltipPosition(getTooltipPosition(cardRef.current));
+    if (cardRef.current) {
+      setTooltipPosition(getTooltipPosition(cardRef.current));
+    }
+    setShowTooltip(true);
   };
 
   const handleMouseLeave = () => {
-    setTooltipPosition(null);
+    hoverTimeoutRef.current = setTimeout(() => {
+      setShowTooltip(false);
+    }, 200);
+  };
+
+  const handleTooltipMouseEnter = () => {
+    if (hoverTimeoutRef.current) {
+      clearTimeout(hoverTimeoutRef.current);
+      hoverTimeoutRef.current = null;
+    }
+    setShowTooltip(true);
+  };
+
+  const handleTooltipMouseLeave = () => {
+    hoverTimeoutRef.current = setTimeout(() => {
+      setShowTooltip(false);
+    }, 200);
   };
 
   return (
@@ -283,11 +424,13 @@ export function ShiftCard({ shift }: ShiftCardProps) {
         </div>
       </div>
 
-      {tooltipPosition ? (
+      {showTooltip && tooltipPosition ? (
         <ShiftTooltip
           shift={shift}
           statusLabel={statusLabel}
           position={tooltipPosition}
+          onMouseEnter={handleTooltipMouseEnter}
+          onMouseLeave={handleTooltipMouseLeave}
         />
       ) : null}
     </>

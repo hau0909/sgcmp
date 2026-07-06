@@ -4,7 +4,7 @@ import { handleUpdateProfile } from "@/features/profile/controller/profile.contr
 export async function PUT(req: NextRequest) {
   try {
     const body = await req.json();
-    const { userId, fullName, phoneNumber, gender, dateOfBirth, address } = body;
+    const { userId, fullName, phoneNumber, gender, dateOfBirth, address, avatarUrl } = body;
 
     const result = await handleUpdateProfile(userId, {
       fullName,
@@ -12,6 +12,7 @@ export async function PUT(req: NextRequest) {
       gender,
       dateOfBirth,
       address,
+      avatarUrl,
     });
 
     if (!result.success) {

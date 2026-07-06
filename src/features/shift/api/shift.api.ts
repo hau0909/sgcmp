@@ -7,7 +7,23 @@ import type {
   GetGuardShiftsResponse,
   GuardShiftDetailResponse,
   CheckinGuardShiftResponse,
+  GuardAvailabilityResponse,
 } from "../type";
+
+export const requestGetGuardAvailability = async ({
+  guardIds,
+  startTime,
+  endTime,
+}: {
+  guardIds: string[];
+  startTime: string;
+  endTime: string;
+}): Promise<GuardAvailabilityResponse> => {
+  return fetcher("/api/shifts/guards/availability", {
+    method: "POST",
+    body: JSON.stringify({ guardIds, startTime, endTime }),
+  });
+};
 
 export const requestGetShiftContracts =
   async (): Promise<GetShiftContractsResponse> => {
@@ -99,10 +115,34 @@ export const requestGetGuardShiftDetail = async ({
 
 export const requestCheckinGuardShift = async ({
   shiftId,
+  imageUrl,
+  imagePath,
 }: {
   shiftId: string;
+  imageUrl?: string;
+  imagePath?: string;
 }): Promise<CheckinGuardShiftResponse> => {
   return await fetcher(`/api/shifts/${encodeURIComponent(shiftId)}/checkin`, {
     method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ imageUrl, imagePath }),
+  });
+};
+
+export const requestGetLatestShiftDate = async (
+  contractId: string,
+): Promise<{ message: string; data: string | null }> => {
+  return fetcher(`/api/shifts/contracts/${encodeURIComponent(contractId)}/latest`, {
+    method: "GET",
+  });
+};
+
+export const requestGetScheduledShiftDates = async (
+  contractId: string,
+): Promise<{ message: string; data: string[] }> => {
+  return fetcher(`/api/shifts/contracts/${encodeURIComponent(contractId)}/scheduled-dates`, {
+    method: "GET",
   });
 };

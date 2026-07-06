@@ -7,16 +7,51 @@ import { createClient } from "@/lib/supabase/server";
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const PHONE_REGEX = /^(0|\+84)[0-9]{9,10}$/;
 const IDENTITY_REGEX = /^(\d{9}|\d{12})$/;
+const NAME_REGEX = /^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u;
 
 export const validateCreateGuardInput = (
   input: createGuardAccountFormInput,
 ): string | null => {
-  if (!input.full_name.trim()) {
+  if (!input.full_name) {
     return "Vui lòng nhập họ và tên.";
+  }
+
+  const nameInput = input.full_name;
+  if (nameInput.startsWith(" ") || nameInput.endsWith(" ")) {
+    return "Họ và tên không được chứa khoảng trắng ở đầu hoặc cuối.";
+  }
+
+  if (/\s{2,}/.test(nameInput)) {
+    return "Họ và tên không được chứa nhiều khoảng trắng liên tiếp.";
+  }
+
+  if (!NAME_REGEX.test(nameInput)) {
+    return "Họ và tên chỉ được chứa chữ cái và khoảng trắng giữa các từ.";
   }
 
   if (!input.date_of_birth) {
     return "Vui lòng chọn ngày sinh.";
+  }
+
+  const dobDate = new Date(input.date_of_birth);
+  const today = new Date();
+  
+  // Reset hours to compare dates only
+  today.setHours(0, 0, 0, 0);
+  dobDate.setHours(0, 0, 0, 0);
+
+  if (dobDate > today) {
+    return "Ngày sinh không được ở tương lai.";
+  }
+
+  let age = today.getFullYear() - dobDate.getFullYear();
+  const monthDiff = today.getMonth() - dobDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) {
+    age--;
+  }
+
+  if (age < 18) {
+    return "Nhân viên bảo vệ phải từ 18 tuổi trở lên.";
   }
 
   if (!input.gender) {
@@ -29,6 +64,13 @@ export const validateCreateGuardInput = (
 
   if (!input.identity_issue_date) {
     return "Vui lòng chọn ngày cấp CCCD/CMND.";
+  }
+
+  const issueDate = new Date(input.identity_issue_date);
+  issueDate.setHours(0, 0, 0, 0);
+
+  if (issueDate > today) {
+    return "Ngày cấp CCCD/CMND không được ở tương lai.";
   }
 
   if (!input.identity_issue_place.trim()) {
@@ -131,8 +173,21 @@ export const checkPhoneNumberExists = async (phone_number: string) => {
 export const validateCreateGuardAccount = (
   input: CreateGuardAccountInput,
 ): string | null => {
-  if (!input.full_name.trim()) {
+  if (!input.full_name) {
     return "Vui lòng nhập họ và tên.";
+  }
+
+  const nameInput = input.full_name;
+  if (nameInput.startsWith(" ") || nameInput.endsWith(" ")) {
+    return "Họ và tên không được chứa khoảng trắng ở đầu hoặc cuối.";
+  }
+
+  if (/\s{2,}/.test(nameInput)) {
+    return "Họ và tên không được chứa nhiều khoảng trắng liên tiếp.";
+  }
+
+  if (!NAME_REGEX.test(nameInput)) {
+    return "Họ và tên chỉ được chứa chữ cái và khoảng trắng giữa các từ.";
   }
 
   if (!input.phone_number.trim()) {
@@ -149,6 +204,14 @@ export const validateCreateGuardAccount = (
 
   if (!EMAIL_REGEX.test(input.email.trim())) {
     return "Email không hợp lệ.";
+  }
+
+  if (!input.identity_id.trim()) {
+    return "Vui lòng nhập số CCCD/CMND.";
+  }
+
+  if (!IDENTITY_REGEX.test(input.identity_id.trim())) {
+    return "CCCD/CMND phải gồm 9 hoặc 12 chữ số.";
   }
 
   return null;

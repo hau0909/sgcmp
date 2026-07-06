@@ -93,6 +93,29 @@ export default function PaymentScreen() {
     }
   }, [paymentId, router]);
 
+  // Polling mechanism to check payment status
+  useEffect(() => {
+    let intervalId: NodeJS.Timeout;
+
+    if (payment && payment.payment_status === "pending") {
+      intervalId = setInterval(async () => {
+        try {
+          const res = await requestGetPaymentById(payment.payment_id);
+          if (res.success && res.data && res.data.payment_status === "completed") {
+            clearInterval(intervalId);
+            router.push(`/billing/payment/${selectedPlan.id}/success?paymentId=${payment.payment_id}`);
+          }
+        } catch (err) {
+          console.error("Lỗi khi kiểm tra trạng thái thanh toán:", err);
+        }
+      }, 5000);
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [payment, router, selectedPlan.id]);
+
   // Calculations
   const basePrice = payment ? payment.amount : selectedPlan.price;
   const vat = 0;
@@ -100,9 +123,9 @@ export default function PaymentScreen() {
   const totalAmount = basePrice;
 
   // Static Bank Details
-  const bankId = "vietcombank";
-  const accountNumber = "012345678910";
-  const accountName = "CONG TY CO PHAN SGCMP VIET NAM";
+  const bankId = "mbbank";
+  const accountNumber = "0852933924";
+  const accountName = "NGUYEN DINH HAU";
   const transactionCode = payment
     ? payment.transaction_code || ""
     : `SGCMP ORD789${selectedPlan.id}`;
@@ -129,30 +152,29 @@ export default function PaymentScreen() {
   };
 
   const handleCompletePayment = async () => {
-    if (!payment) {
-      // Mock fallback: just navigate
-      router.push(`/billing/payment/${selectedPlan.id}/success`);
-      return;
-    }
+    if (!payment) return;
 
     try {
       setIsCompleting(true);
       setErrorMsg(null);
-      const res = await requestUpdatePaymentStatus(
-        payment.payment_id,
-        "completed",
-      );
-      if (res.success) {
-        router.push(`/billing/payment/${selectedPlan.id}/success`);
+      const res = await requestGetPaymentById(payment.payment_id);
+      
+      if (res.success && res.data) {
+        if (res.data.payment_status === "completed") {
+           router.push(`/billing/payment/${selectedPlan.id}/success?paymentId=${payment.payment_id}`);
+        } else {
+           setErrorMsg("Thanh toán chưa được ghi nhận. Vui lòng đợi thêm hoặc kiểm tra lại.");
+        }
       } else {
-        throw new Error("Không thể cập nhật trạng thái giao dịch");
+        throw new Error("Không thể kiểm tra trạng thái giao dịch");
       }
     } catch (err: any) {
-      console.error("Lỗi hoàn tất thanh toán:", err);
+      console.error("Lỗi kiểm tra thanh toán:", err);
       setErrorMsg(
         err.message ||
-          "Đã xảy ra lỗi khi hoàn tất thanh toán. Vui lòng thử lại.",
+          "Đã xảy ra lỗi khi kiểm tra thanh toán. Vui lòng thử lại.",
       );
+    } finally {
       setIsCompleting(false);
     }
   };
@@ -166,6 +188,18 @@ export default function PaymentScreen() {
       <div className="flex-1 flex items-center justify-center p-8 text-xs text-on-surface-variant font-medium font-body min-h-[400px]">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
         <span>Đang tải thông tin giao dịch...</span>
+      </div>
+    );
+  }
+
+  if (payment && payment.payment_status !== "pending") {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-xs text-on-surface-variant font-medium font-body min-h-[400px] gap-3">
+        <div className="text-red-600 font-bold text-base">Thanh toán không khả dụng</div>
+        <p>Giao dịch này đã được hoàn tất hoặc đã bị hủy.</p>
+        <Button onClick={() => router.push("/billing")} variant="outline" className="h-8 text-xs font-bold mt-2">
+          Quay lại Quản lý gói
+        </Button>
       </div>
     );
   }
@@ -294,7 +328,7 @@ export default function PaymentScreen() {
                       Ngân hàng thụ hưởng
                     </span>
                     <p className="text-xs font-bold text-on-surface mt-0.5">
-                      Ngân hàng TMCP Ngoại thương VN (Vietcombank)
+                      Ngân hàng TMCP Quân đội (MBBank)
                     </p>
                   </div>
 
@@ -304,7 +338,7 @@ export default function PaymentScreen() {
                       Tên tài khoản
                     </span>
                     <p className="text-xs font-bold text-on-surface mt-0.5 uppercase">
-                      CÔNG TY CỔ PHẦN SGCMP VIỆT NAM
+                      NGUYEN DINH HAU
                     </p>
                   </div>
 
@@ -392,12 +426,12 @@ export default function PaymentScreen() {
                   {isCompleting ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Đang xác nhận...</span>
+                      <span>Đang kiểm tra...</span>
                     </>
                   ) : (
                     <>
-                      <span>Đã hoàn tất thanh toán</span>
-                      <ArrowRight className="w-3.5 h-3.5" />
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>Đang chờ thanh toán...</span>
                     </>
                   )}
                 </Button>

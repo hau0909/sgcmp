@@ -167,6 +167,101 @@ export const uploadGuardAvatar = async ({
   };
 };
 
+export const uploadGuardFile = async ({
+  user_id,
+  file,
+  type,
+}: {
+  user_id: string;
+  file: File;
+  type: "avatar" | "cccd_front" | "cccd_back";
+}): Promise<UploadGuardAvatarResult> => {
+  const authSupabase = await createClient();
+
+  const {
+    data: { user },
+    error: authError,
+  } = await authSupabase.auth.getUser();
+
+  if (authError || !user) {
+    throw new Error("Bạn chưa đăng nhập.");
+  }
+
+  const { data: currentProfile, error: profileError } = await authSupabase
+    .from("profiles")
+    .select("user_id, role")
+    .eq("user_id", user.id)
+    .single();
+
+  if (profileError || !currentProfile) {
+    throw new Error("Không tìm thấy hồ sơ người dùng hiện tại.");
+  }
+
+  if (currentProfile.role !== "Coordinator") {
+    throw new Error("Bạn không có quyền tải ảnh bảo vệ.");
+  }
+
+  const bucket_name = "profiles";
+
+  const file_extension = file.name.split(".").pop()?.toLowerCase();
+
+  if (!file_extension) {
+    throw new Error("Không xác định được định dạng ảnh.");
+  }
+
+  const allowedExtensions = ["jpg", "jpeg", "png"];
+
+  if (!allowedExtensions.includes(file_extension)) {
+    throw new Error("Chỉ hỗ trợ ảnh JPG, JPEG hoặc PNG.");
+  }
+
+  if (!file.type.startsWith("image/")) {
+    throw new Error("File tải lên không phải là ảnh.");
+  }
+
+  if (type === "avatar" && file.size > 2 * 1024 * 1024) {
+    throw new Error("Ảnh không được vượt quá 2MB.");
+  }
+
+  let file_name = "";
+  let file_path = "";
+
+  if (type === "avatar") {
+    file_name = `avatar-${Date.now()}.${file_extension}`;
+    file_path = `${user_id}/avatar/${file_name}`;
+  } else if (type === "cccd_front") {
+    file_name = `cccd-front-${Date.now()}.${file_extension}`;
+    file_path = `${user_id}/identity/${file_name}`;
+  } else if (type === "cccd_back") {
+    file_name = `cccd-back-${Date.now()}.${file_extension}`;
+    file_path = `${user_id}/identity/${file_name}`;
+  }
+
+  const supabaseAdmin = createAdminClient();
+
+  const { data: upload_data, error: upload_error } = await supabaseAdmin.storage
+    .from(bucket_name)
+    .upload(file_path, file, {
+      contentType: file.type,
+      cacheControl: "3600",
+      upsert: false,
+    });
+
+  if (upload_error) {
+    console.error("Upload Guard File Error:", upload_error);
+    throw new Error(upload_error.message);
+  }
+
+  const {
+    data: { publicUrl: public_url },
+  } = supabaseAdmin.storage.from(bucket_name).getPublicUrl(file_path);
+
+  return {
+    file_path: upload_data.path,
+    public_url,
+  };
+};
+
 export const getAllGuards = async ({
   company_id,
   page,
@@ -217,7 +312,8 @@ export const getAllGuards = async ({
         full_name,
         phone_number,
         avatar_url,
-        email
+        email,
+        status
       )
     `,
       {
@@ -355,3 +451,124 @@ export const getGuardsByIds = async (guardIds: string[]): Promise<Guard[]> => {
 
   return (data as Guard[]) || [];
 };
+
+export const getGuardCountByCompanyId = async (
+  company_id: string,
+): Promise<number> => {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("guards")
+    .select("*", { count: "exact", head: true })
+    .eq("company_id", company_id);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return count ?? 0;
+};
+
+export const getGuardsByContract = async ({
+  contract_id,
+  company_id,
+  page,
+  limit,
+  search,
+}: {
+  contract_id: string;
+  company_id: string;
+  page: number;
+  limit: number;
+  search?: string;
+}): Promise<GetAllGuardsRepositoryResult> => {
+  const supabase = await createClient();
+
+  // 1. Get guard_assigned from the contract
+  const { data: contract, error: contractError } = await supabase
+    .from("contracts")
+    .select("guard_assigned")
+    .eq("contract_id", contract_id)
+    .single();
+
+  if (contractError) {
+    throw new Error(contractError.message);
+  }
+
+  const guardAssigned = contract?.guard_assigned as string[] | null;
+  if (!guardAssigned || guardAssigned.length === 0) {
+    return { guards: [], total: 0 };
+  }
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  let matchedUserIds: string[] | null = null;
+  const keyword = search?.trim();
+
+  if (keyword) {
+    const safeKeyword = keyword.replace(/[,()]/g, " ");
+    const searchPattern = `%${safeKeyword}%`;
+
+    const { data: matchedProfiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .or(
+        `full_name.ilike.${searchPattern},phone_number.ilike.${searchPattern},email.ilike.${searchPattern}`,
+      );
+
+    if (profileError) {
+      throw new Error(profileError.message);
+    }
+
+    matchedUserIds = (matchedProfiles ?? []).map((profile) => profile.user_id);
+
+    if (matchedUserIds.length === 0) {
+      return {
+        guards: [],
+        total: 0,
+      };
+    }
+  }
+
+  let query = supabase
+    .from("guards")
+    .select(
+      `
+      guard_id,
+      profiles!guards_user_id_fkey (
+        user_id,
+        full_name,
+        phone_number,
+        avatar_url,
+        email,
+        status
+      )
+    `,
+      {
+        count: "exact",
+      },
+    )
+    .in("guard_id", guardAssigned)
+    .eq("company_id", company_id)
+    .order("created_at", {
+      ascending: false,
+    })
+    .range(from, to);
+
+  if (matchedUserIds) {
+    query = query.in("user_id", matchedUserIds);
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    guards: (data ?? []) as unknown as GuardListItem[],
+    total: count ?? 0,
+  };
+};
+

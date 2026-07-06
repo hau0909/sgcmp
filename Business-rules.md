@@ -15,3 +15,4 @@ Khi người dùng yêu cầu viết hoặc cập nhật các Quy tắc nghiệp
 | **BR-02** | A business organization (Company) is allowed only one active subscription plan at any given time. |
 | **BR-03** | System features and resources available to a company are determined by the limits and quotas of their active subscription plan. |
 | **BR-04** | Changing, upgrading, or canceling active subscription plans must follow the organization's billing policy and may require support assistance. |
+

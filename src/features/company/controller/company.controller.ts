@@ -11,6 +11,8 @@ import {
   getCompanyActivityImagesService,
   createCompanyPublishRequestService,
   getCompanyPublishRequestsService,
+  getCompanyPublishRequestByIdService,
+  updateCompanyPublishRequestStatusService,
 } from "../service/company.service";
 import {
   CompanyDetailData,
@@ -18,6 +20,7 @@ import {
   UpdateCompanyProfileInput,
   UploadCompanyImageControllerParams,
   CompanyPublishRequestItem,
+  PublishRequestDetailData,
 } from "../types";
 import {
   validateUpdateCompanyProfileInput,
@@ -85,8 +88,6 @@ export const handleUpdateCompanyProfile = async ({
     email: input.email.trim(),
     phone: input.phone.trim(),
     address: input.address.trim(),
-    business_license_no: input.business_license_no.trim(),
-    registration_code: input.registration_code.trim(),
   };
 
   const data = await updateCompanyProfileService({
@@ -172,4 +173,21 @@ export const handleCreateCompanyPublishRequest = async (
 export const handleGetCompanyPublishRequests = async (): Promise<CompanyPublishRequestItem[]> => {
   const data = await getCompanyPublishRequestsService();
   return data;
+};
+
+export const handleGetCompanyPublishRequestById = async (
+  requestId: string,
+): Promise<PublishRequestDetailData | null> => {
+  const data = await getCompanyPublishRequestByIdService(requestId);
+  return data;
+};
+
+export const handleUpdateCompanyPublishRequestStatus = async (
+  requestId: string,
+  status: "APPROVED" | "REJECTED",
+): Promise<void> => {
+  const profile = await getCurrentUserProfileService();
+  const adminId = profile ? profile.user_id : undefined;
+
+  await updateCompanyPublishRequestStatusService(requestId, status, adminId);
 };

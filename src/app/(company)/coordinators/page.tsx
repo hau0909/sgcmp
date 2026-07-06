@@ -1,29 +1,45 @@
-import React from 'react';
-import Link from 'next/link';
-import { Plus } from 'lucide-react';
+"use client";
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CoordinatorTable } from '@/features/coordinator/components/CoordinatorTable';
+import { CoordinatorHeader } from '@/features/coordinator/components/CoordinatorHeader';
+import { CoordinatorFilters } from '@/features/coordinator/components/CoordinatorFilters';
 
 export default function CoordinatorPage() {
+  const router = useRouter();
+  
+  // UI states for filters
+  const [search, setSearch] = useState("");
+  const [status, setStatus] = useState("");
+
+  const handleExport = () => {
+    // TBD in future
+    alert("Export feature coming soon");
+  };
+
+  const handleCreateNew = () => {
+    router.push("/coordinators/add");
+  };
+
   return (
     <div className="flex-1 p-6 lg:p-8 max-w-[1440px] mx-auto w-full space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-outline-variant/60 pb-4">
-        <div>
-          <h2 className="text-2xl font-bold text-primary tracking-tight font-headline">
-            Quản lý Tài khoản Điều phối viên
-          </h2>
-          <p className="text-sm text-on-surface-variant mt-1 font-body">
-            Quản lý và theo dõi quyền truy cập của các điều phối viên trong doanh nghiệp.
-          </p>
-        </div>
-        <Link
-          href="/coordinators/add"
-          className="bg-secondary hover:bg-primary text-on-secondary font-bold py-2 px-4 rounded text-sm transition-colors flex items-center gap-2 w-fit shadow-sm active:scale-95 duration-100"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Tạo tài khoản mới</span>
-        </Link>
-      </div>
       
+      {/* Page Header */}
+      <CoordinatorHeader 
+        onExport={handleExport}
+        onCreateNew={handleCreateNew}
+      />
+      
+      {/* Filters Bar */}
+      <CoordinatorFilters
+        search={search}
+        onSearchChange={setSearch}
+        status={status}
+        onStatusChange={setStatus}
+      />
+      
+      {/* Data Table */}
       <CoordinatorTable />
 
       <div className="h-8" />

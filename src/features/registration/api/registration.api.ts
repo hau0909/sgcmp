@@ -14,11 +14,12 @@ export async function requestGetRegistrationDetail(id: string) {
 
 export async function requestUpdateRegistrationStatus(
   id: string,
-  status: "approved" | "rejected"
+  status: "approved" | "rejected",
+  note?: string
 ) {
   return await fetcher(`/api/registrations/${id}`, {
     method: "PUT",
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, note }),
     headers: {
       "Content-Type": "application/json",
     },

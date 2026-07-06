@@ -95,8 +95,8 @@ export type UpdateCompanyProfileInput = {
   email: string;
   phone: string;
   address: string;
-  business_license_no: string;
-  registration_code: string;
+  business_license_no?: string;
+  registration_code?: string;
 };
 
 export type UpdateCompanyProfileControllerParams = {
@@ -128,4 +128,38 @@ export type CompanyActivityImage = {
 };
 
 export type CompanyPublishRequestItem = PublishRequest;
+
+export interface PublishRequestDetailData {
+  request_id: string;
+  company_id: string;
+  status: "pending" | "approved" | "rejected" | string;
+  note: string | null;
+  requested_at: string;
+  requested_by?: {
+    full_name: string;
+    role: string;
+    phone: string;
+    email: string;
+  };
+  company: {
+    company_name: string;
+    description: string;
+    logo_url?: string;
+    banner_url?: string;
+    email: string;
+    phone: string;
+    address: string;
+    business_license_no: string;
+    registration_code: string;
+    license_file_url?: string;
+    activity_images: string[];
+    services: {
+      service_id: string;
+      name: string;
+      sub_description?: string;
+      description: string;
+      price: number;
+    }[];
+  };
+}
 

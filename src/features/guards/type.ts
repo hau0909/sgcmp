@@ -34,6 +34,8 @@ export type InsertGuardInformationParams = {
   identity_id: string;
   identity_issue_date: string;
   identity_issue_place: string;
+  front_url?: string | null;
+  back_url?: string | null;
 };
 
 export type InsertGuardInformationInput = {
@@ -51,6 +53,8 @@ export type InsertGuardInformationInput = {
   identity_id: string;
   identity_issue_date: string;
   identity_issue_place: string;
+  front_url?: string | null;
+  back_url?: string | null;
 };
 
 export type InsertGuardInformationRepositoryParams =
@@ -73,6 +77,8 @@ export type InsertGuardInformationBody = {
   identity_id?: unknown;
   identity_issue_date?: unknown;
   identity_issue_place?: unknown;
+  front_url?: unknown;
+  back_url?: unknown;
 };
 
 export type CreateGuardAccountBody = {
@@ -120,6 +126,7 @@ export type GuardProfileItem = {
   phone_number: string | null;
   avatar_url: string | null;
   email: string | null;
+  status: string | null;
 };
 
 export type GuardListItem = {

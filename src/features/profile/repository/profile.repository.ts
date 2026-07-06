@@ -9,6 +9,7 @@ export const updateProfile = async (
     gender?: string;
     dateOfBirth?: string;
     address?: string;
+    avatarUrl?: string;
   }
 ): Promise<void> => {
   const supabase = await createClient();
@@ -21,6 +22,7 @@ export const updateProfile = async (
       gender: payload.gender || null,
       date_of_birth: payload.dateOfBirth || null,
       address: payload.address || null,
+      avatar_url: payload.avatarUrl ?? undefined,
     })
     .eq("user_id", userId);
 

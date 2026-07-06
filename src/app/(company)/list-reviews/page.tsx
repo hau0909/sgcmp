@@ -143,7 +143,7 @@ export default function ServiceReviewPage() {
         setTotalReviews(ratingDistributionResponse.data.total_reviews ?? 0);
         setRatingDistribution(
           ratingDistributionResponse.data.rating_distribution ??
-            DEFAULT_RATING_DISTRIBUTION,
+          DEFAULT_RATING_DISTRIBUTION,
         );
       } catch (error) {
         const message =
@@ -217,7 +217,7 @@ export default function ServiceReviewPage() {
         (selectedRating === 5
           ? reviewRating === 5
           : reviewRating >= selectedRating &&
-            reviewRating < selectedRating + 1);
+          reviewRating < selectedRating + 1);
 
       return matchSearch && matchRating;
     });
@@ -479,7 +479,18 @@ export default function ServiceReviewPage() {
                   })
                 )}
 
-                {!isReviewLoading && filteredReviews.length === 0 && (
+                {!isReviewLoading && reviews.length === 0 && (
+                  <tr>
+                    <td
+                      colSpan={4}
+                      className="px-5 py-12 text-center text-sm font-medium text-slate-500"
+                    >
+                      Không có phản hồi từ khách hàng.
+                    </td>
+                  </tr>
+                )}
+
+                {!isReviewLoading && reviews.length > 0 && filteredReviews.length === 0 && (
                   <tr>
                     <td
                       colSpan={4}
