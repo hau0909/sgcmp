@@ -1,8 +1,9 @@
 import { handleGetBookings, handleCreateBooking, handleGetCustomerBookings } from "@/features/booking/controller/booking.controller";
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse, NextRequest, connection } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: NextRequest) {
+  await connection();
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get("companyId") || undefined;
