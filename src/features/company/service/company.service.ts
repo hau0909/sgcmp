@@ -39,6 +39,8 @@ export interface CompanyFilterParams {
   location?: string;
   tags?: string[];
   sortBy?: string;
+  minPrice?: number;
+  maxPrice?: number;
   page?: number;
   limit?: number;
 }
@@ -81,14 +83,17 @@ export const mapDbCompanyToMarketplace = async (
         .filter((n): n is string => !!n)
     : [];
 
-  // Find minimum price among services, default to 0 if none
+  // Find minimum and maximum price among services, default to 0 if none
   let pricePerHour = 0;
+  let maxPrice = 0;
+  const serviceCount = dbCompany.company_services ? dbCompany.company_services.length : 0;
   if (dbCompany.company_services && dbCompany.company_services.length > 0) {
     const prices = dbCompany.company_services
       .map((cs) => cs.price)
       .filter((p) => typeof p === "number");
     if (prices.length > 0) {
       pricePerHour = Math.min(...prices);
+      maxPrice = Math.max(...prices);
     }
   }
 
@@ -110,15 +115,21 @@ export const mapDbCompanyToMarketplace = async (
 
   const location = await formatAddressService(dbCompany.address);
 
+  const logoImg = dbCompany.company_imgs?.find(
+    (img) => img.image_type === "logo",
+  );
+
   return {
     id: dbCompany.company_id,
     name: dbCompany.company_name,
-    logoUrl: undefined,
+    logoUrl: logoImg ? logoImg.image_url : undefined,
     initials,
     rating: dbCompany.rating_average,
     location,
     tags,
     pricePerHour,
+    maxPrice,
+    serviceCount,
     description: dbCompany.description || undefined,
   };
 };
@@ -180,22 +191,36 @@ export const getCompaniesService = async (
     });
   }
 
-  // 4. Tags filter
+  // 4. Tags filter — OR logic: show company if it has ANY of the selected tags
   if (params.tags && params.tags.length > 0) {
     companies = companies.filter((c) =>
-      params.tags!.every((selectedTag) =>
+      params.tags!.some((selectedTag) =>
         c.tags.some((tag) => tag.toLowerCase() === selectedTag.toLowerCase()),
       ),
     );
+  }
+
+  // 4.5. Price range filter
+  if (params.minPrice !== undefined) {
+    companies = companies.filter((c) => c.pricePerHour >= params.minPrice!);
+  }
+  if (params.maxPrice !== undefined) {
+    companies = companies.filter((c) => c.pricePerHour > 0 && c.pricePerHour <= params.maxPrice!);
   }
 
   // 5. Sort operations
   const sortBy = params.sortBy || "Đề xuất";
   if (sortBy === "Đánh giá cao nhất") {
     companies.sort((a, b) => {
-      if (a.rating === null) return 1;
-      if (b.rating === null) return -1;
-      return b.rating - a.rating;
+      const ratingA = a.rating ?? 0;
+      const ratingB = b.rating ?? 0;
+      return ratingB - ratingA;
+    });
+  } else if (sortBy === "Đánh giá thấp nhất") {
+    companies.sort((a, b) => {
+      const ratingA = a.rating ?? 0;
+      const ratingB = b.rating ?? 0;
+      return ratingA - ratingB;
     });
   } else if (sortBy === "Giá thấp nhất") {
     companies.sort((a, b) => a.pricePerHour - b.pricePerHour);

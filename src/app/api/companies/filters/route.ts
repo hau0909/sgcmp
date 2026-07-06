@@ -13,6 +13,12 @@ export async function GET(request: NextRequest) {
     
     const sortBy = searchParams.get("sortBy") || undefined;
     
+    const minPriceVal = searchParams.get("minPrice");
+    const minPrice = minPriceVal ? parseInt(minPriceVal, 10) : undefined;
+
+    const maxPriceVal = searchParams.get("maxPrice");
+    const maxPrice = maxPriceVal ? parseInt(maxPriceVal, 10) : undefined;
+    
     const pageVal = searchParams.get("page");
     const page = pageVal ? parseInt(pageVal, 10) : undefined;
     
@@ -24,6 +30,8 @@ export async function GET(request: NextRequest) {
       location,
       tags,
       sortBy,
+      minPrice,
+      maxPrice,
       page,
       limit,
     });
