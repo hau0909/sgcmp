@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -227,7 +227,11 @@ export default function AdminLayout({
 
           {/* Content Viewport */}
           <main className="flex-1 overflow-y-auto bg-background flex flex-col justify-between">
-            <div className="flex-1">{children}</div>
+            <div className="flex-1">
+              <Suspense fallback={<div className="p-6 text-center text-sm text-on-surface-variant">Đang tải...</div>}>
+                {children}
+              </Suspense>
+            </div>
 
             {/* Shared Admin Footer */}
             <footer className="px-6 py-4 border-t border-outline-variant bg-surface-container-lowest flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">

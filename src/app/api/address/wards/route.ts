@@ -1,7 +1,8 @@
 import { handleGetWards } from "@/features/address";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextRequest, connection } from "next/server";
 
 export async function GET(request: NextRequest) {
+  await connection();
   try {
     const { searchParams } = new URL(request.url);
     const cityIdStr = searchParams.get("cityId");

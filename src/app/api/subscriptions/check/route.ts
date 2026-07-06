@@ -1,7 +1,8 @@
 import { handleCheckCompanySubscription } from "@/features/subscription/controller/subscription.controller";
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 
 export async function GET(request: Request) {
+  await connection();
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get("companyId");

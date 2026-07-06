@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import { handleGetCustomerContractDetail, handleSignContractCustomer, handleCompleteContractCustomer } from "@/features/contract/controller/contract.controller";
 
 interface RouteParams {
@@ -8,6 +8,7 @@ interface RouteParams {
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  await connection();
   try {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get("customerId");
@@ -45,6 +46,7 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
 }
 
 export async function PUT(request: NextRequest, { params }: RouteParams) {
+  await connection();
   try {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get("customerId");

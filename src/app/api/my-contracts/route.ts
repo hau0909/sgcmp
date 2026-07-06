@@ -1,7 +1,8 @@
 import { handleGetCustomerContracts } from "@/features/contract/controller/contract.controller";
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse, NextRequest, connection } from "next/server";
 
 export async function GET(request: NextRequest) {
+  await connection();
   try {
     const { searchParams } = new URL(request.url);
     const customerId = searchParams.get("customerId");

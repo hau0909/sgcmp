@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import { handleGetGuardsByContract } from "@/features/guards/controller/guard.controller";
 
 interface RouteParams {
@@ -8,6 +8,7 @@ interface RouteParams {
 }
 
 export async function GET(request: NextRequest, { params }: RouteParams) {
+  await connection();
   try {
     const { id: contractId } = await params;
 
