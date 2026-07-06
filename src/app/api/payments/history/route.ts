@@ -1,8 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest, NextResponse, connection } from "next/server";
 import { handleGetPaymentHistory } from "@/features/payment/controller/payment.controller";
 import { PaymentStatus } from "@/types/Enum";
 
 export async function GET(request: NextRequest) {
+  await connection();
   try {
     const { searchParams } = new URL(request.url);
     const companyId = searchParams.get("companyId");

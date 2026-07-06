@@ -1,4 +1,4 @@
-import { NextResponse, NextRequest } from "next/server";
+import { NextResponse, NextRequest, connection } from "next/server";
 import {
   handleInsertGuardInformation,
   handleGetAllGuards,
@@ -35,6 +35,7 @@ export const POST = async (request: Request) => {
 };
 
 export async function GET(request: NextRequest) {
+  await connection();
   const { searchParams } = new URL(request.url);
 
   const result = await handleGetAllGuards({

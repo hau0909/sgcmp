@@ -1,7 +1,8 @@
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 import { handleCheckGuardQuota } from "@/features/guards/controller/guard.controller";
 
 export const GET = async () => {
+  await connection();
   try {
     const result = await handleCheckGuardQuota();
     return NextResponse.json(result, {
