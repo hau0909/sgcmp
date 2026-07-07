@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { UserCircle, Camera, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { UserCircle, Camera, Loader2, CheckCircle2, AlertCircle, Pencil, X } from "lucide-react";
 import { requestGetUserProfile } from "@/features/auth/api/auth.api";
 import { requestUpdateProfile } from "../api/profile.api";
 import { useAuthStore } from "@/store/auth.store";
@@ -26,6 +26,7 @@ export default function ProfileForm() {
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [message, setMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
 
   // Form states
@@ -37,6 +38,14 @@ export default function ProfileForm() {
   const [avatarUrl, setAvatarUrl] = useState("");
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Backup states for cancel
+  const [backupFullName, setBackupFullName] = useState("");
+  const [backupPhoneNumber, setBackupPhoneNumber] = useState("");
+  const [backupGender, setBackupGender] = useState("");
+  const [backupDateOfBirth, setBackupDateOfBirth] = useState("");
+  const [backupAddress, setBackupAddress] = useState("");
+  const [backupAvatarUrl, setBackupAvatarUrl] = useState("");
 
   useEffect(() => {
     let active = true;
@@ -73,6 +82,29 @@ export default function ProfileForm() {
       active = false;
     };
   }, [userId]);
+
+  const handleEnableEditing = () => {
+    // Backup current values before editing
+    setBackupFullName(fullName);
+    setBackupPhoneNumber(phoneNumber);
+    setBackupGender(gender);
+    setBackupDateOfBirth(dateOfBirth);
+    setBackupAddress(address);
+    setBackupAvatarUrl(avatarUrl);
+    setIsEditing(true);
+  };
+
+  const handleCancelEditing = () => {
+    // Restore backup values
+    setFullName(backupFullName);
+    setPhoneNumber(backupPhoneNumber);
+    setGender(backupGender);
+    setDateOfBirth(backupDateOfBirth);
+    setAddress(backupAddress);
+    setAvatarUrl(backupAvatarUrl);
+    setAvatarFile(null);
+    setIsEditing(false);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -115,7 +147,18 @@ export default function ProfileForm() {
 
       if (result.success) {
         setMessage({ type: "success", text: "Cập nhật hồ sơ thành công!" });
-        // Optionally update the avatar in Header if it was changed (not implemented here yet)
+        setIsEditing(false);
+        setAvatarFile(null);
+        // Update profile state with new values
+        setProfile((prev) => prev ? {
+          ...prev,
+          full_name: fullName.trim(),
+          phone_number: phoneNumber.trim(),
+          gender,
+          date_of_birth: dateOfBirth,
+          address: address.trim(),
+          avatar_url: finalAvatarUrl,
+        } : prev);
       } else {
         setMessage({ type: "error", text: result.message || "Cập nhật thất bại." });
       }
@@ -125,6 +168,19 @@ export default function ProfileForm() {
       setIsSaving(false);
     }
   };
+
+  const genderLabel = (value: string) => {
+    switch (value) {
+      case "Nam": return "Nam";
+      case "Nữ": return "Nữ";
+      case "Khác": return "Khác";
+      default: return "Chưa cập nhật";
+    }
+  };
+
+  const inputBaseClass = "w-full h-11 px-4 rounded-xl border outline-none transition-all";
+  const inputEditableClass = `${inputBaseClass} border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary`;
+  const inputReadonlyClass = `${inputBaseClass} border-outline-variant/50 bg-surface-container-low text-on-surface cursor-default`;
 
   if (isLoading) {
     return (
@@ -171,7 +227,33 @@ export default function ProfileForm() {
       )}
 
       <div className="bg-white rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
-        <div className="p-6 md:p-8">
+        {/* Header with Edit Button */}
+        <div className="flex items-center justify-between px-6 md:px-8 pt-6 md:pt-8">
+          <h2 className="text-lg font-semibold text-on-surface">Thông tin cá nhân</h2>
+          {!isEditing ? (
+            <button
+              type="button"
+              onClick={handleEnableEditing}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-all cursor-pointer"
+              title="Chỉnh sửa hồ sơ"
+            >
+              <Pencil className="w-4 h-4" />
+              <span>Chỉnh sửa</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleCancelEditing}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container-low hover:bg-surface-container rounded-xl transition-all cursor-pointer"
+              title="Hủy chỉnh sửa"
+            >
+              <X className="w-4 h-4" />
+              <span>Hủy</span>
+            </button>
+          )}
+        </div>
+
+        <div className="p-6 md:p-8 pt-4 md:pt-4">
           <form onSubmit={handleSubmit} className="space-y-8">
             <div className="flex flex-col md:flex-row gap-8 items-start">
               {/* Avatar Section */}
@@ -189,27 +271,31 @@ export default function ProfileForm() {
                       <UserCircle className="w-20 h-20 text-on-surface-variant/50" />
                     )}
                   </div>
-                  <input 
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    ref={fileInputRef}
-                    onChange={(e) => {
-                      const file = e.target.files?.[0];
-                      if (file) {
-                        setAvatarFile(file);
-                        setAvatarUrl(URL.createObjectURL(file));
-                      }
-                    }}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => fileInputRef.current?.click()}
-                    className="absolute bottom-0 right-0 p-2 bg-primary text-on-primary rounded-full shadow-md hover:bg-primary-container hover:text-on-primary-container transition-colors"
-                    title="Cập nhật ảnh đại diện"
-                  >
-                    <Camera className="w-5 h-5" />
-                  </button>
+                  {isEditing && (
+                    <>
+                      <input 
+                        type="file"
+                        accept="image/*"
+                        className="hidden"
+                        ref={fileInputRef}
+                        onChange={(e) => {
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            setAvatarFile(file);
+                            setAvatarUrl(URL.createObjectURL(file));
+                          }
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="absolute bottom-0 right-0 p-2 bg-primary text-on-primary rounded-full shadow-md hover:bg-primary-container hover:text-on-primary-container transition-colors cursor-pointer"
+                        title="Cập nhật ảnh đại diện"
+                      >
+                        <Camera className="w-5 h-5" />
+                      </button>
+                    </>
+                  )}
                 </div>
                 <div className="text-center flex flex-col gap-2 mt-2">
                   <h3 className="font-semibold text-lg text-on-surface">
@@ -233,7 +319,8 @@ export default function ProfileForm() {
                     type="text"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                    readOnly={!isEditing}
+                    className={isEditing ? inputEditableClass : inputReadonlyClass}
                     placeholder="Nhập họ và tên"
                     required
                   />
@@ -255,7 +342,8 @@ export default function ProfileForm() {
                     type="tel"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                    readOnly={!isEditing}
+                    className={isEditing ? inputEditableClass : inputReadonlyClass}
                     placeholder="Nhập số điện thoại"
                     required
                   />
@@ -263,26 +351,44 @@ export default function ProfileForm() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-on-surface">Giới tính</label>
-                  <select
-                    value={gender}
-                    onChange={(e) => setGender(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-                  >
-                    <option value="">Chọn giới tính</option>
-                    <option value="Nam">Nam</option>
-                    <option value="Nữ">Nữ</option>
-                    <option value="Khác">Khác</option>
-                  </select>
+                  {isEditing ? (
+                    <select
+                      value={gender}
+                      onChange={(e) => setGender(e.target.value)}
+                      className={inputEditableClass}
+                    >
+                      <option value="">Chọn giới tính</option>
+                      <option value="Nam">Nam</option>
+                      <option value="Nữ">Nữ</option>
+                      <option value="Khác">Khác</option>
+                    </select>
+                  ) : (
+                    <input
+                      type="text"
+                      value={genderLabel(gender)}
+                      readOnly
+                      className={inputReadonlyClass}
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-on-surface">Ngày sinh</label>
-                  <input
-                    type="date"
-                    value={dateOfBirth}
-                    onChange={(e) => setDateOfBirth(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
-                  />
+                  {isEditing ? (
+                    <input
+                      type="date"
+                      value={dateOfBirth}
+                      onChange={(e) => setDateOfBirth(e.target.value)}
+                      className={inputEditableClass}
+                    />
+                  ) : (
+                    <input
+                      type="text"
+                      value={dateOfBirth ? new Date(dateOfBirth).toLocaleDateString("vi-VN") : "Chưa cập nhật"}
+                      readOnly
+                      className={inputReadonlyClass}
+                    />
+                  )}
                 </div>
 
                 <div className="space-y-2 md:col-span-2">
@@ -291,23 +397,34 @@ export default function ProfileForm() {
                     type="text"
                     value={address}
                     onChange={(e) => setAddress(e.target.value)}
-                    className="w-full h-11 px-4 rounded-xl border border-outline-variant bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary outline-none transition-all"
+                    readOnly={!isEditing}
+                    className={isEditing ? inputEditableClass : inputReadonlyClass}
                     placeholder="Nhập địa chỉ"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="flex justify-end pt-4 border-t border-outline-variant/30">
-              <button
-                type="submit"
-                disabled={isSaving}
-                className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-medium shadow-sm hover:bg-primary/90 hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed"
-              >
-                {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
-              </button>
-            </div>
+            {/* Action Buttons - Only visible in edit mode */}
+            {isEditing && (
+              <div className="flex justify-end gap-3 pt-4 border-t border-outline-variant/30">
+                <button
+                  type="button"
+                  onClick={handleCancelEditing}
+                  className="px-6 py-2.5 text-on-surface-variant bg-surface-container-low hover:bg-surface-container rounded-xl font-medium transition-all cursor-pointer"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSaving}
+                  className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-medium shadow-sm hover:bg-primary/90 hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                </button>
+              </div>
+            )}
           </form>
         </div>
       </div>
