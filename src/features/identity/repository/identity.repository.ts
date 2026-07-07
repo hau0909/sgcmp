@@ -50,7 +50,9 @@ export const getIdentityByUserId = async (
       `
       identity_id,
       issue_date,
-      issue_place
+      issue_place,
+      front_url,
+      back_url
     `,
     )
     .eq("user_id", user_id)
