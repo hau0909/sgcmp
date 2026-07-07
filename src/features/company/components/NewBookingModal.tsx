@@ -234,8 +234,7 @@ export default function NewBookingModal({
     if (!selectedCity) newErrors.selectedCity = "Vui lòng chọn Tỉnh/Thành phố";
     if (!selectedWard) newErrors.selectedWard = "Vui lòng chọn Quận/Huyện/Phường/Xã";
     if (!specificAddress.trim()) newErrors.specificAddress = "Vui lòng nhập địa chỉ cụ thể";
-    if (!address.trim())
-      newErrors.address = "Vui lòng nhập tên vị trí cần bảo vệ";
+
     if (!startDate) newErrors.startDate = "Vui lòng chọn ngày bắt đầu";
     if (!endDate) newErrors.endDate = "Vui lòng chọn ngày kết thúc";
 
@@ -292,7 +291,7 @@ export default function NewBookingModal({
     try {
       const cityName = cities.find(c => c.city_id.toString() === selectedCity)?.city_name || "";
       const wardName = wards.find(w => w.ward_id.toString() === selectedWard)?.ward_name || "";
-      const fullAddress = [specificAddress, wardName, cityName, address].filter(Boolean).join(", ");
+      const fullAddress = [specificAddress, wardName, cityName].filter(Boolean).join(", ");
 
       await requestCreateBooking({
         company_id: companyId,
@@ -572,30 +571,7 @@ export default function NewBookingModal({
                       )}
                     </div>
 
-                    <div className="flex flex-col gap-1">
-                      <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <MapPin className="w-3.5 h-3.5 text-primary" /> Tên vị trí cần bảo vệ <span className="text-error">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        value={address}
-                        onChange={(e) => {
-                          setAddress(e.target.value);
-                          if (errors.address)
-                            setErrors((prev) => ({ ...prev, address: "" }));
-                        }}
-                        placeholder="Tòa nhà A, Khu công nghiệp B..."
-                        className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${errors.address
-                          ? "border-error ring-1 ring-error"
-                          : "border-outline-variant"
-                          }`}
-                      />
-                      {errors.address && (
-                        <p className="text-xs text-error font-medium flex items-center gap-1 mt-1">
-                          <AlertCircle className="w-3.5 h-3.5" /> {errors.address}
-                        </p>
-                      )}
-                    </div>
+
                   </div>
                 </div>
 
