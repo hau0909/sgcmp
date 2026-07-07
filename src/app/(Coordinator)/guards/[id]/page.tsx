@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, CheckCircle, Edit, Mail, Phone, User, UserRound, X } from "lucide-react";
+import { ArrowLeft, CheckCircle, Edit, Mail, Phone, User, UserRound, X, IdCard } from "lucide-react";
 
 import { requestGetGuardDetail, requestUploadGuardFile, requestUpdateGuardProfile } from "@/features/guards/api/guard.api";
 import type { GuardDetail, GuardDetailProfile, gender } from "@/features/guards/type";
@@ -740,7 +740,7 @@ export default function GuardDetailPage() {
 
           <section className="rounded-md border border-slate-300 bg-white p-5 shadow-sm">
             <div className="mb-4 flex items-center gap-2 border-b border-slate-300 pb-3">
-              <User className="h-4 w-4 text-blue-800" />
+              <IdCard className="h-4 w-4 text-blue-800" />
 
               <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
                 Hình ảnh CCCD/CMND
