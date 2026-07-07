@@ -1,12 +1,16 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Loader2 } from "lucide-react";
+import { CheckCircle2, Loader2, AlertTriangle } from "lucide-react";
 import { Plan } from "@/types/Plan";
+import { BankAccount } from "@/types/BankAccount";
 import { CurrentPlanWithSubscription } from "../types";
 import { formatPrice } from "@/utils/formatPrice";
-import { requestCreatePayment } from "@/features/payment/api/payment.api";
+import {
+  requestCreatePayment,
+  requestGetActiveBankAccount,
+} from "@/features/payment/api/payment.api";
 
 export default function SubscriptionPlans({
   plans,
@@ -20,21 +24,47 @@ export default function SubscriptionPlans({
   const router = useRouter();
   const [loadingPlanId, setLoadingPlanId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [activeBankAccount, setActiveBankAccount] = useState<
+    BankAccount | null | undefined
+  >(undefined); // undefined = loading
+
+  // Fetch active bank account to check payment availability
+  useEffect(() => {
+    requestGetActiveBankAccount()
+      .then((res) => {
+        setActiveBankAccount(res.success ? res.data : null);
+      })
+      .catch(() => setActiveBankAccount(null));
+  }, []);
+
+  const paymentUnavailable = activeBankAccount === null; // null = loaded but no active account
+  const paymentLoading = activeBankAccount === undefined; // undefined = still fetching
 
   const handleSubscribe = async (planId: number) => {
+    if (paymentUnavailable) return;
+
     try {
       setLoadingPlanId(planId);
       setErrorMsg(null);
-      const res = await requestCreatePayment(companyId, planId, "bank_transfer");
+      const res = await requestCreatePayment(
+        companyId,
+        planId,
+        "bank_transfer",
+      );
 
       if (res.success && res.data) {
-        router.push(`/billing/payment/${planId}?paymentId=${res.data.payment_id}`);
+        router.push(
+          `/billing/payment/${planId}?paymentId=${res.data.payment_id}`,
+        );
       } else {
         throw new Error("Không thể khởi tạo giao dịch thanh toán");
       }
     } catch (error: unknown) {
       console.error("Lỗi đăng ký gói:", error);
-      const message = error instanceof Error ? error.message : "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.";
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Đã xảy ra lỗi hệ thống, vui lòng thử lại sau.";
       setErrorMsg(message);
       setLoadingPlanId(null);
     }
@@ -54,10 +84,26 @@ export default function SubscriptionPlans({
           </p>
         )}
       </div>
-      
+
+      {/* Payment unavailable banner */}
+      {paymentUnavailable && (
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+          <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <p className="text-sm text-amber-700 font-medium">
+            <span className="font-bold">
+              Thanh toán gói hiện không khả dụng.
+            </span>{" "}
+            Hệ thống chưa có tài khoản ngân hàng nào được kích hoạt. Vui lòng
+            liên hệ quản trị viên để được hỗ trợ.
+          </p>
+        </div>
+      )}
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pt-2">
         {plans.map((plan: Plan) => {
-          const isCurrent = currentPlan ? plan?.plan_id === currentPlanId : false;
+          const isCurrent = currentPlan
+            ? plan?.plan_id === currentPlanId
+            : false;
           const showRegister = currentPlan === null;
 
           return (
@@ -96,24 +142,41 @@ export default function SubscriptionPlans({
                 </span>
               </div>
 
-              <ul className="space-y-3 mb-8 flex-1">
+              <ul className="space-y-3 mb-8 fle-1">
                 {(() => {
                   let parsedFeatures: string[] = [];
-                  if (Array.isArray(plan?.features)) {
-                    parsedFeatures = plan.features;
-                  } else if (typeof plan?.features === "string") {
-                    try {
-                      const parsed = JSON.parse(plan.features);
-                      if (Array.isArray(parsed)) {
-                        parsedFeatures = parsed;
+                  if (plan?.features) {
+                    if (Array.isArray(plan.features)) {
+                      parsedFeatures = plan.features;
+                    } else if (typeof plan.features === "object") {
+                      // Handle jsonb object like {"features": ["..."]}
+                      const obj = plan.features as any;
+                      if (Array.isArray(obj.features)) {
+                        parsedFeatures = obj.features;
                       } else {
-                        parsedFeatures = [plan.features];
+                        parsedFeatures = [];
                       }
-                    } catch {
-                      parsedFeatures = (plan.features as string)
-                        .split(",")
-                        .map((f) => f.trim())
-                        .filter(Boolean);
+                    } else if (typeof plan.features === "string") {
+                      const featuresStr = plan.features as unknown as string;
+                      try {
+                        const parsed = JSON.parse(featuresStr);
+                        if (Array.isArray(parsed)) {
+                          parsedFeatures = parsed;
+                        } else if (
+                          parsed &&
+                          typeof parsed === "object" &&
+                          Array.isArray(parsed.features)
+                        ) {
+                          parsedFeatures = parsed.features;
+                        } else {
+                          parsedFeatures = [featuresStr];
+                        }
+                      } catch {
+                        parsedFeatures = featuresStr
+                          .split(",")
+                          .map((f) => f.trim())
+                          .filter(Boolean);
+                      }
                     }
                   }
                   return parsedFeatures.map((feature, index) => (
@@ -130,6 +193,31 @@ export default function SubscriptionPlans({
                     </li>
                   ));
                 })()}
+
+                {plan.max_coordinators !== null && (
+                  <li
+                    className={`flex items-start gap-2.5 text-xs text-on-surface-variant font-semibold
+                      ${isCurrent ? "text-on-surface/80" : ""}`}
+                  >
+                    <CheckCircle2
+                      className={`w-4 h-4 shrink-0 mt-0.5
+                        ${isCurrent ? "text-primary" : "text-secondary"}`}
+                    />
+                    <span>Tối đa {plan.max_coordinators} điều phối viên</span>
+                  </li>
+                )}
+                {plan.max_guards !== null && (
+                  <li
+                    className={`flex items-start gap-2.5 text-xs text-on-surface-variant font-semibold
+                      ${isCurrent ? "text-on-surface/80" : ""}`}
+                  >
+                    <CheckCircle2
+                      className={`w-4 h-4 shrink-0 mt-0.5
+                        ${isCurrent ? "text-primary" : "text-secondary"}`}
+                    />
+                    <span>Tối đa {plan.max_guards} bảo vệ</span>
+                  </li>
+                )}
               </ul>
 
               {isCurrent ? (
@@ -140,20 +228,38 @@ export default function SubscriptionPlans({
                   Đang sử dụng
                 </button>
               ) : showRegister ? (
-                <button
-                  onClick={() => handleSubscribe(plan.plan_id)}
-                  disabled={loadingPlanId !== null}
-                  className="w-full bg-primary hover:bg-primary-container text-on-primary font-bold py-2 rounded text-xs transition-colors shadow-sm active:scale-98 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
-                >
-                  {loadingPlanId === plan.plan_id ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Đang xử lý...</span>
-                    </>
-                  ) : (
-                    <span>Đăng ký ngay</span>
-                  )}
-                </button>
+                paymentLoading ? (
+                  <button
+                    disabled
+                    className="w-full bg-primary/60 text-on-primary font-bold py-2 rounded text-xs flex items-center justify-center gap-1.5 cursor-not-allowed"
+                  >
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    Đang tải...
+                  </button>
+                ) : paymentUnavailable ? (
+                  <button
+                    disabled
+                    title="Thanh toán hiện không khả dụng. Liên hệ admin."
+                    className="w-full bg-surface-container-low text-on-surface-variant/70 font-bold py-2 rounded text-xs cursor-not-allowed select-none border border-outline-variant/30 text-center"
+                  >
+                    Không khả dụng
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleSubscribe(plan.plan_id)}
+                    disabled={loadingPlanId !== null}
+                    className="w-full bg-primary hover:bg-primary-container text-on-primary font-bold py-2 rounded text-xs transition-colors shadow-sm active:scale-98 cursor-pointer flex items-center justify-center gap-1.5 disabled:opacity-70 disabled:cursor-not-allowed"
+                  >
+                    {loadingPlanId === plan.plan_id ? (
+                      <>
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                        <span>Đang xử lý...</span>
+                      </>
+                    ) : (
+                      <span>Đăng ký ngay</span>
+                    )}
+                  </button>
+                )
               ) : (
                 <button className="w-full bg-primary hover:bg-primary-container text-on-primary font-bold py-2 rounded text-xs transition-colors shadow-sm active:scale-98 cursor-pointer">
                   Liên Hệ

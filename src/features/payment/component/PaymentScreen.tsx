@@ -15,43 +15,35 @@ import {
 } from "lucide-react";
 import { formatPrice } from "@/utils/formatPrice";
 import { Button } from "@/components/ui/button";
-import { LANDING_PLANS } from "./plans-data";
-import { Payment } from "@/types/Payment";
 import {
   requestUpdatePaymentStatus,
   requestGetPaymentById,
+  requestGetActiveBankAccount,
 } from "@/features/payment/api/payment.api";
+import { requestGetAllPlans } from "@/features/subscription/api/subscription.api";
+import { Plan } from "@/types/Plan";
 
-interface MockPlan {
-  id: string;
-  name: string;
-  duration: string;
-  price: number;
-  features: string[];
-}
-
-const getSelectedPlan = (id: string): MockPlan => {
-  const normId = String(id).toLowerCase();
-
-  // Find in LANDING_PLANS
-  const found =
-    LANDING_PLANS.find(
-      (p) =>
-        p.id === normId ||
-        normId.includes(p.id) ||
-        p.id.includes(normId) ||
-        (normId === "1" && p.id === "co-ban") ||
-        (normId === "2" && p.id === "chuyen-nghiep") ||
-        (normId === "3" && p.id === "doanh-nghiep"),
-    ) || LANDING_PLANS[2]; // Default to Gói Doanh nghiệp
-
-  return {
-    id: found.id,
-    name: `Gói ${found.name}`,
-    duration: "Gói dịch vụ 1 tháng",
-    price: found.priceVal,
-    features: found.features,
-  };
+// Function to safely parse features from JSONB or string
+const parseFeatures = (featuresData: any): string[] => {
+  if (!featuresData) return [];
+  if (Array.isArray(featuresData)) return featuresData;
+  if (typeof featuresData === "object") {
+    if (Array.isArray(featuresData.features)) return featuresData.features;
+    return [];
+  }
+  if (typeof featuresData === "string") {
+    try {
+      const parsed = JSON.parse(featuresData);
+      if (Array.isArray(parsed)) return parsed;
+      if (parsed && typeof parsed === "object" && Array.isArray(parsed.features)) {
+        return parsed.features;
+      }
+      return [featuresData];
+    } catch {
+      return featuresData.split(",").map((f) => f.trim()).filter(Boolean);
+    }
+  }
+  return [];
 };
 
 export default function PaymentScreen() {
@@ -64,9 +56,29 @@ export default function PaymentScreen() {
 
   const [payment, setPayment] = useState<Payment | null>(null);
   const [loadingPayment, setLoadingPayment] = useState(false);
+  const [activeBankAccount, setActiveBankAccount] = useState<BankAccount | null>(null);
+  const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
+  const [loadingPlan, setLoadingPlan] = useState(true);
 
-  // Find plan by ID or default to Gói Doanh nghiệp
-  const selectedPlan = getSelectedPlan(planId);
+  // Fetch active bank account and plans on mount
+  useEffect(() => {
+    requestGetActiveBankAccount()
+      .then((res) => {
+        if (res.success) setActiveBankAccount(res.data);
+      })
+      .catch((err) => console.error("Error loading active bank account:", err));
+      
+    requestGetAllPlans()
+      .then((plans) => {
+        const found = plans.find((p) => p.plan_id.toString() === planId);
+        if (found) setSelectedPlan(found);
+        setLoadingPlan(false);
+      })
+      .catch((err) => {
+        console.error("Error loading plans:", err);
+        setLoadingPlan(false);
+      });
+  }, [planId]);
 
   useEffect(() => {
     if (paymentId) {
@@ -103,7 +115,7 @@ export default function PaymentScreen() {
           const res = await requestGetPaymentById(payment.payment_id);
           if (res.success && res.data && res.data.payment_status === "completed") {
             clearInterval(intervalId);
-            router.push(`/billing/payment/${selectedPlan.id}/success?paymentId=${payment.payment_id}`);
+            router.push(`/billing/payment/${selectedPlan?.plan_id}/success?paymentId=${payment.payment_id}`);
           }
         } catch (err) {
           console.error("Lỗi khi kiểm tra trạng thái thanh toán:", err);
@@ -114,21 +126,21 @@ export default function PaymentScreen() {
     return () => {
       if (intervalId) clearInterval(intervalId);
     };
-  }, [payment, router, selectedPlan.id]);
+  }, [payment, router, selectedPlan?.plan_id]);
 
   // Calculations
-  const basePrice = payment ? payment.amount : selectedPlan.price;
+  const basePrice = payment ? payment.amount : (selectedPlan?.price ?? 0);
   const vat = 0;
   const discount = 0;
   const totalAmount = basePrice;
 
-  // Static Bank Details
-  const bankId = "mbbank";
-  const accountNumber = "0852933924";
-  const accountName = "NGUYEN DINH HAU";
+  // Bank Details — fetched from active bank account
+  const bankId = activeBankAccount?.bank_code ?? "";
+  const accountNumber = activeBankAccount?.account_number ?? "";
+  const accountName = activeBankAccount?.account_name ?? "";
   const transactionCode = payment
     ? payment.transaction_code || ""
-    : `SGCMP ORD789${selectedPlan.id}`;
+    : `SGCMP ORD789${selectedPlan?.plan_id ?? "0"}`;
 
   // Copy states
   const [copiedAccount, setCopiedAccount] = useState(false);
@@ -161,7 +173,7 @@ export default function PaymentScreen() {
       
       if (res.success && res.data) {
         if (res.data.payment_status === "completed") {
-           router.push(`/billing/payment/${selectedPlan.id}/success?paymentId=${payment.payment_id}`);
+           router.push(`/billing/payment/${selectedPlan?.plan_id}/success?paymentId=${payment.payment_id}`);
         } else {
            setErrorMsg("Thanh toán chưa được ghi nhận. Vui lòng đợi thêm hoặc kiểm tra lại.");
         }
@@ -183,11 +195,22 @@ export default function PaymentScreen() {
   // Bank name: VCB, Template: compact2
   const qrCodeUrl = `https://img.vietqr.io/image/${bankId}-${accountNumber}-compact2.png?amount=${totalAmount}&addInfo=${encodeURIComponent(transactionCode)}&accountName=${encodeURIComponent(accountName)}`;
 
-  if (paymentId && loadingPayment && !payment) {
+  if (paymentId && loadingPayment && !payment || loadingPlan) {
     return (
       <div className="flex-1 flex items-center justify-center p-8 text-xs text-on-surface-variant font-medium font-body min-h-[400px]">
         <Loader2 className="w-5 h-5 animate-spin mr-2" />
         <span>Đang tải thông tin giao dịch...</span>
+      </div>
+    );
+  }
+
+  if (!selectedPlan) {
+    return (
+      <div className="flex-1 flex flex-col items-center justify-center p-8 text-xs text-on-surface-variant font-medium font-body min-h-[400px] gap-3">
+        <div className="text-red-600 font-bold text-base">Gói dịch vụ không tồn tại</div>
+        <Button onClick={() => router.push("/billing")} variant="outline" className="h-8 text-xs font-bold mt-2">
+          Quay lại Quản lý gói
+        </Button>
       </div>
     );
   }
@@ -241,10 +264,10 @@ export default function PaymentScreen() {
               <div className="flex justify-between items-start mb-3">
                 <div>
                   <h3 className="text-xs font-bold text-on-surface">
-                    {selectedPlan.name}
+                    {selectedPlan.plan_name}
                   </h3>
                   <p className="text-[11px] text-on-surface-variant mt-0.5 font-medium">
-                    {selectedPlan.duration}
+                    Gói dịch vụ 1 tháng
                   </p>
                 </div>
                 <span className="text-xs font-bold text-primary">
@@ -253,12 +276,24 @@ export default function PaymentScreen() {
               </div>
 
               <ul className="text-[11px] text-on-surface-variant flex flex-col gap-1.5 border-t border-outline-variant/60 pt-3 font-semibold">
-                {selectedPlan.features.map((feature, idx) => (
+                {parseFeatures(selectedPlan.features).map((feature, idx) => (
                   <li key={idx} className="flex items-center gap-2">
                     <CheckCircle2 className="w-3.5 h-3.5 text-secondary shrink-0" />
                     <span>{feature}</span>
                   </li>
                 ))}
+                {selectedPlan.max_coordinators !== null && (
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-secondary shrink-0" />
+                    <span>Tối đa {selectedPlan.max_coordinators} điều phối viên</span>
+                  </li>
+                )}
+                {selectedPlan.max_guards !== null && (
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-secondary shrink-0" />
+                    <span>Tối đa {selectedPlan.max_guards} bảo vệ</span>
+                  </li>
+                )}
               </ul>
             </div>
           </div>
