@@ -7,7 +7,7 @@ import type {
   GetAllGuardsResponse,
   GetGuardDetailResponse,
   GetAllGuardsParams,
-  GuardListPaginatedData,
+  UpdateGuardAccountInput
 } from "../type";
 
 interface ApiResponse<T> {
@@ -164,3 +164,14 @@ export const requestCheckGuardQuota = async (): Promise<{
     method: "GET",
   });
 };
+
+export const requestUpdateGuardProfile = async (guardId: string,
+  input: UpdateGuardAccountInput) => {
+  return fetcher(`/api/guard/${guardId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+}

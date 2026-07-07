@@ -14,6 +14,7 @@ import {
   uploadGuardFileService,
   checkGuardQuotaService,
   getGuardsByContractService,
+  updateGuardDetailService,
 } from "../service/guard.service";
 
 import { getIdentityByUserIdService } from "@/features/identity/service/identity.service";
@@ -24,6 +25,10 @@ import {
   checkGuardExistsByUserId,
   checkPhoneNumberExists,
   checkEmailExists,
+  validateUpdateGuardInput,
+  checkEmailExistsForOtherUser,
+  checkPhoneNumberExistsForOtherUser,
+  checkIdentityExistsForOtherUser,
 } from "../validator/guard.validate";
 
 import type {
@@ -582,6 +587,135 @@ export const handleGetGuardDetail = async (
           ? error.message
           : "Không thể lấy thông tin bảo vệ",
       data: null,
+    };
+  }
+};
+
+export const handleUpdateGuardDetail = async (
+  guard_id: string,
+  params: {
+    user_id: string;
+    full_name: string;
+    phone_number: string;
+    email: string;
+    date_of_birth: string;
+    gender: string;
+    address: string;
+    identity_id: string;
+    identity_issue_date: string;
+    identity_issue_place: string;
+    avatar_url?: string | null;
+    front_url?: string | null;
+    back_url?: string | null;
+  }
+): Promise<{ success: boolean; message: string }> => {
+  try {
+    if (!guard_id.trim()) {
+      return { success: false, message: "Không tìm thấy mã bảo vệ" };
+    }
+
+    const profile = await getCurrentUserProfileService();
+
+    if (!profile) {
+      return {
+        success: false,
+        message: "Bạn chưa đăng nhập",
+      };
+    }
+
+    let companyId: string;
+
+    if (profile.role === "company-admin") {
+      const companyIdResult = await getCompanyByOwnerIdService(profile.user_id);
+
+      if (!companyIdResult) {
+        return {
+          success: false,
+          message: "Không tìm thấy công ty của tài khoản",
+        };
+      }
+
+      companyId = companyIdResult;
+    } else if (profile.role === "Coordinator") {
+      const coordinatorCompanyId = await getCoordinatorByCompanyIdService(
+        profile.user_id,
+      );
+
+      if (!coordinatorCompanyId) {
+        return {
+          success: false,
+          message: "Điều phối viên chưa được liên kết với công ty",
+        };
+      }
+
+      companyId = coordinatorCompanyId;
+    } else {
+      return {
+        success: false,
+        message: "Bạn không có quyền cập nhật thông tin bảo vệ",
+      };
+    }
+
+    const guard = await getGuardDetailService(guard_id, companyId);
+
+    if (!guard) {
+      return {
+        success: false,
+        message: "Không tìm thấy hồ sơ bảo vệ",
+      };
+    }
+
+    const userIdToUse = params.user_id || guard.user_id;
+
+    // Validate inputs
+    const validate_error = validateUpdateGuardInput(params);
+    if (validate_error) {
+      return {
+        success: false,
+        message: validate_error,
+      };
+    }
+
+    // Check duplicates for other users
+    const email_exists = await checkEmailExistsForOtherUser(params.email, userIdToUse);
+    if (email_exists) {
+      return {
+        success: false,
+        message: "Email này đã được sử dụng bởi tài khoản khác.",
+      };
+    }
+
+    const phone_exists = await checkPhoneNumberExistsForOtherUser(params.phone_number, userIdToUse);
+    if (phone_exists) {
+      return {
+        success: false,
+        message: "Số điện thoại này đã được sử dụng bởi tài khoản khác.",
+      };
+    }
+
+    const identity_exists = await checkIdentityExistsForOtherUser(params.identity_id, userIdToUse);
+    if (identity_exists) {
+      return {
+        success: false,
+        message: "Số CCCD/CMND đã được sử dụng bởi tài khoản khác.",
+      };
+    }
+
+    await updateGuardDetailService(guard_id, companyId, userIdToUse, params);
+
+    return {
+      success: true,
+      message: "Cập nhật thông tin bảo vệ thành công",
+    };
+  } catch (error: unknown) {
+    console.error("handleUpdateGuardDetail error:", error);
+
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Không thể cập nhật thông tin bảo vệ",
     };
   }
 };

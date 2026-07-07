@@ -228,3 +228,21 @@ export type RouteContext = {
     guardId: string;
   }>;
 };
+
+export type UpdateGuardAccountInput = {
+  user_id?: string;
+  full_name?: string;
+  email?: string;
+  phone_number?: string;
+  gender?: string;
+  date_of_birth?: string;
+  address?: string;
+  avatar_url?: string | null;
+
+  identity_id?: string;
+  identity_issue_date?: string;
+  identity_issue_place?: string;
+
+  front_url?: string | null;
+  back_url?: string | null;
+};
