@@ -22,6 +22,8 @@ import {
 } from "@/features/payment/api/payment.api";
 import { requestGetAllPlans } from "@/features/subscription/api/subscription.api";
 import { Plan } from "@/types/Plan";
+import { Payment } from "@/types/Payment";
+import { BankAccount } from "@/types/BankAccount";
 
 // Function to safely parse features from JSONB or string
 const parseFeatures = (featuresData: any): string[] => {
