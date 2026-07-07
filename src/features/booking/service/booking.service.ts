@@ -1,5 +1,5 @@
 import { Booking, BookingWithCustomerProfile, BookingStatus } from "../types";
-import { getBookings, getBookingDetail, getBookingById, createBooking, updateBookingStatusAndPrice, getCustomerBookings, getActiveBookingsByAddress } from "../repository/booking.repository";
+import { getBookings, getBookingDetail, getBookingById, createBooking, updateBookingStatusAndPrice, getCustomerBookings, getActiveBookingsByAddressAndService } from "../repository/booking.repository";
 import { formatAddressService } from "@/features/address/service/address.service";
 
 
@@ -113,7 +113,8 @@ export const getBookingByIdService = async (
 };
 
 export const createBookingService = async (
-  bookingData: Omit<Booking, "booking_id" | "created_at" | "updated_at" | "quoted_price" | "status" | "customer_name" | "service_name">
+  bookingData: Omit<Booking, "booking_id" | "created_at" | "updated_at" | "quoted_price" | "status" | "customer_name" | "service_name">,
+  forceCreate: boolean = false
 ): Promise<Booking> => {
   if (!bookingData.customer_id) throw new Error("Yêu cầu customer_id.");
   if (!bookingData.company_id) throw new Error("Yêu cầu company_id.");
@@ -129,7 +130,7 @@ export const createBookingService = async (
     throw new Error("Vui lòng chọn ít nhất một ngày làm việc trong tuần.");
   }
 
-  const activeBookings = await getActiveBookingsByAddress(bookingData.address);
+  const activeBookings = await getActiveBookingsByAddressAndService(bookingData.address, bookingData.service_id);
 
   const checkTimeOverlap = (slot1: string, slot2: string) => {
     const [s1, e1] = slot1.split(" - ");
@@ -152,6 +153,8 @@ export const createBookingService = async (
     return new Date(start1) <= new Date(end2) && new Date(end1) >= new Date(start2);
   };
 
+  const overlappingBookings = [];
+
   for (const existing of activeBookings) {
     if (!checkDateOverlap(bookingData.start_date, bookingData.end_date, existing.start_date, existing.end_date)) {
       continue;
@@ -169,8 +172,15 @@ export const createBookingService = async (
     );
 
     if (timeOverlap) {
-      throw new Error("Địa chỉ này đã có lịch đặt dịch vụ trùng ngày và khung giờ");
+      overlappingBookings.push(existing);
     }
+  }
+
+  if (overlappingBookings.length > 0 && !forceCreate) {
+    const error: any = new Error("Địa chỉ này đã có lịch đặt dịch vụ trùng ngày và khung giờ");
+    error.errorType = "OVERLAP";
+    error.overlaps = overlappingBookings;
+    throw error;
   }
 
   return await createBooking(bookingData);

@@ -19,6 +19,8 @@ import {
 } from "lucide-react";
 import { CompanyServiceData } from "../types";
 import { requestCreateBooking } from "@/features/booking/api/booking.api";
+import { requestGetCities, requestGetWards } from "@/features/address/api/address.api";
+import { City, Ward } from "@/features/address/types";
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -28,16 +30,7 @@ interface NewBookingModalProps {
   services: CompanyServiceData[];
 }
 
-const DAYS_OF_WEEK = [
-  { value: "Monday", label: "T2" },
-  { value: "Tuesday", label: "T3" },
-  { value: "Wednesday", label: "T4" },
-  { value: "Thursday", label: "T5" },
-  { value: "Friday", label: "T6" },
-  { value: "Saturday", label: "T7" },
-  { value: "Sunday", label: "CN" },
-];
-
+const DAYS_OF_WEEK = [{ value: "Monday", label: "T2" }, { value: "Tuesday", label: "T3" }, { value: "Wednesday", label: "T4" }, { value: "Thursday", label: "T5" }, { value: "Friday", label: "T6" }, { value: "Saturday", label: "T7" }, { value: "Sunday", label: "CN" },];
 export default function NewBookingModal({
   isOpen,
   onClose,
@@ -51,6 +44,15 @@ export default function NewBookingModal({
   const [endDate, setEndDate] = useState("");
   const [guardsPerSlot, setGuardsPerSlot] = useState(1);
   const [description, setDescription] = useState("");
+
+  const [cities, setCities] = useState<City[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [selectedCity, setSelectedCity] = useState("");
+  const [selectedWard, setSelectedWard] = useState("");
+  const [specificAddress, setSpecificAddress] = useState("");
+
+  const [showOverlapWarning, setShowOverlapWarning] = useState(false);
+  const [overlappingBookings, setOverlappingBookings] = useState<any[]>([]);
 
   // Day per week selection
   const [selectedDays, setSelectedDays] = useState<string[]>([]);
@@ -85,8 +87,33 @@ export default function NewBookingModal({
       setIsSubmitting(false);
       setSubmitSuccess(false);
       setToastMessage(null);
+
+      setSelectedCity("");
+      setSelectedWard("");
+      setSpecificAddress("");
+      setShowOverlapWarning(false);
+      setOverlappingBookings([]);
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      requestGetCities().then(res => {
+        if (res.success) setCities(res.cities);
+      }).catch(console.error);
+    }
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (selectedCity) {
+      requestGetWards(Number(selectedCity)).then(res => {
+        if (res.success) setWards(res.wards);
+      }).catch(console.error);
+    } else {
+      setWards([]);
+      setSelectedWard("");
+    }
+  }, [selectedCity]);
 
   if (!isOpen) return null;
 
@@ -148,12 +175,12 @@ export default function NewBookingModal({
     }
     const start24 = formatTo24h(startTime);
     const end24 = formatTo24h(endTime);
-    
+
     const timeToMins = (t: string) => {
       const [h, m] = t.split(":").map(Number);
       return h * 60 + m;
     };
-    
+
     const newStartMins = timeToMins(start24);
     const newEndMins = timeToMins(end24);
 
@@ -204,8 +231,11 @@ export default function NewBookingModal({
     const todayStr = new Date().toISOString().split("T")[0];
 
     if (!serviceId) newErrors.serviceId = "Vui lòng chọn loại dịch vụ";
+    if (!selectedCity) newErrors.selectedCity = "Vui lòng chọn Tỉnh/Thành phố";
+    if (!selectedWard) newErrors.selectedWard = "Vui lòng chọn Quận/Huyện/Phường/Xã";
+    if (!specificAddress.trim()) newErrors.specificAddress = "Vui lòng nhập địa chỉ cụ thể";
     if (!address.trim())
-      newErrors.address = "Vui lòng nhập địa chỉ vị trí cần bảo vệ";
+      newErrors.address = "Vui lòng nhập tên vị trí cần bảo vệ";
     if (!startDate) newErrors.startDate = "Vui lòng chọn ngày bắt đầu";
     if (!endDate) newErrors.endDate = "Vui lòng chọn ngày kết thúc";
 
@@ -227,7 +257,7 @@ export default function NewBookingModal({
       const end = new Date(endDate);
       const diffTime = Math.abs(end.getTime() - start.getTime());
       const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays < 7) {
         const validDays = new Set<string>();
         for (let i = 0; i <= diffDays; i++) {
@@ -252,27 +282,32 @@ export default function NewBookingModal({
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!validate()) return;
+  const handleSubmit = async (e?: React.FormEvent, forceCreate: boolean = false) => {
+    if (e) e.preventDefault();
+    if (!forceCreate && !validate()) return;
 
     setIsSubmitting(true);
     setToastMessage(null);
 
     try {
+      const cityName = cities.find(c => c.city_id.toString() === selectedCity)?.city_name || "";
+      const wardName = wards.find(w => w.ward_id.toString() === selectedWard)?.ward_name || "";
+      const fullAddress = [specificAddress, wardName, cityName, address].filter(Boolean).join(", ");
+
       await requestCreateBooking({
         company_id: companyId,
         service_id: serviceId,
-        address,
+        address: fullAddress,
         description: description || null,
         guards_per_slot: guardsPerSlot,
         time_slots: timeSlots,
         day_per_week: selectedDays,
         start_date: startDate,
         end_date: endDate,
-      });
+      }, forceCreate);
 
       setIsSubmitting(false);
+      setShowOverlapWarning(false);
       setSubmitSuccess(true);
       setToastMessage(
         "Gửi yêu cầu đặt lịch dịch vụ thành công! Đang chờ đối tác báo giá."
@@ -284,6 +319,11 @@ export default function NewBookingModal({
       }, 3000);
     } catch (err: any) {
       setIsSubmitting(false);
+      if (err?.data?.errorType === "OVERLAP") {
+        setOverlappingBookings(err.data.overlaps || []);
+        setShowOverlapWarning(true);
+        return;
+      }
       setToastMessage(
         err?.message || "Đã xảy ra lỗi khi gửi yêu cầu đặt lịch. Vui lòng thử lại."
       );
@@ -295,11 +335,10 @@ export default function NewBookingModal({
       {/* Toast alert overlay */}
       {toastMessage && (
         <div className="fixed top-5 left-1/2 -translate-x-1/2 z-[100] w-full max-w-md px-4 animate-fade-in">
-          <div className={`text-white rounded-xl shadow-2xl p-4 flex items-center justify-between gap-3 border ${
-            submitSuccess 
-              ? "bg-emerald-600 border-emerald-500" 
-              : "bg-error border-error/80"
-          }`}>
+          <div className={`text-white rounded-xl shadow-2xl p-4 flex items-center justify-between gap-3 border ${submitSuccess
+            ? "bg-emerald-600 border-emerald-500"
+            : "bg-error border-error/80"
+            }`}>
             <div className="flex items-center gap-3">
               {submitSuccess ? (
                 <CheckCircle className="w-6 h-6 shrink-0 text-white" />
@@ -408,11 +447,10 @@ export default function NewBookingModal({
                             if (errors.serviceId)
                               setErrors((prev) => ({ ...prev, serviceId: "" }));
                           }}
-                          className={`w-full bg-surface-bright border rounded-xl px-3 py-2 pr-10 text-sm text-on-surface appearance-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all cursor-pointer ${
-                            errors.serviceId
-                              ? "border-error ring-1 ring-error"
-                              : "border-outline-variant"
-                          }`}
+                          className={`w-full bg-surface-bright border rounded-xl px-3 py-2 pr-10 text-sm text-on-surface appearance-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all cursor-pointer ${errors.serviceId
+                            ? "border-error ring-1 ring-error"
+                            : "border-outline-variant"
+                            }`}
                         >
                           <option value="" disabled>
                             Chọn dịch vụ cần thiết...
@@ -436,38 +474,125 @@ export default function NewBookingModal({
                         </p>
                       )}
                     </div>
+                  </div>
 
-                    {/* Address / Location */}
+                  {/* Address Section */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <MapPin className="w-3.5 h-3.5 text-primary" /> Vị trí
-                        cần bảo vệ <span className="text-error">*</span>
+                        <MapPin className="w-3.5 h-3.5 text-primary" /> Tỉnh / Thành phố <span className="text-error">*</span>
                       </label>
-                      <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-0.5">
-                        Địa chỉ chi tiết nơi triển khai dịch vụ bảo vệ.
-                      </p>
                       <div className="relative">
-                        <input
-                          type="text"
-                          value={address}
+                        <select
+                          value={selectedCity}
                           onChange={(e) => {
-                            setAddress(e.target.value);
-                            if (errors.address)
-                              setErrors((prev) => ({ ...prev, address: "" }));
+                            setSelectedCity(e.target.value);
+                            if (errors.selectedCity)
+                              setErrors((prev) => ({ ...prev, selectedCity: "" }));
                           }}
-                          placeholder="Nhập địa chỉ chi tiết nơi cần bảo vệ..."
-                          className={`w-full bg-surface-bright border rounded-xl pl-10 pr-4 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                            errors.address
-                              ? "border-error ring-1 ring-error"
-                              : "border-outline-variant"
-                          }`}
-                        />
-                        <MapPin className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-on-surface-variant/60" />
+                          className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface appearance-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all cursor-pointer ${errors.selectedCity
+                            ? "border-error ring-1 ring-error"
+                            : "border-outline-variant"
+                            }`}
+                        >
+                          <option value="" disabled>Chọn Tỉnh/Thành phố...</option>
+                          {cities.map((c) => (
+                            <option key={c.city_id} value={c.city_id.toString()}>
+                              {c.city_name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant/70" />
                       </div>
+                      {errors.selectedCity && (
+                        <p className="text-xs text-error font-medium flex items-center gap-1 mt-1">
+                          <AlertCircle className="w-3.5 h-3.5" /> {errors.selectedCity}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
+                        <MapPin className="w-3.5 h-3.5 text-primary" /> Quận / Huyện / Phường / Xã <span className="text-error">*</span>
+                      </label>
+                      <div className="relative">
+                        <select
+                          value={selectedWard}
+                          onChange={(e) => {
+                            setSelectedWard(e.target.value);
+                            if (errors.selectedWard)
+                              setErrors((prev) => ({ ...prev, selectedWard: "" }));
+                          }}
+                          disabled={!selectedCity || wards.length === 0}
+                          className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface appearance-none focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed ${errors.selectedWard
+                            ? "border-error ring-1 ring-error"
+                            : "border-outline-variant"
+                            }`}
+                        >
+                          <option value="" disabled>Chọn Quận/Huyện/Phường/Xã...</option>
+                          {wards.map((w) => (
+                            <option key={w.ward_id} value={w.ward_id.toString()}>
+                              {w.ward_name}
+                            </option>
+                          ))}
+                        </select>
+                        <ChevronDown className="w-4 h-4 absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-on-surface-variant/70" />
+                      </div>
+                      {errors.selectedWard && (
+                        <p className="text-xs text-error font-medium flex items-center gap-1 mt-1">
+                          <AlertCircle className="w-3.5 h-3.5" /> {errors.selectedWard}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
+                        <MapPin className="w-3.5 h-3.5 text-primary" /> Địa chỉ cụ thể <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={specificAddress}
+                        onChange={(e) => {
+                          setSpecificAddress(e.target.value);
+                          if (errors.specificAddress)
+                            setErrors((prev) => ({ ...prev, specificAddress: "" }));
+                        }}
+                        placeholder="Số nhà, tên đường..."
+                        className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${errors.specificAddress
+                          ? "border-error ring-1 ring-error"
+                          : "border-outline-variant"
+                          }`}
+                      />
+                      {errors.specificAddress && (
+                        <p className="text-xs text-error font-medium flex items-center gap-1 mt-1">
+                          <AlertCircle className="w-3.5 h-3.5" /> {errors.specificAddress}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
+                        <MapPin className="w-3.5 h-3.5 text-primary" /> Tên vị trí cần bảo vệ <span className="text-error">*</span>
+                      </label>
+                      <input
+                        type="text"
+                        value={address}
+                        onChange={(e) => {
+                          setAddress(e.target.value);
+                          if (errors.address)
+                            setErrors((prev) => ({ ...prev, address: "" }));
+                        }}
+                        placeholder="Tòa nhà A, Khu công nghiệp B..."
+                        className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${errors.address
+                          ? "border-error ring-1 ring-error"
+                          : "border-outline-variant"
+                          }`}
+                      />
                       {errors.address && (
                         <p className="text-xs text-error font-medium flex items-center gap-1 mt-1">
-                          <AlertCircle className="w-3.5 h-3.5" />{" "}
-                          {errors.address}
+                          <AlertCircle className="w-3.5 h-3.5" /> {errors.address}
                         </p>
                       )}
                     </div>
@@ -502,11 +627,10 @@ export default function NewBookingModal({
                           if (errors.startDate)
                             setErrors((prev) => ({ ...prev, startDate: "" }));
                         }}
-                        className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                          errors.startDate
-                            ? "border-error ring-1 ring-error"
-                            : "border-outline-variant"
-                        }`}
+                        className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${errors.startDate
+                          ? "border-error ring-1 ring-error"
+                          : "border-outline-variant"
+                          }`}
                       />
                       {errors.startDate && (
                         <p className="text-xs text-error font-medium flex items-center gap-1 mt-1">
@@ -533,11 +657,10 @@ export default function NewBookingModal({
                           if (errors.endDate)
                             setErrors((prev) => ({ ...prev, endDate: "" }));
                         }}
-                        className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${
-                          errors.endDate
-                            ? "border-error ring-1 ring-error"
-                            : "border-outline-variant"
-                        }`}
+                        className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${errors.endDate
+                          ? "border-error ring-1 ring-error"
+                          : "border-outline-variant"
+                          }`}
                       />
                       {errors.endDate && (
                         <p className="text-xs text-error font-medium flex items-center gap-1 mt-1">
@@ -604,11 +727,10 @@ export default function NewBookingModal({
                             key={day.value}
                             type="button"
                             onClick={() => toggleDay(day.value)}
-                            className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${
-                              isSelected
-                                ? "bg-primary text-on-primary shadow-xs animate-fade-in"
-                                : "hover:bg-surface-container-high text-on-surface-variant"
-                            }`}
+                            className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${isSelected
+                              ? "bg-primary text-on-primary shadow-xs animate-fade-in"
+                              : "hover:bg-surface-container-high text-on-surface-variant"
+                              }`}
                           >
                             {day.label}
                           </button>
@@ -629,10 +751,10 @@ export default function NewBookingModal({
                       <Clock className="w-3.5 h-3.5 text-primary" /> Khung giờ
                       thực hiện <span className="text-error">*</span>
                     </label>
-                     <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-1.5">
-                       Nhập khung giờ thực hiện trong ngày (ví dụ: từ 08:00 đến
-                       17:00, hoặc từ 17:00 đến 08:00).
-                     </p>
+                    <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-1.5">
+                      Nhập khung giờ thực hiện trong ngày (ví dụ: từ 08:00 đến
+                      17:00, hoặc từ 17:00 đến 08:00).
+                    </p>
 
                     <div className="flex flex-col gap-3">
                       <div className="flex flex-col sm:flex-row gap-3 items-end">
@@ -768,7 +890,7 @@ export default function NewBookingModal({
                 </button>
                 <button
                   type="submit"
-                  disabled={isSubmitting}
+                  disabled={isSubmitting || showOverlapWarning}
                   className="px-5 py-2.5 bg-primary text-on-primary hover:bg-primary/90 font-bold rounded-xl shadow-xs text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer active:scale-98 disabled:bg-primary/60 disabled:cursor-not-allowed"
                 >
                   {isSubmitting ? (
@@ -800,6 +922,69 @@ export default function NewBookingModal({
                 </button>
               </div>
             </form>
+          )}
+
+          {/* Overlap Warning Overlay */}
+          {showOverlapWarning && (
+            <div className="absolute inset-0 bg-surface-container-lowest/90 backdrop-blur-sm z-10 flex flex-col items-center justify-center p-6 animate-in fade-in duration-200">
+              <div className="bg-surface-bright border border-error/50 rounded-2xl shadow-xl w-full max-w-lg p-6 flex flex-col gap-4">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-error/10 text-error flex items-center justify-center shrink-0">
+                    <AlertCircle className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-bold text-on-surface">Cảnh báo trùng lặp yêu cầu</h3>
+                    <p className="text-sm text-on-surface-variant mt-1">
+                      Hệ thống phát hiện địa chỉ này đã có lịch đặt dịch vụ trùng ngày và khung giờ.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="bg-surface-container-low rounded-xl p-3 max-h-[150px] overflow-y-auto">
+                  <p className="text-xs font-semibold text-on-surface mb-2">Các lịch trùng lặp:</p>
+                  <div className="flex flex-col gap-2">
+                    {overlappingBookings.map((b, idx) => {
+                      const srvName = Array.isArray(b.services) ? b.services[0]?.name : b.services?.name;
+                      const dayMap: Record<string, string> = {
+                        "Monday": "Thứ 2", "Tuesday": "Thứ 3", "Wednesday": "Thứ 4",
+                        "Thursday": "Thứ 5", "Friday": "Thứ 6", "Saturday": "Thứ 7", "Sunday": "Chủ nhật"
+                      };
+                      const vnDays = b.day_per_week?.map((d: string) => dayMap[d] || d).join(", ");
+                      
+                      return (
+                        <div key={idx} className="text-xs text-on-surface-variant bg-surface-bright p-2 rounded-lg border border-outline-variant/50">
+                          <span className="font-semibold">{b.start_date} - {b.end_date}</span>
+                          {srvName && <div className="mt-1 font-medium text-primary">Dịch vụ: {srvName}</div>}
+                          <div className="mt-1">Khung giờ: {b.time_slots?.join(", ")}</div>
+                          <div className="mt-1">Thứ: {vnDays}</div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <p className="text-sm font-medium text-on-surface mt-2 text-center">
+                  Bạn có xác nhận yêu cầu này là một yêu cầu khác không?
+                </p>
+
+                <div className="flex justify-end gap-3 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowOverlapWarning(false)}
+                    className="px-4 py-2 border border-outline-variant text-on-surface hover:bg-surface-container-low rounded-xl text-xs font-bold transition-all cursor-pointer"
+                  >
+                    Hủy, sửa lại yêu cầu
+                  </button>
+                  <button
+                    type="button"
+                    onClick={(e) => handleSubmit(e, true)}
+                    className="px-4 py-2 bg-error text-white hover:bg-error/90 font-bold rounded-xl shadow-xs text-xs flex items-center justify-center transition-all cursor-pointer"
+                  >
+                    Xác nhận tạo mới
+                  </button>
+                </div>
+              </div>
+            </div>
           )}
         </div>
       </div>

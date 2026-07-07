@@ -142,12 +142,13 @@ export const getBookingById = async (
   return (data as Booking) || null;
 };
 
-export const getActiveBookingsByAddress = async (address: string) => {
+export const getActiveBookingsByAddressAndService = async (address: string, serviceId: string) => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bookings")
-    .select("start_date, end_date, day_per_week, time_slots, status")
+    .select("start_date, end_date, day_per_week, time_slots, status, services(name)")
     .eq("address", address)
+    .eq("service_id", serviceId)
     .in("status", ["pending", "quoted", "accepted"]);
 
   if (error) {
