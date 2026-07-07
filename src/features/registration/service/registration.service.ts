@@ -18,9 +18,10 @@ export const getRegistrationDetailService = async (id: string): Promise<Registra
 
 export const updateRegistrationStatusService = async (
   id: string,
-  status: "approved" | "rejected"
+  status: "approved" | "rejected",
+  note?: string
 ): Promise<void> => {
-  await updateRegistrationStatus(id, status);
+  await updateRegistrationStatus(id, status, note);
 };
 
 export const createRegistrationFlowService = async (payload: {

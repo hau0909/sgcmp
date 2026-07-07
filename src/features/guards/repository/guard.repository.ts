@@ -468,3 +468,107 @@ export const getGuardCountByCompanyId = async (
 
   return count ?? 0;
 };
+
+export const getGuardsByContract = async ({
+  contract_id,
+  company_id,
+  page,
+  limit,
+  search,
+}: {
+  contract_id: string;
+  company_id: string;
+  page: number;
+  limit: number;
+  search?: string;
+}): Promise<GetAllGuardsRepositoryResult> => {
+  const supabase = await createClient();
+
+  // 1. Get guard_assigned from the contract
+  const { data: contract, error: contractError } = await supabase
+    .from("contracts")
+    .select("guard_assigned")
+    .eq("contract_id", contract_id)
+    .single();
+
+  if (contractError) {
+    throw new Error(contractError.message);
+  }
+
+  const guardAssigned = contract?.guard_assigned as string[] | null;
+  if (!guardAssigned || guardAssigned.length === 0) {
+    return { guards: [], total: 0 };
+  }
+
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+
+  let matchedUserIds: string[] | null = null;
+  const keyword = search?.trim();
+
+  if (keyword) {
+    const safeKeyword = keyword.replace(/[,()]/g, " ");
+    const searchPattern = `%${safeKeyword}%`;
+
+    const { data: matchedProfiles, error: profileError } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .or(
+        `full_name.ilike.${searchPattern},phone_number.ilike.${searchPattern},email.ilike.${searchPattern}`,
+      );
+
+    if (profileError) {
+      throw new Error(profileError.message);
+    }
+
+    matchedUserIds = (matchedProfiles ?? []).map((profile) => profile.user_id);
+
+    if (matchedUserIds.length === 0) {
+      return {
+        guards: [],
+        total: 0,
+      };
+    }
+  }
+
+  let query = supabase
+    .from("guards")
+    .select(
+      `
+      guard_id,
+      profiles!guards_user_id_fkey (
+        user_id,
+        full_name,
+        phone_number,
+        avatar_url,
+        email,
+        status
+      )
+    `,
+      {
+        count: "exact",
+      },
+    )
+    .in("guard_id", guardAssigned)
+    .eq("company_id", company_id)
+    .order("created_at", {
+      ascending: false,
+    })
+    .range(from, to);
+
+  if (matchedUserIds) {
+    query = query.in("user_id", matchedUserIds);
+  }
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return {
+    guards: (data ?? []) as unknown as GuardListItem[],
+    total: count ?? 0,
+  };
+};
+

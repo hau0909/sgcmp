@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { UserCircle } from "lucide-react";
 import Link from "next/link";
@@ -9,6 +9,7 @@ import { requestLogout } from "@/features/auth/api/auth.api";
 import { createClient } from "@/lib/supabase/client";
 import { requestGetUserProfile } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/store/auth.store";
+import CompanySearchBar from "@/features/company/components/CompanySearchBar";
 
 interface NavLink {
   label: string;
@@ -51,6 +52,7 @@ export default function Header() {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
+  const [isScrolled, setIsScrolled] = useState(false);
 
   const userId = useAuthStore((state) => state.user_id);
   const setAuth = useAuthStore((state) => state.setAuth);
@@ -63,6 +65,18 @@ export default function Header() {
     setMobileMenuOpen(false);
     setUserDropdownOpen(false);
   };
+
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > 120) {
+        setIsScrolled(true);
+      } else {
+        setIsScrolled(false);
+      }
+    };
+    window.addEventListener("scroll", handleScroll);
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -124,48 +138,90 @@ export default function Header() {
     }
   };
 
+  const isCompaniesPage = pathname === "/companies";
+  const showStickySearch = isScrolled && isCompaniesPage;
+
   return (
     <>
       <header
         className="fixed top-0 w-full z-50 transition-all duration-300 
          bg-surface-container-lowest/90 backdrop-blur-md shadow-md py-3 border-b border-outline-variant/30"
       >
-        <div className="flex justify-between items-center h-14 px-8 max-w-7xl mx-auto">
-          <Link
-            className="font-sans text-[22px] font-bold text-primary flex items-center gap-2 hover:scale-[1.02] transition-transform duration-200"
-            href="/"
-            onClick={closeMenus}
-          >
-            <Image
-              src="/logo.png"
-              width={30}
-              height={30}
-              alt="logo image"
-              className="drop-shadow-sm/20 shadow-secondary"
-            />
-            SGCMP
-          </Link>
+        <div className="flex justify-between items-center h-14 px-8 max-w-7xl mx-auto w-full">
+          {/* Logo and Nav links (on left when scrolled down) */}
+          <div className="flex items-center gap-6">
+            <Link
+              className="font-sans text-[22px] font-bold text-primary flex items-center gap-2 hover:scale-[1.02] transition-transform duration-200 shrink-0"
+              href="/"
+              onClick={closeMenus}
+            >
+              <Image
+                src="/logo.png"
+                width={30}
+                height={30}
+                alt="logo image"
+                className="drop-shadow-sm/20 shadow-secondary"
+              />
+              SGCMP
+            </Link>
 
-          <nav className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => {
-              const isActive = pathname === link.href;
+            {/* Nav links on left when scrolled on /companies */}
+            <nav
+              className={`hidden md:flex items-center gap-6 transition-all duration-300 origin-left ${
+                showStickySearch
+                  ? "opacity-100 scale-100 w-auto"
+                  : "opacity-0 scale-95 w-0 overflow-hidden pointer-events-none"
+              }`}
+            >
+              {navLinks.map((link) => {
+                const isActive = pathname === link.href;
+                return (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    onClick={closeMenus}
+                    className={`text-[14px] font-semibold transition-all duration-200 py-1 hover:text-primary whitespace-nowrap ${
+                      isActive ? "text-primary font-bold" : "text-on-surface-variant"
+                    }`}
+                  >
+                    {link.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
 
-              return (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  onClick={closeMenus}
-                  className={`text-[14px] font-medium transition-all duration-200 relative py-1 hover:text-primary ${
-                    isActive
-                      ? "text-primary font-semibold after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary"
-                      : "text-on-surface-variant hover:-translate-y-px"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              );
-            })}
-          </nav>
+          {/* Center Area: Default Nav links or Mini Search bar */}
+          <div className="hidden md:flex flex-1 justify-center items-center px-4 max-w-lg">
+            {!showStickySearch ? (
+              <nav className="flex items-center gap-8 transition-all duration-300">
+                {navLinks.map((link) => {
+                  const isActive = pathname === link.href;
+
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      onClick={closeMenus}
+                      className={`text-[14px] font-medium transition-all duration-200 relative py-1 hover:text-primary ${
+                        isActive
+                          ? "text-primary font-semibold after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary"
+                          : "text-on-surface-variant hover:-translate-y-px"
+                      }`}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </nav>
+            ) : (
+              <div className="w-full transition-all duration-300">
+                <Suspense fallback={<div className="h-10 w-full max-w-sm bg-slate-100 rounded-full animate-pulse" />}>
+                  <CompanySearchBar variant="mini" />
+                </Suspense>
+              </div>
+            )}
+          </div>
 
           <div className="hidden md:flex items-center gap-4">
             {shouldShowCheckingAuth ? (

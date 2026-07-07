@@ -1,7 +1,8 @@
 import { handleGetCompanyPublishRequests } from "@/features/company";
-import { NextResponse } from "next/server";
+import { NextResponse, connection } from "next/server";
 
 export async function GET() {
+  await connection();
   try {
     const result = await handleGetCompanyPublishRequests();
     return NextResponse.json({ publish_requests: result }, { status: 200 });

@@ -23,6 +23,10 @@ export interface DbCompany {
   rating_average: number | null;
   status: string;
   created_at: string;
+  company_imgs?: {
+    image_url: string;
+    image_type: string;
+  }[];
   company_services?: {
     price: number;
     services: {
@@ -47,6 +51,10 @@ export const getAllActiveCompanies = async (): Promise<DbCompany[]> => {
       rating_average,
       status,
       created_at,
+      company_imgs (
+        image_url,
+        image_type
+      ),
       company_services (
         price,
         services (
