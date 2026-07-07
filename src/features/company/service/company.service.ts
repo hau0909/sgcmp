@@ -294,8 +294,8 @@ export const getCompanyByIdServiceInCustomer = async (
           return {
             serviceId: cs.services.service_id,
             name: cs.services.name,
-            description: cs.description || "",
-            baseDescription: cs.services.description || "",
+            description: (cs.description || "").replace(/\.\.\.+$/, ""),
+            baseDescription: (cs.services.description || "").replace(/\.\.\.+$/, ""),
             price: cs.price,
           };
         })
@@ -418,6 +418,7 @@ export const getCompanyPublishRequestByIdService = async (
     company_id: publishRequest.company_id,
     status: publishRequest.status.toLowerCase(),
     note: publishRequest.notes,
+    reject_reason: publishRequest.reject_reason,
     requested_at: publishRequest.requested_at,
     requested_by: requesterInfo,
     company: {
@@ -447,6 +448,7 @@ export const updateCompanyPublishRequestStatusService = async (
   requestId: string,
   status: "APPROVED" | "REJECTED",
   approvedBy?: string,
+  note?: string,
 ): Promise<void> => {
-  await updateCompanyPublishRequestStatus(requestId, status, approvedBy);
+  await updateCompanyPublishRequestStatus(requestId, status, approvedBy, note);
 };

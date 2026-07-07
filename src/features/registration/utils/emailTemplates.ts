@@ -165,6 +165,172 @@ export function getRejectedEmailHtml({
       </td>
     </tr>
   </table>
+ </body>
+</html>
+  `;
+}
+
+interface PublishRequestApprovedTemplateParams {
+  repName: string;
+  companyName: string;
+  createdAt: string;
+  marketplaceUrl: string;
+}
+
+interface PublishRequestRejectedTemplateParams {
+  repName: string;
+  companyName: string;
+  createdAt: string;
+  rejectReason: string;
+  editUrl: string;
+}
+
+export function getPublishRequestApprovedEmailHtml({
+  repName,
+  companyName,
+  createdAt,
+  marketplaceUrl
+}: PublishRequestApprovedTemplateParams): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thông báo phê duyệt yêu cầu công khai thông tin</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f6f9; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #024594; padding: 30px 40px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">SGCMP</h1>
+              <p style="color: #cbd5e1; margin: 5px 0 0 0; font-size: 13px;">Phê duyệt yêu cầu công khai doanh nghiệp</p>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px; color: #334155;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6;">Kính chào ông/bà <strong>${repName}</strong>,</p>
+              <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">Ban quản trị hệ thống <strong>SGCMP</strong> xin thông báo yêu cầu công khai thông tin doanh nghiệp của đơn vị <strong>${companyName}</strong> gửi ngày <strong>${createdAt}</strong> đã được <strong>phê duyệt thành công</strong>.</p>
+              
+              <!-- Info Box -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                      <tr style="font-size: 13px;">
+                        <td style="padding: 4px 0; color: #64748b; width: 150px;">Tên doanh nghiệp:</td>
+                        <td style="padding: 4px 0; color: #0f172a; font-weight: bold;">${companyName}</td>
+                      </tr>
+                      <tr style="font-size: 13px;">
+                        <td style="padding: 4px 0; color: #64748b;">Trạng thái thị trường:</td>
+                        <td style="padding: 4px 0; color: #10b981; font-weight: bold;">ĐÃ CÔNG KHAI (PUBLISHED)</td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #475569;">Doanh nghiệp của bạn hiện đã hiển thị công khai trên trang chủ (Marketplace) của SGCMP. Quý khách có thể xem và chia sẻ hồ sơ doanh nghiệp của mình thông qua liên kết dưới đây.</p>
+              
+              <!-- CTA Button -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 8px;">
+                    <a href="${marketplaceUrl}" target="_blank" style="display: inline-block; background-color: #024594; color: #ffffff; font-size: 14px; font-weight: bold; text-decoration: none; padding: 12px 30px; border-radius: 6px; box-shadow: 0 4px 6px rgba(2, 69, 148, 0.2);">Xem hồ sơ trên Marketplace</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 24px 40px; text-align: center; color: #94a3b8; font-size: 11px;">
+              <p style="margin: 0 0 6px 0; font-weight: bold; color: #64748b;">Hệ thống Giao thương và Quản lý Doanh nghiệp SGCMP</p>
+              <p style="margin: 0 0 12px 0;">Email hỗ trợ: support@sgcmp.vn | Hotline: 1900-xxxx</p>
+              <p style="margin: 0;">Đây là email tự động từ hệ thống, vui lòng không trả lời trực tiếp email này.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>
+  `;
+}
+
+export function getPublishRequestRejectedEmailHtml({
+  repName,
+  companyName,
+  createdAt,
+  rejectReason,
+  editUrl
+}: PublishRequestRejectedTemplateParams): string {
+  return `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thông báo kết quả yêu cầu công khai thông tin</title>
+</head>
+<body style="margin: 0; padding: 0; background-color: #f4f6f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased;">
+  <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #f4f6f9; padding: 20px 0;">
+    <tr>
+      <td align="center">
+        <table border="0" cellpadding="0" cellspacing="0" width="100%" style="max-width: 600px; background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);">
+          <!-- Header -->
+          <tr>
+            <td style="background-color: #b91c1c; padding: 30px 40px; text-align: center;">
+              <h1 style="color: #ffffff; margin: 0; font-size: 20px; font-weight: 700; letter-spacing: 0.5px;">SGCMP</h1>
+              <p style="color: #fca5a5; margin: 5px 0 0 0; font-size: 13px;">Yêu cầu công khai doanh nghiệp bị từ chối</p>
+            </td>
+          </tr>
+          <!-- Content -->
+          <tr>
+            <td style="padding: 40px; color: #334155;">
+              <p style="margin: 0 0 16px 0; font-size: 15px; line-height: 1.6;">Kính chào ông/bà <strong>${repName}</strong>,</p>
+              <p style="margin: 0 0 24px 0; font-size: 15px; line-height: 1.6;">Ban quản trị hệ thống <strong>SGCMP</strong> đã xem xét yêu cầu công khai thông tin doanh nghiệp <strong>${companyName}</strong> gửi ngày <strong>${createdAt}</strong>. Rất tiếc, yêu cầu này hiện tại <strong>không được phê duyệt</strong>.</p>
+              
+              <!-- Rejection Reason Box -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #fef2f2; border: 1px solid #fee2e2; border-left: 4px solid #ef4444; border-radius: 6px; margin-bottom: 24px;">
+                <tr>
+                  <td style="padding: 16px 20px;">
+                    <h4 style="margin: 0 0 8px 0; color: #991b1b; font-size: 14px; font-weight: bold;">Lý do từ chối công khai:</h4>
+                    <p style="margin: 0; color: #b91c1c; font-size: 13px; line-height: 1.6; white-space: pre-wrap;">${rejectReason}</p>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="margin: 0 0 24px 0; font-size: 14px; line-height: 1.6; color: #475569;">Vui lòng bấm vào nút dưới đây để truy cập trang quản lý doanh nghiệp, thực hiện điều chỉnh hoặc cập nhật lại các thông tin/dịch vụ cần thiết theo ý kiến phản hồi của ban quản trị.</p>
+              
+              <!-- CTA Button -->
+              <table border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                  <td align="center" style="padding-bottom: 8px;">
+                    <a href="${editUrl}" target="_blank" style="display: inline-block; background-color: #b91c1c; color: #ffffff; font-size: 14px; font-weight: bold; text-decoration: none; padding: 12px 30px; border-radius: 6px; box-shadow: 0 4px 6px rgba(185, 28, 28, 0.2);">Quản lý thông tin doanh nghiệp</a>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background-color: #f8fafc; border-top: 1px solid #f1f5f9; padding: 24px 40px; text-align: center; color: #94a3b8; font-size: 11px;">
+              <p style="margin: 0 0 6px 0; font-weight: bold; color: #64748b;">Hệ thống Giao thương và Quản lý Doanh nghiệp SGCMP</p>
+              <p style="margin: 0 0 12px 0;">Email hỗ trợ: support@sgcmp.vn | Hotline: 1900-xxxx</p>
+              <p style="margin: 0;">Đây là email tự động từ hệ thống, vui lòng không trả lời trực tiếp email này.</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
 </body>
 </html>
   `;

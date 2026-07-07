@@ -166,6 +166,7 @@ export async function requestGetCompanyPublishRequestById(
 export async function requestUpdateCompanyPublishRequestStatus(
   id: string,
   status: "APPROVED" | "REJECTED",
+  note?: string,
 ): Promise<{ success: boolean; message: string }> {
   const url = `/api/admin/publish-requests/${id}`;
   return await fetcher(url, {
@@ -173,6 +174,6 @@ export async function requestUpdateCompanyPublishRequestStatus(
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify({ status }),
+    body: JSON.stringify({ status, note }),
   });
 }

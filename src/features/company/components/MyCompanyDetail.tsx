@@ -28,7 +28,6 @@ import {
   Eye,
   Camera,
   Upload,
-  ChevronRight,
   Plus,
   Trash,
   ChevronDown,
@@ -325,11 +324,12 @@ export default function MyCompanyDetail() {
         .filter(Boolean);
 
       setAllActivityImgs(imageUrls);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi khi lấy hình ảnh hoạt động:", err);
+      const errMsg = err instanceof Error ? err.message : "Không thể lấy danh sách hình ảnh hoạt động.";
       showToast(
         "error",
-        err.message || "Không thể lấy danh sách hình ảnh hoạt động.",
+        errMsg,
       );
     } finally {
       setLoadingActivityGallery(false);
@@ -378,9 +378,10 @@ export default function MyCompanyDetail() {
 
       setLogoUrl(imageUrl);
       showToast("success", "Cập nhật logo công ty thành công.");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi khi upload logo:", err);
-      showToast("error", err.message || "Không thể cập nhật logo công ty.");
+      const errMsg = err instanceof Error ? err.message : "Không thể cập nhật logo công ty.";
+      showToast("error", errMsg);
     } finally {
       setUploadingLogo(false);
       target.value = "";
@@ -412,9 +413,10 @@ export default function MyCompanyDetail() {
 
       setBannerUrl(imageUrl);
       showToast("success", "Cập nhật ảnh bìa công ty thành công.");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi khi upload banner:", err);
-      showToast("error", err.message || "Không thể cập nhật ảnh bìa công ty.");
+      const errMsg = err instanceof Error ? err.message : "Không thể cập nhật ảnh bìa công ty.";
+      showToast("error", errMsg);
     } finally {
       setUploadingBanner(false);
       target.value = "";
@@ -458,9 +460,10 @@ export default function MyCompanyDetail() {
         "success",
         `Tải lên ${imageUrls.length} hình ảnh hoạt động thành công.`,
       );
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi khi upload hình ảnh hoạt động:", err);
-      showToast("error", err.message || "Không thể tải hình ảnh hoạt động.");
+      const errMsg = err instanceof Error ? err.message : "Không thể tải hình ảnh hoạt động.";
+      showToast("error", errMsg);
     } finally {
       setUploadingActivity(false);
       target.value = "";
@@ -469,6 +472,40 @@ export default function MyCompanyDetail() {
 
   const handleRemoveActivityImage = (index: number) => {
     setCompanyImgs((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const handleDownloadLicenseFile = async (url: string) => {
+    if (!url) return;
+    try {
+      let extension = "pdf";
+      try {
+        const urlObj = new URL(url);
+        const pathname = urlObj.pathname;
+        const lastPart = pathname.substring(pathname.lastIndexOf('/') + 1);
+        if (lastPart.includes('.')) {
+          extension = lastPart.split('.').pop() || "pdf";
+        }
+      } catch (err) {
+        console.error("Lỗi khi phân tích định dạng file:", err);
+      }
+      
+      const filename = `giay-phep-kinh-doanh.${extension}`;
+
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Không thể tải file");
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (err) {
+      console.warn("CORS/network block, fallback sang mở tab mới:", err);
+      window.open(url, "_blank");
+    }
   };
 
   const handleSaveEdit = async () => {
@@ -506,11 +543,12 @@ export default function MyCompanyDetail() {
       setFieldErrors({});
 
       showToast("success", "Cập nhật thông tin công ty thành công.");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi khi cập nhật công ty:", err);
+      const errMsg = err instanceof Error ? err.message : "Không thể cập nhật thông tin công ty.";
       showToast(
         "error",
-        err.message || "Không thể cập nhật thông tin công ty.",
+        errMsg,
       );
     } finally {
       setSaving(false);
@@ -532,7 +570,7 @@ export default function MyCompanyDetail() {
       setIsConfirmModalOpen(false);
       setPublishNote("");
       showToast("success", "Gửi yêu cầu công khai thành công.");
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi khi gửi yêu cầu công khai:", err);
       showToast("error", "Không thể gửi yêu cầu công khai. Vui lòng thử lại.");
     } finally {
@@ -569,9 +607,10 @@ export default function MyCompanyDetail() {
       setNewServiceDesc("");
       setNewServicePrice("");
       setIsAddServiceOpen(false);
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi khi thêm dịch vụ:", err);
-      alert(err.message || "Không thể thêm dịch vụ. Vui lòng thử lại.");
+      const errMsg = err instanceof Error ? err.message : "Không thể thêm dịch vụ. Vui lòng thử lại.";
+      alert(errMsg);
     }
   };
 
@@ -586,9 +625,10 @@ export default function MyCompanyDetail() {
       if (updatedData && updatedData.services) {
         setCompanyServices(updatedData.services);
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Lỗi khi xóa dịch vụ:", err);
-      alert(err.message || "Không thể xóa dịch vụ.");
+      const errMsg = err instanceof Error ? err.message : "Không thể xóa dịch vụ.";
+      alert(errMsg);
     }
   };
 
@@ -1204,16 +1244,7 @@ export default function MyCompanyDetail() {
 
                 <button
                   type="button"
-                  onClick={() => {
-                    if (!licenseImg) return;
-                    const a = document.createElement("a");
-                    a.href = licenseImg;
-                    a.download = "giay_phep_kinh_doanh";
-                    a.target = "_blank";
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                  }}
+                  onClick={() => handleDownloadLicenseFile(licenseImg)}
                   className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface-container-low transition-all shadow-3xs cursor-pointer"
                   title="Tải xuống giấy phép"
                 >
