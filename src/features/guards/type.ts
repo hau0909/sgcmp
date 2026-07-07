@@ -203,6 +203,7 @@ export type GuardDetailProfile = {
   date_of_birth: string | null;
   address: string | null;
   avatar_url: string | null;
+  status: string | null;
 };
 
 export type GuardDetailDatabase = {
