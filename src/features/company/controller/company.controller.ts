@@ -185,9 +185,10 @@ export const handleGetCompanyPublishRequestById = async (
 export const handleUpdateCompanyPublishRequestStatus = async (
   requestId: string,
   status: "APPROVED" | "REJECTED",
+  note?: string,
 ): Promise<void> => {
   const profile = await getCurrentUserProfileService();
   const adminId = profile ? profile.user_id : undefined;
 
-  await updateCompanyPublishRequestStatusService(requestId, status, adminId);
+  await updateCompanyPublishRequestStatusService(requestId, status, adminId, note);
 };

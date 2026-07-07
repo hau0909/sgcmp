@@ -48,16 +48,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const body = await request.json();
+    const { forceCreate, ...restBody } = await request.json();
     const bookingData = {
-      ...body,
+      ...restBody,
       customer_id: user.id,
     };
 
-    const result = await handleCreateBooking(bookingData);
+    const result = await handleCreateBooking(bookingData, forceCreate);
     return NextResponse.json(result, { status: 201 });
   } catch (error: any) {
-    console.error("[POST /api/bookings] Error:", error);
+    if (error.errorType === "OVERLAP") {
+      return NextResponse.json(
+        { 
+          error: error.message, 
+          errorType: error.errorType, 
+          overlaps: error.overlaps 
+        },
+        { status: 409 }
+      );
+    }
+    console.error("[POST /api/bookings] Error:", error?.message || error);
     return NextResponse.json(
       { error: error?.message || "Internal Server Error" },
       { status: 400 }

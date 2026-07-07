@@ -138,6 +138,7 @@ export interface PublishRequestDetailData {
   company_id: string;
   status: "pending" | "approved" | "rejected" | string;
   note: string | null;
+  reject_reason: string | null;
   requested_at: string;
   requested_by?: {
     full_name: string;
