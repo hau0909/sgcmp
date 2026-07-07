@@ -173,9 +173,15 @@ export default function GuardDetailPage() {
                 {fullName}
               </h1>
 
-              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                HOẠT ĐỘNG
-              </span>
+              {profile?.status === "active" ? (
+                <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                  HOẠT ĐỘNG
+                </span>
+              ) : (
+                <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
+                  VÔ HIỆU HÓA
+                </span>
+              )}
             </div>
 
             <p className="mt-2 text-sm font-medium text-slate-600">
@@ -252,9 +258,15 @@ export default function GuardDetailPage() {
             </div>
 
             <div className="grid gap-5 md:grid-cols-2">
-              <CccdPreviewBox label="Mặt trước CCCD/CMND" />
+              <CccdPreviewBox
+                label="Mặt trước CCCD/CMND"
+                imageUrl={identity?.front_url}
+              />
 
-              <CccdPreviewBox label="Mặt sau CCCD/CMND" />
+              <CccdPreviewBox
+                label="Mặt sau CCCD/CMND"
+                imageUrl={identity?.back_url}
+              />
             </div>
           </section>
         </div>
@@ -313,20 +325,36 @@ function InfoItem({ label, value }: { label: string; value: string }) {
   );
 
 }
-function CccdPreviewBox({ label }: { label: string }) {
+function CccdPreviewBox({
+  label,
+  imageUrl,
+}: {
+  label: string;
+  imageUrl?: string | null;
+}) {
   return (
     <div>
       <p className="mb-2 text-sm font-semibold text-slate-700">{label}</p>
 
-      <div className="flex aspect-[16/10] items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-100">
-        <div className="text-center">
-          <User className="mx-auto h-8 w-8 text-slate-400" />
-
-          <p className="mt-2 text-sm font-medium text-slate-500">
-            Chưa có hình ảnh
-          </p>
+      {imageUrl ? (
+        <div className="relative aspect-[16/10] overflow-hidden rounded-md border border-slate-300">
+          <img
+            src={imageUrl}
+            alt={label}
+            className="h-full w-full object-cover"
+          />
         </div>
-      </div>
+      ) : (
+        <div className="flex aspect-[16/10] items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-100">
+          <div className="text-center">
+            <User className="mx-auto h-8 w-8 text-slate-400" />
+
+            <p className="mt-2 text-sm font-medium text-slate-500">
+              Chưa có hình ảnh
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
