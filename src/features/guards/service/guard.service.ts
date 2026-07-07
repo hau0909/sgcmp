@@ -5,6 +5,7 @@ import {
   getCompanyByOwnerId,
   getGuardDetail,
   getGuardsByContract,
+  updateGuardDetail,
 } from "../repository/guard.repository";
 import { getCurrentActivePlanService } from "@/features/subscription/service/subscription.service";
 import type {
@@ -226,4 +227,31 @@ export const getGuardsByContractService = async ({
       totalPages: Math.ceil(total / limit),
     },
   };
+};
+
+export const updateGuardDetailService = async (
+  guard_id: string,
+  company_id: string,
+  user_id: string,
+  params: {
+    full_name: string;
+    phone_number: string;
+    email: string;
+    date_of_birth: string;
+    gender: string;
+    address: string;
+    identity_id: string;
+    identity_issue_date: string;
+    identity_issue_place: string;
+    avatar_url?: string | null;
+    front_url?: string | null;
+    back_url?: string | null;
+  }
+) => {
+  if (!params.full_name.trim()) throw new Error("Họ và tên không được để trống");
+  if (!params.phone_number.trim()) throw new Error("Số điện thoại không được để trống");
+  if (!params.email.trim()) throw new Error("Email không được để trống");
+  if (!params.identity_id.trim()) throw new Error("Số CCCD/CMND không được để trống");
+
+  return updateGuardDetail(guard_id, company_id, user_id, params);
 };

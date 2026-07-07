@@ -573,3 +573,74 @@ export const getGuardsByContract = async ({
   };
 };
 
+export const updateGuardDetail = async (
+  guard_id: string,
+  company_id: string,
+  user_id: string,
+  params: {
+    full_name: string;
+    phone_number: string;
+    email: string;
+    date_of_birth: string;
+    gender: string;
+    address: string;
+    identity_id: string;
+    identity_issue_date: string;
+    identity_issue_place: string;
+    avatar_url?: string | null;
+    front_url?: string | null;
+    back_url?: string | null;
+  }
+): Promise<void> => {
+  const supabase = await createClient();
+
+  // 1. Update profiles table
+  const profileUpdateData: any = {
+    full_name: params.full_name,
+    phone_number: params.phone_number,
+    email: params.email,
+    date_of_birth: params.date_of_birth,
+    gender: params.gender,
+    address: params.address,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (params.avatar_url !== undefined) {
+    profileUpdateData.avatar_url = params.avatar_url;
+  }
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update(profileUpdateData)
+    .eq("user_id", user_id);
+
+  if (profileError) {
+    throw new Error(`Cập nhật hồ sơ thất bại: ${profileError.message}`);
+  }
+
+  // 2. Upsert identities table
+  const identityUpsertData: any = {
+    user_id,
+    identity_id: params.identity_id,
+    issue_date: params.identity_issue_date,
+    issue_place: params.identity_issue_place,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (params.front_url !== undefined) {
+    identityUpsertData.front_url = params.front_url;
+  }
+
+  if (params.back_url !== undefined) {
+    identityUpsertData.back_url = params.back_url;
+  }
+
+  const { error: identityError } = await supabase
+    .from("identities")
+    .upsert(identityUpsertData);
+
+  if (identityError) {
+    throw new Error(`Cập nhật thông tin định danh thất bại: ${identityError.message}`);
+  }
+};
+
