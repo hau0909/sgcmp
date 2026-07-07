@@ -427,7 +427,7 @@ export const getCompanyPublishRequestById = async (
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("company_publish_requests")
-    .select("request_id, company_id, status, notes, requested_at, requested_by, approved_by, processed_at")
+    .select("request_id, company_id, status, notes, reject_reason, requested_at, requested_by, approved_by, processed_at")
     .eq("request_id", requestId)
     .maybeSingle();
 
@@ -442,6 +442,7 @@ export const updateCompanyPublishRequestStatus = async (
   requestId: string,
   status: "APPROVED" | "REJECTED",
   approvedBy?: string,
+  note?: string,
 ): Promise<void> => {
   const supabaseServer = await createClient();
 
@@ -459,13 +460,19 @@ export const updateCompanyPublishRequestStatus = async (
   const { company_id } = requestData;
 
   // 2. Update the publish request status
+  const updatePayload: any = {
+    status,
+    approved_by: approvedBy || null,
+    processed_at: new Date().toISOString(),
+  };
+
+  if (status === "REJECTED" && note) {
+    updatePayload.reject_reason = note;
+  }
+
   const { error: updateError } = await supabaseServer
     .from("company_publish_requests")
-    .update({
-      status,
-      approved_by: approvedBy || null,
-      processed_at: new Date().toISOString(),
-    })
+    .update(updatePayload)
     .eq("request_id", requestId);
 
   if (updateError) {
