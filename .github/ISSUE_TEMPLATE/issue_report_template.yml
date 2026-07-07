@@ -1,0 +1,30 @@
+name: "Issue Report"
+description: "Create a feat, refactor, or bug issue"
+title: "[Iteration] [Type] Short description"
+labels: ["triage"]
+body:
+  - type: dropdown
+    id: issue-type
+    attributes:
+      label: "Issue Type"
+      description: "Select the type of issue you want to create."
+      options:
+        - "Feature"
+        - "Refactor"
+        - "Bug"
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: "Description"
+      placeholder: "Describe the feature, refactor, or bug..."
+    validations:
+      required: true
+
+  - type: input
+    id: branch
+    attributes:
+      label: "Target Branch"
+      placeholder: "e.g. main, develop"

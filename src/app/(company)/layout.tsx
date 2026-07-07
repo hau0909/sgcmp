@@ -135,15 +135,15 @@ export default function CompanyLayout({
       icon: Package,
       active: pathname === "/billing",
     },
-    {
-      name: "Phản hồi khách hàng",
-      href: "/list-reviews",
-      icon: Star,
-      active:
-        pathname === "/list-reviews" || pathname.startsWith("/list-reviews/"),
-    },
     ...(isActive
       ? [
+          {
+            name: "Phản hồi khách hàng",
+            href: "/list-reviews",
+            icon: Star,
+            active:
+              pathname === "/list-reviews" || pathname.startsWith("/list-reviews/"),
+          },
           {
             name: "Quản lý điều phối viên",
             href: "/coordinators",
@@ -249,32 +249,7 @@ export default function CompanyLayout({
             })}
           </nav>
 
-          {/* Footer Section */}
-          <div className="mt-auto flex flex-col gap-1 border-t border-outline-variant pt-4">
-            <Link
-              href="#"
-              className="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg font-body text-sm font-semibold transition-all"
-            >
-              <Settings className="w-5 h-5" />
-              <span>Cài đặt</span>
-            </Link>
 
-            <Link
-              href="#"
-              className="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg font-body text-sm font-semibold transition-all"
-            >
-              <HelpCircle className="w-5 h-5" />
-              <span>Hỗ trợ</span>
-            </Link>
-
-            <Link
-              href="/billing"
-              className="mt-4 w-full bg-primary hover:bg-primary-container text-on-primary font-medium py-2 rounded shadow-sm transition-colors flex items-center justify-center gap-2"
-            >
-              <ArrowUpCircle className="w-4 h-4" />
-              <span>{isActive ? "Nâng cấp gói" : "Đăng ký gói"}</span>
-            </Link>
-          </div>
         </aside>
 
         {/* Main Panel */}
@@ -341,6 +316,10 @@ export default function CompanyLayout({
 
           {/* Page Content Viewport */}
           <main className="flex-1 overflow-y-auto bg-surface">{children}</main>
+          
+          <footer className="py-4 text-center text-xs text-on-surface-variant/60 border-t border-outline-variant/30 bg-surface shrink-0">
+            &copy; {new Date().getFullYear()} Hệ thống quản lý. All rights reserved.
+          </footer>
         </div>
       </div>
     </RoleGuard>

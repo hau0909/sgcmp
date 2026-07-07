@@ -89,10 +89,6 @@ function BillingContent() {
             Xem thông tin gói hiện tại, nâng cấp và quản lý lịch sử giao dịch.
           </p>
         </div>
-        <button className="bg-secondary hover:bg-secondary-container text-on-secondary font-bold py-2 px-4 rounded text-sm transition-colors flex items-center gap-2 w-fit shadow-sm active:scale-95 duration-100">
-          <Download className="w-4 h-4" />
-          <span>Xuất hóa đơn</span>
-        </button>
       </div>
 
       {/* Current Plan & Resource Usage Grid */}
