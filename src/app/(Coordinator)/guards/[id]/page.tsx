@@ -168,7 +168,15 @@ export default function GuardDetailPage() {
           )}
 
           <div>
-            <h1 className="text-2xl font-bold text-slate-950">{fullName}</h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-slate-950">
+                {fullName}
+              </h1>
+
+              <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
+                HOẠT ĐỘNG
+              </span>
+            </div>
 
             <p className="mt-2 text-sm font-medium text-slate-600">
               Thông tin chi tiết nhân viên bảo vệ
@@ -233,6 +241,22 @@ export default function GuardDetailPage() {
               </div>
             </div>
           </section>
+
+          <section className="rounded-md border border-slate-300 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2 border-b border-slate-300 pb-3">
+              <User className="h-4 w-4 text-blue-800" />
+
+              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
+                Hình ảnh CCCD/CMND
+              </h2>
+            </div>
+
+            <div className="grid gap-5 md:grid-cols-2">
+              <CccdPreviewBox label="Mặt trước CCCD/CMND" />
+
+              <CccdPreviewBox label="Mặt sau CCCD/CMND" />
+            </div>
+          </section>
         </div>
 
         <div className="space-y-5">
@@ -285,6 +309,24 @@ function InfoItem({ label, value }: { label: string; value: string }) {
       <p className="text-sm font-medium text-slate-500">{label}</p>
 
       <p className="mt-1 text-sm font-bold text-slate-950">{value}</p>
+    </div>
+  );
+
+}
+function CccdPreviewBox({ label }: { label: string }) {
+  return (
+    <div>
+      <p className="mb-2 text-sm font-semibold text-slate-700">{label}</p>
+
+      <div className="flex aspect-[16/10] items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-100">
+        <div className="text-center">
+          <User className="mx-auto h-8 w-8 text-slate-400" />
+
+          <p className="mt-2 text-sm font-medium text-slate-500">
+            Chưa có hình ảnh
+          </p>
+        </div>
+      </div>
     </div>
   );
 }
