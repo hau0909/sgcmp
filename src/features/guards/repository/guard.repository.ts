@@ -381,7 +381,8 @@ export const getGuardDetail = async (
         gender,
         date_of_birth,
         address,
-        avatar_url
+        avatar_url,
+        status
       )
     `,
     )
