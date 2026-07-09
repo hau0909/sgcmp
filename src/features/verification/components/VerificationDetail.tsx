@@ -100,7 +100,15 @@ export function VerificationDetail({
     if (!verification) return;
     try {
       setIsSimulating(true);
-      const updates = { status, notes, description };
+      const updates: any = {};
+      if (status !== undefined) updates.status = status;
+      
+      if (isCompanyAdmin) {
+        updates.notes = notes;
+      } else {
+        updates.description = description;
+      }
+
       const res = await requestUpdateVerification(bookingId, updates);
       setVerification(res.verification);
       if (onVerificationUpdate) onVerificationUpdate(res.verification);
@@ -472,7 +480,7 @@ export function VerificationDetail({
             </div>
           )}
 
-          {!isCompanyAdmin && verification.status === "rejected" && (
+          {!isCompanyAdmin && (verification.status === "rejected" || verification.status === "pending") && (
             <div className="pt-4 border-t border-outline-variant/30 flex items-center justify-end gap-4 flex-wrap">
               <button
                 onClick={() => handleUpdate("pending")}
