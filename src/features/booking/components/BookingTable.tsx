@@ -40,6 +40,12 @@ function getStatusBadge(status: BookingStatus) {
           Từ chối
         </span>
       );
+    case "canceled":
+      return (
+        <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-slate-50 text-slate-700 border-slate-200">
+          Đã hủy
+        </span>
+      );
     default:
       return null;
   }

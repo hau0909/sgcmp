@@ -4,17 +4,20 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { DollarSign, Send, XCircle, FileText } from "lucide-react";
 import { BookingStatus } from "../types";
+import { VerificationStatus } from "@/features/verification/types";
 import { formatPrice } from "@/utils/formatPrice";
 
 interface BookingQuotationPanelProps {
   initialPrice: number | null;
   guardsCount: number;
   status: BookingStatus;
-  onQuote: (price: number, notes: string) => void;
+  onQuote: (price: number) => void;
   onReject: () => void;
   viewMode?: "company" | "customer";
   onAccept?: () => void;
   contractId?: string | null;
+  verificationStatus?: VerificationStatus | null;
+  onCancelBooking?: () => void;
 }
 
 export function BookingQuotationPanel({
@@ -26,14 +29,10 @@ export function BookingQuotationPanel({
   viewMode = "company",
   onAccept,
   contractId,
+  verificationStatus,
+  onCancelBooking,
 }: BookingQuotationPanelProps) {
-  // Calculate default price based on: guardsCount * 3,000,000 VND
-  const defaultEstimate = React.useMemo(() => {
-    return (guardsCount || 0) * 3000000;
-  }, [guardsCount]);
-
   const [priceStr, setPriceStr] = useState("");
-  const [notes, setNotes] = useState("");
 
   // Helper to format string into numbers with commas: e.g. 45000000 -> 45,000,000
   const formatNumber = (val: string) => {
@@ -44,9 +43,8 @@ export function BookingQuotationPanel({
 
   // Synchronize initial value
   useEffect(() => {
-    const val = (initialPrice !== null && initialPrice !== undefined) ? initialPrice : defaultEstimate;
-    setPriceStr(formatPrice(val));
-  }, [initialPrice, defaultEstimate]);
+    setPriceStr(initialPrice !== null && initialPrice !== undefined ? formatPrice(initialPrice) : "");
+  }, [initialPrice]);
 
   const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const cleanVal = e.target.value.replace(/\D/g, "");
@@ -56,14 +54,14 @@ export function BookingQuotationPanel({
   const handleSubmitQuote = (e: React.FormEvent) => {
     e.preventDefault();
     const cleanNum = priceStr.replace(/\D/g, "");
-    const numericPrice = cleanNum ? Number(cleanNum) : defaultEstimate;
-    onQuote(numericPrice, notes);
+    const numericPrice = cleanNum ? Number(cleanNum) : 0;
+    onQuote(numericPrice);
   };
 
   const isReadOnly =
-    viewMode === "customer" ? status !== "quoted" : status !== "pending";
+    viewMode === "customer" ? status !== "quoted" : (status !== "pending" && status !== "rejected");
 
-  const isInputsDisabled = isReadOnly || viewMode === "customer";
+  const isInputsDisabled = isReadOnly || viewMode === "customer" || (viewMode === "company" && verificationStatus !== "approved");
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-sm relative overflow-hidden h-fit sticky top-20 transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] duration-300 animate-in fade-in slide-in-from-right-3 duration-300">
@@ -103,33 +101,9 @@ export function BookingQuotationPanel({
               VND
             </span>
           </div>
-          <p className="text-[10px] font-medium text-outline mt-1.5 leading-normal">
-            Dựa trên ước tính: 3,000,000 VND / nhân sự / sự kiện
-          </p>
         </div>
 
-        {/* Notes Textarea */}
-        <div>
-          <label
-            htmlFor="quotation-notes"
-            className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5"
-          >
-            Ghi chú báo giá
-          </label>
-          <textarea
-            id="quotation-notes"
-            rows={4}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            disabled={isInputsDisabled}
-            placeholder={
-              isInputsDisabled
-                ? "Đã đóng cập nhật ghi chú."
-                : "Nhập ghi chú hoặc điều khoản đặc biệt gửi cho khách hàng..."
-            }
-            className="w-full p-3 border border-outline-variant rounded-lg bg-surface-container-lowest text-xs font-medium font-body text-on-surface placeholder:text-on-surface-variant/45 focus:outline-none focus:ring-2 focus:ring-secondary/60 focus:border-secondary shadow-sm resize-none transition-all disabled:opacity-60 disabled:cursor-not-allowed"
-          />
-        </div>
+
 
         {/* Action Buttons */}
         <div className="pt-4 border-t border-outline-variant/30 space-y-3">
@@ -141,7 +115,8 @@ export function BookingQuotationPanel({
                     {status === "pending" &&
                       "Yêu cầu đang chờ doanh nghiệp gửi báo giá."}
                     {status === "accepted" && "Yêu cầu này đã được phê duyệt."}
-                    {status === "rejected" && "Yêu cầu này đã bị từ chối."}
+                    {status === "rejected" && "Yêu cầu này đã bị từ chối báo giá."}
+                    {status === "canceled" && "Yêu cầu này đã bị hủy bỏ."}
                   </>
                 ) : (
                   <>
@@ -151,6 +126,8 @@ export function BookingQuotationPanel({
                       "Yêu cầu này đã được phê duyệt. Không thể chỉnh sửa."}
                     {status === "rejected" &&
                       "Yêu cầu này đã bị từ chối. Không thể chỉnh sửa."}
+                    {status === "canceled" &&
+                      "Yêu cầu này đã bị hủy bỏ. Không thể chỉnh sửa."}
                   </>
                 )}
               </div>
@@ -192,13 +169,19 @@ export function BookingQuotationPanel({
           ) : (
             <>
               {/* Button: Send/Update */}
-              <button
-                type="submit"
-                className="w-full bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold py-2.5 rounded-lg shadow-md transition-all duration-100 active:scale-95 flex justify-center items-center gap-1.5 cursor-pointer"
-              >
-                <Send className="w-4 h-4 shrink-0" />
-                <span>Cập nhật & Gửi khách hàng</span>
-              </button>
+              {viewMode === "company" && verificationStatus !== "approved" ? (
+                <div className="p-3 mb-3 text-center rounded-lg bg-amber-50 text-amber-700 text-[11px] font-semibold border border-amber-200 leading-relaxed">
+                  Cần hoàn tất và duyệt &quot;Khảo sát yêu cầu&quot; trước khi báo giá.
+                </div>
+              ) : (
+                <button
+                  type="submit"
+                  className="w-full bg-primary hover:bg-primary/90 text-on-primary text-xs font-bold py-2.5 rounded-lg shadow-md transition-all duration-100 active:scale-95 flex justify-center items-center gap-1.5 cursor-pointer"
+                >
+                  <Send className="w-4 h-4 shrink-0" />
+                  <span>{status === "rejected" ? "Cập nhật & Gửi báo giá lại" : "Cập nhật & Gửi khách hàng"}</span>
+                </button>
+              )}
 
               {/* Button: Reject */}
               <button

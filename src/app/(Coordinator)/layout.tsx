@@ -21,6 +21,7 @@ import {
   Archive,
   Copy,
   ShieldAlert,
+  ClipboardCheck,
 } from "lucide-react";
 
 export default function CoordinatorLayout({
@@ -74,6 +75,12 @@ export default function CoordinatorLayout({
       href: "/bookings",
       icon: FileText,
       active: pathname === "/bookings" || pathname.startsWith("/bookings/"),
+    },
+    {
+      name: "Khảo sát yêu cầu",
+      href: "/coor-verifications",
+      icon: ClipboardCheck,
+      active: pathname === "/coor-verifications" || pathname.startsWith("/coor-verifications/"),
     },
     {
       name: "Bảo vệ",
