@@ -375,18 +375,28 @@ export function VerificationDetail({
                 onDrop={handleDrop}
               >
                 {verification.images.length === 0 ? (
-                  <div
-                    className={`col-span-full py-8 border ${isDragActive ? "border-primary/50 text-primary" : "border-outline-variant border-dashed text-on-surface-variant bg-surface-bright/50"} rounded-lg flex flex-col items-center justify-center pointer-events-none`}
-                  >
-                    <FileImage className="w-6 h-6 mb-1.5 opacity-55" />
-                    <p className="text-[10px] font-medium">
-                      {isDragActive
-                        ? "Thả ảnh vào đây..."
-                        : canEditImages
-                          ? "Kéo thả hoặc bấm nút để tải ảnh lên"
-                          : "Chưa có hình ảnh nào"}
-                    </p>
-                  </div>
+                  canEditImages ? (
+                    <label
+                      htmlFor="image-upload"
+                      className={`col-span-full py-8 border ${isDragActive ? "border-primary/50 bg-primary/5 text-primary" : "border-outline-variant border-dashed text-on-surface-variant hover:border-primary hover:text-primary hover:bg-surface-bright cursor-pointer"} rounded-lg flex flex-col items-center justify-center transition-all`}
+                    >
+                      <FileImage className="w-6 h-6 mb-1.5 opacity-55" />
+                      <p className="text-[10px] font-medium">
+                        {isDragActive
+                          ? "Thả ảnh vào đây..."
+                          : "Kéo thả hoặc bấm nút để tải ảnh lên"}
+                      </p>
+                    </label>
+                  ) : (
+                    <div
+                      className="col-span-full py-8 border border-outline-variant border-dashed text-on-surface-variant bg-surface-bright/50 rounded-lg flex flex-col items-center justify-center pointer-events-none"
+                    >
+                      <FileImage className="w-6 h-6 mb-1.5 opacity-55" />
+                      <p className="text-[10px] font-medium">
+                        Chưa có hình ảnh nào
+                      </p>
+                    </div>
+                  )
                 ) : (
                   <>
                     {verification.images.map((img, idx) => (
