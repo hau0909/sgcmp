@@ -190,7 +190,7 @@ export const updateBookingStatusAndPriceService = async (
   bookingId: string,
   updates: { status: BookingStatus; quoted_price?: number }
 ): Promise<{ booking: Booking; contract_id?: string }> => {
-  if (updates.status !== "quoted" && updates.status !== "rejected" && updates.status !== "accepted") {
+  if (updates.status !== "quoted" && updates.status !== "rejected" && updates.status !== "accepted" && updates.status !== "canceled") {
     throw new Error("Trạng thái cập nhật không hợp lệ.");
   }
   if (updates.status === "quoted" && (updates.quoted_price === undefined || updates.quoted_price <= 0)) {

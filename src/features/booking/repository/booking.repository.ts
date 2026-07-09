@@ -213,11 +213,25 @@ export const updateBookingStatusAndPrice = async (
   const targetStatus = updates.status;
 
   const isValidTransition =
-    (currentStatus === "pending" && (targetStatus === "quoted" || targetStatus === "rejected")) ||
-    (currentStatus === "quoted" && (targetStatus === "accepted" || targetStatus === "rejected"));
+    (currentStatus === "pending" && (targetStatus === "quoted" || targetStatus === "rejected" || targetStatus === "canceled")) ||
+    (currentStatus === "quoted" && (targetStatus === "accepted" || targetStatus === "rejected" || targetStatus === "canceled")) ||
+    (currentStatus === "rejected" && (targetStatus === "quoted" || targetStatus === "canceled"));
 
   if (!isValidTransition) {
     throw new Error(`Chuyển đổi trạng thái từ ${currentStatus} sang ${targetStatus} không hợp lệ.`);
+  }
+
+  // Khảo sát must be approved before Quoted
+  if (targetStatus === "quoted") {
+    const { data: verification } = await supabase
+      .from("request_verifications")
+      .select("status")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
+
+    if (!verification || verification.status !== "approved") {
+      throw new Error("Cần hoàn tất và duyệt khảo sát trước khi thực hiện báo giá.");
+    }
   }
 
   const updatePayload: any = {

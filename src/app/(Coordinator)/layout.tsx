@@ -21,6 +21,7 @@ import {
   Archive,
   Copy,
   ShieldAlert,
+  ClipboardCheck,
 } from "lucide-react";
 
 export default function CoordinatorLayout({
@@ -74,6 +75,12 @@ export default function CoordinatorLayout({
       href: "/bookings",
       icon: FileText,
       active: pathname === "/bookings" || pathname.startsWith("/bookings/"),
+    },
+    {
+      name: "Khảo sát yêu cầu",
+      href: "/coor-verifications",
+      icon: ClipboardCheck,
+      active: pathname === "/coor-verifications" || pathname.startsWith("/coor-verifications/"),
     },
     {
       name: "Bảo vệ",
@@ -154,23 +161,7 @@ export default function CoordinatorLayout({
             })}
           </nav>
 
-          {/* Footer Section */}
-          <div className="mt-auto flex flex-col gap-1 border-t border-outline-variant pt-4 shrink-0">
-            <Link
-              href="#"
-              className="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg font-body text-sm font-semibold transition-all"
-            >
-              <HelpCircle className="w-5 h-5" />
-              <span>Hỗ trợ</span>
-            </Link>
-            <Link
-              href="#"
-              className="flex items-center gap-3 px-3 py-2 text-on-surface-variant hover:bg-surface-container-high rounded-lg font-body text-sm font-semibold transition-all"
-            >
-              <BookOpen className="w-5 h-5" />
-              <span>Hướng dẫn sử dụng</span>
-            </Link>
-          </div>
+          {/* Footer Section - Removed */}
         </aside>
 
         {/* Main Panel */}
@@ -199,24 +190,6 @@ export default function CoordinatorLayout({
 
             {/* Right Header Options */}
             <div className="flex items-center gap-4">
-              {/* Search Box */}
-              <div className="hidden sm:flex items-center bg-surface-container-low rounded-full px-3 py-1.5 border border-outline-variant focus-within:border-secondary transition-colors">
-                <Search className="w-4 h-4 text-on-surface-variant mr-2" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="bg-transparent border-none outline-none text-sm text-on-surface w-32 focus:w-48 transition-all duration-300 placeholder-on-surface-variant"
-                />
-              </div>
-              {/* Notification */}
-              <button className="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full" />
-              </button>
-              {/* Help */}
-              <button className="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low">
-                <HelpCircle className="w-5 h-5" />
-              </button>
               {/* User Profile */}
               <div className="w-8 h-8 rounded-full border border-outline-variant overflow-hidden cursor-pointer hover:border-primary transition-colors ml-2 shrink-0">
                 <img

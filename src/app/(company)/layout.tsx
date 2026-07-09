@@ -20,6 +20,7 @@ import {
   Calendar,
   Building2,
   MessageSquare,
+  ClipboardCheck,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/store/auth.store";
@@ -113,6 +114,13 @@ export default function CompanyLayout({
             icon: Calendar,
             active:
               pathname === "/requests" || pathname.startsWith("/requests/"),
+          },
+          {
+            name: "Khảo sát yêu cầu",
+            href: "/verifications",
+            icon: ClipboardCheck,
+            active:
+              pathname === "/verifications" || pathname.startsWith("/verifications/"),
           },
           {
             name: "Quản lý hợp đồng",
