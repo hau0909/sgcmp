@@ -76,6 +76,9 @@ export const requestGetAllGuards = ({
   page = 1,
   limit = 10,
   search = "",
+  gender = "",
+  status = "",
+  workStatus = "",
 }: GetAllGuardsParams = {}) => {
   const searchParams = new URLSearchParams();
 
@@ -84,6 +87,18 @@ export const requestGetAllGuards = ({
 
   if (search.trim()) {
     searchParams.set("search", search.trim());
+  }
+
+  if (gender) {
+    searchParams.set("gender", gender);
+  }
+
+  if (status) {
+    searchParams.set("status", status);
+  }
+
+  if (workStatus) {
+    searchParams.set("workStatus", workStatus);
   }
 
   return fetcher(`/api/guard?${searchParams.toString()}`, {

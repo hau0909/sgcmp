@@ -127,6 +127,7 @@ export type GuardProfileItem = {
   avatar_url: string | null;
   email: string | null;
   status: string | null;
+  gender: string | null;
 };
 
 export type GuardListItem = {
@@ -151,6 +152,9 @@ export type GetAllGuardsRepositoryParams = {
   page: number;
   limit: number;
   search?: string;
+  gender?: string;
+  status?: string;
+  workStatus?: string;
 };
 
 export type GetAllGuardsRepositoryResult = {
@@ -163,18 +167,27 @@ export type GetAllGuardsServiceParams = {
   page: number;
   limit: number;
   search?: string;
+  gender?: string;
+  status?: string;
+  workStatus?: string;
 };
 
 export type HandleGetAllGuardsInput = {
   page?: string | null;
   limit?: string | null;
   search?: string | null;
+  gender?: string | null;
+  status?: string | null;
+  workStatus?: string | null;
 };
 
 export interface GetAllGuardsParams {
   page?: number;
   limit?: number;
   search?: string;
+  gender?: string;
+  status?: string;
+  workStatus?: string;
 }
 
 export type HandleGetAllGuardsResult = {

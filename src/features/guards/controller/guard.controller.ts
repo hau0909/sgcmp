@@ -408,6 +408,9 @@ export const handleGetAllGuards = async ({
   page,
   limit,
   search,
+  gender,
+  status,
+  workStatus,
 }: HandleGetAllGuardsInput): Promise<HandleGetAllGuardsResult> => {
   try {
     const profile = await getCurrentUserProfileService();
@@ -470,12 +473,18 @@ export const handleGetAllGuards = async ({
         : 10;
 
     const keyword = search?.trim() ?? "";
+    const genderVal = gender?.trim() ?? "";
+    const statusVal = status?.trim() ?? "";
+    const workStatusVal = workStatus?.trim() ?? "";
 
     const data = await getAllGuardService({
       company_id,
       page: validPage,
       limit: validLimit,
       search: keyword,
+      gender: genderVal,
+      status: statusVal,
+      workStatus: workStatusVal,
     });
 
     return {

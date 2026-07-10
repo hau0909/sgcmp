@@ -267,6 +267,9 @@ export const getAllGuards = async ({
   page,
   limit,
   search,
+  gender,
+  status,
+  workStatus,
 }: GetAllGuardsRepositoryParams): Promise<GetAllGuardsRepositoryResult> => {
   const supabase = await createClient();
 
@@ -274,6 +277,7 @@ export const getAllGuards = async ({
   const to = from + limit - 1;
 
   let matchedUserIds: string[] | null = null;
+  let excludeUserIds: string[] | null = null;
 
   const keyword = search?.trim();
 
@@ -302,18 +306,107 @@ export const getAllGuards = async ({
     }
   }
 
+  // Handle workStatus filter
+  if (workStatus) {
+    const now = new Date();
+    const nowStr = now.toISOString();
+    const nowPlus1sStr = new Date(now.getTime() + 1000).toISOString();
+
+    // 1. Get user IDs that are currently on duty
+    const { data: activeAssignments, error: activeErr } = await supabase
+      .from("shift_assignments")
+      .select("guard_id, shifts!inner(start_time, end_time)")
+      .neq("status", "absent")
+      .lt("shifts.start_time", nowPlus1sStr)
+      .gt("shifts.end_time", nowStr);
+
+    if (activeErr) {
+      throw new Error(activeErr.message);
+    }
+
+    const activeUserIds = Array.from(new Set((activeAssignments ?? []).map((a) => a.guard_id)));
+
+    // 2. Get user IDs that have any shift today (active or future today)
+    const vnTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+    const year = vnTime.getUTCFullYear();
+    const month = String(vnTime.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(vnTime.getUTCDate()).padStart(2, "0");
+    const dateKey = `${year}-${month}-${day}`;
+    const todayEnd = `${dateKey}T23:59:59+07:00`;
+
+    const { data: upcomingAssignments, error: upcomingErr } = await supabase
+      .from("shift_assignments")
+      .select("guard_id, shifts!inner(start_time, end_time)")
+      .neq("status", "absent")
+      .gt("shifts.end_time", nowStr)
+      .lt("shifts.start_time", todayEnd);
+
+    if (upcomingErr) {
+      throw new Error(upcomingErr.message);
+    }
+
+    const upcomingUserIds = Array.from(new Set((upcomingAssignments ?? []).map((a) => a.guard_id)));
+
+    // 3. Compute matching user IDs for this workStatus
+    let workStatusMatchedUserIds: string[] = [];
+
+    if (workStatus === "on_duty") {
+      workStatusMatchedUserIds = activeUserIds;
+    } else if (workStatus === "assigned") {
+      // Upcoming today but not currently on duty
+      workStatusMatchedUserIds = upcomingUserIds.filter((id) => !activeUserIds.includes(id));
+    }
+
+    if (workStatus === "on_duty" || workStatus === "assigned") {
+      if (workStatusMatchedUserIds.length === 0) {
+        return {
+          guards: [],
+          total: 0,
+        };
+      }
+
+      if (matchedUserIds) {
+        matchedUserIds = matchedUserIds.filter((id) => workStatusMatchedUserIds.includes(id));
+      } else {
+        matchedUserIds = workStatusMatchedUserIds;
+      }
+
+      if (matchedUserIds.length === 0) {
+        return {
+          guards: [],
+          total: 0,
+        };
+      }
+    } else if (workStatus === "available") {
+      if (matchedUserIds) {
+        matchedUserIds = matchedUserIds.filter((id) => !upcomingUserIds.includes(id));
+        if (matchedUserIds.length === 0) {
+          return {
+            guards: [],
+            total: 0,
+          };
+        }
+      } else {
+        if (upcomingUserIds.length > 0) {
+          excludeUserIds = upcomingUserIds;
+        }
+      }
+    }
+  }
+
   let query = supabase
     .from("guards")
     .select(
       `
       guard_id,
-      profiles!guards_user_id_fkey (
+      profiles!guards_user_id_fkey!inner (
         user_id,
         full_name,
         phone_number,
         avatar_url,
         email,
-        status
+        status,
+        gender
       )
     `,
       {
@@ -328,6 +421,25 @@ export const getAllGuards = async ({
 
   if (matchedUserIds) {
     query = query.in("user_id", matchedUserIds);
+  }
+
+  if (excludeUserIds && excludeUserIds.length > 0) {
+    query = query.not("user_id", "in", `(${excludeUserIds.join(",")})`);
+  }
+
+  if (gender) {
+    const normalizedGender = gender.trim().toLowerCase();
+    if (normalizedGender === "female" || normalizedGender === "nữ" || normalizedGender === "nu") {
+      query = query.in("profiles.gender", ["female", "Female", "FEMALE", "nữ", "Nữ", "NỮ", "nu", "Nu", "NU"]);
+    } else if (normalizedGender === "male" || normalizedGender === "nam") {
+      query = query.in("profiles.gender", ["male", "Male", "MALE", "nam", "Nam", "NAM"]);
+    } else {
+      query = query.eq("profiles.gender", gender);
+    }
+  }
+
+  if (status) {
+    query = query.eq("profiles.status", status);
   }
 
   const { data, error, count } = await query;
@@ -543,7 +655,8 @@ export const getGuardsByContract = async ({
         phone_number,
         avatar_url,
         email,
-        status
+        status,
+        gender
       )
     `,
       {

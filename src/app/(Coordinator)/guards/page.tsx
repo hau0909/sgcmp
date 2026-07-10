@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -12,6 +13,7 @@ import { useRouter } from "next/navigation";
 import Image from "next/image";
 
 import { requestGetAllGuards } from "@/features/guards/api/guard.api";
+import { requestGetGuardAvailability } from "@/features/shift/api/shift.api";
 import type { GuardListItem, GuardProfileItem } from "@/features/guards/type";
 
 const PAGE_SIZE = 10;
@@ -45,10 +47,19 @@ const GuardTableSkeleton = () => {
 
           <td className="px-4 py-3">
             <div className="h-4 w-40 animate-pulse rounded bg-slate-200" />
+            <div className="mt-1.5 h-3 w-28 animate-pulse rounded bg-slate-200" />
+          </td>
+
+          <td className="px-4 py-3">
+            <div className="h-4 w-16 animate-pulse rounded bg-slate-200" />
           </td>
 
           <td className="px-4 py-3">
             <div className="h-4 w-32 animate-pulse rounded bg-slate-200" />
+          </td>
+
+          <td className="px-4 py-3">
+            <div className="h-4 w-28 animate-pulse rounded bg-slate-200" />
           </td>
 
           <td className="px-4 py-3">
@@ -64,12 +75,98 @@ const GuardTableSkeleton = () => {
   );
 };
 
+interface CustomSelectProps {
+  value: string;
+  onChange: (value: string) => void;
+  options: { value: string; label: string }[];
+  placeholder: string;
+}
+
+const CustomSelect = ({ value, onChange, options, placeholder }: CustomSelectProps) => {
+  const [isOpen, setIsOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const selectedOption = options.find((opt) => opt.value === value);
+
+  return (
+    <div className="relative inline-block min-w-[170px]" ref={dropdownRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={`flex h-9 w-full items-center justify-between border border-slate-300 bg-slate-50 px-3 text-sm text-slate-700 outline-none transition focus:border-blue-700 focus:bg-white rounded-lg cursor-pointer ${
+          value ? "font-bold text-slate-950" : ""
+        }`}
+      >
+        <span>{selectedOption ? selectedOption.label : placeholder}</span>
+        <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute left-0 z-50 mt-1.5 w-full min-w-[170px] rounded-lg border border-slate-200 bg-white p-1 shadow-lg animate-in fade-in slide-in-from-top-1 duration-150">
+          {options.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setIsOpen(false);
+              }}
+              className={`flex w-full items-center rounded-md px-3 py-2 text-left text-sm transition-colors cursor-pointer ${
+                opt.value === value
+                  ? "bg-blue-50 font-semibold text-blue-700"
+                  : "text-slate-700 hover:bg-slate-50"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 export default function GuardListScreen() {
   const router = useRouter();
 
   const [guards, setGuards] = useState<GuardListItem[]>([]);
   const [searchValue, setSearchValue] = useState("");
+
+  const workStatusOptions = [
+    { value: "", label: "Lịch hôm nay (Tất cả)" },
+    { value: "on_duty", label: "Đang trực" },
+    { value: "assigned", label: "Phân công" },
+    { value: "available", label: "Đang rảnh" },
+  ];
+
+  const statusOptions = [
+    { value: "", label: "Trạng thái (Tất cả)" },
+    { value: "active", label: "Hoạt động" },
+    { value: "unactive", label: "Vô hiệu hóa" },
+  ];
+
+  const genderOptions = [
+    { value: "", label: "Giới tính (Tất cả)" },
+    { value: "male", label: "Nam" },
+    { value: "female", label: "Nữ" },
+  ];
   const [debouncedSearchValue, setDebouncedSearchValue] = useState("");
+
+  const [workStatusFilter, setWorkStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [genderFilter, setGenderFilter] = useState("");
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalGuards, setTotalGuards] = useState(0);
@@ -77,6 +174,9 @@ export default function GuardListScreen() {
 
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
+  const [availability, setAvailability] = useState<
+    Record<string, { isOnDuty: boolean; hasUpcomingShiftToday: boolean }>
+  >({});
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => {
@@ -90,6 +190,10 @@ export default function GuardListScreen() {
   }, [searchValue]);
 
   useEffect(() => {
+    setCurrentPage(1);
+  }, [genderFilter, statusFilter, workStatusFilter]);
+
+  useEffect(() => {
     let isCancelled = false;
 
     const fetchGuards = async () => {
@@ -101,6 +205,9 @@ export default function GuardListScreen() {
           page: currentPage,
           limit: PAGE_SIZE,
           search: debouncedSearchValue,
+          gender: genderFilter,
+          status: statusFilter,
+          workStatus: workStatusFilter,
         });
 
         if (isCancelled) {
@@ -140,7 +247,76 @@ export default function GuardListScreen() {
     return () => {
       isCancelled = true;
     };
-  }, [currentPage, debouncedSearchValue]);
+  }, [currentPage, debouncedSearchValue, genderFilter, statusFilter, workStatusFilter]);
+
+  useEffect(() => {
+    if (guards.length === 0) {
+      setAvailability({});
+      return;
+    }
+
+    let isCancelled = false;
+
+    const fetchAvailability = async () => {
+      try {
+        const guardUserIds = guards
+          .map((g) => getGuardProfile(g.profiles)?.user_id)
+          .filter((id): id is string => !!id);
+
+        if (guardUserIds.length === 0) return;
+
+        const now = new Date();
+        const nowStr = now.toISOString();
+        // Shift endTime forward by 1 second to cover exact boundary starts
+        const nowPlus1sStr = new Date(now.getTime() + 1000).toISOString();
+
+        // Calculate today's end time in Vietnam local time (+07:00)
+        const vnTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
+        const year = vnTime.getUTCFullYear();
+        const month = String(vnTime.getUTCMonth() + 1).padStart(2, "0");
+        const day = String(vnTime.getUTCDate()).padStart(2, "0");
+        const dateKey = `${year}-${month}-${day}`;
+
+        const todayEnd = `${dateKey}T23:59:59+07:00`;
+
+        const [nowResult, futureResult] = await Promise.all([
+          requestGetGuardAvailability({
+            guardIds: guardUserIds,
+            startTime: nowStr,
+            endTime: nowPlus1sStr,
+          }),
+          requestGetGuardAvailability({
+            guardIds: guardUserIds,
+            startTime: nowStr,
+            endTime: todayEnd,
+          }),
+        ]);
+
+        if (isCancelled) return;
+
+        const nowData = nowResult.data || {};
+        const futureData = futureResult.data || {};
+
+        const mapped: Record<string, { isOnDuty: boolean; hasUpcomingShiftToday: boolean }> = {};
+        for (const userId of guardUserIds) {
+          mapped[userId] = {
+            isOnDuty: !!nowData[userId],
+            hasUpcomingShiftToday: !!futureData[userId],
+          };
+        }
+
+        setAvailability(mapped);
+      } catch (error) {
+        console.error("Error fetching guard availability:", error);
+      }
+    };
+
+    void fetchAvailability();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [guards]);
 
   const guardsWithIndex = useMemo(() => {
     return guards.map((guard, index) => ({
@@ -181,8 +357,8 @@ export default function GuardListScreen() {
       </div>
 
       <div className="overflow-hidden rounded-md border border-slate-300 bg-white">
-        <div className="border-b border-slate-300 p-3">
-          <div className="relative w-full md:max-w-[390px]">
+        <div className="border-b border-slate-300 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="relative w-full md:max-w-[320px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
             <input
@@ -190,7 +366,30 @@ export default function GuardListScreen() {
               value={searchValue}
               onChange={(event) => setSearchValue(event.target.value)}
               placeholder="Tìm kiếm theo họ tên, SĐT, email..."
-              className="h-9 w-full border border-slate-300 bg-slate-50 pl-9 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:bg-white"
+              className="h-9 w-full border border-slate-300 bg-slate-50 pl-9 pr-3 text-sm text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:bg-white rounded-lg"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <CustomSelect
+              value={workStatusFilter}
+              onChange={setWorkStatusFilter}
+              options={workStatusOptions}
+              placeholder="Lịch hôm nay (Tất cả)"
+            />
+
+            <CustomSelect
+              value={statusFilter}
+              onChange={setStatusFilter}
+              options={statusOptions}
+              placeholder="Trạng thái (Tất cả)"
+            />
+
+            <CustomSelect
+              value={genderFilter}
+              onChange={setGenderFilter}
+              options={genderOptions}
+              placeholder="Giới tính (Tất cả)"
             />
           </div>
         </div>
@@ -200,9 +399,11 @@ export default function GuardListScreen() {
             <thead>
               <tr className="bg-sky-200/80 text-xs font-bold uppercase text-slate-950">
                 <th className="w-[100px] px-4 py-3">STT</th>
-                <th className="w-[120px] px-4 py-3">Ảnh bảo vệ</th>
+                <th className="w-[120px] px-4 py-3">Ảnh</th>
                 <th className="w-[240px] px-4 py-3">Họ và tên</th>
+                <th className="w-[120px] px-4 py-3">Giới tính</th>
                 <th className="w-[180px] px-4 py-3">Số điện thoại</th>
+                <th className="w-[180px] px-4 py-3">Lịch hôm nay</th>
                 <th className="w-[160px] px-4 py-3">Trạng thái</th>
                 <th className="w-[110px] px-4 py-3 text-center">Hành động</th>
               </tr>
@@ -214,7 +415,7 @@ export default function GuardListScreen() {
               ) : errorMessage ? (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={8}
                     className="px-4 py-10 text-center text-sm text-red-600"
                   >
                     {errorMessage}
@@ -248,12 +449,40 @@ export default function GuardListScreen() {
                         )}
                       </td>
 
-                      <td className="px-4 py-3 font-semibold text-slate-950">
-                        {profile?.full_name ?? "Chưa cập nhật"}
+                      <td className="px-4 py-3 text-slate-950">
+                        <div className="font-semibold">{profile?.full_name ?? "Chưa cập nhật"}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{profile?.email ?? "Chưa cập nhật"}</div>
+                      </td>
+
+                      <td className="px-4 py-3 font-medium">
+                        {(() => {
+                          const g = profile?.gender?.trim().toLowerCase();
+                          if (g === "male" || g === "nam") return "Nam";
+                          if (g === "female" || g === "nữ" || g === "nu") return "Nữ";
+                          return profile?.gender ?? "Chưa cập nhật";
+                        })()}
                       </td>
 
                       <td className="px-4 py-3 font-medium">
                         {profile?.phone_number ?? "Chưa cập nhật"}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        {profile?.user_id && availability[profile.user_id] === undefined ? (
+                          <span className="text-xs text-slate-400">Đang kiểm tra...</span>
+                        ) : profile?.user_id && availability[profile.user_id]?.isOnDuty ? (
+                          <span className="inline-flex items-center rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                            ĐANG TRỰC
+                          </span>
+                        ) : profile?.user_id && availability[profile.user_id]?.hasUpcomingShiftToday ? (
+                          <span className="inline-flex items-center rounded-md bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700 ring-1 ring-inset ring-blue-600/20">
+                            PHÂN CÔNG
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                            ĐANG RẢNH
+                          </span>
+                        )}
                       </td>
 
                       <td className="px-4 py-3">
@@ -285,7 +514,7 @@ export default function GuardListScreen() {
               ) : (
                 <tr>
                   <td
-                    colSpan={6}
+                    colSpan={8}
                     className="px-4 py-10 text-center text-sm text-slate-500"
                   >
                     {debouncedSearchValue

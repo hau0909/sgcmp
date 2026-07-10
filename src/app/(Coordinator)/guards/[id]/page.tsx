@@ -43,11 +43,11 @@ const formatGender = (gender: string | null | undefined): string => {
 
   const normalizedGender = gender.trim().toLowerCase();
 
-  if (normalizedGender === "male") {
+  if (normalizedGender === "male" || normalizedGender === "nam") {
     return "Nam";
   }
 
-  if (normalizedGender === "female") {
+  if (normalizedGender === "female" || normalizedGender === "nữ" || normalizedGender === "nu") {
     return "Nữ";
   }
 
@@ -141,10 +141,11 @@ export default function GuardDetailPage() {
     if (guard) {
       const p = getProfile(guard.profiles);
       const iden = guard.identity;
+      const g = p?.gender?.trim().toLowerCase();
       setFormData({
         full_name: p?.full_name ?? "",
         date_of_birth: p?.date_of_birth ?? "",
-        gender: (p?.gender?.trim().toLowerCase() === "female" ? "female" : "male") as gender,
+        gender: (g === "female" || g === "nữ" || g === "nu" ? "female" : "male") as gender,
         identity_id: iden?.identity_id ?? "",
         identity_issue_date: iden?.issue_date ?? "",
         identity_issue_place: iden?.issue_place ?? "",
@@ -165,10 +166,11 @@ export default function GuardDetailPage() {
     if (guard) {
       const p = getProfile(guard.profiles);
       const iden = guard.identity;
+      const g = p?.gender?.trim().toLowerCase();
       setFormData({
         full_name: p?.full_name ?? "",
         date_of_birth: p?.date_of_birth ?? "",
-        gender: (p?.gender?.trim().toLowerCase() === "female" ? "female" : "male") as gender,
+        gender: (g === "female" || g === "nữ" || g === "nu" ? "female" : "male") as gender,
         identity_id: iden?.identity_id ?? "",
         identity_issue_date: iden?.issue_date ?? "",
         identity_issue_place: iden?.issue_place ?? "",
