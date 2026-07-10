@@ -1,5 +1,6 @@
-import { getCoordinators, insertCoordinatorRecord } from "../repository/coordinator.repository";
+import { getCoordinators, insertCoordinatorRecord, getCoordinatorById } from "../repository/coordinator.repository";
 import { CoordinatorWithUser } from "../types";
+import { getIdentityByUserId } from "@/features/identity/repository/identity.repository";
 
 export const getCoordinatorsService = async (
   companyId: string,
@@ -16,4 +17,13 @@ export const addCoordinatorToCompanyService = async (
 ): Promise<void> => {
   if (!userId || !companyId) throw new Error("User ID và Company ID là bắt buộc");
   await insertCoordinatorRecord(userId, companyId);
+};
+
+export const getCoordinatorDetailService = async (coordinatorId: string) => {
+  if (!coordinatorId) throw new Error("Coordinator ID là bắt buộc");
+  
+  const coordinator = await getCoordinatorById(coordinatorId);
+  const identity = await getIdentityByUserId(coordinator.user_id);
+  
+  return { ...coordinator, identity };
 };

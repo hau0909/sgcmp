@@ -29,3 +29,11 @@ export async function requestCreateCoordinator(
     body: JSON.stringify(payload),
   });
 }
+
+export async function requestGetCoordinatorDetail(
+  id: string
+): Promise<any> {
+  return await fetcher(`/api/coordinators/${id}`, {
+    method: "GET",
+  });
+}

@@ -1,6 +1,7 @@
 import {
   getCoordinatorsService,
   addCoordinatorToCompanyService,
+  getCoordinatorDetailService
 } from "../service/coordinator.service";
 import { checkCompanySubscriptionService, getPlanByIdService } from "@/features/subscription/service/subscription.service";
 import { registerAccountService } from "@/features/auth/service/auth.service";
@@ -180,4 +181,8 @@ export const handleCreateCoordinator = async (
       message: error?.message || error?.details || "Đã có lỗi xảy ra",
     };
   }
+};
+
+export const handleGetCoordinatorDetail = async (coordinatorId: string) => {
+  return await getCoordinatorDetailService(coordinatorId);
 };
