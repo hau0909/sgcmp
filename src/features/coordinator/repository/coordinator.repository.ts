@@ -41,3 +41,20 @@ export const insertCoordinatorRecord = async (
 
   if (error) throw error;
 };
+
+export const getCoordinatorById = async (
+  coordinatorId: string
+): Promise<CoordinatorWithUser> => {
+  const supabaseServer = await createClient();
+
+  const { data, error } = await supabaseServer
+    .from("coordinators")
+    .select("*, profiles!inner(*)")
+    .eq("coordinator_id", coordinatorId)
+    .single();
+
+  if (error) throw error;
+  if (!data) throw new Error("Coordinator không tồn tại");
+
+  return data as unknown as CoordinatorWithUser;
+};

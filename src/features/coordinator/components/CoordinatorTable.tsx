@@ -5,6 +5,7 @@ import { Search, Filter, Download, Edit2, Ban, Unlock, Trash2, ChevronLeft, Chev
 import { requestGetCoordinators } from '../api/coordinator.api';
 import { CoordinatorWithUser } from '../types';
 import { useAuthStore } from '@/store/auth.store';
+import { useRouter } from 'next/navigation';
 
 // Helpers
 function getInitials(name: string) {
@@ -43,6 +44,8 @@ export function CoordinatorTable() {
   const [data, setData] = useState<CoordinatorWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+
+  const router = useRouter();
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -139,6 +142,7 @@ export function CoordinatorTable() {
                     <td className="px-4 py-1.5 whitespace-nowrap text-right">
                       <button 
                         className="text-xs font-semibold text-secondary hover:text-primary transition-colors cursor-pointer"
+                        onClick={() => router.push(`/coordinators/${item.coordinator_id}`)}
                       >
                         Xem chi tiết
                       </button>
