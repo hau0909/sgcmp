@@ -1,6 +1,8 @@
 import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
 import { CustomerContract } from "../types";
+import { getCurrentUserProfileService } from "@/features/auth/service/auth.service";
+import { getCompanyByOwnerIdService, getCoordinatorByCompanyIdService } from "@/features/guards/service/guard.service";
 import {
   getContracts,
   getContractDetail,
@@ -8,7 +10,7 @@ import {
   getCustomerContracts,
   getCustomerContractDetail,
   getContractIdsByCompany,
-  getContractById 
+  getContractById
 } from "../repository/contract.repository";
 import { createClient } from "@/lib/supabase/server";
 import { formatAddressService } from "@/features/address/service/address.service";
@@ -66,9 +68,7 @@ export const getContractsService = async (
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getContractDetailService = async (
-  id: string,
-): Promise<any | null> => {
+export const getContractDetailService = async (id: string): Promise<any | null> => {
   const item = await getContractDetail(id);
   if (!item) return null;
 
@@ -97,6 +97,7 @@ export const getContractDetailService = async (
     status: item.status,
     created_at: item.created_at,
     updated_at: item.updated_at,
+    guard_assigned: item.guard_assigned || [],
 
     // Virtual/mapped fields for UI rendering
     contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
@@ -106,33 +107,34 @@ export const getContractDetailService = async (
     // Booking details
     booking: booking
       ? {
-          booking_id: booking.booking_id,
-          address: booking.address,
-          description: booking.description || null,
-          guards_per_slot: booking.guards_per_slot || 1,
-          time_slots: booking.time_slots || [],
-          start_date: booking.start_date,
-          end_date: booking.end_date,
-          quoted_price: booking.quoted_price,
-          formatted_price: formattedPrice,
-          status: booking.status,
-          profiles: profile
-            ? {
-                user_id: profile.user_id,
-                full_name: profile.full_name || "Khách hàng không tên",
-                phone_number: profile.phone_number || "Không có SĐT",
-                email: profile.email || "Không có Email",
-                address: profile.address || "Chưa cập nhật địa chỉ",
-              }
-            : null,
-          services: service
-            ? {
-                service_id: service.service_id,
-                name: service.name,
-                description: service.description || null,
-              }
-            : null,
-        }
+        booking_id: booking.booking_id,
+        company_id: booking.company_id,
+        address: booking.address,
+        description: booking.description || null,
+        guards_per_slot: booking.guards_per_slot || 1,
+        time_slots: booking.time_slots || [],
+        start_date: booking.start_date,
+        end_date: booking.end_date,
+        quoted_price: booking.quoted_price,
+        formatted_price: formattedPrice,
+        status: booking.status,
+        profiles: profile
+          ? {
+            user_id: profile.user_id,
+            full_name: profile.full_name || "Khách hàng không tên",
+            phone_number: profile.phone_number || "Không có SĐT",
+            email: profile.email || "Không có Email",
+            address: profile.address || "Chưa cập nhật địa chỉ",
+          }
+          : null,
+        services: service
+          ? {
+            service_id: service.service_id,
+            name: service.name,
+            description: service.description || null,
+          }
+          : null,
+      }
       : null,
   };
 };
@@ -166,6 +168,10 @@ export const signContractCompanyService = async (id: string): Promise<any> => {
   const contract = await getContractDetail(id);
   if (!contract) {
     throw new Error("Không tìm thấy hợp đồng");
+  }
+
+  if (!contract.guard_assigned || contract.guard_assigned.length === 0) {
+    throw new Error("Không thể ký duyệt hợp đồng khi chưa phân công nhân sự bảo vệ.");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -302,10 +308,8 @@ export const getCustomerContractsService = async (
   };
 };
 
-export const signContractCustomerService = async (
-  id: string,
-  customerId: string,
-): Promise<any> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const signContractCustomerService = async (id: string, customerId: string): Promise<any> => {
   const contract = await getCustomerContractDetail(id, customerId);
   if (!contract) {
     throw new Error("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập");
@@ -313,6 +317,10 @@ export const signContractCustomerService = async (
 
   if (contract.customer_agreed) {
     throw new Error("Bạn đã ký xác nhận hợp đồng này rồi");
+  }
+
+  if (!contract.guard_assigned || contract.guard_assigned.length === 0) {
+    throw new Error("Hợp đồng này chưa được phân công nhân sự bảo vệ. Vui lòng liên hệ công ty để được phân công trước khi ký.");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -329,10 +337,8 @@ export const signContractCustomerService = async (
   return await updateContract(id, payload);
 };
 
-export const completeContractCustomerService = async (
-  id: string,
-  customerId: string,
-): Promise<any> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const completeContractCustomerService = async (id: string, customerId: string): Promise<any> => {
   const contract = await getCustomerContractDetail(id, customerId);
   if (!contract) {
     throw new Error("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập");
@@ -363,10 +369,7 @@ export const completeContractCustomerService = async (
 
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getCustomerContractDetailService = async (
-  id: string,
-  customerId: string,
-): Promise<any | null> => {
+export const getCustomerContractDetailService = async (id: string, customerId: string): Promise<any | null> => {
   const item = await getCustomerContractDetail(id, customerId);
   if (!item) return null;
 
@@ -375,7 +378,7 @@ export const getCustomerContractDetailService = async (
   const company = booking?.companies;
   const serviceName = service?.name || "Dịch vụ chưa xác định";
   const companyName = company?.company_name || "Công ty chưa xác định";
-  
+
   const reviewData = item.reviews?.[0] || null;
 
   // Format price to VND currency string
@@ -402,7 +405,8 @@ export const getCustomerContractDetailService = async (
     start_date: item.start_date || null,
     end_date: item.end_date || null,
     contract_file_url: item.contract_file_url || null,
-    
+    guard_assigned: item.guard_assigned || [],
+
     // Review specific virtual fields
     has_reviewed: !!reviewData,
     review_rating: reviewData?.rating || 0,
@@ -438,4 +442,99 @@ export const getContractByIdService = async (
   contractId: string,
 ): Promise<Contract | null> => {
   return await getContractById(contractId);
+};
+
+const calculateHoursFromSlot = (slot: string): number => {
+  const parts = slot.split("-");
+  if (parts.length !== 2) return 0;
+  
+  const [startStr, endStr] = parts;
+  const startParts = startStr.split(":");
+  const endParts = endStr.split(":");
+  if (startParts.length !== 2 || endParts.length !== 2) return 0;
+  
+  const startHour = parseInt(startParts[0], 10);
+  const startMin = parseInt(startParts[1], 10);
+  const endHour = parseInt(endParts[0], 10);
+  const endMin = parseInt(endParts[1], 10);
+  
+  if (isNaN(startHour) || isNaN(startMin) || isNaN(endHour) || isNaN(endMin)) {
+    return 0;
+  }
+  
+  const startTotalMinutes = startHour * 60 + startMin;
+  let endTotalMinutes = endHour * 60 + endMin;
+  
+  if (endTotalMinutes <= startTotalMinutes) {
+    endTotalMinutes += 24 * 60;
+  }
+  
+  return (endTotalMinutes - startTotalMinutes) / 60;
+};
+
+export const assignGuardsToContractService = async (
+  contractId: string,
+  guardIds: string[],
+): Promise<unknown> => {
+  const profile = await getCurrentUserProfileService();
+  if (!profile) {
+    throw new Error("Bạn chưa đăng nhập");
+  }
+
+  const role = profile.role?.trim().toLowerCase();
+  let companyId = "";
+
+  if (role === "company-admin") {
+    companyId = await getCompanyByOwnerIdService(profile.user_id);
+  } else if (role === "coordinator") {
+    companyId = await getCoordinatorByCompanyIdService(profile.user_id);
+  } else {
+    throw new Error("Bạn không có quyền thực hiện chức năng này");
+  }
+
+  if (!companyId) {
+    throw new Error("Không tìm thấy công ty của tài khoản");
+  }
+
+  const contract = await getContractDetail(contractId);
+  if (!contract) {
+    throw new Error("Không tìm thấy hợp đồng");
+  }
+
+  // Validate company ownership
+  const bookingCompanyId = contract.bookings?.company_id;
+  if (bookingCompanyId !== companyId) {
+    throw new Error("Bạn không có quyền chỉnh sửa hợp đồng này");
+  }
+
+  // Check if customer already agreed
+  if (contract.customer_agreed) {
+    throw new Error("Hợp đồng đã được khách hàng ký duyệt, không thể thay đổi danh sách bảo vệ.");
+  }
+
+  // Validate shift duration and minimum guards
+  const booking = contract.bookings;
+  const timeSlots: string[] = booking?.time_slots || [];
+  const hasShiftOver8Hours = timeSlots.some((slot) => {
+    const hours = calculateHoursFromSlot(slot);
+    return hours > 8;
+  });
+
+  if (hasShiftOver8Hours && guardIds.length < 2) {
+    throw new Error(
+      "Hợp đồng này có ca trực kéo dài hơn 8 tiếng, yêu cầu phân công ít nhất 2 nhân sự bảo vệ."
+    );
+  }
+
+  // Validate total assigned guards >= required guards (guards_per_slot)
+  const requiredGuards = booking?.guards_per_slot || 1;
+  if (guardIds.length < requiredGuards) {
+    throw new Error(
+      `Hợp đồng yêu cầu tối thiểu ${requiredGuards} nhân sự bảo vệ, hiện tại mới phân công ${guardIds.length} bảo vệ.`
+    );
+  }
+
+  return await updateContract(contractId, {
+    guard_assigned: guardIds,
+  });
 };

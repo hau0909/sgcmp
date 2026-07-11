@@ -13,6 +13,7 @@ interface ContractDetailHeaderProps {
   customerAgreed: boolean;
   companyAgreed: boolean;
   hasContractFile: boolean;
+  hasGuards: boolean;
   onSignCompany?: () => void;
 }
 
@@ -22,6 +23,7 @@ export function ContractDetailHeader({
   customerAgreed,
   companyAgreed,
   hasContractFile,
+  hasGuards,
   onSignCompany,
 }: ContractDetailHeaderProps) {
   // Map statuses to appropriate styles and labels
@@ -130,9 +132,9 @@ export function ContractDetailHeader({
           <div className="relative group/tooltip flex items-center">
             <Button
               onClick={onSignCompany}
-              disabled={!hasContractFile}
+              disabled={!hasContractFile || !hasGuards}
               className={`font-bold shadow-md px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 ${
-                !hasContractFile
+                (!hasContractFile || !hasGuards)
                   ? "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed hover:bg-slate-200"
                   : "cursor-pointer bg-primary hover:bg-primary/90 text-on-primary active:scale-95"
               }`}
@@ -140,9 +142,13 @@ export function ContractDetailHeader({
               <span>Ký duyệt (Công ty)</span>
             </Button>
             
-            {!hasContractFile && (
+            {(!hasContractFile || !hasGuards) && (
               <div className="absolute top-full mt-2 right-0 pointer-events-none opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded shadow-lg whitespace-nowrap z-50">
-                Vui lòng tải lên tệp hợp đồng PDF trước khi ký duyệt
+                {!hasContractFile && !hasGuards
+                  ? "Vui lòng tải lên tệp hợp đồng PDF và phân công bảo vệ trước khi ký duyệt"
+                  : !hasContractFile
+                  ? "Vui lòng tải lên tệp hợp đồng PDF trước khi ký duyệt"
+                  : "Vui lòng phân công bảo vệ trước khi ký duyệt"}
                 <div className="absolute bottom-full right-16 border-4 border-transparent border-b-slate-900" />
               </div>
             )}

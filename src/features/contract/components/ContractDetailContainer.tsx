@@ -9,6 +9,7 @@ import { ContractServiceInfo } from "./ContractServiceInfo";
 import { ContractPaymentInfo } from "./ContractPaymentInfo";
 import { ContractDocuments } from "./ContractDocuments";
 import { ContractHistoryLog } from "./ContractHistoryLog";
+import { ContractGuardsInfo } from "./ContractGuardsInfo";
 
 import {
   requestGetContractDetail,
@@ -92,7 +93,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     const email = customerProfile?.email || "Chưa cập nhật";
     const address = customerProfile?.address || "Chưa cập nhật";
     const quantity = booking?.guards_per_slot || 1;
-    
+
     // Format duration
     const formattedStartDate = currentContract.start_date
       ? new Date(currentContract.start_date).toLocaleDateString("vi-VN")
@@ -101,7 +102,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
       ? new Date(currentContract.end_date).toLocaleDateString("vi-VN")
       : (booking?.end_date ? new Date(booking.end_date).toLocaleDateString("vi-VN") : "");
     const duration = `${formattedStartDate} - ${formattedEndDate}`;
-    
+
     const location = booking?.address || "Chưa cập nhật";
     const totalValue = booking?.formatted_price || "Chưa báo giá";
     const paymentMethod = "Chuyển khoản ngân hàng";
@@ -111,7 +112,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
 
     // Generate dynamic history log based on signatures
     const historyList = [];
-    
+
     if (currentContract.status === "active") {
       historyList.push({
         time: currentContract.updated_at ? new Date(currentContract.updated_at).toLocaleString("vi-VN") : "Vừa xong",
@@ -221,6 +222,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
         customerAgreed={contract.customer_agreed}
         companyAgreed={contract.company_agreed}
         hasContractFile={!!detailedData.contractFileUrl}
+        hasGuards={!!contract.guard_assigned && contract.guard_assigned.length > 0}
         onSignCompany={() => setIsSignModalOpen(true)}
       />
 
@@ -236,20 +238,36 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
             address={detailedData.address}
           />
 
-          {/* Service & Payment Info Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <ContractServiceInfo
-              serviceName={contract.service_name || ""}
-              quantity={detailedData.quantity}
-              duration={detailedData.duration}
-              location={detailedData.location}
-              timeSlots={detailedData.timeSlots}
-              description={detailedData.description}
-            />
+          {/* Service & Payment & Guards Info Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <ContractServiceInfo
+                serviceName={contract.service_name || ""}
+                quantity={detailedData.quantity}
+                duration={detailedData.duration}
+                location={detailedData.location}
+                timeSlots={detailedData.timeSlots}
+                description={detailedData.description}
+              />
 
-            <ContractPaymentInfo
-              totalValue={detailedData.totalValue}
-              paymentMethod={detailedData.paymentMethod}
+              <ContractPaymentInfo
+                totalValue={detailedData.totalValue}
+              />
+            </div>
+
+            <ContractGuardsInfo
+              contractId={contractId}
+              customerAgreed={contract.customer_agreed}
+              onGuardsUpdated={(newGuardIds) => {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                setContract((prev: any) => {
+                  if (!prev) return prev;
+                  return {
+                    ...prev,
+                    guard_assigned: newGuardIds,
+                  };
+                });
+              }}
             />
           </div>
 

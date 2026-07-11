@@ -2,6 +2,7 @@ import {
   getCurrentUserProfileService,
   registerAccountService,
 } from "@/features/auth/service/auth.service";
+import { getCustomerContractDetail } from "@/features/contract/repository/contract.repository";
 import { createIdentityService } from "@/features/identity/service/identity.service";
 import { validateIdentityExists } from "@/features/identity/validator/identity.validator";
 import {
@@ -849,6 +850,78 @@ export const handleGetGuardsByContract = async ({
     };
   } catch (error: unknown) {
     console.error("handleGetGuardsByContract error:", error);
+
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Lấy danh sách bảo vệ theo hợp đồng thất bại",
+      data: createEmptyGuardListData(),
+    };
+  }
+};
+
+export const handleGetCustomerGuardsByContract = async ({
+  contract_id,
+  customerId,
+  page,
+  limit,
+  search,
+}: {
+  contract_id: string;
+  customerId: string;
+  page?: string | null;
+  limit?: string | null;
+  search?: string | null;
+}): Promise<HandleGetAllGuardsResult> => {
+  try {
+    const contract = await getCustomerContractDetail(contract_id, customerId);
+    if (!contract) {
+      return {
+        success: false,
+        message: "Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập",
+        data: createEmptyGuardListData(),
+      };
+    }
+
+    const company_id = contract.bookings?.companies?.company_id;
+    if (!company_id) {
+      return {
+        success: false,
+        message: "Không tìm thấy công ty quản lý hợp đồng này",
+        data: createEmptyGuardListData(),
+      };
+    }
+
+    const pageNumber = Number(page ?? "1");
+    const limitNumber = Number(limit ?? "10");
+
+    const validPage =
+      Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1;
+
+    const validLimit =
+      Number.isInteger(limitNumber) && limitNumber > 0 && limitNumber <= 50
+        ? limitNumber
+        : 10;
+
+    const keyword = search?.trim() ?? "";
+
+    const data = await getGuardsByContractService({
+      contract_id,
+      company_id,
+      page: validPage,
+      limit: validLimit,
+      search: keyword,
+    });
+
+    return {
+      success: true,
+      message: "Lấy danh sách bảo vệ theo hợp đồng thành công",
+      data,
+    };
+  } catch (error: unknown) {
+    console.error("handleGetCustomerGuardsByContract error:", error);
 
     return {
       success: false,
