@@ -4,13 +4,15 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
-import { requestGetUserProfile } from "@/features/auth/api/auth.api";
+import { requestRegisterAccount, requestLogout } from "@/features/auth/api/auth.api";
+import { RegisterPayload } from "@/features/auth/types";
 import { createClient } from "@/lib/supabase/client";
 import { requestSubmitRegistration } from "../api/registration.api";
 import StepperHeader from "./StepperHeader";
 import StepPersonal from "./StepPersonal";
 import StepCompany from "./StepCompany";
 import StepReview from "./StepReview";
+import StepSignUp from "./StepSignUp";
 
 const generateUUID = (): string => {
   if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
@@ -26,15 +28,16 @@ const generateUUID = (): string => {
 export default function RegisterCompanyStepper() {
   const router = useRouter();
   const userId = useAuthStore((state) => state.user_id);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const [authLoading, setAuthLoading] = useState(true);
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const supabase = createClient();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [successCode, setSuccessCode] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
-  const [hasRegistered, setHasRegistered] = useState(false);
+  // Signup payload collected from StepSignUp (guest flow)
+  const [signupPayload, setSignupPayload] = useState<RegisterPayload | null>(null);
 
   // Form State
   const [formData, setFormData] = useState({
@@ -70,57 +73,51 @@ export default function RegisterCompanyStepper() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Fetch and populate profile details based on logged-in userId
+  // Automatically sign out if there is an active session
   useEffect(() => {
-    const fetchProfile = async () => {
+    const checkAndLogout = async () => {
       if (userId) {
         try {
           setAuthLoading(true);
-
-          // 1. Check if user already owns a company
-          const { data: compData, error: compErr } = await supabase
-            .from("companies")
-            .select("company_id")
-            .eq("owner_id", userId)
-            .maybeSingle();
-
-          if (compErr) {
-            console.error("Check existing company error:", compErr);
-          }
-
-          if (compData) {
-            setHasRegistered(true);
-            setAuthLoading(false);
-            return;
-          }
-
-          // 2. Fetch profile details
-          const result = await requestGetUserProfile();
-          if (result?.success && result?.data) {
-            const p = result.data;
-            setUser({ id: userId, email: p.email || "" });
-            setFormData((prev) => ({
-              ...prev,
-              email: p.email || "",
-              fullName: prev.fullName || p.full_name || "",
-              phoneNumber: prev.phoneNumber || p.phone_number || "",
-            }));
-          } else {
-            setUser(null);
-          }
+          await requestLogout();
         } catch (err) {
-          console.error("Fetch profile error:", err);
-          setUser(null);
+          console.error("Error logging out existing user:", err);
         } finally {
+          clearAuth();
           setAuthLoading(false);
         }
       } else {
-        setUser(null);
         setAuthLoading(false);
       }
     };
-    fetchProfile();
-  }, [userId, supabase]);
+    checkAndLogout();
+  }, [userId, clearAuth]);
+
+  // Steps definition for the guest registration flow (4 steps)
+  const steps = [
+    "Thiết lập tài khoản",
+    "Thông tin cá nhân & CCCD",
+    "Thông tin doanh nghiệp & Giấy phép",
+    "Xác nhận & Gửi",
+  ];
+
+  // The form steps start at index 2 (step 2 = personal info)
+  // so we offset: guestStep 1 = signup, guestStep 2 = personal, 3 = company, 4 = review
+  const formStep = currentStep - 1;
+
+  const handleSignUpSuccess = (data: RegisterPayload) => {
+    // Store signup data — actual API call happens at final submit
+    setSignupPayload(data);
+    // Pre-populate formData fields from signup payload so StepPersonal displays them
+    setFormData((prev) => ({
+      ...prev,
+      email: data.email,
+      fullName: prev.fullName || data.fullName,
+      phoneNumber: prev.phoneNumber || data.phoneNumber,
+    }));
+    // Advance to personal info step
+    setCurrentStep(2);
+  };
 
   const updateFormData = (data: Partial<typeof formData>) => {
     setFormData((prev) => ({ ...prev, ...data }));
@@ -208,10 +205,10 @@ export default function RegisterCompanyStepper() {
   };
 
   const handleNext = () => {
-    if (currentStep === 1) {
-      if (validateStep1()) setCurrentStep(2);
-    } else if (currentStep === 2) {
-      if (validateStep2()) setCurrentStep(3);
+    if (formStep === 1) {
+      if (validateStep1()) setCurrentStep((prev) => prev + 1);
+    } else if (formStep === 2) {
+      if (validateStep2()) setCurrentStep((prev) => prev + 1);
     }
   };
 
@@ -241,11 +238,11 @@ export default function RegisterCompanyStepper() {
     return publicUrl;
   };
 
-  // Final submit handler
   const handleSubmit = async () => {
     if (!validateStep3()) return;
-    if (!user) {
-      setErrors({ general: "Bạn cần đăng nhập để thực hiện đăng ký công ty" });
+
+    if (!signupPayload) {
+      setErrors({ general: "Thông tin tài khoản bị thiếu. Vui lòng quay lại bước đầu tiên." });
       return;
     }
 
@@ -253,7 +250,27 @@ export default function RegisterCompanyStepper() {
       setSubmitting(true);
       setErrors({});
 
-      const uid = user.id;
+      const registerResult = await requestRegisterAccount({
+        ...signupPayload,
+        registrationType: "company",
+        companyName: formData.companyName,
+        businessLicenseNo: formData.businessLicenseNo,
+        companyEmail: formData.companyEmail,
+        companyPhone: formData.companyPhone,
+      });
+
+      if (!registerResult.success) {
+        const msg = registerResult.message || "Đăng ký tài khoản thất bại. Vui lòng thử lại.";
+        setErrors({ general: msg });
+        return;
+      }
+
+      // Extract the newly created userId from Supabase signUp response
+      const uid = registerResult.account?.user?.id ?? null;
+      if (!uid) {
+        setErrors({ general: "Không thể xác định ID tài khoản. Vui lòng thử lại." });
+        return;
+      }
 
       // Client-side generate UUID for company ID
       const companyId = generateUUID();
@@ -354,9 +371,10 @@ export default function RegisterCompanyStepper() {
       } else {
         setErrors({ general: res?.message || "Đăng ký thất bại. Vui lòng thử lại." });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Submit registration error:", err);
-      setErrors({ general: err?.message || "Lỗi hệ thống khi gửi thông tin đăng ký." });
+      const errorMessage = err instanceof Error ? err.message : "Lỗi hệ thống khi gửi thông tin đăng ký.";
+      setErrors({ general: errorMessage });
     } finally {
       setSubmitting(false);
     }
@@ -370,41 +388,7 @@ export default function RegisterCompanyStepper() {
     );
   }
 
-  if (hasRegistered) {
-    return (
-      <div className="max-w-md mx-auto p-6 bg-surface-container-lowest border border-outline-variant rounded-xl text-center shadow-sm space-y-4 animate-scale-in">
-        <AlertCircle className="w-12 h-12 text-warning mx-auto" />
-        <h3 className="text-lg font-bold text-on-surface">Đơn đăng ký đã tồn tại</h3>
-        <p className="text-sm text-on-surface-variant leading-relaxed">
-          Tài khoản của bạn đã gửi hồ sơ đăng ký doanh nghiệp hoặc đã liên kết với một doanh nghiệp trên hệ thống. Không thể gửi thêm hồ sơ mới.
-        </p>
-        <button
-          onClick={() => router.push("/")}
-          className="bg-primary hover:bg-primary-container text-white py-2 px-6 rounded-lg text-sm font-semibold transition-all"
-        >
-          Quay lại trang chủ
-        </button>
-      </div>
-    );
-  }
 
-  if (!user) {
-    return (
-      <div className="max-w-md mx-auto p-6 bg-surface-container-lowest border border-outline-variant rounded-xl text-center shadow-sm space-y-4">
-        <AlertCircle className="w-12 h-12 text-error mx-auto" />
-        <h3 className="text-lg font-bold text-on-surface">Yêu cầu đăng nhập</h3>
-        <p className="text-sm text-on-surface-variant leading-relaxed">
-          Bạn cần đăng nhập tài khoản trước khi thực hiện quy trình đăng ký doanh nghiệp.
-        </p>
-        <button
-          onClick={() => router.push("/login")}
-          className="bg-primary hover:bg-primary-container text-white py-2 px-6 rounded-lg text-sm font-semibold transition-all"
-        >
-          Đăng nhập ngay
-        </button>
-      </div>
-    );
-  }
 
   // Render Success Screen
   if (successCode) {
@@ -452,7 +436,7 @@ export default function RegisterCompanyStepper() {
     );
   }
 
-  const steps = ["Thông tin cá nhân & CCCD", "Thông tin doanh nghiệp & Giấy phép", "Xác nhận & Gửi"];
+  // steps and formStep are computed above based on isGuestFlow
 
   return (
     <div className="max-w-4xl mx-auto space-y-6">
@@ -470,6 +454,9 @@ export default function RegisterCompanyStepper() {
 
         {/* Render Step View */}
         {currentStep === 1 && (
+          <StepSignUp onSuccess={handleSignUpSuccess} />
+        )}
+        {formStep === 1 && (
           <StepPersonal
             formData={formData}
             updateFormData={updateFormData}
@@ -477,7 +464,7 @@ export default function RegisterCompanyStepper() {
             clearError={clearError}
           />
         )}
-        {currentStep === 2 && (
+        {formStep === 2 && (
           <StepCompany
             formData={formData}
             updateFormData={updateFormData}
@@ -485,7 +472,7 @@ export default function RegisterCompanyStepper() {
             clearError={clearError}
           />
         )}
-        {currentStep === 3 && (
+        {formStep === 3 && (
           <StepReview
             formData={formData}
             consentChecked={consentChecked}
@@ -494,53 +481,55 @@ export default function RegisterCompanyStepper() {
           />
         )}
 
-        {/* Footer Actions Button */}
-        <div className="mt-8 pt-6 border-t border-outline-variant/30 flex justify-between items-center">
-          <button
-            type="button"
-            onClick={handlePrev}
-            disabled={currentStep === 1 || submitting}
-            className={`flex items-center gap-1 text-sm font-semibold px-4 py-2 rounded-lg border border-outline-variant transition-all
-              ${
-                currentStep === 1
-                  ? "opacity-0 pointer-events-none"
-                  : "text-on-surface hover:bg-surface-container-low disabled:opacity-50"
-              }`}
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Quay lại</span>
-          </button>
-
-          {currentStep < 3 ? (
+        {/* Footer Actions Button — hidden on signup step (step handles its own submit) */}
+        {currentStep !== 1 && (
+          <div className="mt-8 pt-6 border-t border-outline-variant/30 flex justify-between items-center">
             <button
               type="button"
-              onClick={handleNext}
-              className="bg-primary hover:bg-primary-container text-white py-2 px-6 rounded-lg text-sm font-semibold transition-all flex items-center gap-1 active:scale-[0.98]"
-            >
-              <span>Tiếp tục</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleSubmit}
+              onClick={handlePrev}
               disabled={submitting}
-              className="bg-primary hover:bg-primary-container text-white py-2.5 px-8 rounded-lg text-sm font-bold transition-all flex items-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed active:scale-[0.98]"
+              className={`flex items-center gap-1 text-sm font-semibold px-4 py-2 rounded-lg border border-outline-variant transition-all
+                ${
+                  currentStep === 1
+                    ? "opacity-0 pointer-events-none"
+                    : "text-on-surface hover:bg-surface-container-low disabled:opacity-50"
+                }`}
             >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Đang gửi hồ sơ...</span>
-                </>
-              ) : (
-                <>
-                  <span>Gửi hồ sơ đăng ký</span>
-                  <Send className="w-4 h-4" />
-                </>
-              )}
+              <ArrowLeft className="w-4 h-4" />
+              <span>Quay lại</span>
             </button>
-          )}
-        </div>
+
+            {formStep < 3 ? (
+              <button
+                type="button"
+                onClick={handleNext}
+                className="bg-primary hover:bg-primary-container text-white py-2 px-6 rounded-lg text-sm font-semibold transition-all flex items-center gap-1 active:scale-[0.98]"
+              >
+                <span>Tiếp tục</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={submitting}
+                className="bg-primary hover:bg-primary-container text-white py-2.5 px-8 rounded-lg text-sm font-bold transition-all flex items-center gap-2 disabled:opacity-75 disabled:cursor-not-allowed active:scale-[0.98]"
+              >
+                {submitting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span>Đang gửi hồ sơ...</span>
+                  </>
+                ) : (
+                  <>
+                    <span>Gửi hồ sơ đăng ký</span>
+                    <Send className="w-4 h-4" />
+                  </>
+                )}
+              </button>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );

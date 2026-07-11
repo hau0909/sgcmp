@@ -4,7 +4,9 @@ import { useState } from "react";
 import Link from "next/link";
 import { requestRegisterAccount } from "../api/auth.api";
 import { isDisposableEmail } from "../validator/auth.validator";
-import { Eye, EyeOff } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import Footer from "@/components/layout/Footer";
 
 type FormErrors = {
   fullName?: string;
@@ -16,6 +18,7 @@ type FormErrors = {
 };
 
 export default function SignUp() {
+  const router = useRouter();
   const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
@@ -57,8 +60,8 @@ export default function SignUp() {
 
     if (!password) {
       newErrors.password = "Vui lòng nhập mật khẩu";
-    } else if (password.length < 6) {
-      newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
+    } else if (password.length < 8) {
+      newErrors.password = "Mật khẩu phải có ít nhất 8 ký tự";
     }
 
     if (!confirmPassword) {
@@ -143,8 +146,27 @@ export default function SignUp() {
     }`;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-start justify-center pt-10">
-      <div className="w-full max-w-[500px] rounded-md border border-slate-300 bg-white px-12 py-12 shadow-sm">
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-between relative">
+      {/* Back button container (absolute on the far top-left) */}
+      <div className="absolute left-6 top-6">
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/");
+            }
+          }}
+          className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-800 transition-all duration-200 group bg-white border border-slate-300 rounded px-3 py-1.5 shadow-xs"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span>Quay lại</span>
+        </button>
+      </div>
+
+      <div className="flex-1 flex items-start justify-center pt-24 pb-10">
+        <div className="w-full max-w-[500px] rounded-md border border-slate-300 bg-white px-12 py-12 shadow-sm">
         <div className="text-center">
           <h1 className="text-4xl font-bold text-blue-800">SGCMP</h1>
 
@@ -337,6 +359,8 @@ export default function SignUp() {
           </div>
         </form>
       </div>
+     </div>
+     <Footer />
     </div>
   );
 }

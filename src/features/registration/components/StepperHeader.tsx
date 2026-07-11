@@ -41,13 +41,11 @@ export default function StepperHeader({ currentStep, steps }: StepperHeaderProps
                 {isCompleted ? <Check className="w-5 h-5" /> : stepNumber}
               </div>
               <span
-                className={`text-xs md:text-sm font-medium transition-all duration-300 absolute top-12 whitespace-nowrap
+                className={`text-[10px] sm:text-xs md:text-sm font-medium transition-all duration-300 absolute top-12 text-center w-16 sm:w-24 md:w-32 break-words left-1/2 -translate-x-1/2
                   ${
                     isActive
-                      ? "text-primary font-bold scale-[1.02]"
-                      : isCompleted
-                      ? "text-on-surface/80"
-                      : "text-on-surface-variant"
+                      ? "text-primary font-bold scale-[1.02] block z-10 bg-surface px-1 rounded-md"
+                      : "hidden sm:block text-on-surface-variant"
                   }`}
               >
                 {step}
@@ -57,7 +55,7 @@ export default function StepperHeader({ currentStep, steps }: StepperHeaderProps
         })}
       </div>
       {/* Spacer to avoid absolute overlap of labels */}
-      <div className="h-8" />
+      <div className="h-12 sm:h-10" />
     </div>
   );
 }

@@ -13,14 +13,14 @@ type Profile = {
 type ApiResponse = {
   success: boolean;
   data?:
-    | {
-        user?: unknown;
-        profile?: Profile | null;
-        role?: string | null;
-        status?: string | null;
-      }
-    | Profile
-    | null;
+  | {
+    user?: unknown;
+    profile?: Profile | null;
+    role?: string | null;
+    status?: string | null;
+  }
+  | Profile
+  | null;
   message?: string;
 };
 
@@ -41,18 +41,33 @@ export default function AuthRedirect() {
   useEffect(() => {
     const checkSessionAndRedirect = async () => {
       const publicPaths = ["/", "/login", "/register", "/sign-up"];
-      const isPublicPath = publicPaths.includes(pathname);
+      const companyRelatedPaths = ["/companies", "/register-company"];
+      const profilePaths = ["/profile"];
 
-      if (!isPublicPath) return;
+      const isPublicPath = publicPaths.includes(pathname);
+      const isCompanyRelatedPath = companyRelatedPaths.includes(pathname);
+      const isProfilePath = profilePaths.includes(pathname);
+
+      if (!isPublicPath && !isCompanyRelatedPath && !isProfilePath) return;
 
       try {
         const result = (await requestGetUserProfile()) as ApiResponse;
 
-        if (!result?.success) return;
+        if (!result?.success) {
+          if (isProfilePath) {
+            router.replace("/login");
+          }
+          return;
+        }
 
         const profile = getProfileFromResponse(result.data);
 
-        if (!profile?.role) return;
+        if (!profile?.role) {
+          if (isProfilePath) {
+            router.replace("/login");
+          }
+          return;
+        }
 
         if (profile.status && profile.status !== "active") {
           router.replace("/unauthorized?reason=inactive");
@@ -60,9 +75,17 @@ export default function AuthRedirect() {
         }
 
         const redirectPath = getRedirectPathByRole(profile.role);
+        const userRole = profile.role.toLowerCase();
 
-        if (pathname !== redirectPath) {
-          router.replace(redirectPath);
+        if (userRole === "customer") {
+          if (["/login", "/register", "/sign-up"].includes(pathname)) {
+            router.replace("/");
+          }
+        } else {
+          const targetIsRestricted = ["/", "/login", "/register", "/sign-up", "/companies", "/register-company"].includes(pathname);
+          if (targetIsRestricted && pathname !== redirectPath) {
+            router.replace(redirectPath);
+          }
         }
       } catch (error) {
         console.error("AUTH REDIRECT ERROR:", error);
