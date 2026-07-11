@@ -103,8 +103,10 @@ export const getContractDetail = async (id: string): Promise<any | null> => {
       status,
       created_at,
       updated_at,
+      guard_assigned,
       bookings!inner (
         booking_id,
+        company_id,
         address,
         description,
         guards_per_slot,
@@ -140,10 +142,7 @@ export const getContractDetail = async (id: string): Promise<any | null> => {
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const updateContract = async (
-  id: string,
-  payload: any,
-): Promise<any> => {
+export const updateContract = async (id: string, payload: any): Promise<any> => {
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("contracts")
@@ -160,15 +159,8 @@ export const updateContract = async (
   }
   return data;
 };
-export const getCustomerContracts = async (
-  customerId: string,
-  page: number,
-  limit: number,
-  search?: string,
-  status?: ContractStatus,
-  startDate?: string,
-  endDate?: string,
-): Promise<{ data: any[]; count: number }> => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const getCustomerContracts = async (customerId: string, page: number, limit: number, search?: string, status?: ContractStatus, startDate?: string, endDate?: string): Promise<{ data: any[]; count: number }> => {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -230,10 +222,7 @@ export const getCustomerContracts = async (
 };
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getCustomerContractDetail = async (
-  id: string,
-  customerId: string,
-): Promise<any | null> => {
+export const getCustomerContractDetail = async (id: string, customerId: string): Promise<any | null> => {
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("contracts")
@@ -249,6 +238,7 @@ export const getCustomerContractDetail = async (
       status,
       created_at,
       updated_at,
+      guard_assigned,
       reviews (
         rating,
         comment

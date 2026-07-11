@@ -105,3 +105,13 @@ export async function requestCompleteContractCustomer(id: string, customerId: st
   });
 }
 
+export async function requestAssignGuardsToContract(contractId: string, guardIds: string[]) {
+  return await fetcher(`/api/contracts/${contractId}/guards`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ guardIds }),
+  });
+}
+

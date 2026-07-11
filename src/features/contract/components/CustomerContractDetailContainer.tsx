@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import {
-  ArrowLeft,
   CheckCircle,
   X,
   AlertTriangle,
@@ -15,6 +14,7 @@ import { CustomerServiceInfo } from "./CustomerServiceInfo";
 import { CustomerPaymentInfo } from "./CustomerPaymentInfo";
 import { CustomerContractDocument } from "./CustomerContractDocument";
 import { CustomerHistoryLog } from "./CustomerHistoryLog";
+import { CustomerContractGuardsInfo } from "./CustomerContractGuardsInfo";
 import { CustomerQualityReviewModal } from "../../review/components/CustomerQualityReviewModal";
 import { requestCreateReview } from "../../review/api/review.api";
 import {
@@ -67,11 +67,14 @@ export function CustomerContractDetailContainer({
     } finally {
       setIsLoading(false);
     }
-  }, [contractId]);
+  }, [contractId, customerId]);
 
   useEffect(() => {
     if (contractId) {
-      fetchDetail();
+      const timer = setTimeout(() => {
+        fetchDetail();
+      }, 0);
+      return () => clearTimeout(timer);
     }
   }, [contractId, fetchDetail]);
 
@@ -223,6 +226,7 @@ export function CustomerContractDetailContainer({
         customerAgreed={contract.customer_agreed}
         companyAgreed={contract.company_agreed}
         contractFileUrl={contract.contract_file_url}
+        hasGuards={!!contract.guard_assigned && contract.guard_assigned.length > 0}
         onSignCustomer={() => setIsSignModalOpen(true)}
         onReviewCustomer={() => setIsReviewModalOpen(true)}
         hasReviewed={contract.has_reviewed}
@@ -257,17 +261,21 @@ export function CustomerContractDetailContainer({
             address={contract.company?.address || "Chưa cập nhật"}
           />
 
-          {/* Service + Payment */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <CustomerServiceInfo
-              serviceName={contract.service_name}
-              quantity={contract.guards_per_slot}
-              duration={contract.duration}
-              location={contract.location}
-              timeSlots={contract.time_slots}
-              description={contract.description}
-            />
-            <CustomerPaymentInfo totalValue={contract.formatted_price} />
+          {/* Service + Payment + Guards */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="space-y-6">
+              <CustomerServiceInfo
+                serviceName={contract.service_name}
+                quantity={contract.guards_per_slot}
+                duration={contract.duration}
+                location={contract.location}
+                timeSlots={contract.time_slots}
+                description={contract.description}
+              />
+              <CustomerPaymentInfo totalValue={contract.formatted_price} />
+            </div>
+
+            <CustomerContractGuardsInfo contractId={contractId} />
           </div>
 
           {/* Document (read-only) */}
@@ -358,6 +366,7 @@ export function CustomerContractDetailContainer({
               });
               setIsReviewModalOpen(false);
               // Cập nhật state ngay lập tức, không cần reload
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
               setContract((prev: any) => ({
                 ...prev,
                 has_reviewed: true,
@@ -365,8 +374,9 @@ export function CustomerContractDetailContainer({
                 review_comment: data.feedback,
               }));
               showToast("Đánh giá của bạn đã được ghi nhận. Cảm ơn sự phản hồi của bạn!");
-            } catch (error: any) {
-              showToast(error.message || "Đã có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại sau.");
+            } catch (error: unknown) {
+              const err = error as Error;
+              showToast(err.message || "Đã có lỗi xảy ra khi gửi đánh giá. Vui lòng thử lại sau.");
             }
           }}
           isReadOnly={contract.has_reviewed}
@@ -406,7 +416,7 @@ export function CustomerContractDetailContainer({
               </p>
               <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200 p-3 rounded-lg leading-normal flex gap-2">
                 <CheckCircle className="w-4 h-4 shrink-0 text-emerald-600 mt-0.5" />
-                Lưu ý: Hành động này sẽ chuyển trạng thái của hợp đồng này sang "Đã hoàn thành". Hành động này không thể hoàn tác.
+                Lưu ý: Hành động này sẽ chuyển trạng thái của hợp đồng này sang {"'Đã hoàn thành'"}. Hành động này không thể hoàn tác.
               </p>
             </div>
 

@@ -134,6 +134,37 @@ export const requestGetGuardsByContract = ({
   );
 };
 
+export const requestGetCustomerGuardsByContract = ({
+  contractId,
+  customerId,
+  page = 1,
+  limit = 10,
+  search = "",
+}: {
+  contractId: string;
+  customerId: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+}) => {
+  const searchParams = new URLSearchParams();
+
+  searchParams.set("customerId", customerId);
+  searchParams.set("page", String(page));
+  searchParams.set("limit", String(limit));
+
+  if (search.trim()) {
+    searchParams.set("search", search.trim());
+  }
+
+  return fetcher(
+    `/api/my-contracts/${encodeURIComponent(contractId)}/guards?${searchParams.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+};
+
 export const requestUploadGuardFile = async (
   file: File,
   user_id: string,

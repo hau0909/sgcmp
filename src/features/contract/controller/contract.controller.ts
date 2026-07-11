@@ -11,6 +11,7 @@ import {
   getCustomerContractsService,
   getCustomerContractDetailService,
   completeContractCustomerService,
+  assignGuardsToContractService,
 } from "../service/contract.service";
 import { CustomerContract } from "../types";
 
@@ -103,4 +104,16 @@ export const handleGetCustomerContracts = async (
     params.startDate,
     params.endDate
   );
+};
+
+export const handleAssignGuardsToContract = async (
+  contractId: string,
+  guardIds: string[],
+): Promise<{ success: boolean; message: string; contract?: unknown }> => {
+  const contract = await assignGuardsToContractService(contractId, guardIds);
+  return {
+    success: true,
+    message: "Phân công bảo vệ thành công",
+    contract,
+  };
 };
