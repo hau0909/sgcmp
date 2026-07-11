@@ -302,7 +302,7 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
         <button
           type="submit"
           disabled={loading}
-          className="w-full h-12 rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99]"
+          className="w-full h-12 cursor-pointer rounded-lg bg-primary hover:bg-primary/90 text-white text-sm font-semibold transition-all flex items-center justify-center gap-2 disabled:cursor-not-allowed disabled:opacity-60 active:scale-[0.99]"
         >
           {loading ? (
             <>
