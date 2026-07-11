@@ -45,12 +45,18 @@ export const getAllGuardService = async ({
   page,
   limit,
   search,
+  gender,
+  status,
+  workStatus,
 }: GetAllGuardsServiceParams): Promise<GuardListPaginatedData> => {
   const { guards, total } = await getAllGuards({
     company_id,
     page,
     limit,
     search,
+    gender,
+    status,
+    workStatus,
   });
 
   return {

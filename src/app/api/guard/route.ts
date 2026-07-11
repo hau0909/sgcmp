@@ -35,16 +35,36 @@ export const POST = async (request: Request) => {
 };
 
 export async function GET(request: NextRequest) {
-  await connection();
-  const { searchParams } = new URL(request.url);
+  try {
+    await connection();
+    const { searchParams } = new URL(request.url);
 
-  const result = await handleGetAllGuards({
-    page: searchParams.get("page"),
-    limit: searchParams.get("limit"),
-    search: searchParams.get("search"),
-  });
+    const result = await handleGetAllGuards({
+      page: searchParams.get("page"),
+      limit: searchParams.get("limit"),
+      search: searchParams.get("search"),
+      gender: searchParams.get("gender"),
+      status: searchParams.get("status"),
+      workStatus: searchParams.get("workStatus"),
+    });
 
-  return NextResponse.json(result, {
-    status: result.success ? 200 : 400,
-  });
+    return NextResponse.json(result, {
+      status: result.success ? 200 : 400,
+    });
+  } catch (error) {
+    console.error("GET /api/guard ERROR:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error
+            ? error.message
+            : "Không thể lấy danh sách bảo vệ.",
+      },
+      {
+        status: 500,
+      },
+    );
+  }
 }
