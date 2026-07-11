@@ -141,9 +141,8 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative overflow-hidden flex-grow flex-shrink min-w-0">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className={`fixed bottom-5 right-5 px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-[999] animate-in fade-in slide-in-from-bottom-5 ${
-          toastMessage.type === "success" ? "bg-emerald-950 text-emerald-200 border border-emerald-800" : "bg-red-950 text-red-200 border border-red-800"
-        }`}>
+        <div className={`fixed bottom-5 right-5 px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-[999] animate-in fade-in slide-in-from-bottom-5 ${toastMessage.type === "success" ? "bg-emerald-950 text-emerald-200 border border-emerald-800" : "bg-red-950 text-red-200 border border-red-800"
+          }`}>
           <span className="text-sm font-medium">{toastMessage.text}</span>
           <button onClick={() => setToastMessage(null)} className="text-white/60 hover:text-white ml-2">
             <X className="w-4 h-4" />
@@ -173,7 +172,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
         ) : (
           <button
             onClick={handleOpenModal}
-            className="px-4 py-2 bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold rounded-lg transition-all shadow-sm flex items-center gap-1.5 cursor-pointer"
+            className="px-4 py-2 cursor-pointer bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold rounded-lg transition-all shadow-sm flex items-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Cập nhật bảo vệ</span>
@@ -312,18 +311,16 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                       <div
                         key={guard.guard_id}
                         onClick={() => handleToggleGuard(guard.guard_id)}
-                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer select-none ${
-                          isSelected
-                            ? "border-primary bg-primary/5 shadow-sm"
-                            : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
-                        }`}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer select-none ${isSelected
+                          ? "border-primary bg-primary/5 shadow-sm"
+                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+                          }`}
                       >
                         {/* Custom Checkbox */}
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${
-                          isSelected
-                            ? "bg-primary border-primary text-on-primary"
-                            : "border-slate-300 bg-white"
-                        }`}>
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isSelected
+                          ? "bg-primary border-primary text-on-primary"
+                          : "border-slate-300 bg-white"
+                          }`}>
                           {isSelected && <Check className="w-3.5 h-3.5 stroke-[3px]" />}
                         </div>
 
