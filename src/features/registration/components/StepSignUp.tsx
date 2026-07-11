@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+
 import { Eye, EyeOff, UserPlus, Loader2 } from "lucide-react";
 import { isDisposableEmail, checkEmailExists, checkPhoneNumberExists } from "@/features/auth/validator/auth.validator";
 import { RegisterPayload } from "@/features/auth/types";
@@ -109,9 +109,10 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
         fullName: trimmedFullName,
         phoneNumber: normalizedPhoneNumber,
       });
-    } catch (error: any) {
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : "Đã xảy ra lỗi khi kiểm tra thông tin. Vui lòng thử lại.";
       setErrors({
-        general: error?.message || "Đã xảy ra lỗi khi kiểm tra thông tin. Vui lòng thử lại.",
+        general: errorMessage,
       });
     } finally {
       setLoading(false);
@@ -139,16 +140,7 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
         </div>
       </div>
 
-      {/* Already have account banner */}
-      <div className="mb-6 flex items-center justify-between rounded-lg border border-outline-variant/40 bg-surface-container-low px-4 py-3">
-        <span className="text-sm text-on-surface-variant">Đã có tài khoản?</span>
-        <Link
-          href="/login"
-          className="text-sm font-semibold text-primary hover:underline transition-all"
-        >
-          Đăng nhập ngay →
-        </Link>
-      </div>
+
 
       {/* General Error */}
       {errors.general && (

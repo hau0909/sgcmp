@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ArrowRight, Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
-import { requestGetUserProfile, requestRegisterAccount } from "@/features/auth/api/auth.api";
+import { requestRegisterAccount, requestLogout } from "@/features/auth/api/auth.api";
 import { RegisterPayload } from "@/features/auth/types";
 import { createClient } from "@/lib/supabase/client";
 import { requestSubmitRegistration } from "../api/registration.api";
@@ -28,15 +28,14 @@ const generateUUID = (): string => {
 export default function RegisterCompanyStepper() {
   const router = useRouter();
   const userId = useAuthStore((state) => state.user_id);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const [authLoading, setAuthLoading] = useState(true);
-  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
   const supabase = createClient();
 
   const [currentStep, setCurrentStep] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [successCode, setSuccessCode] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
-  const [hasRegistered, setHasRegistered] = useState(false);
   // Signup payload collected from StepSignUp (guest flow)
   const [signupPayload, setSignupPayload] = useState<RegisterPayload | null>(null);
 
@@ -74,71 +73,37 @@ export default function RegisterCompanyStepper() {
 
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Fetch and populate profile details based on logged-in userId
+  // Automatically sign out if there is an active session
   useEffect(() => {
-    const fetchProfile = async () => {
+    const checkAndLogout = async () => {
       if (userId) {
         try {
           setAuthLoading(true);
-
-          // 1. Check if user already owns a company
-          const { data: compData, error: compErr } = await supabase
-            .from("companies")
-            .select("company_id")
-            .eq("owner_id", userId)
-            .maybeSingle();
-
-          if (compErr) {
-            console.error("Check existing company error:", compErr);
-          }
-
-          if (compData) {
-            setHasRegistered(true);
-            setAuthLoading(false);
-            return;
-          }
-
-          // 2. Fetch profile details
-          const result = await requestGetUserProfile();
-          if (result?.success && result?.data) {
-            const p = result.data;
-            setUser({ id: userId, email: p.email || "" });
-            setFormData((prev) => ({
-              ...prev,
-              email: p.email || "",
-              fullName: prev.fullName || p.full_name || "",
-              phoneNumber: prev.phoneNumber || p.phone_number || "",
-            }));
-          } else {
-            setUser(null);
-          }
+          await requestLogout();
         } catch (err) {
-          console.error("Fetch profile error:", err);
-          setUser(null);
+          console.error("Error logging out existing user:", err);
         } finally {
+          clearAuth();
           setAuthLoading(false);
         }
       } else {
-        setUser(null);
         setAuthLoading(false);
       }
     };
-    fetchProfile();
-  }, [userId, supabase]);
+    checkAndLogout();
+  }, [userId, clearAuth]);
 
-  // When user is not logged in, show signup step first (step 1 of 4)
-  // isGuestFlow = true means we render the 4-step flow with signup as step 1
-  const isGuestFlow = !authLoading && !user;
+  // Steps definition for the guest registration flow (4 steps)
+  const steps = [
+    "Thiết lập tài khoản",
+    "Thông tin cá nhân & CCCD",
+    "Thông tin doanh nghiệp & Giấy phép",
+    "Xác nhận & Gửi",
+  ];
 
-  // Steps definition changes based on auth state
-  const steps = isGuestFlow
-    ? ["Thiết lập tài khoản", "Thông tin cá nhân & CCCD", "Thông tin doanh nghiệp & Giấy phép", "Xác nhận & Gửi"]
-    : ["Thông tin cá nhân & CCCD", "Thông tin doanh nghiệp & Giấy phép", "Xác nhận & Gửi"];
-
-  // In guest flow, the form steps start at index 2 (step 2 = personal info)
+  // The form steps start at index 2 (step 2 = personal info)
   // so we offset: guestStep 1 = signup, guestStep 2 = personal, 3 = company, 4 = review
-  // In logged-in flow: step 1 = personal, 2 = company, 3 = review
-  const formStep = isGuestFlow ? currentStep - 1 : currentStep;
+  const formStep = currentStep - 1;
 
   const handleSignUpSuccess = (data: RegisterPayload) => {
     // Store signup data — actual API call happens at final submit
@@ -273,18 +238,10 @@ export default function RegisterCompanyStepper() {
     return publicUrl;
   };
 
-  // Final submit handler
   const handleSubmit = async () => {
     if (!validateStep3()) return;
 
-    // In logged-in flow: must have user
-    if (!isGuestFlow && !user) {
-      setErrors({ general: "Phiên đăng nhập chưa được xác nhận. Vui lòng tải lại trang." });
-      return;
-    }
-
-    // In guest flow: must have signup payload
-    if (isGuestFlow && !signupPayload) {
+    if (!signupPayload) {
       setErrors({ general: "Thông tin tài khoản bị thiếu. Vui lòng quay lại bước đầu tiên." });
       return;
     }
@@ -293,31 +250,27 @@ export default function RegisterCompanyStepper() {
       setSubmitting(true);
       setErrors({});
 
-      // In guest flow: call requestRegisterAccount first to create account & send verification email
-      let guestUid: string | null = null;
-      if (isGuestFlow && signupPayload) {
-        const registerResult = await requestRegisterAccount({
-          ...signupPayload,
-          registrationType: "company",
-          companyName: formData.companyName,
-          businessLicenseNo: formData.businessLicenseNo,
-          companyEmail: formData.companyEmail,
-          companyPhone: formData.companyPhone,
-        });
-        if (!registerResult.success) {
-          const msg = registerResult.message || "Đăng ký tài khoản thất bại. Vui lòng thử lại.";
-          setErrors({ general: msg });
-          return;
-        }
-        // Extract the newly created userId from Supabase signUp response
-        guestUid = registerResult.account?.user?.id ?? null;
-        if (!guestUid) {
-          setErrors({ general: "Không thể xác định ID tài khoản. Vui lòng thử lại." });
-          return;
-        }
+      const registerResult = await requestRegisterAccount({
+        ...signupPayload,
+        registrationType: "company",
+        companyName: formData.companyName,
+        businessLicenseNo: formData.businessLicenseNo,
+        companyEmail: formData.companyEmail,
+        companyPhone: formData.companyPhone,
+      });
+
+      if (!registerResult.success) {
+        const msg = registerResult.message || "Đăng ký tài khoản thất bại. Vui lòng thử lại.";
+        setErrors({ general: msg });
+        return;
       }
 
-      const uid = user?.id ?? guestUid!;
+      // Extract the newly created userId from Supabase signUp response
+      const uid = registerResult.account?.user?.id ?? null;
+      if (!uid) {
+        setErrors({ general: "Không thể xác định ID tài khoản. Vui lòng thử lại." });
+        return;
+      }
 
       // Client-side generate UUID for company ID
       const companyId = generateUUID();
@@ -418,9 +371,10 @@ export default function RegisterCompanyStepper() {
       } else {
         setErrors({ general: res?.message || "Đăng ký thất bại. Vui lòng thử lại." });
       }
-    } catch (err: any) {
+    } catch (err) {
       console.error("Submit registration error:", err);
-      setErrors({ general: err?.message || "Lỗi hệ thống khi gửi thông tin đăng ký." });
+      const errorMessage = err instanceof Error ? err.message : "Lỗi hệ thống khi gửi thông tin đăng ký.";
+      setErrors({ general: errorMessage });
     } finally {
       setSubmitting(false);
     }
@@ -434,23 +388,7 @@ export default function RegisterCompanyStepper() {
     );
   }
 
-  if (hasRegistered) {
-    return (
-      <div className="max-w-md mx-auto p-6 bg-surface-container-lowest border border-outline-variant rounded-xl text-center shadow-sm space-y-4 animate-scale-in">
-        <AlertCircle className="w-12 h-12 text-warning mx-auto" />
-        <h3 className="text-lg font-bold text-on-surface">Đơn đăng ký đã tồn tại</h3>
-        <p className="text-sm text-on-surface-variant leading-relaxed">
-          Tài khoản của bạn đã gửi hồ sơ đăng ký doanh nghiệp hoặc đã liên kết với một doanh nghiệp trên hệ thống. Không thể gửi thêm hồ sơ mới.
-        </p>
-        <button
-          onClick={() => router.push("/")}
-          className="bg-primary hover:bg-primary-container text-white py-2 px-6 rounded-lg text-sm font-semibold transition-all"
-        >
-          Quay lại trang chủ
-        </button>
-      </div>
-    );
-  }
+
 
   // Render Success Screen
   if (successCode) {
@@ -515,7 +453,7 @@ export default function RegisterCompanyStepper() {
         )}
 
         {/* Render Step View */}
-        {isGuestFlow && currentStep === 1 && (
+        {currentStep === 1 && (
           <StepSignUp onSuccess={handleSignUpSuccess} />
         )}
         {formStep === 1 && (
@@ -544,7 +482,7 @@ export default function RegisterCompanyStepper() {
         )}
 
         {/* Footer Actions Button — hidden on signup step (step handles its own submit) */}
-        {!(isGuestFlow && currentStep === 1) && (
+        {currentStep !== 1 && (
           <div className="mt-8 pt-6 border-t border-outline-variant/30 flex justify-between items-center">
             <button
               type="button"
