@@ -6,7 +6,8 @@ import { useRouter } from "next/navigation";
 import { requestLoginAccount } from "../api/auth.api";
 import { getRedirectPathByRole } from "../utils/redirectByRole";
 import { useAuthStore } from "@/store/auth.store";
-import { Eye, EyeOff } from "lucide-react";
+import { Eye, EyeOff, ArrowLeft } from "lucide-react";
+import Footer from "@/components/layout/Footer";
 
 type FormErrors = {
   email?: string;
@@ -90,8 +91,6 @@ export default function SignInComponent() {
 
     if (!password) {
       newErrors.password = "Vui lòng nhập mật khẩu";
-    } else if (password.length < 6) {
-      newErrors.password = "Mật khẩu phải có ít nhất 6 ký tự";
     }
 
     setErrors(newErrors);
@@ -161,124 +160,145 @@ export default function SignInComponent() {
     }`;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex items-start justify-center pt-6">
-      <div className="w-full max-w-[430px] rounded-md border border-slate-300 bg-white px-7 py-8 shadow-sm">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-blue-800">SGCMP</h1>
-          <p className="mt-3 text-sm text-slate-700">
-            Điền thông tin của bạn để truy cập hệ thống
-          </p>
-        </div>
+    <div className="min-h-screen bg-slate-50 flex flex-col justify-between relative">
+      {/* Back button container (absolute on the far top-left) */}
+      <div className="absolute left-6 top-6">
+        <button
+          type="button"
+          onClick={() => {
+            if (typeof window !== "undefined" && window.history.length > 1) {
+              router.back();
+            } else {
+              router.push("/");
+            }
+          }}
+          className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-800 transition-all duration-200 group bg-white border border-slate-300 rounded px-3 py-1.5 shadow-xs"
+        >
+          <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+          <span>Quay lại</span>
+        </button>
+      </div>
 
-        <form onSubmit={handleSignIn} className="mt-7 space-y-4" noValidate>
-          {errors.general && (
-            <p className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
-              {errors.general}
+      <div className="flex-1 flex items-start justify-center pt-24 pb-6">
+        <div className="w-full max-w-[430px] rounded-md border border-slate-300 bg-white px-7 py-8 shadow-sm">
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-blue-800">SGCMP</h1>
+            <p className="mt-3 text-sm text-slate-700">
+              Điền thông tin của bạn để truy cập hệ thống
             </p>
-          )}
-
-          {successMessage && (
-            <p className="rounded border border-green-300 bg-green-50 px-4 py-3 text-sm font-medium text-green-600">
-              {successMessage}
-            </p>
-          )}
-
-          <div>
-            <label className="mb-2 block text-sm font-semibold text-slate-900">
-              Địa chỉ Email
-            </label>
-
-            <input
-              type="email"
-              placeholder="name@company.com"
-              value={email}
-              disabled={loading}
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setSuccessMessage("");
-                setErrors((prev) => ({
-                  ...prev,
-                  email: undefined,
-                  general: undefined,
-                }));
-              }}
-              className={inputClass(!!errors.email)}
-            />
-
-            {errors.email && (
-              <p className="mt-1 text-sm font-medium text-red-600">
-                {errors.email}
-              </p>
-            )}
           </div>
 
-          <div>
-            <div className="mb-2 flex items-center justify-between">
-              <label className="block text-sm font-semibold text-slate-900">
-                Mật khẩu
+          <form onSubmit={handleSignIn} className="mt-7 space-y-4" noValidate>
+            {errors.general && (
+              <p className="rounded border border-red-300 bg-red-50 px-4 py-3 text-sm font-medium text-red-600">
+                {errors.general}
+              </p>
+            )}
+
+            {successMessage && (
+              <p className="rounded border border-green-300 bg-green-50 px-4 py-3 text-sm font-medium text-green-600">
+                {successMessage}
+              </p>
+            )}
+
+            <div>
+              <label className="mb-2 block text-sm font-semibold text-slate-900">
+                Địa chỉ Email
               </label>
 
-              <Link
-                href="/forgot-password"
-                className="text-xs font-semibold text-blue-800 hover:underline"
-              >
-                Quên mật khẩu?
-              </Link>
-            </div>
-
-            <div className="relative">
               <input
-                type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
-                value={password}
+                type="email"
+                placeholder="name@company.com"
+                value={email}
                 disabled={loading}
                 onChange={(e) => {
-                  setPassword(e.target.value);
+                  setEmail(e.target.value);
                   setSuccessMessage("");
                   setErrors((prev) => ({
                     ...prev,
-                    password: undefined,
+                    email: undefined,
                     general: undefined,
                   }));
                 }}
-                className={`${inputClass(!!errors.password)} pr-10`}
+                className={inputClass(!!errors.email)}
               />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
-              >
-                {showPassword ? (
-                  <EyeOff className="h-5 w-5" />
-                ) : (
-                  <Eye className="h-5 w-5" />
-                )}
-              </button>
+
+              {errors.email && (
+                <p className="mt-1 text-sm font-medium text-red-600">
+                  {errors.email}
+                </p>
+              )}
             </div>
 
-            {errors.password && (
-              <p className="mt-1 text-sm font-medium text-red-600">
-                {errors.password}
-              </p>
-            )}
-          </div>
+            <div>
+              <div className="mb-2 flex items-center justify-between">
+                <label className="block text-sm font-semibold text-slate-900">
+                  Mật khẩu
+                </label>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="mt-2 h-10 w-full rounded bg-blue-800 text-sm font-semibold text-white transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
-          >
-            {loading ? "Đang đăng nhập..." : "Đăng nhập"}
-          </button>
+                <Link
+                  href="/forgot-password"
+                  className="text-xs font-semibold text-blue-800 hover:underline"
+                >
+                  Quên mật khẩu?
+                </Link>
+              </div>
 
-          <Link
-            href="/register"
-            className="flex h-10 w-full items-center justify-center rounded border border-blue-800 bg-white text-sm font-semibold text-blue-800 transition hover:bg-blue-50"
-          >
-            Đăng ký
-          </Link>
-        </form>
+              <div className="relative">
+                <input
+                  type={showPassword ? "text" : "password"}
+                  placeholder="••••••••"
+                  value={password}
+                  disabled={loading}
+                  onChange={(e) => {
+                    setPassword(e.target.value);
+                    setSuccessMessage("");
+                    setErrors((prev) => ({
+                      ...prev,
+                      password: undefined,
+                      general: undefined,
+                    }));
+                  }}
+                  className={`${inputClass(!!errors.password)} pr-10`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 focus:outline-none"
+                >
+                  {showPassword ? (
+                    <EyeOff className="h-5 w-5" />
+                  ) : (
+                    <Eye className="h-5 w-5" />
+                  )}
+                </button>
+              </div>
+
+              {errors.password && (
+                <p className="mt-1 text-sm font-medium text-red-600">
+                  {errors.password}
+                </p>
+              )}
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="mt-2 h-10 w-full rounded bg-blue-800 text-sm font-semibold text-white transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+            </button>
+
+            <Link
+              href="/register"
+              className="flex h-10 w-full items-center justify-center rounded border border-blue-800 bg-white text-sm font-semibold text-blue-800 transition hover:bg-blue-50"
+            >
+              Đăng ký
+            </Link>
+          </form>
+        </div>
       </div>
+      <Footer />
     </div>
   );
 }

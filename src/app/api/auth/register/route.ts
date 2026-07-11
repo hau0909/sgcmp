@@ -5,7 +5,18 @@ export const POST = async (request: Request) => {
   try {
     const body = await request.json();
 
-    const { email, password, confirmPassword, phoneNumber, fullName } = body;
+    const {
+      email,
+      password,
+      confirmPassword,
+      phoneNumber,
+      fullName,
+      registrationType,
+      companyName,
+      businessLicenseNo,
+      companyEmail,
+      companyPhone,
+    } = body;
 
     const result = await handleRegisterAccount({
       email,
@@ -13,6 +24,11 @@ export const POST = async (request: Request) => {
       confirmPassword,
       phoneNumber,
       fullName,
+      registrationType,
+      companyName,
+      businessLicenseNo,
+      companyEmail,
+      companyPhone,
     });
 
     return NextResponse.json(result, {

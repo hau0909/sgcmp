@@ -9,6 +9,11 @@ export const registerAccount = async ({
   role,
   tempPass,
   tempPasswordExpiresAt,
+  registration_type,
+  company_name,
+  business_license_no,
+  company_email,
+  company_phone,
 }: RegisterParams) => {
   const supabase = await createClient();
 
@@ -28,6 +33,12 @@ export const registerAccount = async ({
         temp_password_expires_at: isTemporaryAccount
           ? tempPasswordExpiresAt
           : null,
+        // Company registration metadata (read by email template)
+        registration_type: registration_type ?? null,
+        company_name: company_name ?? null,
+        business_license_no: business_license_no ?? null,
+        company_email: company_email ?? null,
+        company_phone: company_phone ?? null,
       },
     },
   });

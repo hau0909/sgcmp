@@ -20,6 +20,11 @@ export const handleRegisterAccount = async ({
   confirmPassword,
   phoneNumber,
   fullName,
+  registrationType,
+  companyName,
+  businessLicenseNo,
+  companyEmail,
+  companyPhone,
 }: RegisterInput) => {
   const validateError = validateRegisterInput({
     email,
@@ -62,12 +67,30 @@ export const handleRegisterAccount = async ({
       role: "customer",
       phoneNumber,
       fullName,
+      registrationType,
+      companyName,
+      businessLicenseNo,
+      companyEmail,
+      companyPhone,
     });
+
+    const isCompanyRegistration = registrationType === "company";
+    const successMessage = isCompanyRegistration
+      ? "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản trước khi gửi hồ sơ doanh nghiệp."
+      : "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.";
 
     return {
       success: true,
-      message:
-        "Đăng ký thành công. Vui lòng kiểm tra email để xác thực tài khoản.",
+      message: successMessage,
+      registrationType: registrationType ?? "individual",
+      companyInfo: isCompanyRegistration
+        ? {
+            companyName: companyName ?? "",
+            businessLicenseNo: businessLicenseNo ?? "",
+            companyEmail: companyEmail ?? "",
+            companyPhone: companyPhone ?? "",
+          }
+        : null,
       account,
     };
   } catch (error) {

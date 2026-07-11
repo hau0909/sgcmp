@@ -130,6 +130,30 @@ export const updateRegistrationStatus = async (id: string, status: "approved" | 
     if (updateCompanyError) {
       throw updateCompanyError;
     }
+
+    // Promote the owner's profile role to 'company-admin' only when approved
+    if (status === "approved") {
+      const { data: companyData, error: fetchCompanyError } = await supabase
+        .from("companies")
+        .select("owner_id")
+        .eq("company_id", regData.company_id)
+        .maybeSingle();
+
+      if (fetchCompanyError) {
+        throw fetchCompanyError;
+      }
+
+      if (companyData?.owner_id) {
+        const { error: updateRoleError } = await supabase
+          .from("profiles")
+          .update({ role: "company-admin" })
+          .eq("user_id", companyData.owner_id);
+
+        if (updateRoleError) {
+          throw updateRoleError;
+        }
+      }
+    }
   }
 };
 
@@ -177,14 +201,13 @@ export const createRegistrationFlow = async (payload: {
     throw new Error("Tài khoản của bạn đã đăng ký doanh nghiệp hoặc đang có đơn đăng ký chờ duyệt.");
   }
 
-  // 1. Update Profile (including role promotion to company-admin)
+  // 1. Update Profile
   const { error: profileError } = await supabase
     .from("profiles")
     .update({
       full_name: payload.profile.fullName,
       phone_number: payload.profile.phoneNumber,
       avatar_url: payload.profile.avatarUrl,
-      role: "company-admin",
       updated_at: new Date().toISOString(),
     })
     .eq("user_id", payload.userId);
@@ -219,7 +242,6 @@ export const createRegistrationFlow = async (payload: {
       company_name: payload.company.companyName,
       business_license_no: payload.company.businessLicenseNo,
       license_file_url: payload.company.licenseFileUrl,
-      director: payload.profile.fullName,
       address: payload.company.address,
       email: payload.company.email,
       phone: payload.company.phone,

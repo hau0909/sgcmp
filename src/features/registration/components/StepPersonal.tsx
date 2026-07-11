@@ -107,7 +107,7 @@ export default function StepPersonal({
               className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-10 text-sm text-on-surface-variant outline-none"
             />
           </div>
-          <p className="text-[10px] text-emerald-600 font-semibold mt-1">✓ Tài khoản đang đăng nhập</p>
+          <p className="text-[10px] text-on-surface-variant font-medium mt-1">Email dùng để đăng nhập, không thể chỉnh sửa.</p>
         </div>
 
         {/* Avatar Upload */}

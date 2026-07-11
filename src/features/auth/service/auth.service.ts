@@ -14,6 +14,11 @@ export const registerAccountService = async ({
   role,
   tempPass,
   tempPasswordExpiresAt,
+  registrationType,
+  companyName,
+  businessLicenseNo,
+  companyEmail,
+  companyPhone,
 }: RegisterInputService) => {
   return registerAccount({
     email,
@@ -23,6 +28,11 @@ export const registerAccountService = async ({
     role,
     tempPass,
     tempPasswordExpiresAt,
+    registration_type: registrationType,
+    company_name: companyName,
+    business_license_no: businessLicenseNo,
+    company_email: companyEmail,
+    company_phone: companyPhone,
   });
 };
 
