@@ -20,6 +20,20 @@ export type CreateCoordinatorPayload = {
   issuePlace: string;
 };
 
+export type UpdateCoordinatorPayload = {
+  fullName: string;
+  phoneNumber: string;
+  gender?: string;
+  dateOfBirth?: string;
+  address?: string;
+  identityId: string;
+  issueDate: string;
+  issuePlace: string;
+  avatarUrl?: string;
+  frontUrl?: string;
+  backUrl?: string;
+};
+
 // ─── Form ─────────────────────────────────────────────────────────────────────
 
 export interface City {
