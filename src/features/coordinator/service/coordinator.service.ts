@@ -1,4 +1,4 @@
-import { getCoordinators, insertCoordinatorRecord, getCoordinatorById } from "../repository/coordinator.repository";
+import { getCoordinators, insertCoordinatorRecord, getCoordinatorById, updateCoordinatorInfo } from "../repository/coordinator.repository";
 import { CoordinatorWithUser } from "../types";
 import { getIdentityByUserId } from "@/features/identity/repository/identity.repository";
 
@@ -27,3 +27,24 @@ export const getCoordinatorDetailService = async (coordinatorId: string) => {
   
   return { ...coordinator, identity };
 };
+
+export const updateCoordinatorService = async (
+  userId: string,
+  payload: {
+    fullName: string;
+    phoneNumber: string;
+    gender?: string;
+    dateOfBirth?: string;
+    address?: string;
+    identityId: string;
+    issueDate: string;
+    issuePlace: string;
+    avatarUrl?: string;
+    frontUrl?: string;
+    backUrl?: string;
+  }
+): Promise<void> => {
+  if (!userId) throw new Error("User ID là bắt buộc");
+  await updateCoordinatorInfo(userId, payload);
+};
+
