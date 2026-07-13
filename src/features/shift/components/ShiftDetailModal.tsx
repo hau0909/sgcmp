@@ -492,7 +492,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
 
       {/* ── Right Sidebar: Dispatch Panel ── */}
       {isDispatchPanelOpen && (
-        <div className="fixed right-0 top-0 bottom-0 h-full w-[380px] border-l border-slate-200 flex flex-col bg-white shadow-2xl z-[10000] animate-in slide-in-from-right duration-300">
+        <div className="fixed right-4 top-0 bottom-0 my-4 w-[380px] flex flex-col bg-white shadow-2xl z-[10000] rounded-2xl overflow-hidden animate-in slide-in-from-right duration-300" style={{ maxHeight: "calc(100vh - 2rem)" }}>
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 bg-slate-50">
             <div>
