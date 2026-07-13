@@ -18,6 +18,8 @@ import type {
   ShiftAssignmentStatus,
   ShiftWithAssignments,
 } from "../type";
+import { ShiftDetailModal } from "./ShiftDetailModal";
+
 
 type ShiftWeekScheduleTableProps = {
   shifts: ShiftWithAssignments[];
@@ -177,6 +179,7 @@ function GuardRow({
 
 type WeekShiftCardProps = {
   shift: ShiftWithAssignments;
+  onShiftClick: (shift: ShiftWithAssignments) => void;
 };
 
 const TOOLTIP_WIDTH = 340;
@@ -437,6 +440,7 @@ export function ShiftWeekScheduleTable({
   selectedLocation,
   weekStartDate,
 }: ShiftWeekScheduleTableProps) {
+  const [selectedShift, setSelectedShift] = useState<ShiftWithAssignments | null>(null);
   const weekDays = buildWeekDays(weekStartDate);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef({
@@ -511,6 +515,7 @@ export function ShiftWeekScheduleTable({
   }
 
   return (
+    <>
     <div
       ref={scrollRef}
       onMouseDown={handleMouseDown}
@@ -567,18 +572,31 @@ export function ShiftWeekScheduleTable({
             >
               <div className="space-y-3">
                 {day.shifts.map((shift) => (
-                  <WeekShiftCard key={shift.shift_id} shift={shift} />
-                ))}
+                  <WeekShiftCard
+                    key={shift.shift_id}
+                    shift={shift}
+                    onShiftClick={(s) => setSelectedShift(s)}
+                  />
+                ))}  
               </div>
             </div>
           ))}
         </div>
       </div>
     </div>
+
+    {selectedShift && (
+      <ShiftDetailModal
+        open={!!selectedShift}
+        shift={selectedShift}
+        onClose={() => setSelectedShift(null)}
+      />
+    )}
+  </>
   );
 }
 
-function WeekShiftCard({ shift }: WeekShiftCardProps) {
+function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
   const cardRef = useRef<HTMLButtonElement | null>(null);
   const [tooltipPosition, setTooltipPosition] =
     useState<TooltipPosition | null>(null);
@@ -589,6 +607,7 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
     return (
       <button
         type="button"
+        onClick={() => onShiftClick(shift)}
         className="w-full rounded-md border border-dashed border-orange-400 bg-orange-50 px-3 py-2 text-left text-orange-700"
       >
         <div className="flex items-start justify-between gap-2">
@@ -654,6 +673,7 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
       <button
         ref={cardRef}
         type="button"
+        onClick={() => onShiftClick(shift)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className="w-full rounded-md border border-blue-200 bg-blue-100 px-3 py-2 text-left text-blue-900 shadow-sm transition-all duration-300 hover:bg-blue-200"

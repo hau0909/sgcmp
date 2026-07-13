@@ -294,6 +294,14 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                 {shift.shift_name || "Ca trực"}
               </p>
             </div>
+            {!isDispatchPanelOpen && (
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100"
+              >
+                <X size={18} />
+              </button>
+            )}
           </div>
 
           {/* Body */}
