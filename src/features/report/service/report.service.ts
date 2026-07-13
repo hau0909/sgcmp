@@ -4,6 +4,8 @@ import {
   createCustomerReport,
   deleteCustomerReport,
   getCustomerContractsForReport,
+  getCompanyReports,
+  updateReportStatus,
 } from "../repository/report.repository";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -25,6 +27,8 @@ const formatReport = (item: any): Report => {
     contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
     service_name: serviceName,
     report_code: `BC-${item.id.slice(0, 8).toUpperCase()}`,
+    customer_name: item.customer_name,
+    customer_phone: item.customer_phone,
   };
 };
 
@@ -76,3 +80,38 @@ export const getCustomerContractsForReportService = async (
 ): Promise<any[]> => {
   return await getCustomerContractsForReport(customerId);
 };
+
+export const getCompanyReportsService = async (
+  companyId: string,
+  page: number,
+  limit: number,
+  search?: string,
+  status?: ReportStatus,
+  type?: ReportType
+): Promise<{ reports: Report[]; totalCount: number }> => {
+  const { data, count } = await getCompanyReports(
+    companyId,
+    page,
+    limit,
+    search,
+    status,
+    type
+  );
+
+  const reports = data.map((item) => formatReport(item));
+
+  return {
+    reports,
+    totalCount: count,
+  };
+};
+
+export const updateReportStatusService = async (
+  id: string,
+  status: ReportStatus
+): Promise<Report> => {
+  const rawReport = await updateReportStatus(id, status);
+  // Need to enrich or just return basic report
+  return formatReport(rawReport);
+};
+
