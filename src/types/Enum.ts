@@ -36,4 +36,8 @@ export enum ShiftImgType {
   other = "other",
 }
 
-export type VerificationStatus = "pending" | "approved" | "rejected";
+export type VerificationStatus = "pending" | "approved" | "rejected";
+
+export type ReportType = "LATE" | "ABSENT" | "BAD_ATTITUDE" | "SLEEPING" | "OTHER";
+
+export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
