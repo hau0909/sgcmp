@@ -4,13 +4,18 @@ import { CoordinatorWithUser } from "../types";
 export async function requestGetCoordinators(
   companyId: string,
   page = 1,
-  limit = 10
+  limit = 10,
+  search?: string
 ): Promise<{ coordinators: CoordinatorWithUser[]; total: number }> {
   const params = new URLSearchParams({
     companyId,
     page: String(page),
     limit: String(limit),
   });
+
+  if (search) {
+    params.append("search", search);
+  }
 
   const result = await fetcher(`/api/coordinators?${params.toString()}`, {
     method: "GET",

@@ -277,6 +277,14 @@ export default function Header() {
                       Quản lý hợp đồng
                     </Link>
 
+                    <Link
+                      href="/my-reports"
+                      onClick={closeMenus}
+                      className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                    >
+                      Báo cáo
+                    </Link>
+
                     <button
                       type="button"
                       onClick={handleLogout}
@@ -406,6 +414,14 @@ export default function Header() {
                 onClick={closeMenus}
               >
                 Xem hợp đồng
+              </Link>
+
+              <Link
+                className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                href="/my-reports"
+                onClick={closeMenus}
+              >
+                Báo cáo
               </Link>
 
               <button
