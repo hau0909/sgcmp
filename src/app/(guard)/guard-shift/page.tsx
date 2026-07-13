@@ -7,6 +7,8 @@ import { type ShiftItem } from "@/features/shift/components/ShiftCardGuard";
 import { requestGetGuardShiftsByDay } from "@/features/shift/api/shift.api";
 import type { GuardShiftItem } from "@/features/shift/type";
 
+import { formatDate } from "@/utils/dateTime";
+
 const parseDateKey = (dateKey: string | null) => {
   if (!dateKey) {
     return new Date();
@@ -30,7 +32,7 @@ const formatGuardShiftDateKey = (date: Date) => {
 };
 
 const formatDateTitle = (date: Date) => {
-  return date.toLocaleDateString("vi-VN", {
+  return formatDate(date, {
     weekday: "long",
     day: "2-digit",
     month: "2-digit",
@@ -38,7 +40,11 @@ const formatDateTitle = (date: Date) => {
   });
 };
 
-const getStatusLabel = (status: ShiftItem["status"]) => {
+const getStatusLabel = (status: ShiftItem["status"], isReplacement?: boolean) => {
+  if (isReplacement) {
+    return "CA THAY THẾ";
+  }
+
   if (status === "assigned") {
     return "PHÂN CÔNG";
   }
@@ -47,16 +53,28 @@ const getStatusLabel = (status: ShiftItem["status"]) => {
     return "HOÀN THÀNH";
   }
 
+  if (status === "late") {
+    return "ĐI TRỄ";
+  }
+
   return "VẮNG MẶT";
 };
 
-const getStatusStyle = (status: ShiftItem["status"]) => {
+const getStatusStyle = (status: ShiftItem["status"], isReplacement?: boolean) => {
+  if (isReplacement) {
+    return "bg-purple-100 text-purple-700";
+  }
+
   if (status === "assigned") {
     return "bg-[#0754a6] text-white";
   }
 
   if (status === "completed") {
     return "bg-green-600 text-white";
+  }
+
+  if (status === "late") {
+    return "bg-amber-100 text-amber-700";
   }
 
   return "bg-red-600 text-white";
@@ -70,6 +88,7 @@ const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
     location: shift.location,
     address: shift.address,
     status: shift.status,
+    is_replacement: shift.is_replacement,
   };
 };
 
@@ -199,9 +218,10 @@ export default function GuardShiftPage() {
                   <span
                     className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold ${getStatusStyle(
                       shift.status,
+                      shift.is_replacement,
                     )}`}
                   >
-                    {getStatusLabel(shift.status)}
+                    {getStatusLabel(shift.status, shift.is_replacement)}
                   </span>
                 </div>
 

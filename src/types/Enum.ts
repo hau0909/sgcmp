@@ -27,13 +27,14 @@ export type BookingStatus = "pending" | "quoted" | "accepted" | "rejected" | "ca
 
 export type ImageType = 'logo' | 'banner' | 'other';
 
-export type ShiftAssignmentStatus = "assigned" | "completed" | "absent";
+export type ShiftAssignmentStatus = "assigned" | "completed" | "absent" | "late";
 
 export enum ShiftImgType {
   checkin = "checkin",
   checkout = "checkout",
   incident = "incident",
+  late = "late",
   other = "other",
 }
 
-export type VerificationStatus = "pending" | "approved" | "rejected";
+export type VerificationStatus = "pending" | "approved" | "rejected";

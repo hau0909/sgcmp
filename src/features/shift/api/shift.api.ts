@@ -115,19 +115,19 @@ export const requestGetGuardShiftDetail = async ({
 
 export const requestCheckinGuardShift = async ({
   shiftId,
-  imageUrl,
-  imagePath,
+  imageFile,
 }: {
   shiftId: string;
-  imageUrl?: string;
-  imagePath?: string;
+  imageFile?: File;
 }): Promise<CheckinGuardShiftResponse> => {
+  const formData = new FormData();
+  if (imageFile) {
+    formData.append("image", imageFile);
+  }
+
   return await fetcher(`/api/shifts/${encodeURIComponent(shiftId)}/checkin`, {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ imageUrl, imagePath }),
+    body: formData,
   });
 };
 
@@ -144,5 +144,43 @@ export const requestGetScheduledShiftDates = async (
 ): Promise<{ message: string; data: string[] }> => {
   return fetcher(`/api/shifts/contracts/${encodeURIComponent(contractId)}/scheduled-dates`, {
     method: "GET",
+  });
+};
+
+export const requestGetReplacementGuards = async ({
+  shiftId,
+  assignmentId,
+}: {
+  shiftId: string;
+  assignmentId: string;
+}): Promise<{
+  success: boolean;
+  data: {
+    contractGuards: any[];
+    outsideContractGuards: any[];
+    currentReplacementGuards: any[];
+  };
+}> => {
+  return fetcher(`/api/shifts/${encodeURIComponent(shiftId)}/replacement-guards?assignmentId=${encodeURIComponent(assignmentId)}`, {
+    method: "GET",
+  });
+};
+
+export const requestUpdateReplacementGuards = async ({
+  shiftId,
+  assignmentId,
+  replacementGuardIds,
+}: {
+  shiftId: string;
+  assignmentId: string;
+  replacementGuardIds: string[];
+}): Promise<{
+  success: boolean;
+  message: string;
+  data: any;
+}> => {
+  return fetcher(`/api/shifts/${encodeURIComponent(shiftId)}/assignments/${encodeURIComponent(assignmentId)}/replacements`, {
+    method: "PATCH",
+    body: JSON.stringify({ replacementGuardIds }),
   });
 };

@@ -12,6 +12,10 @@ export const fetcher = async (url: string, options?: any) => {
       ...(!isFormData && {
         "Content-Type": "application/json",
       }),
+      ...(typeof window !== "undefined" && {
+        "x-timezone": Intl.DateTimeFormat().resolvedOptions().timeZone,
+        "x-locale": navigator.language,
+      }),
       ...(options?.headers || {}),
     },
   });

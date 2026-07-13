@@ -1,5 +1,6 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, MapPin, Plus, Calendar, ChevronDown } from "lucide-react";
+import { getUserTimeZone, getUserLocale, formatDate } from "@/utils/dateTime";
 
 type ShiftToolbarProps = {
   viewMode: "day" | "week";
@@ -38,11 +39,9 @@ const getContractStatusColor = (status: string) => {
   }
 };
 
-const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
-
-const getVietnamTodayKey = () => {
+const getTodayKey = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: VIETNAM_TIME_ZONE,
+    timeZone: getUserTimeZone(),
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -56,7 +55,7 @@ const getVietnamTodayKey = () => {
 };
 
 const getMaxDateKey = () => {
-  const todayKey = getVietnamTodayKey();
+  const todayKey = getTodayKey();
   const [year, month, day] = todayKey.split("-").map(Number);
   return `${year + 1}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
 };
@@ -93,45 +92,42 @@ const getStartOfWeekKey = (dateKey: string) => {
   return formatUtcDateKey(date);
 };
 
-const getDateParts = (dateKey: string) => {
-  const [year, month, day] = dateKey.split("-").map(Number);
-
-  return {
-    year,
-    month,
-    day,
-  };
-};
-
 const formatDayTitle = (dateKey: string) => {
-  const { year, month, day } = getDateParts(dateKey);
-
-  return `${day} Th${month}, ${year}`;
+  const date = new Date(`${dateKey}T00:00:00`);
+  return formatDate(date, { day: "numeric", month: "short", year: "numeric" });
 };
 
 const formatWeekTitle = (dateKey: string) => {
   const startOfWeekKey = getStartOfWeekKey(dateKey);
   const endOfWeekKey = addDaysToDateKey(startOfWeekKey, 6);
 
-  const start = getDateParts(startOfWeekKey);
-  const end = getDateParts(endOfWeekKey);
+  const start = new Date(`${startOfWeekKey}T00:00:00`);
+  const end = new Date(`${endOfWeekKey}T00:00:00`);
 
-  if (start.year !== end.year) {
-    return `${start.day} Th${start.month}, ${start.year} - ${end.day} Th${end.month}, ${end.year}`;
+  const startDay = formatDate(start, { day: "numeric" });
+  const endDay = formatDate(end, { day: "numeric" });
+  const startMonthStr = formatDate(start, { month: "short" });
+  const endMonthStr = formatDate(end, { month: "short" });
+  const startYear = start.getFullYear();
+  const endYear = end.getFullYear();
+
+  if (startYear !== endYear) {
+    return `${startDay} ${startMonthStr}, ${startYear} - ${endDay} ${endMonthStr}, ${endYear}`;
   }
 
-  return `${start.day} Th${start.month} - ${end.day} Th${end.month}, ${end.year}`;
+  if (startMonthStr !== endMonthStr) {
+    return `${startDay} ${startMonthStr} - ${endDay} ${endMonthStr}, ${endYear}`;
+  }
+
+  return `${startDay} ${startMonthStr} - ${endDay} ${endMonthStr}, ${endYear}`;
 };
 
 const formatWeekRangeDisplay = (dateKey: string) => {
   const startOfWeekKey = getStartOfWeekKey(dateKey);
   const endOfWeekKey = addDaysToDateKey(startOfWeekKey, 6);
 
-  const start = getDateParts(startOfWeekKey);
-  const end = getDateParts(endOfWeekKey);
-
-  const startStr = `${String(start.day).padStart(2, "0")}/${String(start.month).padStart(2, "0")}/${start.year}`;
-  const endStr = `${String(end.day).padStart(2, "0")}/${String(end.month).padStart(2, "0")}/${end.year}`;
+  const startStr = formatDate(new Date(`${startOfWeekKey}T00:00:00`));
+  const endStr = formatDate(new Date(`${endOfWeekKey}T00:00:00`));
 
   return `${startStr} - ${endStr}`;
 };
@@ -173,12 +169,8 @@ const getWeekOptionsForYear = (year: number) => {
     if (endKey < "2000-01-01") continue;
     if (startKey > maxDateKey) continue;
 
-    const startStr = `${String(start.getUTCDate()).padStart(2, "0")}/${String(
-      start.getUTCMonth() + 1
-    ).padStart(2, "0")}/${start.getUTCFullYear()}`;
-    const endStr = `${String(end.getUTCDate()).padStart(2, "0")}/${String(
-      end.getUTCMonth() + 1
-    ).padStart(2, "0")}/${end.getUTCFullYear()}`;
+    const startStr = formatDate(new Date(`${startKey}T00:00:00`));
+    const endStr = formatDate(new Date(`${endKey}T00:00:00`));
 
     options.push({
       value: startKey,
@@ -291,8 +283,7 @@ const DayPickerDropdown = ({
   }, []);
 
   const displayDateStr = () => {
-    const [y, m, d] = value.split("-");
-    return `${d}/${m}/${y}`;
+    return formatDate(new Date(`${value}T00:00:00`));
   };
 
   const handleMonthChange = (offset: number) => {
@@ -340,11 +331,26 @@ const DayPickerDropdown = ({
   };
 
   const days = generateDays();
-  const dayNames = ["T2", "T3", "T4", "T5", "T6", "T7", "CN"];
-  const monthNames = [
-    "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4", "Tháng 5", "Tháng 6",
-    "Tháng 7", "Tháng 8", "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12"
-  ];
+  const dayNames = useMemo(() => {
+    const locale = getUserLocale();
+    const baseDate = new Date(Date.UTC(2026, 0, 5));
+    return Array.from({ length: 7 }).map((_, i) => {
+      const date = new Date(baseDate);
+      date.setUTCDate(baseDate.getUTCDate() + i);
+      const name = date.toLocaleDateString(locale, { weekday: "short" });
+      return name.toUpperCase();
+    });
+  }, []);
+
+  const monthNames = useMemo(() => {
+    const locale = getUserLocale();
+    const baseDate = new Date(Date.UTC(2026, 0, 1));
+    return Array.from({ length: 12 }).map((_, i) => {
+      const date = new Date(baseDate);
+      date.setUTCMonth(i);
+      return date.toLocaleDateString(locale, { month: "long" });
+    });
+  }, []);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -603,7 +609,7 @@ export function ShiftToolbar({
   };
 
   const handleToday = () => {
-    onChangeDate(getVietnamTodayKey());
+    onChangeDate(getTodayKey());
   };
 
   const handleSelectDate = (date: string) => {
@@ -711,7 +717,7 @@ export function ShiftToolbar({
             onChange={(event) => onChangeLocation(event.target.value)}
             className="w-full bg-transparent text-sm text-slate-700 outline-none cursor-pointer"
           >
-            <option value="all">Tất cả vị trí</option>
+            
 
             {locations.map((loc) => (
               <option

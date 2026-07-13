@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ShiftDetailModal } from "./ShiftDetailModal";
 import {
   Clock,
   MapPin,
@@ -16,6 +17,7 @@ import type {
   ShiftWithAssignments,
 } from "../type";
 import { getShiftStyle } from "../utils/shift.utils";
+import { formatTime as formatTimeHelper } from "@/utils/dateTime";
 
 type ShiftCardProps = {
   shift: ShiftWithAssignments;
@@ -164,7 +166,6 @@ function GuardRow({
   );
 }
 
-const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
 const TOOLTIP_WIDTH = 340;
 const TOOLTIP_GAP = 12;
 
@@ -175,6 +176,10 @@ const getStatusLabel = (status: ShiftAssignmentStatus) => {
 
   if (status === "completed") {
     return "Hoàn thành";
+  }
+
+  if (status === "late") {
+    return "Đi trễ";
   }
 
   return "Vắng mặt";
@@ -189,16 +194,15 @@ const getStatusStyle = (status: ShiftAssignmentStatus) => {
     return "bg-emerald-100 text-emerald-700 border-emerald-300";
   }
 
+  if (status === "late") {
+    return "bg-amber-100 text-amber-700 border-amber-300";
+  }
+
   return "bg-red-100 text-red-700 border-red-300";
 };
 
 const formatTime = (date: string) => {
-  return new Intl.DateTimeFormat("vi-VN", {
-    timeZone: VIETNAM_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(date));
+  return formatTimeHelper(date);
 };
 
 const getContractAddress = (shift: ShiftWithAssignments) => {
@@ -322,6 +326,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
   const [tooltipPosition, setTooltipPosition] =
     useState<TooltipPosition | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isEmpty = shift.assignments.length < shift.required_guards;
@@ -378,6 +383,10 @@ export function ShiftCard({ shift }: ShiftCardProps) {
         ref={cardRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onClick={() => {
+          setShowTooltip(false);
+          setIsDetailOpen(true);
+        }}
         className={`relative hover:bg-blue-200 transition-all duration-300 cursor-pointer flex h-full w-full flex-col justify-between rounded-md border p-3 shadow-sm ${getShiftStyle(
           shift.shift_name,
         )}`}
@@ -391,7 +400,14 @@ export function ShiftCard({ shift }: ShiftCardProps) {
             {statusLabel}
           </span>
 
-          <button type="button" className="text-slate-500 hover:text-slate-800">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDetailOpen(true);
+            }}
+            className="text-slate-500 hover:text-slate-800"
+          >
             <MoreVertical size={15} />
           </button>
         </div>
@@ -424,7 +440,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
         </div>
       </div>
 
-      {showTooltip && tooltipPosition ? (
+      {showTooltip && tooltipPosition && !isDetailOpen ? (
         <ShiftTooltip
           shift={shift}
           statusLabel={statusLabel}
@@ -433,6 +449,12 @@ export function ShiftCard({ shift }: ShiftCardProps) {
           onMouseLeave={handleTooltipMouseLeave}
         />
       ) : null}
+
+      <ShiftDetailModal
+        open={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        shift={shift}
+      />
     </>
   );
 }

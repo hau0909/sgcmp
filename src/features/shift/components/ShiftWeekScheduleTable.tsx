@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
+import { getUserTimeZone, getUserLocale, formatDate, formatTime as formatTimeHelper } from "@/utils/dateTime";
 import {
   AlertTriangle,
   CalendarX,
@@ -124,7 +125,7 @@ function GuardRow({
   const handleMouseEnter = () => {
     if (!rowRef.current) return;
     const rect = rowRef.current.getBoundingClientRect();
-    
+
     let left = rect.right + 12;
     let top = rect.top;
     if (left + 300 > window.innerWidth - 12) {
@@ -178,20 +179,18 @@ type WeekShiftCardProps = {
   shift: ShiftWithAssignments;
 };
 
-const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
 const TOOLTIP_WIDTH = 340;
 const TOOLTIP_GAP = 12;
 const WEEK_DAY_COLUMN_WIDTH = 240;
 
-const WEEK_DAY_LABELS = [
-  "THỨ 2",
-  "THỨ 3",
-  "THỨ 4",
-  "THỨ 5",
-  "THỨ 6",
-  "THỨ 7",
-  "CN",
-];
+const getWeekDayLabels = (locale: string) => {
+  const baseDate = new Date(Date.UTC(2026, 0, 5)); // 2026-01-05 is a Monday
+  return Array.from({ length: 7 }).map((_, i) => {
+    const date = new Date(baseDate);
+    date.setUTCDate(baseDate.getUTCDate() + i);
+    return date.toLocaleDateString(locale, { weekday: "short" }).toUpperCase();
+  });
+};
 
 const getStatusLabel = (status: ShiftAssignmentStatus) => {
   if (status === "assigned") {
@@ -200,6 +199,10 @@ const getStatusLabel = (status: ShiftAssignmentStatus) => {
 
   if (status === "completed") {
     return "Hoàn thành";
+  }
+
+  if (status === "late") {
+    return "Đi trễ";
   }
 
   return "Vắng mặt";
@@ -214,21 +217,20 @@ const getStatusStyle = (status: ShiftAssignmentStatus) => {
     return "bg-emerald-100 text-emerald-700 border-emerald-300";
   }
 
+  if (status === "late") {
+    return "bg-amber-100 text-amber-700 border-amber-300";
+  }
+
   return "bg-red-100 text-red-700 border-red-300";
 };
 
 const formatTime = (date: string) => {
-  return new Intl.DateTimeFormat("vi-VN", {
-    timeZone: VIETNAM_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(date));
+  return formatTimeHelper(date);
 };
 
-const getVietnamDateKey = (date: Date) => {
+const getLocalDateKey = (date: Date) => {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: VIETNAM_TIME_ZONE,
+    timeZone: getUserTimeZone(),
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -267,7 +269,9 @@ const getStartOfWeekKey = (dateKey: string) => {
 };
 
 const buildWeekDays = (weekStartDate?: string): WeekDay[] => {
-  const todayKey = getVietnamDateKey(new Date());
+  const userLocale = getUserLocale();
+  const weekDayLabels = getWeekDayLabels(userLocale);
+  const todayKey = getLocalDateKey(new Date());
 
   const baseDateKey = weekStartDate ?? todayKey;
   const startOfWeekKey = getStartOfWeekKey(baseDateKey);
@@ -279,20 +283,22 @@ const buildWeekDays = (weekStartDate?: string): WeekDay[] => {
     date.setUTCDate(startOfWeek.getUTCDate() + index);
 
     const dateKey = formatUtcDateKey(date);
-    const dayNumber = date.getUTCDate();
-    const monthNumber = date.getUTCMonth() + 1;
+    const dateLabel = new Intl.DateTimeFormat(userLocale, {
+      day: "numeric",
+      month: "numeric",
+    }).format(new Date(`${dateKey}T00:00:00`));
 
     return {
       date: dateKey,
-      dayLabel: WEEK_DAY_LABELS[index],
-      dateLabel: `${dayNumber}/${monthNumber}`,
+      dayLabel: weekDayLabels[index],
+      dateLabel,
       isToday: dateKey === todayKey,
     };
   });
 };
 
 const getShiftDateKey = (date: string) => {
-  return getVietnamDateKey(new Date(date));
+  return getLocalDateKey(new Date(date));
 };
 
 const getDateTimeValue = (date: string) => {
@@ -511,9 +517,8 @@ export function ShiftWeekScheduleTable({
       onMouseMove={handleMouseMove}
       onMouseUp={stopDragging}
       onMouseLeave={stopDragging}
-      className={`overflow-x-auto overflow-y-visible rounded-sm border border-slate-300 bg-white ${
-        isDragging ? "cursor-grabbing select-none" : "cursor-grab"
-      }`}
+      className={`overflow-x-auto overflow-y-visible rounded-sm border border-slate-300 bg-white ${isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+        }`}
     >
       <div
         style={{
@@ -529,22 +534,19 @@ export function ShiftWeekScheduleTable({
           {visibleWeekDays.map((day) => (
             <div
               key={day.date}
-              className={`border-r border-slate-300 px-4 py-3 text-center ${
-                day.isToday ? "bg-blue-700 text-white" : "bg-slate-100"
-              }`}
+              className={`border-r border-slate-300 px-4 py-3 text-center ${day.isToday ? "bg-blue-700 text-white" : "bg-slate-100"
+                }`}
             >
               <p
-                className={`text-xs font-bold ${
-                  day.isToday ? "text-white" : "text-slate-600"
-                }`}
+                className={`text-xs font-bold ${day.isToday ? "text-white" : "text-slate-600"
+                  }`}
               >
                 {day.dayLabel}
               </p>
 
               <p
-                className={`text-xl font-bold ${
-                  day.isToday ? "text-white" : "text-slate-900"
-                }`}
+                className={`text-xl font-bold ${day.isToday ? "text-white" : "text-slate-900"
+                  }`}
               >
                 {day.dateLabel}
               </p>
@@ -601,9 +603,9 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
           </span>
         </div>
 
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium">
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium min-w-0">
           <MapPin size={12} className="shrink-0" />
-          <span className="whitespace-nowrap">{shift.location}</span>
+          <span className="truncate" title={shift.location}>{shift.location}</span>
         </div>
       </button>
     );
@@ -691,9 +693,9 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
           <span className="whitespace-nowrap">{shift.shift_name}</span>
         </div>
 
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-700 min-w-0">
           <MapPin size={12} className="shrink-0" />
-          <span className="whitespace-nowrap">{shift.location}</span>
+          <span className="truncate" title={shift.location}>{shift.location}</span>
         </div>
       </button>
 

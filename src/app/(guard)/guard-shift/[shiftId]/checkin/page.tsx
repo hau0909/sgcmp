@@ -71,25 +71,33 @@ const formatCheckinTime = (date: Date) => {
   });
 };
 
-const getStatusLabel = (status: GuardShiftDetailItem["status"]) => {
+const getStatusLabel = (status: GuardShiftDetailItem["status"], checkInTime?: string | null) => {
   if (status === "assigned") {
-    return "Chờ xác nhận";
+    return "Chờ điểm danh";
   }
 
   if (status === "completed") {
-    return "Hoàn thành";
+    return "Đã điểm danh đúng giờ";
+  }
+
+  if (status === "late") {
+    return checkInTime ? "Đã điểm danh trễ" : "Đi trễ - vẫn có thể điểm danh";
   }
 
   return "Vắng mặt";
 };
 
-const getStatusStyle = (status: GuardShiftDetailItem["status"]) => {
+const getStatusStyle = (status: GuardShiftDetailItem["status"], checkInTime?: string | null) => {
   if (status === "assigned") {
     return "bg-[#0754a6] text-white";
   }
 
   if (status === "completed") {
     return "bg-emerald-600 text-white";
+  }
+
+  if (status === "late") {
+    return checkInTime ? "bg-amber-600 text-white" : "bg-amber-500 text-white";
   }
 
   return "bg-red-600 text-white";
@@ -108,7 +116,6 @@ export default function GuardShiftCheckinPage() {
   const [error, setError] = useState("");
 
   const [checkingIn, setCheckingIn] = useState(false);
-  const [autoUpdatingAbsent, setAutoUpdatingAbsent] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [checkinPopup, setCheckinPopup] = useState<CheckinPopup | null>(null);
 
@@ -255,35 +262,40 @@ export default function GuardShiftCheckinPage() {
       return null;
     }
 
-    const canCheckinFrom = new Date(
-      startTime.getTime() - CHECKIN_BEFORE_MINUTES * 60 * 1000,
-    );
+    const startCheckinLimit = startTime;
+    const lateCheckinLimit = new Date(startTime.getTime() + 5 * 60 * 1000);
+    const absentLimit = new Date(startTime.getTime() + 35 * 60 * 1000);
 
-    const absentAfter = new Date(
-      startTime.getTime() + CHECKIN_AFTER_MINUTES * 60 * 1000,
-    );
+    const isBeforeWindow = currentTime < startCheckinLimit;
+    const isExpired = currentTime >= absentLimit;
+    const isLate = currentTime > lateCheckinLimit && currentTime < absentLimit;
 
-    const isBeforeWindow = currentTime < canCheckinFrom;
-    const isExpired = currentTime >= absentAfter;
+    // Can check-in if the status is assigned or (status is late and they have not checked in yet)
+    const isPendingCheckin = 
+      shift.status === "assigned" || 
+      (shift.status === "late" && shift.check_in_time === null);
+
+    const canCheckinByTime =
+      isPendingCheckin &&
+      currentTime >= startCheckinLimit &&
+      currentTime < absentLimit;
 
     return {
       startTime,
-      canCheckinFrom,
-      absentAfter,
+      startCheckinLimit,
+      lateCheckinLimit,
+      absentLimit,
       isBeforeWindow,
       isExpired,
-      canCheckinByTime:
-        shift.status === "assigned" &&
-        currentTime >= canCheckinFrom &&
-        currentTime < absentAfter,
+      isLate,
+      canCheckinByTime,
     };
   }, [shift, currentTime]);
 
   const canCheckin =
     Boolean(checkinState?.canCheckinByTime) &&
     Boolean(checkinImageFile) &&
-    !checkingIn &&
-    !autoUpdatingAbsent;
+    !checkingIn;
 
   const checkinMessage = useMemo(() => {
     if (!shift || !checkinState) {
@@ -291,17 +303,28 @@ export default function GuardShiftCheckinPage() {
     }
 
     if (shift.status === "completed") {
-      return "Ca trực này đã được điểm danh.";
+      return "Đã điểm danh đúng giờ.";
+    }
+
+    if (shift.status === "late" && shift.check_in_time !== null) {
+      return "Đã điểm danh trễ.";
     }
 
     if (shift.status === "absent" || checkinState.isExpired) {
-      return "Đã quá thời gian điểm danh. Ca trực được đánh dấu vắng mặt.";
+      return "Đã quá thời gian điểm danh. Bạn được ghi nhận vắng mặt.";
     }
 
     if (checkinState.isBeforeWindow) {
       return `Có thể điểm danh từ ${formatCheckinTime(
-        checkinState.canCheckinFrom,
+        checkinState.startCheckinLimit,
       )}.`;
+    }
+
+    if (shift.status === "late" && shift.check_in_time === null) {
+      if (!checkinImageFile) {
+        return "Bạn đang đi trễ. Vui lòng chụp ảnh check-in để hoàn tất điểm danh.";
+      }
+      return "Ảnh check-in trễ đã sẵn sàng. Bạn có thể xác nhận ca làm việc.";
     }
 
     if (!checkinImageFile) {
@@ -320,106 +343,97 @@ export default function GuardShiftCheckinPage() {
       return "Đã điểm danh";
     }
 
+    if (shift?.status === "late" && shift?.check_in_time !== null) {
+      return "Đã điểm danh trễ";
+    }
+
     if (shift?.status === "absent" || checkinState?.isExpired) {
       return "Đã vắng mặt";
     }
 
-    if (autoUpdatingAbsent) {
-      return "Đang cập nhật...";
+    return "Điểm danh";
+  }, [checkingIn, shift?.status, shift?.check_in_time, checkinState?.isExpired]);
+
+  const fetchShiftDetail = useCallback(async () => {
+    if (!shiftId) {
+      setError("Không tìm thấy mã ca trực.");
+      setLoading(false);
+      return;
     }
 
-    return "Điểm danh";
-  }, [checkingIn, autoUpdatingAbsent, shift?.status, checkinState?.isExpired]);
+    try {
+      const response = await requestGetGuardShiftDetail({
+        shiftId,
+      });
 
-  useEffect(() => {
-    const fetchShiftDetail = async () => {
-      if (!shiftId) {
-        setError("Không tìm thấy mã ca trực.");
-        setLoading(false);
-        return;
-      }
+      const shiftDetail = response.data.shift;
 
-      try {
-        setLoading(true);
-        setError("");
+      setShift({
+        ...shiftDetail,
+        guards: shiftDetail.guards ?? [],
+      });
+      setError("");
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Không thể lấy thông tin ca trực.";
 
-        const response = await requestGetGuardShiftDetail({
-          shiftId,
-        });
-
-        const shiftDetail = response.data.shift;
-
-        setShift({
-          ...shiftDetail,
-          guards: shiftDetail.guards ?? [],
-        });
-      } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Không thể lấy thông tin ca trực.";
-
-        setError(message);
-        setShift(null);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchShiftDetail();
+      setError(message);
+      setShift(null);
+    } finally {
+      setLoading(false);
+    }
   }, [shiftId]);
 
+  // Initial fetch
+  useEffect(() => {
+    setLoading(true);
+    fetchShiftDetail();
+  }, [fetchShiftDetail]);
+
+  // Regular clock updates
   useEffect(() => {
     const timer = window.setInterval(() => {
       setCurrentTime(new Date());
-    }, 30000);
+    }, 1000);
 
     return () => {
       window.clearInterval(timer);
     };
   }, []);
 
+  // Polling and visibility change refetch
   useEffect(() => {
-    const markAbsentIfExpired = async () => {
-      if (!shift || !checkinState) {
-        return;
-      }
+    if (!shift) return;
 
-      if (hasAutoMarkedAbsentRef.current) {
-        return;
-      }
+    // Stop polling if already completed, absent, or late (and checked in)
+    const isFinalState =
+      shift.status === "completed" ||
+      shift.status === "absent" ||
+      (shift.status === "late" && shift.check_in_time !== null);
 
-      if (shift.status !== "assigned" || !checkinState.isExpired) {
-        return;
-      }
+    if (isFinalState) return;
 
-      try {
-        hasAutoMarkedAbsentRef.current = true;
-        setAutoUpdatingAbsent(true);
+    // Poll every 30 seconds
+    const interval = setInterval(() => {
+      fetchShiftDetail();
+    }, 30000);
 
-        const response = await requestCheckinGuardShift({
-          shiftId: shift.id,
-        });
-
-        setShift((currentShift) => {
-          if (!currentShift) {
-            return currentShift;
-          }
-
-          return {
-            ...currentShift,
-            status: response.data.assignment.status,
-          };
-        });
-      } catch {
-        hasAutoMarkedAbsentRef.current = false;
-      } finally {
-        setAutoUpdatingAbsent(false);
+    // Refetch when document becomes visible
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        fetchShiftDetail();
       }
     };
 
-    markAbsentIfExpired();
-  }, [shift, checkinState]);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, [shift, fetchShiftDetail]);
 
   const handleBack = () => {
     stopCamera();
@@ -435,38 +449,9 @@ export default function GuardShiftCheckinPage() {
       setCheckingIn(true);
       setCheckinPopup(null);
 
-      let imageUrl: string | undefined;
-      let imagePath: string | undefined;
-
-      if (checkinImageFile) {
-        const id = shift.assignment_id;
-        const uploadPath = `shifts/${id}/check-in/img.jpg`;
-
-        const supabase = createClient();
-        const { data: uploadData, error: uploadError } = await supabase.storage
-          .from("shifts")
-          .upload(uploadPath, checkinImageFile, {
-            contentType: "image/jpeg",
-            cacheControl: "3600",
-            upsert: true,
-          });
-
-        if (uploadError) {
-          throw new Error(`Tải ảnh check-in lên storage thất bại: ${uploadError.message}`);
-        }
-
-        imagePath = uploadData.path;
-        const { data: publicUrlData } = supabase.storage
-          .from("shifts")
-          .getPublicUrl(uploadData.path);
-
-        imageUrl = publicUrlData.publicUrl;
-      }
-
       const response = await requestCheckinGuardShift({
         shiftId: shift.id,
-        imageUrl,
-        imagePath,
+        imageFile: checkinImageFile || undefined,
       });
 
       setShift((currentShift) => {
@@ -477,6 +462,7 @@ export default function GuardShiftCheckinPage() {
         return {
           ...currentShift,
           status: response.data.assignment.status,
+          check_in_time: response.data.assignment.check_in_time,
         };
       });
 
@@ -531,7 +517,7 @@ export default function GuardShiftCheckinPage() {
     );
   }
 
-  const canUseCamera = checkinState?.canCheckinByTime && !checkingIn && !autoUpdatingAbsent;
+  const canUseCamera = checkinState?.canCheckinByTime && !checkingIn;
 
   return (
     <div className="mx-auto w-full max-w-[430px] bg-[#f3f3f5]">
@@ -614,11 +600,12 @@ export default function GuardShiftCheckinPage() {
             </h1>
 
             <span
-              className={`rounded-sm px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide ${getStatusStyle(
+              className={"rounded-sm px-3 py-1 text-[10px] font-extrabold uppercase tracking-wide " + getStatusStyle(
                 shift.status,
-              )}`}
+                shift.check_in_time,
+              )}
             >
-              {getStatusLabel(shift.status)}
+              {getStatusLabel(shift.status, shift.check_in_time)}
             </span>
           </div>
 
@@ -694,7 +681,7 @@ export default function GuardShiftCheckinPage() {
                 <div className="absolute bottom-2 right-2 flex gap-2">
                   <button
                     type="button"
-                    disabled={checkingIn || autoUpdatingAbsent}
+                    disabled={checkingIn}
                     onClick={handleRetakePhoto}
                     className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-60"
                   >
@@ -703,7 +690,7 @@ export default function GuardShiftCheckinPage() {
                   </button>
                   <button
                     type="button"
-                    disabled={checkingIn || autoUpdatingAbsent}
+                    disabled={checkingIn}
                     onClick={handleRemoveImage}
                     className="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow-md transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
                   >

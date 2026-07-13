@@ -1,3 +1,18 @@
+import { createClient } from "@/lib/supabase/server";
+import fs from "fs";
+import path from "path";
+
+const writeDebugLog = (message: string, data?: any) => {
+  try {
+    const logPath = "/home/jooyoung/SEP490/SEP490/sgcmp/debug.log";
+    const timestamp = new Date().toISOString();
+    const dataStr = data ? JSON.stringify(data, null, 2) : "";
+    fs.appendFileSync(logPath, `[${timestamp}] ${message} ${dataStr}\n`);
+  } catch (err) {
+    // ignore
+  }
+};
+
 import {
   createWorkShiftService,
   getContractShiftRuleService,
@@ -7,7 +22,9 @@ import {
   updateAssignedShiftAssignmentsToAbsentByShiftIdService,
   createShiftImageService,
   getLatestShiftDateService,
+  uploadShiftCheckinImageService,
   getScheduledShiftDatesService,
+  updateReplacementGuardsService,
 } from "../service/shift.service";
 import { handleGetUserProfile } from "@/features/auth/controller/auth.controller";
 import {
@@ -15,7 +32,7 @@ import {
   getCoordinatorByCompanyIdService,
 } from "@/features/guards/service/guard.service";
 import { getUser } from "@/features/auth/service/auth.service";
-import type { CreateShiftInput, GuardShiftDetailItem } from "../type";
+import type { CreateShiftInput, GuardShiftDetailItem, ShiftAssignmentStatus } from "../type";
 import {
   validateCreateShiftInput,
   validateShiftDateInContract,
@@ -755,21 +772,58 @@ export const handleGetGuardShiftDetail = async ({
   );
 
   const userIds = shiftAssignments.map((item) => item.guard_id);
-  const profiles = await getProfilesByUserIdsService(userIds);
+  const replacementGuardIds = shiftAssignments.flatMap((item) => item.replacement_guard_ids || []);
+  const supabase = await createClient();
+  let replacementUserIds: string[] = [];
+  let guardsMapping: any[] = [];
+  if (replacementGuardIds.length > 0) {
+    const { data: dbGuards } = await supabase
+      .from("guards")
+      .select("guard_id, user_id")
+      .in("guard_id", replacementGuardIds);
+    guardsMapping = dbGuards || [];
+    replacementUserIds = guardsMapping.map((g) => g.user_id);
+  }
 
-  const guardList = shiftAssignments.map((shiftAssignment) => {
-    const profile = profiles.find(
-      (item) => item.user_id === shiftAssignment.guard_id,
-    );
+  const allUserIds = [...new Set([...userIds, ...replacementUserIds])];
+  const profiles = await getProfilesByUserIdsService(allUserIds);
 
-    return {
-      guard_id: shiftAssignment.guard_id,
-      user_id: shiftAssignment.guard_id,
+  const guardList: any[] = [];
+
+  shiftAssignments.forEach((sa) => {
+    const profile = profiles.find((item) => item.user_id === sa.guard_id);
+
+    // Add original guard
+    guardList.push({
+      guard_id: sa.guard_id,
+      user_id: sa.guard_id,
       full_name: profile?.full_name || "Chưa có tên",
       phone_number: profile?.phone_number || null,
       avatar_url: profile?.avatar_url || null,
-      status: shiftAssignment.status,
-    };
+      status: sa.status,
+      is_replacement: false,
+      replacement_guard_ids: sa.replacement_guard_ids || [],
+    });
+
+    // Add replacement guards
+    if (sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0) {
+      sa.replacement_guard_ids.forEach((repGuardId) => {
+        const mappedGuard = guardsMapping.find((g) => g.guard_id === repGuardId);
+        if (mappedGuard) {
+          const repProfile = profiles.find((item) => item.user_id === mappedGuard.user_id);
+          guardList.push({
+            guard_id: mappedGuard.user_id,
+            user_id: mappedGuard.user_id,
+            full_name: repProfile?.full_name || "Chưa có tên",
+            phone_number: repProfile?.phone_number || null,
+            avatar_url: repProfile?.avatar_url || null,
+            status: sa.status,
+            is_replacement: true,
+            replaced_guard_name: profile?.full_name || "Bảo vệ gốc",
+          });
+        }
+      });
+    }
   });
 
   const shiftImage = await getShiftImageByAssignmentIdService(assignment.assignment_id);
@@ -783,6 +837,7 @@ export const handleGetGuardShiftDetail = async ({
     shift_name: shift.shift_name || "Chưa cập nhật ca trực",
     address: booking?.address || shift.location || "Chưa cập nhật địa chỉ",
     status: assignment.status,
+    check_in_time: assignment.check_in_time,
     start_time: shift.start_time,
     end_time: shift.end_time,
     required_guards: shift.required_guards,
@@ -827,12 +882,10 @@ export const handleGetGuardShiftDetail = async ({
 
 export const handleCheckinGuardShift = async ({
   shiftId,
-  imageUrl,
-  imagePath,
+  file,
 }: {
   shiftId: string;
-  imageUrl?: string;
-  imagePath?: string;
+  file?: File;
 }) => {
   if (!shiftId || !isValidUuid(shiftId)) {
     throw new ShiftApiError("Mã ca trực không hợp lệ.", 400);
@@ -856,11 +909,6 @@ export const handleCheckinGuardShift = async ({
     throw new ShiftApiError("Không tìm thấy ca trực.", 404);
   }
 
-  /**
-   * DB hiện tại của bạn:
-   * shift_assignments.guard_id = profiles.user_id
-   * nên chỗ này dùng user.id, không dùng guard.guard_id.
-   */
   const assignment = await getShiftAssignmentByShiftAndGuardService({
     shiftId,
     guardId: user.id,
@@ -873,7 +921,15 @@ export const handleCheckinGuardShift = async ({
     );
   }
 
-  if (assignment.status === "completed") {
+  // Prevent replacement guards from checking in
+  if (assignment.guard_id !== user.id) {
+    throw new ShiftApiError(
+      "Bảo vệ thay thế không cần điểm danh cho ca trực này.",
+      403,
+    );
+  }
+
+  if (assignment.check_in_time) {
     throw new ShiftApiError("Ca trực này đã được điểm danh.", 409);
   }
 
@@ -888,74 +944,68 @@ export const handleCheckinGuardShift = async ({
     throw new ShiftApiError("Thời gian bắt đầu ca trực không hợp lệ.", 400);
   }
 
-  const canCheckinFrom = new Date(
-    shiftStartTime.getTime() - CHECKIN_BEFORE_MINUTES * 60 * 1000,
-  );
+  const startCheckinLimit = new Date(shiftStartTime.getTime());
+  const lateCheckinLimit = new Date(shiftStartTime.getTime() + 5 * 60 * 1000);
+  const absentLimit = new Date(shiftStartTime.getTime() + 35 * 60 * 1000);
 
-  const absentAfter = new Date(
-    shiftStartTime.getTime() + CHECKIN_AFTER_MINUTES * 60 * 1000,
-  );
+  if (now < startCheckinLimit) {
+    throw new ShiftApiError("Chưa đến thời gian điểm danh.", 400);
+  }
 
-  if (now < canCheckinFrom) {
+  // Case: past absent limit
+  if (now >= absentLimit) {
+    await updateShiftAssignmentStatusByShiftAndGuardService({
+      shiftId,
+      guardId: user.id,
+      status: "absent",
+    });
+    assignment.status = "absent";
     throw new ShiftApiError(
-      `Chưa đến thời gian điểm danh. Bạn có thể điểm danh từ ${formatTimes(
-        canCheckinFrom.toISOString(),
-      )}.`,
-      400,
+      "Đã quá thời gian điểm danh. Bạn được ghi nhận vắng mặt.",
+      409,
     );
   }
 
-  /**
-   * Từ start_time + 5 phút trở đi:
-   * assigned -> absent
-   */
-  if (now >= absentAfter) {
-    const updatedAssignments =
-      await updateAssignedShiftAssignmentsToAbsentByShiftIdService(shiftId);
+  // Determine status and image type
+  let determinedStatus: ShiftAssignmentStatus = "completed";
+  let determinedImageType = "checkin";
 
-    const currentAssignment = updatedAssignments.find(
-      (item) => item.guard_id === user.id,
-    );
-
-    if (!currentAssignment) {
-      throw new ShiftApiError("Ca trực đã quá thời gian điểm danh.", 409);
-    }
-
-    return {
-      assignment: currentAssignment,
-      checkin_window: {
-        server_time: now.toISOString(),
-        can_checkin_from: canCheckinFrom.toISOString(),
-        absent_after: absentAfter.toISOString(),
-      },
-    };
+  if (now > lateCheckinLimit && now < absentLimit) {
+    determinedStatus = "late";
+    determinedImageType = "late";
   }
 
-  /**
-   * Trong khoảng hợp lệ:
-   * assigned -> completed
-   */
+  // Update status and check_in_time in DB
   const updatedAssignment =
     await updateShiftAssignmentStatusByShiftAndGuardService({
       shiftId,
       guardId: user.id,
-      status: "completed",
+      status: determinedStatus,
+      check_in_time: now.toISOString(),
     });
 
   if (!updatedAssignment) {
     throw new ShiftApiError("Không thể điểm danh ca trực.", 500);
   }
 
-  if (imageUrl) {
+  if (file) {
     try {
+      const uploadResult = await uploadShiftCheckinImageService(
+        updatedAssignment.assignment_id,
+        file,
+      );
+
       await createShiftImageService({
         assignmentId: updatedAssignment.assignment_id,
-        imageUrl,
-        imagePath: imagePath || null,
-        imageType: "checkin",
+        imageUrl: uploadResult.publicUrl,
+        imagePath: uploadResult.path,
+        imageType: determinedImageType,
       });
     } catch (imgError) {
-      console.error("Lỗi khi lưu thông tin ảnh check-in vào DB:", imgError);
+      console.error(
+        "Lỗi khi tải lên storage hoặc lưu thông tin ảnh check-in vào DB:",
+        imgError,
+      );
     }
   }
 
@@ -963,8 +1013,8 @@ export const handleCheckinGuardShift = async ({
     assignment: updatedAssignment,
     checkin_window: {
       server_time: now.toISOString(),
-      can_checkin_from: canCheckinFrom.toISOString(),
-      absent_after: absentAfter.toISOString(),
+      can_checkin_from: startCheckinLimit.toISOString(),
+      absent_after: absentLimit.toISOString(),
     },
   };
 };
@@ -1117,6 +1167,384 @@ export const handleGetScheduledShiftDates = async (contractId: string) => {
       {
         status: 500,
       },
+    );
+  }
+};
+
+export const handleGetReplacementGuards = async (
+  request: Request,
+  { params }: { params: { shiftId: string } }
+) => {
+  try {
+    const { shiftId } = params;
+    const { searchParams } = new URL(request.url);
+    const assignmentId = searchParams.get("assignmentId");
+
+    // Match all UUIDs from the shiftId string (handles composite keys like shift1-shift2)
+    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+    const shiftIds: string[] = shiftId ? (shiftId.match(uuidRegex) || []) : [];
+
+    if (shiftIds.length === 0) {
+      return Response.json({ message: "Mã ca trực không hợp lệ" }, { status: 400 });
+    }
+    if (!assignmentId || !isValidUuid(assignmentId)) {
+      return Response.json({ message: "Mã phân công không hợp lệ" }, { status: 400 });
+    }
+
+    const companyId = await resolveShiftCompanyId();
+
+    const firstShift = await getShiftByIdService(shiftIds[0]);
+    if (!firstShift) {
+      return Response.json({ message: "Không tìm thấy ca trực" }, { status: 404 });
+    }
+
+    const lastShift = shiftIds.length > 1
+      ? await getShiftByIdService(shiftIds[shiftIds.length - 1])
+      : firstShift;
+
+    if (!lastShift) {
+      return Response.json({ message: "Không tìm thấy ca trực cuối" }, { status: 404 });
+    }
+
+    const contract = firstShift.contract_id
+      ? await getContractByIdService(firstShift.contract_id)
+      : null;
+    if (!contract) {
+      return Response.json({ message: "Không tìm thấy hợp đồng của ca trực" }, { status: 404 });
+    }
+
+    const booking = contract.booking_id
+      ? await getBookingByIdService(contract.booking_id)
+      : null;
+    if (!booking || booking.company_id !== companyId) {
+      return Response.json({ message: "Bạn không có quyền truy cập ca trực này" }, { status: 403 });
+    }
+
+    // Fetch original assignment from the first shift in the list
+    const assignments = await getShiftAssignmentsByShiftIdService(shiftIds[0]);
+    const assignment = assignments.find(a => a.assignment_id === assignmentId);
+    if (!assignment) {
+      return Response.json({ message: "Không tìm thấy thông tin phân công gốc" }, { status: 404 });
+    }
+
+    // Fetch all active guards of the company
+    const supabase = await createClient();
+    const { data: allCompanyGuards, error: guardsError } = await supabase
+      .from("guards")
+      .select(`
+        guard_id,
+        user_id,
+        company_id,
+        profiles!guards_user_id_fkey (
+          user_id,
+          full_name,
+          phone_number,
+          avatar_url,
+          email,
+          status
+        )
+      `)
+      .eq("company_id", companyId);
+
+    if (guardsError) {
+      throw guardsError;
+    }
+
+    const activeGuards = (allCompanyGuards || [])
+      .map((g: any) => {
+        const profile = Array.isArray(g.profiles) ? g.profiles[0] : g.profiles;
+        return {
+          guard_id: g.guard_id,
+          user_id: g.user_id,
+          full_name: profile?.full_name ?? "Chưa cập nhật",
+          phone_number: profile?.phone_number ?? "",
+          avatar_url: profile?.avatar_url ?? null,
+          email: profile?.email ?? "",
+          status: profile?.status ?? "unactive"
+        };
+      })
+      .filter(g => g.status === "active");
+
+    // Filter out original guard of target assignment
+    const originalGuardUserId = assignment.guard_id;
+
+    // Fetch all assignments across all target shifts to determine main guards and other replacements
+    const allShiftAssignments = await Promise.all(
+      shiftIds.map(id => getShiftAssignmentsByShiftIdService(id))
+    );
+    const flatAssignments = allShiftAssignments.flat();
+    const assignedUserIds = flatAssignments.map(a => a.guard_id);
+    const otherReplacementGuardIds = flatAssignments
+      .filter(a => a.guard_id !== originalGuardUserId)
+      .flatMap(a => a.replacement_guard_ids || []);
+
+    // Get list of guards with conflicts during this entire merged slot duration
+    const userIdsToCheck = activeGuards.map(g => g.user_id);
+    const overlaps = await getOverlappingGuardShiftsService({
+      guardId: userIdsToCheck,
+      startTime: firstShift.start_time,
+      endTime: lastShift.end_time
+    });
+
+    // Find overlaps that are NOT on any of the target shifts
+    const conflictedUserIds = new Set(
+      overlaps
+        .filter(o => !shiftIds.includes(o.shift_id))
+        .map(o => o.guard_id)
+    );
+
+    // Get list of guards with any shifts scheduled on this entire day (for Outside Contract filters)
+    const datePart = firstShift.start_time.split(/[T ]/)[0];
+    const dayStart = `${datePart}T00:00:00Z`;
+    const dayEnd = `${datePart}T23:59:59Z`;
+
+    const dayOverlaps = await getOverlappingGuardShiftsService({
+      guardId: userIdsToCheck,
+      startTime: dayStart,
+      endTime: dayEnd
+    });
+
+    const guardsWithShiftsOnDay = new Set(
+      dayOverlaps
+        .filter(o => !shiftIds.includes(o.shift_id))
+        .map(o => o.guard_id)
+    );
+
+    // Group active guards
+    const candidateGuards = activeGuards.filter(g => {
+      // 1. Cannot be the original guard of this assignment
+      if (g.user_id === originalGuardUserId) return false;
+      // 2. Cannot be already assigned as a main guard on this shift
+      if (assignedUserIds.includes(g.user_id)) return false;
+      // 3. Cannot be a replacement guard on this shift for another assignment
+      if (otherReplacementGuardIds.includes(g.guard_id)) return false;
+      // 4. Cannot have a conflicting shift
+      if (conflictedUserIds.has(g.user_id)) return false;
+      return true;
+    });
+
+    const guardAssignedInContract = contract.guard_assigned || [];
+
+    const contractGuards = candidateGuards.filter(g => 
+      guardAssignedInContract.includes(g.guard_id)
+    );
+
+    const outsideContractGuards = candidateGuards.filter(g => 
+      !guardAssignedInContract.includes(g.guard_id) &&
+      !guardsWithShiftsOnDay.has(g.user_id)
+    );
+
+    const currentReplacementGuards = activeGuards.filter(g => 
+      assignment.replacement_guard_ids && assignment.replacement_guard_ids.includes(g.guard_id)
+    );
+
+    return Response.json({
+      success: true,
+      data: {
+        contractGuards,
+        outsideContractGuards,
+        currentReplacementGuards,
+      }
+    });
+
+  } catch (error) {
+    return Response.json(
+      {
+        message: error instanceof Error ? error.message : "Lấy danh sách bảo vệ thay thế thất bại",
+      },
+      { status: 500 }
+    );
+  }
+};
+
+export const handleUpdateReplacementGuards = async (
+  request: Request,
+  { params }: { params: { shiftId: string; assignmentId: string } }
+) => {
+  try {
+    const { shiftId, assignmentId } = params;
+    const body = (await request.json()) as { replacementGuardIds?: string[] };
+
+    writeDebugLog("[handleUpdateReplacementGuards] Input parameters:", { shiftId, assignmentId, body });
+
+    // Match all UUIDs from the shiftId string (handles composite keys like shift1-shift2)
+    const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}/gi;
+    const shiftIds: string[] = shiftId ? (shiftId.match(uuidRegex) || []) : [];
+
+    writeDebugLog("[handleUpdateReplacementGuards] Matched shiftIds:", shiftIds);
+
+    if (shiftIds.length === 0) {
+      return Response.json({ message: "Mã ca trực không hợp lệ" }, { status: 400 });
+    }
+    if (!assignmentId || !isValidUuid(assignmentId)) {
+      return Response.json({ message: "Mã phân công không hợp lệ" }, { status: 400 });
+    }
+    if (!body.replacementGuardIds || !Array.isArray(body.replacementGuardIds)) {
+      return Response.json({ message: "Danh sách bảo vệ thay thế không hợp lệ" }, { status: 400 });
+    }
+
+    const companyId = await resolveShiftCompanyId();
+
+    const firstShift = await getShiftByIdService(shiftIds[0]);
+    if (!firstShift) {
+      return Response.json({ message: "Không tìm thấy ca trực" }, { status: 404 });
+    }
+
+    const lastShift = shiftIds.length > 1
+      ? await getShiftByIdService(shiftIds[shiftIds.length - 1])
+      : firstShift;
+
+    if (!lastShift) {
+      return Response.json({ message: "Không tìm thấy ca trực cuối" }, { status: 404 });
+    }
+
+    const contract = firstShift.contract_id
+      ? await getContractByIdService(firstShift.contract_id)
+      : null;
+    if (!contract) {
+      return Response.json({ message: "Không tìm thấy hợp đồng của ca trực" }, { status: 404 });
+    }
+
+    const booking = contract.booking_id
+      ? await getBookingByIdService(contract.booking_id)
+      : null;
+    if (!booking || booking.company_id !== companyId) {
+      return Response.json({ message: "Bạn không có quyền truy cập ca trực này" }, { status: 403 });
+    }
+
+    // Fetch original assignment from the first shift
+    const assignments = await getShiftAssignmentsByShiftIdService(shiftIds[0]);
+    const assignment = assignments.find(a => a.assignment_id === assignmentId);
+    if (!assignment) {
+      return Response.json({ message: "Không tìm thấy thông tin phân công gốc" }, { status: 404 });
+    }
+
+    // Find all assignments of this guard in all of these merged shifts
+    const supabase = await createClient();
+    const { data: dbAssignments } = await supabase
+      .from("shift_assignments")
+      .select("*")
+      .in("shift_id", shiftIds)
+      .eq("guard_id", assignment.guard_id);
+
+    const targetAssignments = dbAssignments || [];
+    if (targetAssignments.length === 0) {
+      return Response.json({ message: "Không tìm thấy thông tin phân công gốc ở các ca trực" }, { status: 404 });
+    }
+
+    // Validate original assignments: the guard must not have checked in for any of these shifts
+    const canDispatch = targetAssignments.every(a => a.check_in_time === null);
+
+    if (!canDispatch) {
+      return Response.json(
+        {
+          success: false,
+          message: "Không thể điều phối thay thế vì bảo vệ đã điểm danh cho một trong các ca trực này."
+        },
+        { status: 409 }
+      );
+    }
+
+    // Deduplicate input replacementGuardIds and filter out nulls/empties
+    const newReplacementGuardIds = Array.from(
+      new Set(body.replacementGuardIds.filter((id): id is string => Boolean(id) && isValidUuid(id)))
+    );
+
+    writeDebugLog("[handleUpdateReplacementGuards] parsed newReplacementGuardIds:", newReplacementGuardIds);
+
+    if (newReplacementGuardIds.length > 0) {
+      // Validate guards exist, belong to same company, are active
+      const { data: dbGuards, error: guardsError } = await supabase
+        .from("guards")
+        .select(`
+          guard_id,
+          user_id,
+          company_id,
+          profiles!guards_user_id_fkey (
+            status
+          )
+        `)
+        .in("guard_id", newReplacementGuardIds);
+
+      if (guardsError) {
+        throw guardsError;
+      }
+
+      if (!dbGuards || dbGuards.length !== newReplacementGuardIds.length) {
+        return Response.json({ message: "Một số bảo vệ không tồn tại trong hệ thống" }, { status: 400 });
+      }
+
+      for (const dg of dbGuards) {
+        if (dg.company_id !== companyId) {
+          return Response.json({ message: "Một số bảo vệ không thuộc công ty của bạn" }, { status: 403 });
+        }
+        const profile = Array.isArray(dg.profiles) ? dg.profiles[0] : dg.profiles;
+        if (!profile || profile.status !== "active") {
+          return Response.json({ message: `Bảo vệ với ID ${dg.guard_id} đang bị khóa hoặc không hoạt động` }, { status: 400 });
+        }
+        // Original guard user ID cannot be in replacement list
+        if (dg.user_id === assignment.guard_id) {
+          return Response.json({ message: "Bảo vệ thay thế không thể là bảo vệ gốc" }, { status: 400 });
+        }
+      }
+
+      // Check overlapping conflicts across the entire merged duration
+      const dbGuardUserIds = dbGuards.map(dg => dg.user_id);
+      const overlaps = await getOverlappingGuardShiftsService({
+        guardId: dbGuardUserIds,
+        startTime: firstShift.start_time,
+        endTime: lastShift.end_time
+      });
+
+      // Find overlaps that are NOT on any of the target shifts
+      const otherOverlaps = overlaps.filter(o => !shiftIds.includes(o.shift_id));
+      if (otherOverlaps.length > 0) {
+        return Response.json({ message: "Một số bảo vệ được chọn có lịch trực trùng giờ ở ca khác" }, { status: 400 });
+      }
+
+      // Ensure no guard is assigned as a main guard or replacement guard on another assignment for any of these shifts
+      const allShiftAssignments = await Promise.all(
+        shiftIds.map(id => getShiftAssignmentsByShiftIdService(id))
+      );
+      const flatAssignments = allShiftAssignments.flat();
+      const assignedUserIds = flatAssignments.filter(a => a.guard_id !== assignment.guard_id).map(a => a.guard_id);
+      const otherReplacementGuardIds = flatAssignments
+        .filter(a => a.guard_id !== assignment.guard_id)
+        .flatMap(a => a.replacement_guard_ids || []);
+
+      for (const dg of dbGuards) {
+        if (assignedUserIds.includes(dg.user_id)) {
+          return Response.json({ message: `Bảo vệ với ID ${dg.guard_id} đã được gán làm bảo vệ chính trong một trong các ca trực này` }, { status: 400 });
+        }
+        if (otherReplacementGuardIds.includes(dg.guard_id)) {
+          return Response.json({ message: `Bảo vệ với ID ${dg.guard_id} đã được điều phối thay thế cho người khác trong các ca trực này` }, { status: 400 });
+        }
+      }
+    }
+
+    // Update replacement_guard_ids for ALL assignments in parallel
+    writeDebugLog("[handleUpdateReplacementGuards] Updating target assignments:", { targetAssignments: targetAssignments.map(a => a.assignment_id), with: newReplacementGuardIds });
+    const updatePromises = targetAssignments.map(a =>
+      updateReplacementGuardsService(a.assignment_id, newReplacementGuardIds)
+    );
+    const updatedAssignments = await Promise.all(updatePromises);
+    writeDebugLog("[handleUpdateReplacementGuards] Database update complete. Updated rows:", updatedAssignments.map(ua => ({ assignment_id: ua.assignment_id, replacement_guard_ids: ua.replacement_guard_ids })));
+
+    return Response.json({
+      success: true,
+      message: "Cập nhật danh sách bảo vệ thay thế thành công",
+      data: {
+        updated_count: updatedAssignments.length,
+        replacement_guard_ids: newReplacementGuardIds,
+      }
+    });
+
+  } catch (error) {
+    return Response.json(
+      {
+        message: error instanceof Error ? error.message : "Cập nhật danh sách bảo vệ thay thế thất bại",
+      },
+      { status: 500 }
     );
   }
 };

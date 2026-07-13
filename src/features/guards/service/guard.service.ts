@@ -48,6 +48,7 @@ export const getAllGuardService = async ({
   gender,
   status,
   workStatus,
+  timeZone,
 }: GetAllGuardsServiceParams): Promise<GuardListPaginatedData> => {
   const { guards, total } = await getAllGuards({
     company_id,
@@ -57,6 +58,7 @@ export const getAllGuardService = async ({
     gender,
     status,
     workStatus,
+    timeZone,
   });
 
   return {

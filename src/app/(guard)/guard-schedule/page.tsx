@@ -4,7 +4,9 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { requestGetGuardShiftsByWeek } from "@/features/shift/api/shift.api";
+import { getUserLocale, formatDate, getUserTimeZone } from "@/utils/dateTime";
 import type { GuardShiftItem } from "@/features/shift/type";
+import { useAuthStore } from "@/store/auth.store";
 import {
   type ShiftItem,
   ShiftCard,
@@ -15,7 +17,14 @@ type DaySchedule = {
   shifts: ShiftItem[];
 };
 
-const weekDayLabels = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const getWeekDayLabels = (locale: string) => {
+  const baseDate = new Date(Date.UTC(2026, 0, 4)); // 2026-01-04 is a Sunday
+  return Array.from({ length: 7 }).map((_, i) => {
+    const date = new Date(baseDate);
+    date.setUTCDate(baseDate.getUTCDate() + i);
+    return date.toLocaleDateString(locale, { weekday: "short" }).toUpperCase();
+  });
+};
 
 const addDays = (date: Date, days: number) => {
   const result = new Date(date);
@@ -45,12 +54,13 @@ const formatGuardShiftDateKey = (date: Date) => {
 const formatMonthYear = (weekDays: Date[]) => {
   const firstDay = weekDays[0];
   const lastDay = weekDays[6];
+  const locale = getUserLocale();
 
-  const firstMonth = firstDay.toLocaleDateString("vi-VN", {
+  const firstMonth = firstDay.toLocaleDateString(locale, {
     month: "long",
   });
 
-  const lastMonth = lastDay.toLocaleDateString("vi-VN", {
+  const lastMonth = lastDay.toLocaleDateString(locale, {
     month: "long",
   });
 
@@ -125,7 +135,11 @@ const EmptyScheduleSkeleton = () => {
 };
 
 export default function GuardSchedulePage() {
+  const userId = useAuthStore((state) => state.user_id);
   const today = useMemo(() => new Date(), []);
+  const resolvedWeekDayLabels = useMemo(() => {
+    return getWeekDayLabels(getUserLocale());
+  }, []);
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(today));
   const [selectedDate, setSelectedDate] = useState(today);
   const [shiftsByDate, setShiftsByDate] = useState<Record<string, ShiftItem[]>>(
@@ -154,7 +168,15 @@ export default function GuardSchedulePage() {
         const mappedShiftsByDate: Record<string, ShiftItem[]> = {};
 
         Object.entries(groupedShifts).forEach(([dateKey, shifts]) => {
-          mappedShiftsByDate[dateKey] = shifts.map(mapGuardShiftToShiftItem);
+          mappedShiftsByDate[dateKey] = shifts.map((s) => ({
+            id: s.id,
+            time: s.time,
+            shift_name: s.shift_name,
+            location: s.location,
+            address: s.address,
+            status: s.status,
+            is_replacement: s.guard_id ? s.guard_id !== userId : false,
+          }));
         });
 
         setShiftsByDate(mappedShiftsByDate);
@@ -186,17 +208,14 @@ export default function GuardSchedulePage() {
   }, [weekDays, shiftsByDate]);
 
   const formatDayMonth = (date: Date) => {
-    return `${date.getDate()}/${date.getMonth() + 1}`;
+    return new Intl.DateTimeFormat(getUserLocale(), {
+      day: "numeric",
+      month: "numeric",
+    }).format(date);
   };
 
   const formatWeekdayText = (date: Date) => {
-    const day = date.getDay();
-
-    if (day === 0) {
-      return "Chủ nhật";
-    }
-
-    return `Thứ ${day + 1}`;
+    return date.toLocaleDateString(getUserLocale(), { weekday: "long" });
   };
 
   const handleOpenCheckinByDate = (date: Date) => {
@@ -299,7 +318,7 @@ export default function GuardSchedulePage() {
                       : "font-bold text-slate-500"
                   }`}
                 >
-                  {weekDayLabels[date.getDay()]}
+                  {resolvedWeekDayLabels[date.getDay()]}
                 </span>
 
                 <span

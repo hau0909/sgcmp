@@ -4,6 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import { ArrowLeft, CheckCircle, Edit, Mail, Phone, User, UserRound, X, IdCard } from "lucide-react";
+import { requestGetCities, requestGetWards } from "@/features/address";
+import type { City, Ward } from "@/features/address/types";
 
 import { requestGetGuardDetail, requestUploadGuardFile, requestUpdateGuardProfile } from "@/features/guards/api/guard.api";
 import type { GuardDetail, GuardDetailProfile, gender } from "@/features/guards/type";
@@ -93,6 +95,15 @@ export default function GuardDetailPage() {
     email: "",
   });
 
+  // Address dropdowns
+  const [cities, setCities] = useState<City[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [selectedCityId, setSelectedCityId] = useState<number | "">("");
+  const [selectedWardId, setSelectedWardId] = useState<number | "">("");
+  const [streetInput, setStreetInput] = useState("");
+  const [loadingCities, setLoadingCities] = useState(false);
+  const [loadingWards, setLoadingWards] = useState(false);
+
   const fetchGuardDetail = async (silent = false) => {
     if (!guardId) {
       setErrorMessage("Không tìm thấy bảo vệ");
@@ -127,6 +138,56 @@ export default function GuardDetailPage() {
   useEffect(() => {
     void fetchGuardDetail();
   }, [guardId]);
+
+  // Load cities on mount
+  useEffect(() => {
+    async function loadCities() {
+      try {
+        setLoadingCities(true);
+        const res = await requestGetCities();
+        if (res?.success && res.cities) setCities(res.cities);
+      } catch (err) {
+        console.error("Failed to load cities:", err);
+      } finally {
+        setLoadingCities(false);
+      }
+    }
+    loadCities();
+  }, []);
+
+  // Load wards when city changes
+  useEffect(() => {
+    setSelectedWardId("");
+    setWards([]);
+    if (selectedCityId === "") return;
+    async function loadWards() {
+      try {
+        setLoadingWards(true);
+        const res = await requestGetWards(Number(selectedCityId));
+        if (res?.success && res.wards) setWards(res.wards);
+      } catch (err) {
+        console.error("Failed to load wards:", err);
+      } finally {
+        setLoadingWards(false);
+      }
+    }
+    loadWards();
+  }, [selectedCityId]);
+
+  // Auto-build address string from street + ward + city
+  useEffect(() => {
+    const parts: string[] = [];
+    if (streetInput.trim()) parts.push(streetInput.trim());
+    if (selectedWardId !== "") {
+      const ward = wards.find((w) => w.ward_id === selectedWardId);
+      if (ward) parts.push(ward.ward_name);
+    }
+    if (selectedCityId !== "") {
+      const city = cities.find((c) => c.city_id === selectedCityId);
+      if (city) parts.push(city.city_name);
+    }
+    setFormData((prev) => ({ ...prev, address: parts.join(", ") }));
+  }, [streetInput, selectedWardId, selectedCityId, wards, cities]);
 
   useEffect(() => {
     if (toastMessage) {
@@ -682,16 +743,58 @@ export default function GuardDetailPage() {
                     <label className="text-sm font-medium text-slate-500 block mb-1">
                       Địa chỉ thường trú
                     </label>
+                    {/* City + Ward dropdowns */}
+                    <div className="grid gap-2 md:grid-cols-2 mb-2">
+                      <div>
+                        <label className="text-xs font-medium text-slate-400 mb-1 block">Tỉnh / Thành phố</label>
+                        <select
+                          value={selectedCityId}
+                          disabled={loadingCities}
+                          onChange={(e) => setSelectedCityId(e.target.value === "" ? "" : Number(e.target.value))}
+                          className={`w-full rounded border px-3 py-2 text-sm focus:outline-none border-slate-300 focus:border-blue-500`}
+                        >
+                          <option value="">{loadingCities ? "Đang tải..." : "Chọn tỉnh/thành phố"}</option>
+                          {cities.map((c) => (
+                            <option key={c.city_id} value={c.city_id}>{c.city_name}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-xs font-medium text-slate-400 mb-1 block">Phường / Xã</label>
+                        <select
+                          value={selectedWardId}
+                          disabled={loadingWards || selectedCityId === ""}
+                          onChange={(e) => setSelectedWardId(e.target.value === "" ? "" : Number(e.target.value))}
+                          className={`w-full rounded border px-3 py-2 text-sm focus:outline-none border-slate-300 focus:border-blue-500`}
+                        >
+                          <option value="">{loadingWards ? "Đang tải..." : selectedCityId === "" ? "Chọn tỉnh trước" : "Chọn phường/xã"}</option>
+                          {wards.map((w) => (
+                            <option key={w.ward_id} value={w.ward_id}>{w.ward_name}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    {/* Street */}
+                    <div className="mb-2">
+                      <label className="text-xs font-medium text-slate-400 mb-1 block">Số nhà, tên đường</label>
+                      <input
+                        type="text"
+                        value={streetInput}
+                        placeholder="VD: 123 Nguyễn Văn A"
+                        onChange={(e) => setStreetInput(e.target.value)}
+                        className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                    {/* Preview of full address */}
                     <input
                       type="text"
-                      className={`w-full rounded border px-3 py-2 text-sm focus:outline-none ${fieldErrors.address
-                        ? "border-red-500 focus:border-red-500"
-                        : "border-slate-300 focus:border-blue-500"
-                        }`}
+                      readOnly
                       value={formData.address}
-                      onChange={(e) =>
-                        setFormData({ ...formData, address: e.target.value })
-                      }
+                      className={`w-full rounded border px-3 py-2 text-sm focus:outline-none bg-slate-50 text-slate-500 ${fieldErrors.address
+                        ? "border-red-500"
+                        : "border-slate-200"
+                        }`}
+                      placeholder="Địa chỉ đầy đủ sẽ tự điền"
                     />
                     {fieldErrors.address && (
                       <p className="mt-1 text-xs text-red-500 font-medium">
@@ -879,14 +982,11 @@ export default function GuardDetailPage() {
                     </label>
                     <input
                       type="email"
-                      className={`w-full rounded border px-3 py-2 text-sm focus:outline-none ${fieldErrors.email
-                        ? "border-red-500 focus:border-red-500"
-                        : "border-slate-300 focus:border-blue-500"
-                        }`}
+                      autoComplete="off"
+                      readOnly
+                      disabled
+                      className="w-full rounded border border-slate-200 bg-slate-100 px-3 py-2 text-sm text-slate-500 cursor-not-allowed"
                       value={formData.email}
-                      onChange={(e) =>
-                        setFormData({ ...formData, email: e.target.value })
-                      }
                     />
                     {fieldErrors.email && (
                       <p className="mt-1 text-xs text-red-500 font-medium">

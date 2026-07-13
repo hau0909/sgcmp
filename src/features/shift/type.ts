@@ -20,6 +20,7 @@ export type ShiftAssignment = {
   guard_id: string;
   assigned_by: string;
   status: ShiftAssignmentStatus;
+  check_in_time: string | null;
   created_at: string;
   updated_at: string;
   guard_name: string;
@@ -28,6 +29,14 @@ export type ShiftAssignment = {
     image_url: string;
     image_path: string | null;
   } | null;
+  replacement_guard_ids?: string[];
+  replacement_guards?: {
+    guard_id: string;
+    user_id: string;
+    full_name: string;
+    phone_number: string | null;
+    avatar_url: string | null;
+  }[];
 };
 
 export type ShiftWithAssignments = Shift & {
@@ -267,6 +276,7 @@ export type ContractShiftRuleQuery = {
 export type OverlappingGuardShiftQuery = {
   assignment_id: string;
   guard_id: string;
+  replacement_guard_ids: string[] | null;
   shifts:
     | {
         shift_id: string;
@@ -314,6 +324,8 @@ export type ShiftAssignmentQuery = {
   guard_id: string;
   assigned_by: string;
   status: ShiftAssignment["status"];
+  check_in_time: string | null;
+  replacement_guard_ids: string[] | null;
   created_at: string;
   updated_at: string;
   profiles:
@@ -378,6 +390,10 @@ export type GuardShiftItem = {
   address: string;
 
   status: ShiftAssignmentStatus;
+  guard_id?: string;
+  replacement_guard_ids?: string[];
+  /** True when this guard is listed as a replacement for another guard's assignment */
+  is_replacement?: boolean;
 };
 
 export type GuardShiftGroupedByDate = Record<string, GuardShiftItem[]>;
@@ -397,6 +413,7 @@ export type ShiftRow = {
   guard_id: string;
   assigned_by: string | null;
   status: ShiftAssignmentStatus;
+  replacement_guard_ids: string[] | null;
   created_at: string;
   updated_at: string;
   shifts:
@@ -499,6 +516,7 @@ export type GuardShiftDetailItem = {
   location: string;
   address: string;
   status: ShiftAssignmentStatus;
+  check_in_time: string | null;
   start_time: string;
   end_time: string;
   required_guards: number;
@@ -529,6 +547,9 @@ export type GuardShiftDetailItem = {
     phone_number: string | null;
     avatar_url: string | null;
     status: ShiftAssignmentStatus;
+    is_replacement?: boolean;
+    replaced_guard_name?: string;
+    replacement_guard_ids?: string[];
   }[];
   checkin_image?: {
     image_url: string;
@@ -548,6 +569,7 @@ export type UpdateShiftAssignmentStatusParams = {
   shiftId: string;
   guardId: string;
   status: ShiftAssignmentStatus;
+  check_in_time?: string | null;
 };
 
 export type CheckinGuardShiftResponse = {
@@ -559,6 +581,7 @@ export type CheckinGuardShiftResponse = {
       guard_id: string;
       assigned_by: string | null;
       status: ShiftAssignmentStatus;
+      check_in_time: string | null;
       created_at: string;
       updated_at: string;
     };
