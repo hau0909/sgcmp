@@ -427,3 +427,96 @@
     ]
   }
 ]
+[2026-07-13T09:05:57.910Z] [handleUpdateReplacementGuards] Input parameters: {
+  "shiftId": "c25f934e-86b5-42de-a6d5-915cc2b9da6f",
+  "assignmentId": "3bfbdf9d-bdf8-4ae2-952a-7711dcfa5812",
+  "body": {
+    "replacementGuardIds": [
+      "d78a0cfd-9bf9-42a5-920b-7ca08c4d4724"
+    ]
+  }
+}
+[2026-07-13T09:05:57.910Z] [handleUpdateReplacementGuards] Matched shiftIds: [
+  "c25f934e-86b5-42de-a6d5-915cc2b9da6f"
+]
+[2026-07-13T09:05:57.911Z] [handleUpdateReplacementGuards] Input parameters: {
+  "shiftId": "c25f934e-86b5-42de-a6d5-915cc2b9da6f",
+  "assignmentId": "f405ac7e-dc69-4898-b48f-f5059e176df7",
+  "body": {
+    "replacementGuardIds": [
+      "fc8d16bd-1e36-4283-8044-a40e6010be96"
+    ]
+  }
+}
+[2026-07-13T09:05:57.911Z] [handleUpdateReplacementGuards] Matched shiftIds: [
+  "c25f934e-86b5-42de-a6d5-915cc2b9da6f"
+]
+[2026-07-13T09:05:57.911Z] [handleUpdateReplacementGuards] Input parameters: {
+  "shiftId": "c25f934e-86b5-42de-a6d5-915cc2b9da6f",
+  "assignmentId": "4ef92729-fa47-497f-8d74-6c2a942f16b8",
+  "body": {
+    "replacementGuardIds": [
+      "e12399ab-adea-4335-be19-efbc9d2e2d38"
+    ]
+  }
+}
+[2026-07-13T09:05:57.911Z] [handleUpdateReplacementGuards] Matched shiftIds: [
+  "c25f934e-86b5-42de-a6d5-915cc2b9da6f"
+]
+[2026-07-13T09:05:58.967Z] [handleUpdateReplacementGuards] parsed newReplacementGuardIds: [
+  "e12399ab-adea-4335-be19-efbc9d2e2d38"
+]
+[2026-07-13T09:05:59.140Z] [handleUpdateReplacementGuards] parsed newReplacementGuardIds: [
+  "fc8d16bd-1e36-4283-8044-a40e6010be96"
+]
+[2026-07-13T09:05:59.214Z] [handleUpdateReplacementGuards] parsed newReplacementGuardIds: [
+  "d78a0cfd-9bf9-42a5-920b-7ca08c4d4724"
+]
+[2026-07-13T09:05:59.500Z] [handleUpdateReplacementGuards] Updating target assignments: {
+  "targetAssignments": [
+    "4ef92729-fa47-497f-8d74-6c2a942f16b8"
+  ],
+  "with": [
+    "e12399ab-adea-4335-be19-efbc9d2e2d38"
+  ]
+}
+[2026-07-13T09:05:59.627Z] [handleUpdateReplacementGuards] Database update complete. Updated rows: [
+  {
+    "assignment_id": "4ef92729-fa47-497f-8d74-6c2a942f16b8",
+    "replacement_guard_ids": [
+      "e12399ab-adea-4335-be19-efbc9d2e2d38"
+    ]
+  }
+]
+[2026-07-13T09:05:59.744Z] [handleUpdateReplacementGuards] Updating target assignments: {
+  "targetAssignments": [
+    "f405ac7e-dc69-4898-b48f-f5059e176df7"
+  ],
+  "with": [
+    "fc8d16bd-1e36-4283-8044-a40e6010be96"
+  ]
+}
+[2026-07-13T09:05:59.755Z] [handleUpdateReplacementGuards] Updating target assignments: {
+  "targetAssignments": [
+    "3bfbdf9d-bdf8-4ae2-952a-7711dcfa5812"
+  ],
+  "with": [
+    "d78a0cfd-9bf9-42a5-920b-7ca08c4d4724"
+  ]
+}
+[2026-07-13T09:05:59.889Z] [handleUpdateReplacementGuards] Database update complete. Updated rows: [
+  {
+    "assignment_id": "3bfbdf9d-bdf8-4ae2-952a-7711dcfa5812",
+    "replacement_guard_ids": [
+      "d78a0cfd-9bf9-42a5-920b-7ca08c4d4724"
+    ]
+  }
+]
+[2026-07-13T09:05:59.921Z] [handleUpdateReplacementGuards] Database update complete. Updated rows: [
+  {
+    "assignment_id": "f405ac7e-dc69-4898-b48f-f5059e176df7",
+    "replacement_guard_ids": [
+      "fc8d16bd-1e36-4283-8044-a40e6010be96"
+    ]
+  }
+]
