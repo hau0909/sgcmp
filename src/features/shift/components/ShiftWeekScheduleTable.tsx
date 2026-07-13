@@ -42,6 +42,7 @@ type TooltipPosition = {
 type WeekShiftTooltipProps = {
   shift: ShiftWithAssignments;
   statusLabel: string;
+  hasReplacement: boolean;
   position: TooltipPosition;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -186,6 +187,70 @@ const TOOLTIP_WIDTH = 340;
 const TOOLTIP_GAP = 12;
 const WEEK_DAY_COLUMN_WIDTH = 240;
 
+function ReplacementGuardRow({
+  repGuard,
+  assignment,
+  shift,
+}: {
+  repGuard: {
+    guard_id: string;
+    full_name: string;
+    phone_number: string | null;
+  };
+  assignment: ShiftAssignment;
+  shift: ShiftWithAssignments;
+}) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const [showSubTooltip, setShowSubTooltip] = useState(false);
+  const [subTooltipPosition, setSubTooltipPosition] = useState<TooltipPosition | null>(null);
+
+  const handleMouseEnter = () => {
+    if (!rowRef.current) return;
+    const rect = rowRef.current.getBoundingClientRect();
+
+    let left = rect.right + 12;
+    let top = rect.top;
+    if (left + 300 > window.innerWidth - 12) {
+      left = rect.left - 300 - 12;
+    }
+    setSubTooltipPosition({ top, left });
+    setShowSubTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowSubTooltip(false);
+  };
+
+  return (
+    <>
+      <div
+        ref={rowRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="ml-4 flex items-center justify-between gap-3 rounded bg-purple-50/50 px-2 py-1.5 border border-purple-100/50 hover:bg-purple-100/80 cursor-pointer transition-colors"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <UserRound size={13} className="shrink-0 text-purple-600" />
+          <p className="truncate text-xs font-semibold text-purple-900">
+            {repGuard.full_name}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[9px] font-bold text-purple-700">
+          Thay thế
+        </span>
+      </div>
+
+      {showSubTooltip && subTooltipPosition && (
+        <GuardSubTooltip
+          assignment={assignment}
+          shift={shift}
+          position={subTooltipPosition}
+        />
+      )}
+    </>
+  );
+}
+
 const getWeekDayLabels = (locale: string) => {
   const baseDate = new Date(Date.UTC(2026, 0, 5)); // 2026-01-05 is a Monday
   return Array.from({ length: 7 }).map((_, i) => {
@@ -201,7 +266,7 @@ const getStatusLabel = (status: ShiftAssignmentStatus) => {
   }
 
   if (status === "completed") {
-    return "Hoàn thành";
+    return "Đang trực";
   }
 
   if (status === "late") {
@@ -343,10 +408,12 @@ const getTooltipPosition = (element: HTMLButtonElement): TooltipPosition => {
 function WeekShiftTooltip({
   shift,
   statusLabel,
+  hasReplacement,
   position,
   onMouseEnter,
   onMouseLeave,
 }: WeekShiftTooltipProps) {
+  const firstAssignment = shift.assignments[0];
   return createPortal(
     <div
       onMouseEnter={onMouseEnter}
@@ -362,10 +429,20 @@ function WeekShiftTooltip({
           <p className="text-xs font-semibold uppercase text-slate-400">
             Trạng thái
           </p>
-
-          <p className="mt-1 text-sm font-semibold text-slate-800">
-            {statusLabel}
-          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusStyle(
+                firstAssignment.status,
+              )}`}
+            >
+              {statusLabel}
+            </span>
+            {hasReplacement && (
+              <span className="rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
+                Thay thế
+              </span>
+            )}
+          </div>
         </div>
 
         <div>
@@ -388,11 +465,20 @@ function WeekShiftTooltip({
 
           <div className="mt-2 space-y-1.5">
             {shift.assignments.map((assignment) => (
-              <GuardRow
-                key={assignment.assignment_id}
-                assignment={assignment}
-                shift={shift}
-              />
+              <div key={assignment.assignment_id} className="space-y-1">
+                <GuardRow
+                  assignment={assignment}
+                  shift={shift}
+                />
+                {assignment.replacement_guards && assignment.replacement_guards.map((rep) => (
+                  <ReplacementGuardRow
+                    key={rep.guard_id}
+                    repGuard={rep}
+                    assignment={assignment}
+                    shift={shift}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </div>
@@ -516,83 +602,83 @@ export function ShiftWeekScheduleTable({
 
   return (
     <>
-    <div
-      ref={scrollRef}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={stopDragging}
-      onMouseLeave={stopDragging}
-      className={`overflow-x-auto overflow-y-visible rounded-sm border border-slate-300 bg-white ${isDragging ? "cursor-grabbing select-none" : "cursor-grab"
-        }`}
-    >
       <div
-        style={{
-          width: `${WEEK_DAY_COLUMN_WIDTH * visibleWeekDays.length}px`,
-        }}
+        ref={scrollRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={stopDragging}
+        onMouseLeave={stopDragging}
+        className={`overflow-x-auto overflow-y-visible rounded-sm border border-slate-300 bg-white ${isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+          }`}
       >
         <div
-          className="grid border-b border-slate-300"
           style={{
-            gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
+            width: `${WEEK_DAY_COLUMN_WIDTH * visibleWeekDays.length}px`,
           }}
         >
-          {visibleWeekDays.map((day) => (
-            <div
-              key={day.date}
-              className={`border-r border-slate-300 px-4 py-3 text-center ${day.isToday ? "bg-blue-700 text-white" : "bg-slate-100"
-                }`}
-            >
-              <p
-                className={`text-xs font-bold ${day.isToday ? "text-white" : "text-slate-600"
+          <div
+            className="grid border-b border-slate-300"
+            style={{
+              gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
+            }}
+          >
+            {visibleWeekDays.map((day) => (
+              <div
+                key={day.date}
+                className={`border-r border-slate-300 px-4 py-3 text-center ${day.isToday ? "bg-blue-700 text-white" : "bg-slate-100"
                   }`}
               >
-                {day.dayLabel}
-              </p>
+                <p
+                  className={`text-xs font-bold ${day.isToday ? "text-white" : "text-slate-600"
+                    }`}
+                >
+                  {day.dayLabel}
+                </p>
 
-              <p
-                className={`text-xl font-bold ${day.isToday ? "text-white" : "text-slate-900"
-                  }`}
-              >
-                {day.dateLabel}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div
-          className="grid min-h-[640px]"
-          style={{
-            gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
-          }}
-        >
-          {visibleWeekDays.map((day) => (
-            <div
-              key={day.date}
-              className="min-h-[640px] border-r border-slate-300 bg-white p-3"
-            >
-              <div className="space-y-3">
-                {day.shifts.map((shift) => (
-                  <WeekShiftCard
-                    key={shift.shift_id}
-                    shift={shift}
-                    onShiftClick={(s) => setSelectedShift(s)}
-                  />
-                ))}  
+                <p
+                  className={`text-xl font-bold ${day.isToday ? "text-white" : "text-slate-900"
+                    }`}
+                >
+                  {day.dateLabel}
+                </p>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          <div
+            className="grid min-h-[640px]"
+            style={{
+              gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
+            }}
+          >
+            {visibleWeekDays.map((day) => (
+              <div
+                key={day.date}
+                className="min-h-[640px] border-r border-slate-300 bg-white p-3"
+              >
+                <div className="space-y-3">
+                  {day.shifts.map((shift) => (
+                    <WeekShiftCard
+                      key={shift.shift_id}
+                      shift={shift}
+                      onShiftClick={(s) => setSelectedShift(s)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
 
-    {selectedShift && (
-      <ShiftDetailModal
-        open={!!selectedShift}
-        shift={selectedShift}
-        onClose={() => setSelectedShift(null)}
-      />
-    )}
-  </>
+      {selectedShift && (
+        <ShiftDetailModal
+          open={!!selectedShift}
+          shift={selectedShift}
+          onClose={() => setSelectedShift(null)}
+        />
+      )}
+    </>
   );
 }
 
@@ -632,6 +718,11 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
 
   const firstAssignment = shift.assignments[0];
   const extraGuardCount = shift.assignments.length - 1;
+  const hasReplacement = shift.assignments.some(
+    (assign) =>
+      (assign.replacement_guard_ids && assign.replacement_guard_ids.length > 0) ||
+      (assign.replacement_guards && assign.replacement_guards.length > 0)
+  );
   const statusLabel = getStatusLabel(firstAssignment.status);
 
   const [showTooltip, setShowTooltip] = useState(false);
@@ -678,7 +769,7 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
         onMouseLeave={handleMouseLeave}
         className="w-full rounded-md border border-blue-200 bg-blue-100 px-3 py-2 text-left text-blue-900 shadow-sm transition-all duration-300 hover:bg-blue-200"
       >
-        <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
           <span
             className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusStyle(
               firstAssignment.status,
@@ -686,6 +777,11 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
           >
             {statusLabel}
           </span>
+          {hasReplacement && (
+            <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
+              Thay thế
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 overflow-visible">
@@ -723,6 +819,7 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
         <WeekShiftTooltip
           shift={shift}
           statusLabel={statusLabel}
+          hasReplacement={hasReplacement}
           position={tooltipPosition}
           onMouseEnter={handleTooltipMouseEnter}
           onMouseLeave={handleTooltipMouseLeave}

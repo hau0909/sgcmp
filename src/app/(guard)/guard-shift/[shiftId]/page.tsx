@@ -50,68 +50,106 @@ const formatDateTitle = (date: Date) => {
   });
 };
 
-const getStatusLabel = (status: GuardShiftDetailItem["status"]) => {
-  if (status === "assigned") {
-    return "PHÂN CÔNG";
-  }
-
+const getStatusLabel = (
+  status: GuardShiftDetailItem["status"],
+  checkInTime: string | null | undefined,
+  startTime: string
+) => {
   if (status === "completed") {
-    return "HOÀN THÀNH";
+    return "ĐANG TRỰC";
   }
 
   if (status === "late") {
-    return "ĐI TRỄ";
+    return checkInTime ? "ĐIỂM DANH TRỄ" : "ĐÃ TRỄ";
   }
 
-  return "VẮNG MẶT";
+  if (status === "absent") {
+    return "VẮNG MẶT";
+  }
+
+  // status === "assigned"
+  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+  if (isStarted) {
+    return "CHƯA ĐIỂM DANH";
+  }
+  return "PHÂN CÔNG";
 };
 
-const getGuardStatusLabel = (status: GuardShiftDetailItem["status"]) => {
-  if (status === "assigned") {
+const getGuardStatusLabel = (
+  status: GuardShiftDetailItem["status"],
+  checkInTime: string | null | undefined,
+  startTime: string
+) => {
+  if (status === "completed") {
     return "Đang trực";
   }
 
-  if (status === "completed") {
-    return "Hoàn thành";
-  }
-
   if (status === "late") {
-    return "Đi trễ";
+    return checkInTime ? "Điểm danh trễ" : "Đã trễ";
   }
 
-  return "Vắng mặt";
+  if (status === "absent") {
+    return "Vắng mặt";
+  }
+
+  // status === "assigned"
+  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+  if (isStarted) {
+    return "Chưa điểm danh";
+  }
+  return "Phân công";
 };
 
-const getStatusStyle = (status: GuardShiftDetailItem["status"]) => {
-  if (status === "assigned") {
-    return "bg-[#0754a6] text-white";
-  }
-
+const getStatusStyle = (
+  status: GuardShiftDetailItem["status"],
+  checkInTime: string | null | undefined,
+  startTime: string
+) => {
   if (status === "completed") {
-    return "bg-green-600 text-white";
+    return "bg-emerald-600 text-white";
   }
 
   if (status === "late") {
-    return "bg-amber-600 text-white";
+    return checkInTime ? "bg-orange-600 text-white" : "bg-amber-600 text-white";
   }
 
-  return "bg-red-600 text-white";
+  if (status === "absent") {
+    return "bg-red-600 text-white";
+  }
+
+  // status === "assigned"
+  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+  if (isStarted) {
+    return "bg-yellow-600 text-white";
+  }
+  return "bg-[#0754a6] text-white";
 };
 
-const getGuardStatusStyle = (status: GuardShiftDetailItem["status"]) => {
-  if (status === "assigned") {
-    return "bg-emerald-50 text-emerald-700";
-  }
-
+const getGuardStatusStyle = (
+  status: GuardShiftDetailItem["status"],
+  checkInTime: string | null | undefined,
+  startTime: string
+) => {
   if (status === "completed") {
-    return "bg-green-50 text-green-700";
+    return "bg-emerald-50 text-emerald-700 border border-emerald-200";
   }
 
   if (status === "late") {
-    return "bg-amber-50 text-amber-700";
+    return checkInTime
+      ? "bg-orange-50 text-orange-700 border border-orange-200"
+      : "bg-amber-50 text-amber-700 border-amber-200";
   }
 
-  return "bg-red-50 text-red-700";
+  if (status === "absent") {
+    return "bg-red-50 text-red-700 border border-red-200";
+  }
+
+  // status === "assigned"
+  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+  if (isStarted) {
+    return "bg-yellow-50 text-yellow-700 border border-yellow-200";
+  }
+  return "bg-blue-50 text-blue-700 border border-blue-200";
 };
 
 export default function GuardShiftDetailPage() {
@@ -259,10 +297,10 @@ export default function GuardShiftDetailPage() {
             className={`rounded-full px-3 py-1.5 text-[10px] font-black ${
               isReplacement
                 ? "bg-purple-600 text-white"
-                : getStatusStyle(shift.status)
+                : getStatusStyle(shift.status, shift.check_in_time, shift.start_time)
             }`}
           >
-            {isReplacement ? "CA THAY THẾ" : getStatusLabel(shift.status)}
+            {isReplacement ? "CA THAY THẾ" : getStatusLabel(shift.status, shift.check_in_time, shift.start_time)}
           </span>
         </div>
 
@@ -451,8 +489,8 @@ export default function GuardShiftDetailPage() {
                         )
                       )}
                       
-                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getGuardStatusStyle(guard.status)}`}>
-                        {getGuardStatusLabel(guard.status)}
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getGuardStatusStyle(guard.status, guard.check_in_time, shift.start_time)}`}>
+                        {getGuardStatusLabel(guard.status, guard.check_in_time, shift.start_time)}
                       </span>
                     </div>
                   </div>

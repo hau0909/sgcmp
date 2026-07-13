@@ -792,6 +792,7 @@ export const handleGetGuardShiftDetail = async ({
 
   shiftAssignments.forEach((sa) => {
     const profile = profiles.find((item) => item.user_id === sa.guard_id);
+    const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
 
     // Add original guard
     guardList.push({
@@ -800,13 +801,14 @@ export const handleGetGuardShiftDetail = async ({
       full_name: profile?.full_name || "Chưa có tên",
       phone_number: profile?.phone_number || null,
       avatar_url: profile?.avatar_url || null,
-      status: sa.status,
+      status: hasRep ? "absent" : sa.status,
+      check_in_time: hasRep ? null : sa.check_in_time,
       is_replacement: false,
       replacement_guard_ids: sa.replacement_guard_ids || [],
     });
 
     // Add replacement guards
-    if (sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0) {
+    if (hasRep) {
       sa.replacement_guard_ids.forEach((repGuardId) => {
         const mappedGuard = guardsMapping.find((g) => g.guard_id === repGuardId);
         if (mappedGuard) {
@@ -818,6 +820,7 @@ export const handleGetGuardShiftDetail = async ({
             phone_number: repProfile?.phone_number || null,
             avatar_url: repProfile?.avatar_url || null,
             status: sa.status,
+            check_in_time: sa.check_in_time,
             is_replacement: true,
             replaced_guard_name: profile?.full_name || "Bảo vệ gốc",
           });

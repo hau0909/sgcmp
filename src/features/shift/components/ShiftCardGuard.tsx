@@ -29,7 +29,7 @@ const getStatusLabel = (status: ShiftStatus, isReplacement?: boolean) => {
   }
 
   if (status === "completed") {
-    return "HOÀN THÀNH";
+    return "ĐANG TRỰC";
   }
 
   if (status === "late") {

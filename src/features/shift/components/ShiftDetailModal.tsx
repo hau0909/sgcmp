@@ -88,7 +88,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
 
   const getStatusLabel = (assign: ShiftAssignment) => {
     if (assign.status === "assigned") return "Đã phân công";
-    if (assign.status === "completed") return "Hoàn thành";
+    if (assign.status === "completed") return "Đang trực";
     if (assign.status === "late") {
       return assign.check_in_time ? "Đã điểm danh trễ" : "Đi trễ - chưa điểm danh";
     }
@@ -279,215 +279,215 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   if (!open || !mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm">
+    <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm transition-all duration-300 ${
+      isDispatchPanelOpen ? "md:justify-start md:pl-10 lg:pl-20 xl:pl-40" : "justify-center"
+    }`}>
       {/* ── Center Modal: Shift Details ── */}
       <div
         className="w-full max-w-xl bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300"
         style={{ maxHeight: "90vh" }}
       >
-        <div className="flex-1 flex flex-col min-w-0">
-          {/* Header */}
-          <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 bg-slate-50">
+        {/* Header */}
+        <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 bg-slate-50">
+          <div>
+            <h3 className="text-base font-bold text-slate-800">Chi tiết ca trực</h3>
+            <p className="text-xs text-slate-500 font-medium">
+              {shift.shift_name || "Ca trực"}
+            </p>
+          </div>
+          {!isDispatchPanelOpen && (
+            <button
+              onClick={onClose}
+              className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100"
+            >
+              <X size={18} />
+            </button>
+          )}
+        </div>
+
+        {/* Body */}
+        <div className="p-5 overflow-y-auto flex-1 space-y-5">
+          {/* Shift info */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex items-start gap-2.5">
+              <Clock size={16} className="text-blue-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Thời gian</p>
+                <p className="text-xs font-semibold text-slate-800">
+                  {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <MapPin size={16} className="text-blue-600 mt-0.5 shrink-0" />
+              <div>
+                <p className="text-[10px] font-bold text-slate-400 uppercase">Địa điểm</p>
+                <p
+                  className="text-xs font-semibold text-slate-800 truncate"
+                  title={shift.contract_address}
+                >
+                  {shift.contract_address || "Chưa có địa chỉ"}
+                </p>
+                {shift.location && (
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Khu vực: {shift.location}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Guard stats */}
+          <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100 flex items-center justify-between">
             <div>
-              <h3 className="text-base font-bold text-slate-800">Chi tiết ca trực</h3>
-              <p className="text-xs text-slate-500 font-medium">
-                {shift.shift_name || "Ca trực"}
+              <p className="text-xs font-semibold text-slate-700">Nhân sự ca trực</p>
+              <p className="text-[11px] text-slate-500 mt-0.5">
+                Thực tế:{" "}
+                <span className="font-bold text-blue-600">{actualGuards}</span> /{" "}
+                {shift.required_guards} bảo vệ
               </p>
             </div>
-            {!isDispatchPanelOpen && (
-              <button
-                onClick={onClose}
-                className="text-slate-400 hover:text-slate-600 transition-colors p-1 rounded-full hover:bg-slate-100"
-              >
-                <X size={18} />
-              </button>
+            {missingGuards > 0 ? (
+              <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-2.5 py-1 rounded-full border border-rose-100">
+                Thiếu {missingGuards} vị trí
+              </span>
+            ) : (
+              <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full border border-emerald-100">
+                Đủ nhân sự
+              </span>
             )}
           </div>
 
-          {/* Body */}
-          <div className="p-5 overflow-y-auto flex-1 space-y-5">
-            {/* Shift info */}
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-start gap-2.5">
-                <Clock size={16} className="text-blue-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Thời gian</p>
-                  <p className="text-xs font-semibold text-slate-800">
-                    {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <MapPin size={16} className="text-blue-600 mt-0.5 shrink-0" />
-                <div>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase">Địa điểm</p>
-                  <p
-                    className="text-xs font-semibold text-slate-800 truncate"
-                    title={shift.contract_address}
-                  >
-                    {shift.contract_address || "Chưa có địa chỉ"}
-                  </p>
-                  {shift.location && (
-                    <p className="text-[10px] text-slate-500 font-medium">
-                      Khu vực: {shift.location}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Guard stats */}
-            <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100 flex items-center justify-between">
-              <div>
-                <p className="text-xs font-semibold text-slate-700">Nhân sự ca trực</p>
-                <p className="text-[11px] text-slate-500 mt-0.5">
-                  Thực tế:{" "}
-                  <span className="font-bold text-blue-600">{actualGuards}</span> /{" "}
-                  {shift.required_guards} bảo vệ
-                </p>
-              </div>
-              {missingGuards > 0 ? (
-                <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-2.5 py-1 rounded-full border border-rose-100">
-                  Thiếu {missingGuards} vị trí
-                </span>
-              ) : (
-                <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full border border-emerald-100">
-                  Đủ nhân sự
-                </span>
-              )}
-            </div>
-
-            {/* Assignments List */}
-            <div className="space-y-3">
-              <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                Danh sách bảo vệ trực
-              </h4>
-              <div className="space-y-2">
-                {shift.assignments.map((assign) => (
-                  <div
-                    key={assign.assignment_id}
-                    className={`rounded-lg border p-3 flex flex-col gap-2.5 transition-colors ${isDispatchPanelOpen && activeSlotId === assign.assignment_id
-                        ? "border-blue-300 bg-blue-50/30"
-                        : isDispatchPanelOpen &&
-                          replacementMap[assign.assignment_id]
-                          ? "border-emerald-200 bg-emerald-50/20"
-                          : "border-slate-200 bg-white"
-                      }`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        <div
-                          className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isDispatchPanelOpen && activeSlotId === assign.assignment_id
-                              ? "bg-blue-100 text-blue-700"
-                              : "bg-slate-100 text-slate-600"
-                            }`}
-                        >
-                          <UserRound size={15} />
-                        </div>
-                        <div className="min-w-0">
-                          <p className="text-xs font-bold text-slate-800 truncate">
-                            {assign.guard_name}
-                          </p>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            Bảo vệ chính
-                          </span>
-                        </div>
+          {/* Assignments List */}
+          <div className="space-y-3">
+            <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+              Danh sách bảo vệ trực
+            </h4>
+            <div className="space-y-2">
+              {shift.assignments.map((assign) => (
+                <div
+                  key={assign.assignment_id}
+                  className={`rounded-lg border p-3 flex flex-col gap-2.5 transition-colors ${isDispatchPanelOpen && activeSlotId === assign.assignment_id
+                      ? "border-blue-300 bg-blue-50/30"
+                      : isDispatchPanelOpen &&
+                        replacementMap[assign.assignment_id]
+                        ? "border-emerald-200 bg-emerald-50/20"
+                        : "border-slate-200 bg-white"
+                    }`}
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-2.5 min-w-0">
+                      <div
+                        className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isDispatchPanelOpen && activeSlotId === assign.assignment_id
+                            ? "bg-blue-100 text-blue-700"
+                            : "bg-slate-100 text-slate-600"
+                          }`}
+                      >
+                        <UserRound size={15} />
                       </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span
-                          className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${getStatusStyle(
-                            assign
-                          )}`}
-                        >
-                          {getStatusLabel(assign)}
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-800 truncate">
+                          {assign.guard_name}
+                        </p>
+                        <span className="text-[10px] text-slate-400 font-medium">
+                          Bảo vệ chính
                         </span>
-
-                        {/* Show dispatch panel slot indicator */}
-                        {isDispatchPanelOpen && canDispatchReplacement(assign) && (
-                          <button
-                            onClick={() => setActiveSlotId(assign.assignment_id)}
-                            className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${activeSlotId === assign.assignment_id
-                                ? "bg-blue-600 text-white"
-                                : replacementMap[assign.assignment_id]
-                                  ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                  : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                              }`}
-                          >
-                            {replacementMap[assign.assignment_id]
-                              ? "✓ Đã chọn"
-                              : "Chọn thay thế"}
-                          </button>
-                        )}
                       </div>
                     </div>
 
-                    {/* Show selected replacement for this slot */}
-                    {isDispatchPanelOpen &&
-                      canDispatchReplacement(assign) &&
-                      replacementMap[assign.assignment_id] && (
-                        <div className="flex items-center gap-2 bg-emerald-50/70 rounded px-2.5 py-1.5 border border-emerald-100">
-                          <ArrowRight size={12} className="text-emerald-600 shrink-0" />
-                          <span className="text-[11px] font-bold text-emerald-700">
-                            {(() => {
-                              const g = allCandidates.find(
-                                (c) => c.guard_id === replacementMap[assign.assignment_id]
-                              ) || (assign.replacement_guards || []).find(
-                                (rg) => rg.guard_id === replacementMap[assign.assignment_id]
-                              );
-                              return g ? g.full_name : replacementMap[assign.assignment_id];
-                            })()}
-                          </span>
-                        </div>
-                      )}
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`rounded-full border px-2 py-0.5 text-[10px] font-bold ${getStatusStyle(
+                          assign
+                        )}`}
+                      >
+                        {getStatusLabel(assign)}
+                      </span>
 
-                    {/* Show existing replacements (already dispatched before) */}
-                    {!isDispatchPanelOpen &&
-                      assign.replacement_guards &&
-                      assign.replacement_guards.length > 0 && (
-                        <div className="bg-slate-50 rounded p-2.5 border border-slate-100 space-y-1.5">
-                          <p className="text-[10px] font-bold text-slate-500 uppercase">
-                            Nhân sự thay thế đã gán:
-                          </p>
-                          <div className="space-y-1">
-                            {assign.replacement_guards.map((rep) => (
-                              <div
-                                key={rep.guard_id}
-                                className="flex items-center justify-between text-xs"
-                              >
-                                <span className="font-semibold text-slate-700">
-                                  • {rep.full_name}
-                                </span>
-                                {rep.phone_number && (
-                                  <span className="text-[10px] text-slate-400 font-medium">
-                                    {rep.phone_number}
-                                  </span>
-                                )}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
+                      {/* Show dispatch panel slot indicator */}
+                      {isDispatchPanelOpen && canDispatchReplacement(assign) && (
+                        <button
+                          onClick={() => setActiveSlotId(assign.assignment_id)}
+                          className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${activeSlotId === assign.assignment_id
+                              ? "bg-blue-600 text-white"
+                              : replacementMap[assign.assignment_id]
+                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            }`}
+                        >
+                          {replacementMap[assign.assignment_id]
+                            ? "✓ Đã chọn"
+                            : "Chọn thay thế"}
+                        </button>
                       )}
+                    </div>
                   </div>
-                ))}
-              </div>
+
+                  {/* Show selected replacement for this slot */}
+                  {isDispatchPanelOpen &&
+                    canDispatchReplacement(assign) &&
+                    replacementMap[assign.assignment_id] && (
+                      <div className="flex items-center gap-2 bg-emerald-50/70 rounded px-2.5 py-1.5 border border-emerald-100">
+                        <ArrowRight size={12} className="text-emerald-600 shrink-0" />
+                        <span className="text-[11px] font-bold text-emerald-700">
+                          {(() => {
+                            const g = allCandidates.find(
+                              (c) => c.guard_id === replacementMap[assign.assignment_id]
+                            ) || (assign.replacement_guards || []).find(
+                              (rg) => rg.guard_id === replacementMap[assign.assignment_id]
+                            );
+                            return g ? g.full_name : replacementMap[assign.assignment_id];
+                          })()}
+                        </span>
+                      </div>
+                    )}
+
+                  {/* Show existing replacements (already dispatched before) */}
+                  {!isDispatchPanelOpen &&
+                    assign.replacement_guards &&
+                    assign.replacement_guards.length > 0 && (
+                      <div className="bg-slate-50 rounded p-2.5 border border-slate-100 space-y-1.5">
+                        <p className="text-[10px] font-bold text-slate-500 uppercase">
+                          Nhân sự thay thế đã gán:
+                        </p>
+                        <div className="space-y-1">
+                          {assign.replacement_guards.map((rep) => (
+                            <div
+                              key={rep.guard_id}
+                              className="flex items-center justify-between text-xs"
+                            >
+                              <span className="font-semibold text-slate-700">
+                                • {rep.full_name}
+                              </span>
+                              {rep.phone_number && (
+                                <span className="text-[10px] text-slate-400 font-medium">
+                                  {rep.phone_number}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                </div>
+              ))}
             </div>
           </div>
-
-          {/* Footer: Dispatch button */}
-          {eligibleAssignments.length > 0 && !isDispatchPanelOpen && (
-            <div className="border-t border-slate-200 p-4 bg-slate-50 shrink-0">
-              <button
-                onClick={handleOpenDispatchPanel}
-                className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2"
-              >
-                <UserCheck size={14} />
-                Điều phối thay thế ({eligibleAssignments.length} vị trí)
-                <ChevronRight size={14} />
-              </button>
-            </div>
-          )}
         </div>
+
+        {/* Footer: Dispatch button */}
+        {eligibleAssignments.length > 0 && !isDispatchPanelOpen && (
+          <div className="border-t border-slate-200 p-4 bg-slate-50 shrink-0">
+            <button
+              onClick={handleOpenDispatchPanel}
+              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2"
+            >
+              <UserCheck size={14} />
+              Điều phối thay thế ({eligibleAssignments.length} vị trí)
+              <ChevronRight size={14} />
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Right Sidebar: Dispatch Panel ── */}

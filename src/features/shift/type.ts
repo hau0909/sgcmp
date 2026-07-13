@@ -550,6 +550,7 @@ export type GuardShiftDetailItem = {
     is_replacement?: boolean;
     replaced_guard_name?: string;
     replacement_guard_ids?: string[];
+    check_in_time?: string | null;
   }[];
   checkin_image?: {
     image_url: string;
