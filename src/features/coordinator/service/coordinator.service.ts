@@ -5,10 +5,11 @@ import { getIdentityByUserId } from "@/features/identity/repository/identity.rep
 export const getCoordinatorsService = async (
   companyId: string,
   page = 1,
-  limit = 10
+  limit = 10,
+  search?: string
 ): Promise<{ data: CoordinatorWithUser[]; total: number }> => {
   if (!companyId) throw new Error("Company ID is required");
-  return await getCoordinators(companyId, page, limit);
+  return await getCoordinators(companyId, page, limit, search);
 };
 
 export const addCoordinatorToCompanyService = async (

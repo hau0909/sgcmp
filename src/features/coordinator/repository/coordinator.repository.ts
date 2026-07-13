@@ -5,16 +5,22 @@ import { supabase } from "@/lib/supabase";
 export const getCoordinators = async (
   companyId: string,
   page = 1,
-  limit = 10
+  limit = 10,
+  search?: string
 ): Promise<{ data: CoordinatorWithUser[]; total: number }> => {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
-  const { data, error, count } = await supabase
+  let query = supabase
     .from("coordinators")
     .select("*, profiles!inner(*)", { count: "exact" })
-    .eq("company_id", companyId)
-    .range(from, to);
+    .eq("company_id", companyId);
+
+  if (search) {
+    query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone_number.ilike.%${search}%`, { foreignTable: "profiles" });
+  }
+
+  const { data, error, count } = await query.range(from, to);
 
   if (error) throw error;
 
