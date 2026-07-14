@@ -88,6 +88,12 @@ export default function CoordinatorLayout({
       icon: ShieldUser,
       active: pathname === "/guards" || pathname.startsWith("/guards/"),
     },
+    {
+      name: "Quản lý báo cáo",
+      href: "/coor-reports",
+      icon: ShieldAlert,
+      active: pathname === "/coor-reports" || pathname.startsWith("/coor-reports/"),
+    },
   ];
 
   return (

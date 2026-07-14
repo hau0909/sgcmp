@@ -4,6 +4,8 @@ import {
   createCustomerReportService,
   deleteCustomerReportService,
   getCustomerContractsForReportService,
+  getCompanyReportsService,
+  updateReportStatusService,
 } from "../service/report.service";
 
 export const handleGetCustomerContractsForReport = async (
@@ -69,3 +71,45 @@ export const handleDeleteCustomerReport = async (
   }
   await deleteCustomerReportService(id, customerId);
 };
+
+export const handleGetCompanyReports = async (
+  companyId: string,
+  params: {
+    page: number;
+    limit: number;
+    search?: string;
+    status?: string;
+    type?: string;
+  }
+): Promise<{ reports: Report[]; totalCount: number }> => {
+  const validStatus = (params.status && params.status !== "ALL")
+    ? (params.status as ReportStatus)
+    : undefined;
+
+  const validType = (params.type && params.type !== "ALL")
+    ? (params.type as ReportType)
+    : undefined;
+
+  return await getCompanyReportsService(
+    companyId,
+    params.page,
+    params.limit,
+    params.search,
+    validStatus,
+    validType
+  );
+};
+
+export const handleUpdateReportStatus = async (
+  id: string,
+  status: ReportStatus
+): Promise<Report> => {
+  if (!id) {
+    throw new Error("Mã báo cáo là bắt buộc");
+  }
+  if (!status) {
+    throw new Error("Trạng thái là bắt buộc");
+  }
+  return await updateReportStatusService(id, status);
+};
+

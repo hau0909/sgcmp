@@ -263,3 +263,183 @@ export const getCustomerContractsForReport = async (
     };
   });
 };
+
+export const getCompanyReports = async (
+  companyId: string,
+  page: number,
+  limit: number,
+  search?: string,
+  status?: ReportStatus,
+  type?: ReportType
+): Promise<{ data: any[]; count: number }> => {
+  const from = (page - 1) * limit;
+  const to = from + limit - 1;
+  const supabase = await createClient();
+
+  // 1. Get bookings for this company
+  const { data: bookingsData, error: bookingsError } = await supabase
+    .from("bookings")
+    .select("booking_id")
+    .eq("company_id", companyId);
+
+  if (bookingsError) {
+    throw bookingsError;
+  }
+
+  if (!bookingsData || bookingsData.length === 0) {
+    return { data: [], count: 0 };
+  }
+
+  const bookingIds = bookingsData.map((b) => b.booking_id);
+
+  // 2. Get contracts for those bookings
+  const { data: contractsData, error: contractsError } = await supabase
+    .from("contracts")
+    .select("contract_id")
+    .in("booking_id", bookingIds);
+
+  if (contractsError) {
+    throw contractsError;
+  }
+
+  if (!contractsData || contractsData.length === 0) {
+    return { data: [], count: 0 };
+  }
+
+  const contractIds = contractsData.map((c) => c.contract_id);
+
+  // 3. Query reports using contract_id in contractIds
+  let query = supabase
+    .from("report")
+    .select("*", { count: "exact" })
+    .in("contract_id", contractIds);
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  if (type) {
+    query = query.eq("type", type);
+  }
+
+  if (search) {
+    const searchLower = `%${search.toLowerCase()}%`;
+    query = query.or(`description.ilike.${searchLower}`);
+  }
+
+  query = query.order("created_at", { ascending: false });
+  query = query.range(from, to);
+
+  const { data: reports, error, count } = await query;
+
+  if (error) {
+    throw error;
+  }
+
+  if (!reports || reports.length === 0) {
+    return { data: [], count: 0 };
+  }
+
+  // 3. Fetch related contracts, bookings, and services independently
+  const reportContractIds = Array.from(new Set(reports.map((r) => r.contract_id).filter(Boolean)));
+  let contracts: any[] = [];
+  let bookings: any[] = [];
+  let services: any[] = [];
+
+  if (reportContractIds.length > 0) {
+    const { data: contractsData } = await supabase
+      .from("contracts")
+      .select("contract_id, booking_id")
+      .in("contract_id", reportContractIds);
+
+    if (contractsData && contractsData.length > 0) {
+      contracts = contractsData;
+      const bookingIds = Array.from(new Set(contractsData.map((c) => c.booking_id).filter(Boolean)));
+      
+      if (bookingIds.length > 0) {
+        const { data: bookingsData } = await supabase
+          .from("bookings")
+          .select("booking_id, service_id")
+          .in("booking_id", bookingIds);
+
+        if (bookingsData && bookingsData.length > 0) {
+          bookings = bookingsData;
+          const serviceIds = Array.from(new Set(bookingsData.map((b) => b.service_id).filter(Boolean)));
+
+          if (serviceIds.length > 0) {
+            const { data: servicesData } = await supabase
+              .from("services")
+              .select("service_id, name")
+              .in("service_id", serviceIds);
+
+            if (servicesData) {
+              services = servicesData;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Fetch customer profiles (users)
+  const customerIds = Array.from(new Set(reports.map((r) => r.customer_id).filter(Boolean)));
+  let profiles: any[] = [];
+  if (customerIds.length > 0) {
+    const { data: profilesData } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, phone_number")
+      .in("user_id", customerIds);
+    if (profilesData) {
+      profiles = profilesData;
+    }
+  }
+
+  // Combine enriched reports
+  const enrichedReports = reports.map((report) => {
+    const contract = contracts.find((c) => c.contract_id === report.contract_id);
+    const booking = contract ? bookings.find((b) => b.booking_id === contract.booking_id) : null;
+    const service = booking ? services.find((s) => s.service_id === booking.service_id) : null;
+    const profile = profiles.find((p) => p.user_id === report.customer_id);
+
+    return {
+      ...report,
+      customer_name: profile ? profile.full_name : "Khách hàng",
+      customer_phone: profile ? profile.phone_number : "",
+      contracts: contract
+        ? {
+            contract_id: contract.contract_id,
+            bookings: booking
+              ? {
+                  services: service ? { name: service.name } : null,
+                }
+              : null,
+          }
+        : null,
+    };
+  });
+
+  return {
+    data: enrichedReports,
+    count: count || 0,
+  };
+};
+
+export const updateReportStatus = async (
+  id: string,
+  status: ReportStatus
+): Promise<any> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("report")
+    .update({ status })
+    .eq("id", id)
+    .select("*")
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
+  return data;
+};
+
