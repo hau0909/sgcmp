@@ -7,7 +7,7 @@ import type {
   GetAllGuardsResponse,
   GetGuardDetailResponse,
   GetAllGuardsParams,
-  GuardListPaginatedData,
+  UpdateGuardAccountInput
 } from "../type";
 
 interface ApiResponse<T> {
@@ -76,6 +76,9 @@ export const requestGetAllGuards = ({
   page = 1,
   limit = 10,
   search = "",
+  gender = "",
+  status = "",
+  workStatus = "",
 }: GetAllGuardsParams = {}) => {
   const searchParams = new URLSearchParams();
 
@@ -84,6 +87,18 @@ export const requestGetAllGuards = ({
 
   if (search.trim()) {
     searchParams.set("search", search.trim());
+  }
+
+  if (gender) {
+    searchParams.set("gender", gender);
+  }
+
+  if (status) {
+    searchParams.set("status", status);
+  }
+
+  if (workStatus) {
+    searchParams.set("workStatus", workStatus);
   }
 
   return fetcher(`/api/guard?${searchParams.toString()}`, {
@@ -113,6 +128,37 @@ export const requestGetGuardsByContract = ({
 
   return fetcher(
     `/api/contracts/${encodeURIComponent(contractId)}/guards?${searchParams.toString()}`,
+    {
+      method: "GET",
+    },
+  );
+};
+
+export const requestGetCustomerGuardsByContract = ({
+  contractId,
+  customerId,
+  page = 1,
+  limit = 10,
+  search = "",
+}: {
+  contractId: string;
+  customerId: string;
+  page?: number;
+  limit?: number;
+  search?: string;
+}) => {
+  const searchParams = new URLSearchParams();
+
+  searchParams.set("customerId", customerId);
+  searchParams.set("page", String(page));
+  searchParams.set("limit", String(limit));
+
+  if (search.trim()) {
+    searchParams.set("search", search.trim());
+  }
+
+  return fetcher(
+    `/api/my-contracts/${encodeURIComponent(contractId)}/guards?${searchParams.toString()}`,
     {
       method: "GET",
     },
@@ -164,3 +210,14 @@ export const requestCheckGuardQuota = async (): Promise<{
     method: "GET",
   });
 };
+
+export const requestUpdateGuardProfile = async (guardId: string,
+  input: UpdateGuardAccountInput) => {
+  return fetcher(`/api/guard/${guardId}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  });
+}

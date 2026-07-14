@@ -4,13 +4,18 @@ import { CoordinatorWithUser } from "../types";
 export async function requestGetCoordinators(
   companyId: string,
   page = 1,
-  limit = 10
+  limit = 10,
+  search?: string
 ): Promise<{ coordinators: CoordinatorWithUser[]; total: number }> {
   const params = new URLSearchParams({
     companyId,
     page: String(page),
     limit: String(limit),
   });
+
+  if (search) {
+    params.append("search", search);
+  }
 
   const result = await fetcher(`/api/coordinators?${params.toString()}`, {
     method: "GET",
@@ -19,7 +24,7 @@ export async function requestGetCoordinators(
   return { coordinators: result.coordinators, total: result.total };
 }
 
-import { CreateCoordinatorPayload } from "../types";
+import { CreateCoordinatorPayload, UpdateCoordinatorPayload } from "../types";
 
 export async function requestCreateCoordinator(
   payload: CreateCoordinatorPayload
@@ -29,3 +34,22 @@ export async function requestCreateCoordinator(
     body: JSON.stringify(payload),
   });
 }
+
+export async function requestGetCoordinatorDetail(
+  id: string
+): Promise<any> {
+  return await fetcher(`/api/coordinators/${id}`, {
+    method: "GET",
+  });
+}
+
+export async function requestUpdateCoordinator(
+  id: string,
+  payload: UpdateCoordinatorPayload
+): Promise<{ success: boolean; message: string; field?: string }> {
+  return await fetcher(`/api/coordinators/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(payload),
+  });
+}
+

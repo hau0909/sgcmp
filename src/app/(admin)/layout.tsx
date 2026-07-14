@@ -18,6 +18,7 @@ import {
   Grid,
   X,
   Globe,
+  Landmark,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
@@ -40,31 +41,24 @@ export default function AdminLayout({
       name: "Yêu cầu phê duyệt",
       href: "/registrations",
       icon: Building2,
-      active: pathname === "/registrations" || pathname.startsWith("/registrations/"),
+      active:
+        pathname === "/registrations" || pathname.startsWith("/registrations/"),
     },
     {
       name: "Yêu cầu công khai",
       href: "/publish-requests",
       icon: Globe,
-      active: pathname === "/publish-requests" || pathname.startsWith("/publish-requests/"),
+      active:
+        pathname === "/publish-requests" ||
+        pathname.startsWith("/publish-requests/"),
     },
+
     {
-      name: "Tuân thủ pháp lý",
-      href: "#",
-      icon: ShieldCheck,
-      active: false,
-    },
-    {
-      name: "Quản lý Bảo vệ",
-      href: "#",
-      icon: Shield,
-      active: false,
-    },
-    {
-      name: "Người dùng Hệ thống",
-      href: "#",
-      icon: Users,
-      active: false,
+      name: "Tài khoản Ngân hàng",
+      href: "/bank-accounts",
+      icon: Landmark,
+      active:
+        pathname === "/bank-accounts" || pathname.startsWith("/bank-accounts/"),
     },
   ];
 
@@ -228,7 +222,13 @@ export default function AdminLayout({
           {/* Content Viewport */}
           <main className="flex-1 overflow-y-auto bg-background flex flex-col justify-between">
             <div className="flex-1">
-              <Suspense fallback={<div className="p-6 text-center text-sm text-on-surface-variant">Đang tải...</div>}>
+              <Suspense
+                fallback={
+                  <div className="p-6 text-center text-sm text-on-surface-variant">
+                    Đang tải...
+                  </div>
+                }
+              >
                 {children}
               </Suspense>
             </div>

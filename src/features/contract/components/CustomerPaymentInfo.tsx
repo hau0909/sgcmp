@@ -1,16 +1,14 @@
 "use client";
 
 import React from "react";
-import { CreditCard, Banknote } from "lucide-react";
+import { CreditCard } from "lucide-react";
 
 interface CustomerPaymentInfoProps {
   totalValue: string;
-  paymentMethod?: string;
 }
 
 export function CustomerPaymentInfo({
   totalValue,
-  paymentMethod = "Chuyển khoản ngân hàng",
 }: CustomerPaymentInfoProps) {
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm flex-1 bg-gradient-to-br from-surface-container-lowest to-surface-bright/40">
@@ -26,16 +24,6 @@ export function CustomerPaymentInfo({
           </span>
           <span className="text-2xl font-black text-primary font-mono tracking-tight">
             {totalValue}
-          </span>
-        </div>
-
-        <div className="flex flex-col">
-          <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Phương thức thanh toán
-          </span>
-          <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
-            <Banknote className="w-4 h-4 text-outline-variant" />
-            {paymentMethod}
           </span>
         </div>
       </div>

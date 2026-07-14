@@ -35,7 +35,7 @@ export default function Home() {
     e.preventDefault();
 
     if (!userId) {
-      router.push("/login?redirect=" + encodeURIComponent("/"));
+      router.push("/register-company");
       return;
     }
 
@@ -97,7 +97,7 @@ export default function Home() {
                 <div className="flex flex-col sm:flex-row gap-4 pt-2">
                   <a
                     className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] text-[15px] h-12"
-                    href="/onboarding/basic-info"
+                    href="/register-company"
                   >
                     Bắt đầu miễn phí
                     <ArrowRight />
@@ -389,10 +389,9 @@ export default function Home() {
                   <div
                     key={plan.id}
                     className={`bg-surface-container-lowest border rounded-3xl p-8 md:p-10 flex flex-col justify-between text-left transition-all duration-300
-                      ${
-                        plan.isPopular
-                          ? "border-2 border-primary shadow-xl transform md:-translate-y-4 relative"
-                          : "border-outline-variant/40 hover:shadow-soft"
+                      ${plan.isPopular
+                        ? "border-2 border-primary shadow-xl transform md:-translate-y-4 relative"
+                        : "border-outline-variant/40 hover:shadow-soft"
                       }`}
                   >
                     {plan.isPopular && (
@@ -442,10 +441,9 @@ export default function Home() {
                       onClick={(e) => handlePlanClick(e, plan.href)}
                       disabled={loadingPlan !== null}
                       className={`w-full font-semibold py-3 px-6 rounded-xl transition-all duration-300 text-[14px] h-12 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed
-                        ${
-                          plan.isPopular
-                            ? "bg-primary hover:bg-primary-container text-on-primary shadow-md hover:shadow-lg hover:scale-[1.02]"
-                            : "border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low"
+                        ${plan.isPopular
+                          ? "bg-primary hover:bg-primary-container text-on-primary shadow-md hover:shadow-lg hover:scale-[1.02]"
+                          : "border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low"
                         }`}
                     >
                       {loadingPlan === plan.href ? (

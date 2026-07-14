@@ -49,7 +49,6 @@ export function CoordinatorFilters({
             >
               <option value="">Tất cả trạng thái</option>
               <option value="Hoạt động">Hoạt động</option>
-              <option value="Tạm khóa">Tạm khóa</option>
               <option value="Vô hiệu hóa">Vô hiệu hóa</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-on-surface-variant">

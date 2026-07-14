@@ -167,11 +167,10 @@ export default function Header() {
 
             {/* Nav links on left when scrolled on /companies */}
             <nav
-              className={`hidden md:flex items-center gap-6 transition-all duration-300 origin-left ${
-                showStickySearch
-                  ? "opacity-100 scale-100 w-auto"
-                  : "opacity-0 scale-95 w-0 overflow-hidden pointer-events-none"
-              }`}
+              className={`hidden md:flex items-center gap-6 transition-all duration-300 origin-left ${showStickySearch
+                ? "opacity-100 scale-100 w-auto"
+                : "opacity-0 scale-95 w-0 overflow-hidden pointer-events-none"
+                }`}
             >
               {navLinks.map((link) => {
                 const isActive = pathname === link.href;
@@ -180,9 +179,8 @@ export default function Header() {
                     key={link.href}
                     href={link.href}
                     onClick={closeMenus}
-                    className={`text-[14px] font-semibold transition-all duration-200 py-1 hover:text-primary whitespace-nowrap ${
-                      isActive ? "text-primary font-bold" : "text-on-surface-variant"
-                    }`}
+                    className={`text-[14px] font-semibold transition-all duration-200 py-1 hover:text-primary whitespace-nowrap ${isActive ? "text-primary font-bold" : "text-on-surface-variant"
+                      }`}
                   >
                     {link.label}
                   </Link>
@@ -203,11 +201,10 @@ export default function Header() {
                       key={link.href}
                       href={link.href}
                       onClick={closeMenus}
-                      className={`text-[14px] font-medium transition-all duration-200 relative py-1 hover:text-primary ${
-                        isActive
-                          ? "text-primary font-semibold after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary"
-                          : "text-on-surface-variant hover:-translate-y-px"
-                      }`}
+                      className={`text-[14px] font-medium transition-all duration-200 relative py-1 hover:text-primary ${isActive
+                        ? "text-primary font-semibold after:absolute after:bottom-0 after:left-0 after:w-full after:h-0.5 after:bg-primary"
+                        : "text-on-surface-variant hover:-translate-y-px"
+                        }`}
                     >
                       {link.label}
                     </Link>
@@ -247,9 +244,9 @@ export default function Header() {
                 </button>
                 <Link
                   className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.03] text-[13px] h-9 flex items-center justify-center"
-                  href="/sign-up"
+                  href="/register-company"
                 >
-                  Đăng kí ngay
+                  Bắt đầu ngay
                 </Link>
 
                 {userDropdownOpen && (
@@ -261,17 +258,6 @@ export default function Header() {
                     >
                       Xem hồ sơ
                     </Link>
-
-                    {profile?.role !== "company-admin" &&
-                      profile?.role !== "admin" && (
-                        <Link
-                          href="/register-company"
-                          onClick={closeMenus}
-                          className="block px-4 py-3 text-sm font-medium text-primary hover:bg-primary/5 transition-colors font-semibold"
-                        >
-                          Đăng ký doanh nghiệp
-                        </Link>
-                      )}
 
                     {profile?.role === "customer" && (
                       <Link
@@ -289,6 +275,14 @@ export default function Header() {
                       className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
                     >
                       Quản lý hợp đồng
+                    </Link>
+
+                    <Link
+                      href="/my-reports"
+                      onClick={closeMenus}
+                      className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                    >
+                      Báo cáo
                     </Link>
 
                     <button
@@ -312,9 +306,9 @@ export default function Header() {
 
                 <Link
                   className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.03] text-[13px] h-9 flex items-center justify-center"
-                  href="/sign-up"
+                  href="/register-company"
                 >
-                  Đăng kí ngay
+                  Bắt đầu ngay
                 </Link>
               </>
             )}
@@ -341,9 +335,8 @@ export default function Header() {
       )}
 
       <div
-        className={`md:hidden fixed top-0 right-0 h-full w-70 bg-surface-container-lowest z-50 shadow-2xl transition-transform duration-300 ease-out transform ${
-          mobileMenuOpen ? "translate-x-0" : "translate-x-full"
-        } flex flex-col`}
+        className={`md:hidden fixed top-0 right-0 h-full w-70 bg-surface-container-lowest z-50 shadow-2xl transition-transform duration-300 ease-out transform ${mobileMenuOpen ? "translate-x-0" : "translate-x-full"
+          } flex flex-col`}
       >
         <div className="flex items-center justify-between p-6 border-b border-outline-variant/30">
           <Link
@@ -380,11 +373,10 @@ export default function Header() {
                 key={link.href}
                 href={link.href}
                 onClick={closeMenus}
-                className={`text-[15px] font-medium p-3 rounded-xl transition-all duration-200 ${
-                  isActive
-                    ? "bg-primary/10 text-primary font-semibold"
-                    : "text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
-                }`}
+                className={`text-[15px] font-medium p-3 rounded-xl transition-all duration-200 ${isActive
+                  ? "bg-primary/10 text-primary font-semibold"
+                  : "text-on-surface-variant hover:bg-surface-container-low hover:text-primary"
+                  }`}
               >
                 {link.label}
               </Link>
@@ -405,16 +397,6 @@ export default function Header() {
                 Xem hồ sơ
               </Link>
 
-              {profile?.role !== "company-admin" &&
-                profile?.role !== "admin" && (
-                  <Link
-                    className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
-                    href="/register-company"
-                    onClick={closeMenus}
-                  >
-                    Đăng ký doanh nghiệp
-                  </Link>
-                )}
 
               {profile?.role === "customer" && (
                 <Link
@@ -432,6 +414,14 @@ export default function Header() {
                 onClick={closeMenus}
               >
                 Xem hợp đồng
+              </Link>
+
+              <Link
+                className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                href="/my-reports"
+                onClick={closeMenus}
+              >
+                Báo cáo
               </Link>
 
               <button
@@ -454,10 +444,10 @@ export default function Header() {
 
               <Link
                 className="bg-primary hover:bg-primary-container text-on-primary font-semibold py-3 px-6 rounded-xl w-full text-center transition-all h-11 flex items-center justify-center"
-                href="/sign-up"
+                href="/register-company"
                 onClick={closeMenus}
               >
-                Đăng kí ngay
+                Bắt đầu ngay
               </Link>
             </>
           )}

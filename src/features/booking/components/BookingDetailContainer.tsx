@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   CheckCircle,
   X,
@@ -20,7 +20,9 @@ import {
   requestGetBookingDetail,
   requestUpdateBookingQuotation,
 } from "../api/booking.api";
-import { formatPrice } from "@/utils/formatPrice";
+import { requestGetVerification } from "@/features/verification/api/verification.api";
+import { VerificationStatus } from "@/features/verification/types";
+import { BookingProgress } from "./BookingProgress";
 
 const MOCK_DETAILS: Record<string, any> = {
   "bkg-1": {
@@ -163,6 +165,7 @@ export function BookingDetailContainer({
   bookingId,
 }: BookingDetailContainerProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const isCoordinator = pathname?.includes("/bookings");
   const isCustomer = pathname?.includes("/my-requests");
   const backUrl = isCoordinator
@@ -170,6 +173,8 @@ export function BookingDetailContainer({
     : isCustomer
       ? "/my-requests"
       : "/requests";
+  // Verification route based on layout context
+  const verificationBasePath = isCoordinator ? "/coor-verifications" : "/verifications";
   const [booking, setBooking] = useState<{
     booking_id: string;
     customer_name: string;
@@ -199,6 +204,8 @@ export function BookingDetailContainer({
   const [toastType, setToastType] = useState<"success" | "error">("success");
   const [isSimulating, setIsSimulating] = useState(false);
   const [contractId, setContractId] = useState<string | null>(null);
+  const [verificationStatus, setVerificationStatus] = useState<VerificationStatus | null>(null);
+  const [isCreatingVerification, setIsCreatingVerification] = useState(false);
 
   const fetchDetail = React.useCallback(
     async (showLoading = true) => {
@@ -251,6 +258,15 @@ export function BookingDetailContainer({
           } else {
             setContractId(null);
           }
+          
+          try {
+            const vRes = await requestGetVerification(bookingId);
+            if (vRes && vRes.verification) {
+              setVerificationStatus(vRes.verification.status);
+            }
+          } catch (e) {
+            console.error("Failed to fetch verification status", e);
+          }
         } else {
           setError("Không tìm thấy thông tin yêu cầu đặt lịch.");
         }
@@ -272,7 +288,7 @@ export function BookingDetailContainer({
   }, [bookingId, fetchDetail]);
 
   // Send a quote to the customer using API
-  const handleQuote = async (price: number, notes: string) => {
+  const handleQuote = async (price: number) => {
     try {
       setIsSimulating(true);
 
@@ -310,7 +326,7 @@ export function BookingDetailContainer({
         });
         setToastType("success");
         setToastMessage(
-          `Đã cập nhật báo giá ${formatPrice(price)} VND & gửi phản hồi cho khách hàng thành công!`,
+          `Đã cập nhật báo giá ${price.toLocaleString('vi-VN')} VND & gửi phản hồi cho khách hàng thành công!`,
         );
       }
     } catch (err: any) {
@@ -328,13 +344,15 @@ export function BookingDetailContainer({
       setIsSimulating(true);
 
       // If it is mock, fallback to mock simulation
+      const targetStatus = isCustomer ? "rejected" : "canceled";
+      
       if (MOCK_DETAILS[bookingId]) {
         await new Promise((resolve) => setTimeout(resolve, 300));
         setBooking((prev) => {
           if (!prev) return null;
           return {
             ...prev,
-            status: "rejected",
+            status: targetStatus,
           };
         });
         setToastType("success");
@@ -347,7 +365,7 @@ export function BookingDetailContainer({
       }
 
       const updated = await requestUpdateBookingQuotation(bookingId, {
-        status: "rejected",
+        status: targetStatus,
       });
 
       if (updated && updated.booking) {
@@ -369,6 +387,48 @@ export function BookingDetailContainer({
       console.error("Lỗi khi từ chối yêu cầu:", err);
       setToastType("error");
       setToastMessage(err?.message || "Lỗi khi từ chối yêu cầu.");
+    } finally {
+      setIsSimulating(false);
+    }
+  };
+
+  const handleCancelBooking = async () => {
+    try {
+      setIsSimulating(true);
+
+      if (MOCK_DETAILS[bookingId]) {
+        await new Promise((resolve) => setTimeout(resolve, 300));
+        setBooking((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: "canceled",
+          };
+        });
+        setToastType("success");
+        setToastMessage("Bạn đã hủy yêu cầu thành công.");
+        return;
+      }
+
+      const updated = await requestUpdateBookingQuotation(bookingId, {
+        status: "canceled",
+      });
+
+      if (updated && updated.booking) {
+        setBooking((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: updated.booking.status,
+          };
+        });
+        setToastType("success");
+        setToastMessage("Bạn đã hủy yêu cầu thành công.");
+      }
+    } catch (err: any) {
+      console.error("Lỗi khi hủy yêu cầu:", err);
+      setToastType("error");
+      setToastMessage(err?.message || "Lỗi khi hủy yêu cầu.");
     } finally {
       setIsSimulating(false);
     }
@@ -507,15 +567,46 @@ export function BookingDetailContainer({
 
       {/* Page Header Area */}
       <BookingDetailHeader
-        bookingId={booking.booking_id}
+        bookingId={bookingId}
         status={booking.status}
         createdAt={booking.created_at}
-        backUrl={backUrl}
+        backUrl={isCoordinator ? "/bookings" : "/requests"}
         contractId={contractId}
-        isCustomer={!!isCustomer}
+        isCustomer={isCustomer}
+        verificationStatus={verificationStatus}
+        onCancelBooking={handleCancelBooking}
+        isCreatingVerification={isCreatingVerification}
+        onCreateVerification={async () => {
+          try {
+            setIsCreatingVerification(true);
+            const { requestCreateVerificationSession } = await import("@/features/verification/api/verification.api");
+            const res = await requestCreateVerificationSession(bookingId);
+            setVerificationStatus(res.verification.status);
+            router.push(`${verificationBasePath}/${bookingId}`);
+          } catch (err: any) {
+            console.error("Tạo khảo sát thất bại:", err);
+          } finally {
+            setIsCreatingVerification(false);
+          }
+        }}
+        onViewVerification={() => router.push(`${verificationBasePath}/${bookingId}`)}
       />
 
-      {/* Bento Grid layout matching specs */}
+      {/* State Progress Bar */}
+      {booking && (
+        <BookingProgress
+          bookingStatus={booking.status}
+          verificationStatus={verificationStatus}
+          hasContract={!!contractId}
+          onViewVerification={() => router.push(`${verificationBasePath}/${bookingId}`)}
+          onViewContract={() => {
+            // TODO: Navigate to contract page if needed
+          }}
+          isCustomer={isCustomer}
+        />
+      )}
+
+      {/* Bento Grid layout */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column (Customer details & Service specs) */}
         <div
@@ -573,9 +664,11 @@ export function BookingDetailContainer({
               status={booking.status}
               onQuote={handleQuote}
               onReject={handleReject}
+              onCancelBooking={handleCancelBooking}
               viewMode={isCustomer ? "customer" : "company"}
               onAccept={handleAcceptQuote}
               contractId={contractId}
+              verificationStatus={verificationStatus}
             />
           </div>
         )}

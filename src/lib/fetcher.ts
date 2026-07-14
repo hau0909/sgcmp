@@ -33,7 +33,7 @@ export const fetcher = async (url: string, options?: any) => {
   const data = await res.json();
 
   if (!res.ok) {
-    throw new Error(data.message || "Request failed");
+    throw new Error(data.error || data.message || "Request failed");
   }
 
   return data;

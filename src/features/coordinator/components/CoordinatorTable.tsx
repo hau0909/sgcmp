@@ -5,6 +5,7 @@ import { Search, Filter, Download, Edit2, Ban, Unlock, Trash2, ChevronLeft, Chev
 import { requestGetCoordinators } from '../api/coordinator.api';
 import { CoordinatorWithUser } from '../types';
 import { useAuthStore } from '@/store/auth.store';
+import { useRouter } from 'next/navigation';
 
 // Helpers
 function getInitials(name: string) {
@@ -30,19 +31,23 @@ function getStatusConfig(status: string) {
   switch (status?.toLowerCase()) {
     case 'hoạt động':
     case 'active':
-      return { text: 'Hoạt động', bg: 'bg-[#bbf7d0]', color: 'text-[#166534]' };
-    case 'tạm khóa':
-    case 'locked':
-      return { text: 'Tạm khóa', bg: 'bg-[#fef08a]', color: 'text-[#854d0e]' };
+      return { text: 'Hoạt động', classes: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
     default:
-      return { text: 'Vô hiệu hóa', bg: 'bg-[#fecaca]', color: 'text-[#991b1b]' };
+      return { text: 'Vô hiệu hóa', classes: 'bg-rose-50 text-rose-700 border-rose-200' };
   }
 }
 
-export function CoordinatorTable() {
+interface CoordinatorTableProps {
+  searchStr?: string;
+  statusFilter?: string;
+}
+
+export function CoordinatorTable({ searchStr = "", statusFilter = "" }: CoordinatorTableProps) {
   const [data, setData] = useState<CoordinatorWithUser[]>([]);
   const [loading, setLoading] = useState(true);
   const [total, setTotal] = useState(0);
+
+  const router = useRouter();
 
   // Pagination
   const [page, setPage] = useState(1);
@@ -52,26 +57,37 @@ export function CoordinatorTable() {
   const companyId = useAuthStore((state) => state.company_id);
   const startIdx = total === 0 ? 0 : (page - 1) * limit + 1;
 
+  // Reset page to 1 when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [searchStr, statusFilter]);
+
   useEffect(() => {
     if (!companyId) {
       setLoading(false);
       return;
     }
-    const fetchData = async () => {
+
+    const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await requestGetCoordinators(companyId, page, limit);
-        setData(response.coordinators);
-        setTotal(response.total);
+        const response = await requestGetCoordinators(companyId, page, limit, searchStr);
+        let results = response.coordinators || [];
+        if (statusFilter) {
+          results = results.filter(item => getStatusConfig(item.profiles?.status).text === statusFilter);
+        }
+        setData(results);
+        // Note: Total isn't perfectly accurate when status-filtering client-side from a paginated API, but sufficient.
+        setTotal(statusFilter ? results.length : response.total);
       } catch (error) {
         console.error("Lỗi lấy danh sách ĐPV:", error);
       } finally {
         setLoading(false);
       }
-    };
+    }, 500);
 
-    fetchData();
-  }, [page, companyId, limit]);
+    return () => clearTimeout(timer);
+  }, [page, companyId, limit, searchStr, statusFilter]);
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] overflow-hidden">
@@ -129,7 +145,7 @@ export function CoordinatorTable() {
                     <td className="px-4 py-1.5 whitespace-nowrap text-on-surface-variant">{profile?.phone_number || '---'}</td>
                     <td className="px-4 py-1.5 whitespace-nowrap text-on-surface-variant">{profile?.email}</td>
                     <td className="px-4 py-1.5 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded ${status.bg} ${status.color} font-label-sm text-[10px]`}>
+                      <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider ${status.classes}`}>
                         {status.text}
                       </span>
                     </td>
@@ -139,6 +155,7 @@ export function CoordinatorTable() {
                     <td className="px-4 py-1.5 whitespace-nowrap text-right">
                       <button 
                         className="text-xs font-semibold text-secondary hover:text-primary transition-colors cursor-pointer"
+                        onClick={() => router.push(`/coordinators/${item.coordinator_id}`)}
                       >
                         Xem chi tiết
                       </button>

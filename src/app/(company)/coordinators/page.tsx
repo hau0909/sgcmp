@@ -40,7 +40,7 @@ export default function CoordinatorPage() {
       />
       
       {/* Data Table */}
-      <CoordinatorTable />
+      <CoordinatorTable searchStr={search} statusFilter={status} />
 
       <div className="h-8" />
     </div>

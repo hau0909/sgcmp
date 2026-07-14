@@ -127,6 +127,7 @@ export type GuardProfileItem = {
   avatar_url: string | null;
   email: string | null;
   status: string | null;
+  gender: string | null;
 };
 
 export type GuardListItem = {
@@ -151,6 +152,9 @@ export type GetAllGuardsRepositoryParams = {
   page: number;
   limit: number;
   search?: string;
+  gender?: string;
+  status?: string;
+  workStatus?: string;
 };
 
 export type GetAllGuardsRepositoryResult = {
@@ -163,18 +167,27 @@ export type GetAllGuardsServiceParams = {
   page: number;
   limit: number;
   search?: string;
+  gender?: string;
+  status?: string;
+  workStatus?: string;
 };
 
 export type HandleGetAllGuardsInput = {
   page?: string | null;
   limit?: string | null;
   search?: string | null;
+  gender?: string | null;
+  status?: string | null;
+  workStatus?: string | null;
 };
 
 export interface GetAllGuardsParams {
   page?: number;
   limit?: number;
   search?: string;
+  gender?: string;
+  status?: string;
+  workStatus?: string;
 }
 
 export type HandleGetAllGuardsResult = {
@@ -203,6 +216,7 @@ export type GuardDetailProfile = {
   date_of_birth: string | null;
   address: string | null;
   avatar_url: string | null;
+  status: string | null;
 };
 
 export type GuardDetailDatabase = {
@@ -226,4 +240,22 @@ export type RouteContext = {
   params: Promise<{
     guardId: string;
   }>;
+};
+
+export type UpdateGuardAccountInput = {
+  user_id?: string;
+  full_name?: string;
+  email?: string;
+  phone_number?: string;
+  gender?: string;
+  date_of_birth?: string;
+  address?: string;
+  avatar_url?: string | null;
+
+  identity_id?: string;
+  identity_issue_date?: string;
+  identity_issue_place?: string;
+
+  front_url?: string | null;
+  back_url?: string | null;
 };

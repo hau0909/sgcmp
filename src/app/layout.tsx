@@ -3,6 +3,8 @@ import { Roboto, Roboto_Mono } from "next/font/google";
 import "./globals.css";
 import { CustomerChatWidget } from "@/features/chat/components/CustomerChatWidget";
 import { Suspense } from "react";
+import AuthRedirect from "@/components/auth/authRedirect";
+
 const robotoSans = Roboto({
   variable: "--font-roboto-sans",
   subsets: ["latin"],
@@ -32,6 +34,9 @@ export default function RootLayout({
       className={`${robotoSans.variable} ${robotoMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col">
+        <Suspense fallback={null}>
+          <AuthRedirect />
+        </Suspense>
         <Suspense fallback={<div className="flex h-screen items-center justify-center">Đang tải...</div>}>
           {children}
         </Suspense>

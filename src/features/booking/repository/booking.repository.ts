@@ -142,6 +142,21 @@ export const getBookingById = async (
   return (data as Booking) || null;
 };
 
+export const getActiveBookingsByAddressAndService = async (address: string, serviceId: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("bookings")
+    .select("start_date, end_date, day_per_week, time_slots, status, services(name)")
+    .eq("address", address)
+    .eq("service_id", serviceId)
+    .in("status", ["pending", "quoted", "accepted"]);
+
+  if (error) {
+    throw error;
+  }
+  return data;
+};
+
 export const createBooking = async (
   booking: Omit<Booking, "booking_id" | "created_at" | "updated_at" | "quoted_price" | "status" | "customer_name" | "service_name">
 ): Promise<Booking> => {
@@ -197,12 +212,26 @@ export const updateBookingStatusAndPrice = async (
   const currentStatus = booking.status;
   const targetStatus = updates.status;
 
-  const isValidTransition = 
-    (currentStatus === "pending" && (targetStatus === "quoted" || targetStatus === "rejected")) ||
-    (currentStatus === "quoted" && (targetStatus === "accepted" || targetStatus === "rejected"));
+  const isValidTransition =
+    (currentStatus === "pending" && (targetStatus === "quoted" || targetStatus === "rejected" || targetStatus === "canceled")) ||
+    (currentStatus === "quoted" && (targetStatus === "accepted" || targetStatus === "rejected" || targetStatus === "canceled")) ||
+    (currentStatus === "rejected" && (targetStatus === "quoted" || targetStatus === "canceled"));
 
   if (!isValidTransition) {
     throw new Error(`Chuyển đổi trạng thái từ ${currentStatus} sang ${targetStatus} không hợp lệ.`);
+  }
+
+  // Khảo sát must be approved before Quoted
+  if (targetStatus === "quoted") {
+    const { data: verification } = await supabase
+      .from("request_verifications")
+      .select("status")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
+
+    if (!verification || verification.status !== "approved") {
+      throw new Error("Cần hoàn tất và duyệt khảo sát trước khi thực hiện báo giá.");
+    }
   }
 
   const updatePayload: any = {

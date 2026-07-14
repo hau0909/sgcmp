@@ -6,6 +6,12 @@ export type RegisterInput = {
   confirmPassword: string;
   phoneNumber: string;
   fullName: string;
+  // Optional fields for company registration flow
+  registrationType?: "company" | "individual";
+  companyName?: string;
+  businessLicenseNo?: string;
+  companyEmail?: string;
+  companyPhone?: string;
 };
 
 export type LoginInput = {
@@ -23,6 +29,12 @@ export type RegisterPayload = {
   confirmPassword: string;
   fullName: string;
   phoneNumber: string;
+  // Optional fields for company registration flow
+  registrationType?: "company" | "individual";
+  companyName?: string;
+  businessLicenseNo?: string;
+  companyEmail?: string;
+  companyPhone?: string;
 };
 
 export type LoginPayload = {
@@ -43,6 +55,12 @@ export type RegisterInputService = {
   role: UserRole;
   tempPass?: string;
   tempPasswordExpiresAt?: string;
+  // Optional fields for company registration email template
+  registrationType?: "company" | "individual";
+  companyName?: string;
+  businessLicenseNo?: string;
+  companyEmail?: string;
+  companyPhone?: string;
 };
 
 export type LoginInputService = {
@@ -62,6 +80,12 @@ export type RegisterParams = {
   role?: UserRole;
   tempPass?: string;
   tempPasswordExpiresAt?: string;
+  // Optional fields for company registration email template
+  registration_type?: "company" | "individual";
+  company_name?: string;
+  business_license_no?: string;
+  company_email?: string;
+  company_phone?: string;
 };
 
 export type LoginParams = {

@@ -22,9 +22,10 @@ export const handleGetBookingDetail = async (id: string): Promise<any | null> =>
 };
 
 export const handleCreateBooking = async (
-  bookingData: Omit<Booking, "booking_id" | "created_at" | "updated_at" | "quoted_price" | "status" | "customer_name" | "service_name">
+  bookingData: Omit<Booking, "booking_id" | "created_at" | "updated_at" | "quoted_price" | "status" | "customer_name" | "service_name">,
+  forceCreate: boolean = false
 ): Promise<Booking> => {
-  return await createBookingService(bookingData);
+  return await createBookingService(bookingData, forceCreate);
 };
 
 export const handleUpdateBookingStatusAndPrice = async (

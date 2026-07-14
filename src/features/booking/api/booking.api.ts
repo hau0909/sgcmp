@@ -32,14 +32,15 @@ export async function requestGetBookingDetail(id: string) {
 }
 
 export async function requestCreateBooking(
-  bookingData: Omit<Booking, "booking_id" | "customer_id" | "created_at" | "updated_at" | "quoted_price" | "status" | "customer_name" | "service_name">
+  bookingData: Omit<Booking, "booking_id" | "customer_id" | "created_at" | "updated_at" | "quoted_price" | "status" | "customer_name" | "service_name">,
+  forceCreate?: boolean
 ): Promise<Booking> {
   return await fetcher("/api/bookings", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(bookingData),
+    body: JSON.stringify({ ...bookingData, forceCreate }),
   });
 }
 

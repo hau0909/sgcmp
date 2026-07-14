@@ -1,4 +1,5 @@
 import { Payment } from "@/types/Payment";
+import { BankAccount } from "@/types/BankAccount";
 import { PaymentMethod, PaymentStatus } from "@/types/Enum";
 import {
   getPaymentHistoryByCompany,
@@ -6,7 +7,18 @@ import {
   getPaymentById,
   updatePaymentStatus,
   getPaymentByTransactionCode,
+  getAllBankAccounts,
+  getBankAccountById,
+  getActiveBankAccount,
+  insertBankAccount,
+  updateBankAccount,
+  activateBankAccount,
+  deactivateAllBankAccounts,
+  deactivateBankAccount,
+  countBankAccounts,
+  deleteBankAccount,
 } from "../repository/payment.repository";
+import { UpsertBankAccountPayload } from "../types";
 import {
   createSubscription,
   activateSubscription,
@@ -170,3 +182,77 @@ export const handleSePayWebhookService = async (payload: any): Promise<boolean> 
   return false;
 };
 
+// ─── Bank Account ────────────────────────────────────────────────────────────
+
+export const getAllBankAccountsService = async (): Promise<BankAccount[]> => {
+  return await getAllBankAccounts();
+};
+
+export const getActiveBankAccountService =
+  async (): Promise<BankAccount | null> => {
+    return await getActiveBankAccount();
+  };
+
+export const createBankAccountService = async (
+  payload: UpsertBankAccountPayload,
+): Promise<BankAccount> => {
+  if (!payload.bank_code) throw new Error("Bank code is required");
+  if (!payload.bank_name) throw new Error("Bank name is required");
+  if (!payload.account_number) throw new Error("Account number is required");
+  if (!payload.account_name) throw new Error("Account name is required");
+
+  return await insertBankAccount(payload);
+};
+
+export const updateBankAccountService = async (
+  id: string,
+  payload: UpsertBankAccountPayload,
+): Promise<BankAccount> => {
+  if (!id) throw new Error("Bank account ID is required");
+  if (!payload.bank_code) throw new Error("Bank code is required");
+  if (!payload.bank_name) throw new Error("Bank name is required");
+  if (!payload.account_number) throw new Error("Account number is required");
+  if (!payload.account_name) throw new Error("Account name is required");
+
+  const existing = await getBankAccountById(id);
+  if (!existing) throw new Error(`Bank account with ID ${id} not found`);
+
+  return await updateBankAccount(id, payload);
+};
+
+export const switchActiveBankAccountService = async (
+  id: string,
+): Promise<BankAccount> => {
+  if (!id) throw new Error("Bank account ID is required");
+
+  const existing = await getBankAccountById(id);
+  if (!existing) throw new Error(`Bank account with ID ${id} not found`);
+
+  // Deactivate all, then activate the target
+  await deactivateAllBankAccounts();
+  return await activateBankAccount(id);
+};
+
+export const deactivateBankAccountService = async (id: string): Promise<void> => {
+  if (!id) throw new Error("Bank account ID is required");
+
+  const existing = await getBankAccountById(id);
+  if (!existing) throw new Error(`Bank account with ID ${id} not found`);
+
+  await deactivateBankAccount(id);
+};
+
+export const deleteBankAccountService = async (id: string): Promise<void> => {
+  if (!id) throw new Error("Bank account ID is required");
+
+  const existing = await getBankAccountById(id);
+  if (!existing) throw new Error(`Bank account with ID ${id} not found`);
+
+  // Business rule: must keep at least 1 account
+  const total = await countBankAccounts();
+  if (total <= 1) {
+    throw new Error("Không thể xóa tài khoản cuối cùng. Hệ thống phải có ít nhất 1 tài khoản ngân hàng.");
+  }
+
+  await deleteBankAccount(id);
+};

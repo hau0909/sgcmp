@@ -1,6 +1,8 @@
 import {
   getCoordinatorsService,
   addCoordinatorToCompanyService,
+  getCoordinatorDetailService,
+  updateCoordinatorService,
 } from "../service/coordinator.service";
 import { checkCompanySubscriptionService, getPlanByIdService } from "@/features/subscription/service/subscription.service";
 import { registerAccountService } from "@/features/auth/service/auth.service";
@@ -18,18 +20,19 @@ import {
   validateIdentityIssueDate,
   validateIdentityIssuePlace,
 } from "../validator/coordinator.validator";
-import { CoordinatorWithUser, CreateCoordinatorPayload } from "../types";
+import { CoordinatorWithUser, CreateCoordinatorPayload, UpdateCoordinatorPayload } from "../types";
 
 export const handleGetCoordinators = async (
   companyId: string,
   page = 1,
   limit = 10,
+  search?: string
 ): Promise<{ data: CoordinatorWithUser[]; total: number }> => {
   const subCheck = await checkCompanySubscriptionService(companyId);
   if (!subCheck.isActive) {
     throw new Error("Tài khoản doanh nghiệp chưa đăng ký gói dịch vụ hoặc gói đã hết hạn.");
   }
-  return await getCoordinatorsService(companyId, page, limit);
+  return await getCoordinatorsService(companyId, page, limit, search);
 };
 
 export const handleCreateCoordinator = async (
@@ -178,6 +181,82 @@ export const handleCreateCoordinator = async (
     return {
       success: false,
       message: error?.message || error?.details || "Đã có lỗi xảy ra",
+    };
+  }
+};
+
+export const handleGetCoordinatorDetail = async (coordinatorId: string) => {
+  return await getCoordinatorDetailService(coordinatorId);
+};
+
+export const handleUpdateCoordinator = async (
+  coordinatorId: string,
+  payload: UpdateCoordinatorPayload
+): Promise<{ success: boolean; message: string; field?: string }> => {
+  // ── Validate cơ bản ────────────────────────────────────────────────────────
+  const fullNameError = validateFullName(payload.fullName);
+  if (fullNameError) return { success: false, message: fullNameError, field: "fullName" };
+
+  const phoneError = validatePhoneNumber(payload.phoneNumber);
+  if (phoneError) return { success: false, message: phoneError, field: "phoneNumber" };
+
+  // ── Validate định danh ──────────────────────────────────────────────────────
+  const idNumberError = validateIdentityNumber(payload.identityId);
+  if (idNumberError) return { success: false, message: idNumberError, field: "identityId" };
+
+  const issueDateError = validateIdentityIssueDate(
+    payload.issueDate,
+    payload.dateOfBirth ?? ""
+  );
+  if (issueDateError) return { success: false, message: issueDateError, field: "issueDate" };
+
+  const issuePlaceError = validateIdentityIssuePlace(payload.issuePlace);
+  if (issuePlaceError) return { success: false, message: issuePlaceError, field: "issuePlace" };
+
+  // ── Validate tuổi ───────────────────────────────────────────────────────────
+  if (payload.dateOfBirth) {
+    const ageError = validateCoordinatorAge(payload.dateOfBirth);
+    if (ageError) return { success: false, message: ageError, field: "dateOfBirth" };
+  }
+
+  try {
+    // Retrieve the coordinator to get the associated user_id
+    const coordinator = await getCoordinatorDetailService(coordinatorId);
+    if (!coordinator) {
+      return { success: false, message: "Coordinator không tồn tại" };
+    }
+    const userId = coordinator.user_id;
+
+    // Duplicate check for phone and identity by confirming deviation from current profiles
+    if (payload.phoneNumber !== coordinator.profiles?.phone_number) {
+      const phoneExists = await checkPhoneNumberExists(payload.phoneNumber);
+      if (phoneExists) {
+        return { success: false, message: "Số điện thoại đã tồn tại trong hệ thống", field: "phoneNumber" };
+      }
+    }
+
+    if (payload.identityId !== coordinator.identity?.identity_id) {
+      const identityExists = await validateIdentityExists(payload.identityId);
+      if (identityExists) {
+        return { success: false, message: "Số CCCD/CMND đã tồn tại trong hệ thống", field: "identityId" };
+      }
+    }
+    
+    // Call service to update
+    await updateCoordinatorService(userId, payload);
+
+    return {
+      success: true,
+      message: "Cập nhật thông tin Điều phối viên thành công",
+    };
+  } catch (error: any) {
+    console.error(
+      "[Coordinator Controller] Error updating coordinator:",
+      error,
+    );
+    return {
+      success: false,
+      message: error?.message || "Đã có lỗi xảy ra khi cập nhật",
     };
   }
 };

@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { handleGetGuardDetail } from "@/features/guards/controller/guard.controller";
+import {
+  handleGetGuardDetail,
+  handleUpdateGuardDetail,
+} from "@/features/guards/controller/guard.controller";
 import { RouteContext } from "@/features/guards/type";
 
 export const GET = async (_request: Request, context: RouteContext) => {
@@ -18,6 +21,30 @@ export const GET = async (_request: Request, context: RouteContext) => {
         message:
           error instanceof Error ? error.message : "Đã xảy ra lỗi hệ thống",
         data: null,
+      },
+      {
+        status: 500,
+      },
+    );
+  }
+};
+
+export const PATCH = async (request: Request, context: RouteContext) => {
+  try {
+    const { guardId } = await context.params;
+    const body = await request.json();
+
+    const result = await handleUpdateGuardDetail(guardId, body);
+
+    return NextResponse.json(result, {
+      status: result.success ? 200 : 400,
+    });
+  } catch (error: unknown) {
+    return NextResponse.json(
+      {
+        success: false,
+        message:
+          error instanceof Error ? error.message : "Đã xảy ra lỗi hệ thống",
       },
       {
         status: 500,

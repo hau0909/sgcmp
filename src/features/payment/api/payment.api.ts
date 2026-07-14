@@ -1,6 +1,8 @@
 import { fetcher } from "@/lib/fetcher";
 import { Payment } from "@/types/Payment";
+import { BankAccount } from "@/types/BankAccount";
 import { PaymentMethod, PaymentStatus } from "@/types/Enum";
+import { UpsertBankAccountPayload } from "../types";
 
 export async function requestGetPaymentHistory(
   companyId: string,
@@ -52,5 +54,66 @@ export async function requestGetPaymentById(
 ): Promise<{ success: boolean; data: Payment }> {
   return await fetcher(`/api/payments/${paymentId}`, {
     method: "GET",
+  });
+}
+
+// ─── Bank Account ────────────────────────────────────────────────────────────
+
+export async function requestGetAllBankAccounts(): Promise<{
+  success: boolean;
+  data: BankAccount[];
+}> {
+  return await fetcher("/api/bank-accounts", { method: "GET" });
+}
+
+export async function requestGetActiveBankAccount(): Promise<{
+  success: boolean;
+  data: BankAccount | null;
+}> {
+  return await fetcher("/api/bank-accounts/active", { method: "GET" });
+}
+
+export async function requestCreateBankAccount(
+  payload: UpsertBankAccountPayload,
+): Promise<{ success: boolean; data: BankAccount }> {
+  return await fetcher("/api/bank-accounts", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function requestUpdateBankAccount(
+  id: string,
+  payload: UpsertBankAccountPayload,
+): Promise<{ success: boolean; data: BankAccount }> {
+  return await fetcher(`/api/bank-accounts/${id}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+}
+
+export async function requestSwitchActiveBankAccount(
+  id: string,
+): Promise<{ success: boolean; data: BankAccount }> {
+  return await fetcher(`/api/bank-accounts/${id}/activate`, {
+    method: "PUT",
+  });
+}
+
+export async function requestDeactivateBankAccount(
+  id: string,
+): Promise<{ success: boolean; data: BankAccount }> {
+  return await fetcher(`/api/bank-accounts/${id}/deactivate`, {
+    method: "PUT",
+  });
+}
+
+export async function requestDeleteBankAccount(
+  id: string,
+): Promise<{ success: boolean }> {
+  return await fetcher(`/api/bank-accounts/${id}`, {
+    method: "DELETE",
   });
 }

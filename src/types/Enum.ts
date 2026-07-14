@@ -23,7 +23,7 @@ export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
 
 export type ContractStatus = "pending_signatures" | "active" | "completed" | "cancelled";
 
-export type BookingStatus = "pending" | "quoted" | "accepted" | "rejected";
+export type BookingStatus = "pending" | "quoted" | "accepted" | "rejected" | "canceled";
 
 export type ImageType = 'logo' | 'banner' | 'other';
 
@@ -35,3 +35,9 @@ export enum ShiftImgType {
   incident = "incident",
   other = "other",
 }
+
+export type VerificationStatus = "pending" | "approved" | "rejected";
+
+export type ReportType = "LATE" | "ABSENT" | "BAD_ATTITUDE" | "SLEEPING" | "OTHER";
+
+export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
