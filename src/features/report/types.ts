@@ -30,6 +30,8 @@ export interface Report {
   contract_code?: string;
   service_name?: string;
   report_code?: string;
+  customer_name?: string;
+  customer_phone?: string;
 }
 
 export interface CreateReportPayload {
