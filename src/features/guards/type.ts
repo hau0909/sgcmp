@@ -155,6 +155,7 @@ export type GetAllGuardsRepositoryParams = {
   gender?: string;
   status?: string;
   workStatus?: string;
+  timeZone?: string;
 };
 
 export type GetAllGuardsRepositoryResult = {
@@ -170,6 +171,7 @@ export type GetAllGuardsServiceParams = {
   gender?: string;
   status?: string;
   workStatus?: string;
+  timeZone?: string;
 };
 
 export type HandleGetAllGuardsInput = {
@@ -179,6 +181,7 @@ export type HandleGetAllGuardsInput = {
   gender?: string | null;
   status?: string | null;
   workStatus?: string | null;
+  timeZone?: string | null;
 };
 
 export interface GetAllGuardsParams {
@@ -188,6 +191,7 @@ export interface GetAllGuardsParams {
   gender?: string;
   status?: string;
   workStatus?: string;
+  timeZone?: string;
 }
 
 export type HandleGetAllGuardsResult = {

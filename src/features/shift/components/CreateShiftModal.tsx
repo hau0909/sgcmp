@@ -21,6 +21,7 @@ import {
 
 import type { GuardListItem } from "@/features/guards/type";
 import { requestGetGuardsByContract } from "@/features/guards/api/guard.api";
+import { formatDate, localTimeToUtc } from "@/utils/dateTime";
 import {
   requestCreateWorkShift,
   requestGetShiftContracts,
@@ -73,7 +74,7 @@ type CreateShiftModalProps = {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const formatDateVN = (date: string) =>
-  new Intl.DateTimeFormat("vi-VN").format(new Date(date));
+  formatDate(new Date(date));
 
 const getGuardProfile = (profiles: GuardListItem["profiles"]) => {
   if (!profiles) return null;
@@ -108,9 +109,9 @@ const nextDate = (date: string): string => {
   return formatLocalDate(d);
 };
 
-/** ISO string with +07:00 offset */
+/** ISO string in user's local timezone */
 const toISO = (date: string, time: string): string =>
-  `${date}T${time}:00+07:00`;
+  localTimeToUtc(date, `${time}:00`);
 
 /**
  * Generate all dates in [contractStart, contractEnd] ∩ [contractStart, contractStart+period]
@@ -317,7 +318,10 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
   const [isLoadingScheduledDates, setIsLoadingScheduledDates] = useState(false);
 
   // ── Free-time availability filters ─────────────────────────────────────────
-  const [freeTimeMode, setFreeTimeMode] = useState<"shift" | "day" | "week" | "month" | "custom">("shift");
+  const [freeTimeMode, setFreeTimeMode] = useState<"today" | "day" | "week" | "month" | "custom">("today");
+  const [filterDate, setFilterDate] = useState("");
+  const [filterWeekDate, setFilterWeekDate] = useState("");
+  const [filterMonth, setFilterMonth] = useState("");
   const [customStartDate, setCustomStartDate] = useState("");
   const [customStartTime, setCustomStartTime] = useState("00:00");
   const [customEndDate, setCustomEndDate] = useState("");
@@ -693,6 +697,22 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     }
   }, [generatedDates]);
 
+  const refDate = useMemo(() => {
+    return (
+      generatedDates[0] ??
+      selectedContract?.start_date ??
+      formatLocalDate(new Date())
+    );
+  }, [generatedDates, selectedContract]);
+
+  useEffect(() => {
+    if (refDate) {
+      setFilterDate(refDate);
+      setFilterWeekDate(refDate);
+      setFilterMonth(refDate.substring(0, 7));
+    }
+  }, [refDate]);
+
   // ── Conflict check: re-run when active slot time or guard list changes ─────
   useEffect(() => {
     if (guards.length === 0) return;
@@ -708,34 +728,35 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
       let startISO = "";
       let endISO = "";
-      const refDate = generatedDates[0] ?? formatLocalDate(new Date());
 
-      if (freeTimeMode === "shift") {
-        if (!activeSlot?.bookingStart || !activeSlot?.bookingEnd) return;
-        startISO = toISO(refDate, activeSlot.bookingStart);
-        endISO =
-          activeSlot.bookingEnd <= activeSlot.bookingStart
-            ? toISO(nextDate(refDate), activeSlot.bookingEnd)
-            : toISO(refDate, activeSlot.bookingEnd);
+      if (freeTimeMode === "today") {
+        const todayStr = formatLocalDate(new Date());
+        startISO = toISO(todayStr, "00:00");
+        endISO = toISO(todayStr, "23:59");
       } else if (freeTimeMode === "day") {
-        startISO = toISO(refDate, "00:00");
-        endISO = toISO(refDate, "23:59");
+        const targetDate = filterDate || refDate;
+        startISO = toISO(targetDate, "00:00");
+        endISO = toISO(targetDate, "23:59");
       } else if (freeTimeMode === "week") {
-        startISO = toISO(refDate, "00:00");
+        const targetWeekDate = filterWeekDate || refDate;
+        startISO = toISO(targetWeekDate, "00:00");
         try {
-          const wEnd = new Date(`${refDate}T00:00:00`);
+          const [yr, mo, dy] = targetWeekDate.split("-").map(Number);
+          const wEnd = new Date(yr, mo - 1, dy);
           wEnd.setDate(wEnd.getDate() + 7);
           endISO = toISO(formatLocalDate(wEnd), "23:59");
         } catch {
-          endISO = toISO(refDate, "23:59");
+          endISO = toISO(targetWeekDate, "23:59");
         }
       } else if (freeTimeMode === "month") {
-        startISO = toISO(refDate, "00:00");
+        const targetMonth = filterMonth || refDate.substring(0, 7);
         try {
-          const mEnd = new Date(`${refDate}T00:00:00`);
-          mEnd.setMonth(mEnd.getMonth() + 1);
+          const [yr, mo] = targetMonth.split("-").map(Number);
+          startISO = toISO(`${targetMonth}-01`, "00:00");
+          const mEnd = new Date(yr, mo, 0);
           endISO = toISO(formatLocalDate(mEnd), "23:59");
         } catch {
+          startISO = toISO(refDate, "00:00");
           endISO = toISO(refDate, "23:59");
         }
       } else if (freeTimeMode === "custom") {
@@ -768,6 +789,9 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
     freeTimeMode,
+    filterDate,
+    filterWeekDate,
+    filterMonth,
     customStartDate,
     customStartTime,
     customEndDate,
@@ -775,7 +799,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     activeSlot?.bookingStart,
     activeSlot?.bookingEnd,
     guards,
-    generatedDates,
+    refDate,
   ]);
 
   // ── Form reset ─────────────────────────────────────────────────────────────
@@ -803,6 +827,12 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     setGenerationWarnings([]);
     setGenerationProgress(null);
     setFilterMode("all");
+    setFreeTimeMode("today");
+    setFilterDate("");
+    setFilterWeekDate("");
+    setFilterMonth("");
+    setCustomStartDate("");
+    setCustomEndDate("");
   };
 
   const handleCloseModal = () => {
@@ -1824,12 +1854,12 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                   Lọc bảo vệ rảnh (Không trùng ca):
                 </label>
                 <div className="grid grid-cols-5 gap-1 rounded bg-slate-200/50 p-0.5">
-                  {(["shift", "day", "week", "month", "custom"] as const).map((mode) => {
+                  {(["today", "day", "week", "month", "custom"] as const).map((mode) => {
                     const labels = {
-                      shift: "Theo ca",
-                      day: "Cả ngày",
-                      week: "1 Tuần",
-                      month: "1 Tháng",
+                      today: "Hôm nay",
+                      day: "Ngày",
+                      week: "Tuần",
+                      month: "Tháng",
                       custom: "Tự chọn",
                     };
                     const isSelected = freeTimeMode === mode;
@@ -1851,6 +1881,54 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                     );
                   })}
                 </div>
+
+                {/* Specific Day Field */}
+                {freeTimeMode === "day" && (
+                  <div className="mt-3 border-t border-slate-200/60 pt-3">
+                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">Chọn ngày cụ thể</label>
+                    <input
+                      type="date"
+                      value={filterDate}
+                      onChange={(e) => {
+                        setFilterDate(e.target.value);
+                        setGuardPage(1);
+                      }}
+                      className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
+
+                {/* Specific Week Field */}
+                {freeTimeMode === "week" && (
+                  <div className="mt-3 border-t border-slate-200/60 pt-3">
+                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">Chọn ngày bắt đầu tuần</label>
+                    <input
+                      type="date"
+                      value={filterWeekDate}
+                      onChange={(e) => {
+                        setFilterWeekDate(e.target.value);
+                        setGuardPage(1);
+                      }}
+                      className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
+
+                {/* Specific Month Field */}
+                {freeTimeMode === "month" && (
+                  <div className="mt-3 border-t border-slate-200/60 pt-3">
+                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">Chọn tháng cụ thể</label>
+                    <input
+                      type="month"
+                      value={filterMonth}
+                      onChange={(e) => {
+                        setFilterMonth(e.target.value);
+                        setGuardPage(1);
+                      }}
+                      className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
+                    />
+                  </div>
+                )}
 
                 {/* Custom Date/Time Range Fields */}
                 {freeTimeMode === "custom" && (

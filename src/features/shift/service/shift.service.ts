@@ -32,6 +32,8 @@ import {
   getShiftImageByAssignmentId,
   getLatestShiftByContract,
   getScheduledShiftDatesByContract,
+  uploadShiftCheckinImage,
+  updateReplacementGuards,
 } from "../repository/shift.repository";
 
 export const getShiftContractOptionsService = async (
@@ -184,4 +186,18 @@ export const getScheduledShiftDatesService = async (
   contractId: string,
 ): Promise<string[]> => {
   return await getScheduledShiftDatesByContract(contractId);
+};
+
+export const uploadShiftCheckinImageService = async (
+  assignmentId: string,
+  file: File,
+) => {
+  return await uploadShiftCheckinImage(assignmentId, file);
+};
+
+export const updateReplacementGuardsService = async (
+  assignmentId: string,
+  replacementGuardIds: string[],
+): Promise<Shift_Assignment> => {
+  return await updateReplacementGuards(assignmentId, replacementGuardIds);
 };

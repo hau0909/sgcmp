@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { ShiftDetailModal } from "./ShiftDetailModal";
 import {
   Clock,
   MapPin,
@@ -16,6 +17,7 @@ import type {
   ShiftWithAssignments,
 } from "../type";
 import { getShiftStyle } from "../utils/shift.utils";
+import { formatTime as formatTimeHelper } from "@/utils/dateTime";
 
 type ShiftCardProps = {
   shift: ShiftWithAssignments;
@@ -29,6 +31,7 @@ type TooltipPosition = {
 type ShiftTooltipProps = {
   shift: ShiftWithAssignments;
   statusLabel: string;
+  hasReplacement: boolean;
   position: TooltipPosition;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -164,9 +167,72 @@ function GuardRow({
   );
 }
 
-const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
 const TOOLTIP_WIDTH = 340;
 const TOOLTIP_GAP = 12;
+
+function ReplacementGuardRow({
+  repGuard,
+  assignment,
+  shift,
+}: {
+  repGuard: {
+    guard_id: string;
+    full_name: string;
+    phone_number: string | null;
+  };
+  assignment: ShiftAssignment;
+  shift: ShiftWithAssignments;
+}) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const [showSubTooltip, setShowSubTooltip] = useState(false);
+  const [subTooltipPosition, setSubTooltipPosition] = useState<TooltipPosition | null>(null);
+
+  const handleMouseEnter = () => {
+    if (!rowRef.current) return;
+    const rect = rowRef.current.getBoundingClientRect();
+
+    let left = rect.right + 12;
+    let top = rect.top;
+    if (left + 300 > window.innerWidth - 12) {
+      left = rect.left - 300 - 12;
+    }
+    setSubTooltipPosition({ top, left });
+    setShowSubTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowSubTooltip(false);
+  };
+
+  return (
+    <>
+      <div
+        ref={rowRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="ml-4 flex items-center justify-between gap-3 rounded bg-purple-50/50 px-2 py-1.5 border border-purple-100/50 hover:bg-purple-100/80 cursor-pointer transition-colors"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <UserRound size={13} className="shrink-0 text-purple-600" />
+          <p className="truncate text-xs font-semibold text-purple-900">
+            {repGuard.full_name}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[9px] font-bold text-purple-700">
+          Thay thế
+        </span>
+      </div>
+
+      {showSubTooltip && subTooltipPosition && (
+        <GuardSubTooltip
+          assignment={assignment}
+          shift={shift}
+          position={subTooltipPosition}
+        />
+      )}
+    </>
+  );
+}
 
 const getStatusLabel = (status: ShiftAssignmentStatus) => {
   if (status === "assigned") {
@@ -174,7 +240,11 @@ const getStatusLabel = (status: ShiftAssignmentStatus) => {
   }
 
   if (status === "completed") {
-    return "Hoàn thành";
+    return "Đang trực";
+  }
+
+  if (status === "late") {
+    return "Đi trễ";
   }
 
   return "Vắng mặt";
@@ -189,16 +259,15 @@ const getStatusStyle = (status: ShiftAssignmentStatus) => {
     return "bg-emerald-100 text-emerald-700 border-emerald-300";
   }
 
+  if (status === "late") {
+    return "bg-amber-100 text-amber-700 border-amber-300";
+  }
+
   return "bg-red-100 text-red-700 border-red-300";
 };
 
 const formatTime = (date: string) => {
-  return new Intl.DateTimeFormat("vi-VN", {
-    timeZone: VIETNAM_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(date));
+  return formatTimeHelper(date);
 };
 
 const getContractAddress = (shift: ShiftWithAssignments) => {
@@ -233,7 +302,8 @@ const getTooltipPosition = (element: HTMLDivElement): TooltipPosition => {
   };
 };
 
-function ShiftTooltip({ shift, statusLabel, position, onMouseEnter, onMouseLeave }: ShiftTooltipProps) {
+function ShiftTooltip({ shift, statusLabel, hasReplacement, position, onMouseEnter, onMouseLeave }: ShiftTooltipProps) {
+  const firstAssignment = shift.assignments[0];
   return createPortal(
     <div
       onMouseEnter={onMouseEnter}
@@ -249,9 +319,20 @@ function ShiftTooltip({ shift, statusLabel, position, onMouseEnter, onMouseLeave
           <p className="text-xs font-semibold uppercase text-slate-400">
             Trạng thái
           </p>
-          <p className="mt-1 text-sm font-semibold text-slate-800">
-            {statusLabel}
-          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[11px] font-medium ${getStatusStyle(
+                firstAssignment.status,
+              )}`}
+            >
+              {statusLabel}
+            </span>
+            {hasReplacement && (
+              <span className="rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
+                Thay thế
+              </span>
+            )}
+          </div>
         </div>
 
         <div>
@@ -273,11 +354,20 @@ function ShiftTooltip({ shift, statusLabel, position, onMouseEnter, onMouseLeave
 
           <div className="mt-2 space-y-1.5">
             {shift.assignments.map((assignment) => (
-              <GuardRow
-                key={assignment.assignment_id}
-                assignment={assignment}
-                shift={shift}
-              />
+              <div key={assignment.assignment_id} className="space-y-1">
+                <GuardRow
+                  assignment={assignment}
+                  shift={shift}
+                />
+                {assignment.replacement_guards && assignment.replacement_guards.map((rep) => (
+                  <ReplacementGuardRow
+                    key={rep.guard_id}
+                    repGuard={rep}
+                    assignment={assignment}
+                    shift={shift}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </div>
@@ -322,6 +412,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
   const [tooltipPosition, setTooltipPosition] =
     useState<TooltipPosition | null>(null);
   const [showTooltip, setShowTooltip] = useState(false);
+  const [isDetailOpen, setIsDetailOpen] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const isEmpty = shift.assignments.length < shift.required_guards;
@@ -339,6 +430,11 @@ export function ShiftCard({ shift }: ShiftCardProps) {
 
   const firstAssignment = shift.assignments[0];
   const extraGuardCount = shift.assignments.length - 1;
+  const hasReplacement = shift.assignments.some(
+    (assign) =>
+      (assign.replacement_guard_ids && assign.replacement_guard_ids.length > 0) ||
+      (assign.replacement_guards && assign.replacement_guards.length > 0)
+  );
   const statusLabel = getStatusLabel(firstAssignment.status);
 
   const handleMouseEnter = () => {
@@ -378,20 +474,38 @@ export function ShiftCard({ shift }: ShiftCardProps) {
         ref={cardRef}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        onClick={() => {
+          setShowTooltip(false);
+          setIsDetailOpen(true);
+        }}
         className={`relative hover:bg-blue-200 transition-all duration-300 cursor-pointer flex h-full w-full flex-col justify-between rounded-md border p-3 shadow-sm ${getShiftStyle(
           shift.shift_name,
         )}`}
       >
         <div className="mb-2 flex items-start justify-between gap-2">
-          <span
-            className={`w-fit rounded-full border px-2 py-0.5 text-[11px] font-medium ${getStatusStyle(
-              firstAssignment.status,
-            )}`}
-          >
-            {statusLabel}
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span
+              className={`w-fit rounded-full border px-2 py-0.5 text-[11px] font-medium ${getStatusStyle(
+                firstAssignment.status,
+              )}`}
+            >
+              {statusLabel}
+            </span>
+            {hasReplacement && (
+              <span className="w-fit rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
+                Thay thế
+              </span>
+            )}
+          </div>
 
-          <button type="button" className="text-slate-500 hover:text-slate-800">
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setIsDetailOpen(true);
+            }}
+            className="text-slate-500 hover:text-slate-800"
+          >
             <MoreVertical size={15} />
           </button>
         </div>
@@ -424,15 +538,22 @@ export function ShiftCard({ shift }: ShiftCardProps) {
         </div>
       </div>
 
-      {showTooltip && tooltipPosition ? (
+      {showTooltip && tooltipPosition && !isDetailOpen ? (
         <ShiftTooltip
           shift={shift}
           statusLabel={statusLabel}
+          hasReplacement={hasReplacement}
           position={tooltipPosition}
           onMouseEnter={handleTooltipMouseEnter}
           onMouseLeave={handleTooltipMouseLeave}
         />
       ) : null}
+
+      <ShiftDetailModal
+        open={isDetailOpen}
+        onClose={() => setIsDetailOpen(false)}
+        shift={shift}
+      />
     </>
   );
 }

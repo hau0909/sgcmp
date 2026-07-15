@@ -14,7 +14,10 @@ import {
   Camera,
 } from "lucide-react";
 import { requestGetGuardShiftDetail } from "@/features/shift/api/shift.api";
+import { useAuthStore } from "@/store/auth.store";
 import type { GuardShiftDetailItem } from "@/features/shift/type";
+
+import { formatDate } from "@/utils/dateTime";
 
 const parseDateKey = (dateKey: string | null) => {
   if (!dateKey) {
@@ -39,7 +42,7 @@ const formatGuardShiftDateKey = (date: Date) => {
 };
 
 const formatDateTitle = (date: Date) => {
-  return date.toLocaleDateString("vi-VN", {
+  return formatDate(date, {
     weekday: "long",
     day: "2-digit",
     month: "2-digit",
@@ -47,58 +50,113 @@ const formatDateTitle = (date: Date) => {
   });
 };
 
-const getStatusLabel = (status: GuardShiftDetailItem["status"]) => {
-  if (status === "assigned") {
-    return "PHÂN CÔNG";
-  }
-
+const getStatusLabel = (
+  status: GuardShiftDetailItem["status"],
+  checkInTime: string | null | undefined,
+  startTime: string
+) => {
   if (status === "completed") {
-    return "HOÀN THÀNH";
+    return "ĐANG TRỰC";
   }
 
-  return "VẮNG MẶT";
+  if (status === "late") {
+    return checkInTime ? "ĐIỂM DANH TRỄ" : "ĐÃ TRỄ";
+  }
+
+  if (status === "absent") {
+    return "VẮNG MẶT";
+  }
+
+  // status === "assigned"
+  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+  if (isStarted) {
+    return "CHƯA ĐIỂM DANH";
+  }
+  return "PHÂN CÔNG";
 };
 
-const getGuardStatusLabel = (status: GuardShiftDetailItem["status"]) => {
-  if (status === "assigned") {
+const getGuardStatusLabel = (
+  status: GuardShiftDetailItem["status"],
+  checkInTime: string | null | undefined,
+  startTime: string
+) => {
+  if (status === "completed") {
     return "Đang trực";
   }
 
-  if (status === "completed") {
-    return "Hoàn thành";
+  if (status === "late") {
+    return checkInTime ? "Điểm danh trễ" : "Đã trễ";
   }
 
-  return "Vắng mặt";
+  if (status === "absent") {
+    return "Vắng mặt";
+  }
+
+  // status === "assigned"
+  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+  if (isStarted) {
+    return "Chưa điểm danh";
+  }
+  return "Phân công";
 };
 
-const getStatusStyle = (status: GuardShiftDetailItem["status"]) => {
-  if (status === "assigned") {
-    return "bg-[#0754a6] text-white";
-  }
-
+const getStatusStyle = (
+  status: GuardShiftDetailItem["status"],
+  checkInTime: string | null | undefined,
+  startTime: string
+) => {
   if (status === "completed") {
-    return "bg-green-600 text-white";
+    return "bg-emerald-600 text-white";
   }
 
-  return "bg-red-600 text-white";
+  if (status === "late") {
+    return checkInTime ? "bg-orange-600 text-white" : "bg-amber-600 text-white";
+  }
+
+  if (status === "absent") {
+    return "bg-red-600 text-white";
+  }
+
+  // status === "assigned"
+  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+  if (isStarted) {
+    return "bg-yellow-600 text-white";
+  }
+  return "bg-[#0754a6] text-white";
 };
 
-const getGuardStatusStyle = (status: GuardShiftDetailItem["status"]) => {
-  if (status === "assigned") {
-    return "bg-emerald-50 text-emerald-700";
-  }
-
+const getGuardStatusStyle = (
+  status: GuardShiftDetailItem["status"],
+  checkInTime: string | null | undefined,
+  startTime: string
+) => {
   if (status === "completed") {
-    return "bg-green-50 text-green-700";
+    return "bg-emerald-50 text-emerald-700 border border-emerald-200";
   }
 
-  return "bg-red-50 text-red-700";
+  if (status === "late") {
+    return checkInTime
+      ? "bg-orange-50 text-orange-700 border border-orange-200"
+      : "bg-amber-50 text-amber-700 border-amber-200";
+  }
+
+  if (status === "absent") {
+    return "bg-red-50 text-red-700 border border-red-200";
+  }
+
+  // status === "assigned"
+  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+  if (isStarted) {
+    return "bg-yellow-50 text-yellow-700 border border-yellow-200";
+  }
+  return "bg-blue-50 text-blue-700 border border-blue-200";
 };
 
 export default function GuardShiftDetailPage() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const userId = useAuthStore((state) => state.user_id);
 
   const shiftId = Array.isArray(params.shiftId)
     ? params.shiftId[0]
@@ -115,6 +173,13 @@ export default function GuardShiftDetailPage() {
   const [shift, setShift] = useState<GuardShiftDetailItem | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+
+  const currentGuardInfo = useMemo(() => {
+    if (!shift || !userId) return null;
+    return shift.guards.find((g) => g.user_id === userId);
+  }, [shift, userId]);
+
+  const isReplacement = (currentGuardInfo as any)?.is_replacement ?? false;
 
   const handleOpenCheckinPage = () => {
     if (!shift) {
@@ -229,11 +294,13 @@ export default function GuardShiftDetailPage() {
           </div>
 
           <span
-            className={`rounded-full px-3 py-1.5 text-[10px] font-black ${getStatusStyle(
-              shift.status,
-            )}`}
+            className={`rounded-full px-3 py-1.5 text-[10px] font-black ${
+              isReplacement
+                ? "bg-purple-600 text-white"
+                : getStatusStyle(shift.status, shift.check_in_time, shift.start_time)
+            }`}
           >
-            {getStatusLabel(shift.status)}
+            {isReplacement ? "CA THAY THẾ" : getStatusLabel(shift.status, shift.check_in_time, shift.start_time)}
           </span>
         </div>
 
@@ -408,6 +475,24 @@ export default function GuardShiftDetailPage() {
                         </p>
                       </div>
                     </div>
+
+                    <div className="flex flex-col items-end gap-1 shrink-0">
+                      {guard.is_replacement ? (
+                        <span className="rounded bg-purple-50 px-2 py-0.5 text-[9px] font-black text-purple-700 border border-purple-200">
+                          Thay thế cho {guard.replaced_guard_name}
+                        </span>
+                      ) : (
+                        guard.replacement_guard_ids && guard.replacement_guard_ids.length > 0 && (
+                          <span className="rounded bg-amber-50 px-2 py-0.5 text-[9px] font-black text-amber-700 border border-amber-200">
+                            Đã điều phối thay thế
+                          </span>
+                        )
+                      )}
+                      
+                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getGuardStatusStyle(guard.status, guard.check_in_time, shift.start_time)}`}>
+                        {getGuardStatusLabel(guard.status, guard.check_in_time, shift.start_time)}
+                      </span>
+                    </div>
                   </div>
                 );
               })
@@ -421,16 +506,18 @@ export default function GuardShiftDetailPage() {
           </div>
         </div>
 
-        <div className="bottom-3 z-20 rounded-2xl bg-[#f7f8fb]/90 pt-2 backdrop-blur">
-          <button
-            type="button"
-            onClick={handleOpenCheckinPage}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0754a6] px-4 py-4 text-sm font-black uppercase text-white shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]"
-          >
-            <UserCheck className="h-5 w-5" />
-            Xác nhận ca làm việc
-          </button>
-        </div>
+        {!isReplacement && (
+          <div className="bottom-3 z-20 rounded-2xl bg-[#f7f8fb]/90 pt-2 backdrop-blur">
+            <button
+              type="button"
+              onClick={handleOpenCheckinPage}
+              className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0754a6] px-4 py-4 text-sm font-black uppercase text-white shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]"
+            >
+              <UserCheck className="h-5 w-5" />
+              Xác nhận ca làm việc
+            </button>
+          </div>
+        )}
       </section>
     </div>
   );

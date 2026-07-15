@@ -14,29 +14,33 @@ export async function POST(request: Request, { params }: RouteParams) {
   try {
     const { shiftId } = await params;
 
-    let imageUrl: string | undefined;
-    let imagePath: string | undefined;
+    let file: File | undefined;
 
     try {
-      const body = await request.json();
-      imageUrl = body.imageUrl;
-      imagePath = body.imagePath;
+      const formData = await request.formData();
+      const imageFile = formData.get("image");
+      if (imageFile instanceof File) {
+        file = imageFile;
+      }
     } catch {
-      // Body can be empty (e.g. auto absent updates)
+      // Form data or file can be empty (e.g. auto absent updates or checkins without image)
     }
 
     const result = await handleCheckinGuardShift({
       shiftId,
-      imageUrl,
-      imagePath,
+      file,
     });
 
     const status = result.assignment.status;
 
-    const message =
-      status === "completed"
-        ? "Điểm danh ca trực thành công."
-        : "Đã quá thời gian điểm danh. Ca trực đã chuyển sang vắng mặt.";
+    let message: string;
+    if (status === "completed") {
+      message = "Điểm danh ca trực thành công.";
+    } else if (status === "late") {
+      message = "Điểm danh trễ thành công. Ca trực vẫn được ghi nhận.";
+    } else {
+      message = "Đã quá thời gian điểm danh. Ca trực đã chuyển sang vắng mặt.";
+    }
 
     return NextResponse.json(
       {

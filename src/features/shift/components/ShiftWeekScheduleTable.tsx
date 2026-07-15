@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
+import { getUserTimeZone, getUserLocale, formatDate, formatTime as formatTimeHelper } from "@/utils/dateTime";
 import {
   AlertTriangle,
   CalendarX,
@@ -17,6 +18,8 @@ import type {
   ShiftAssignmentStatus,
   ShiftWithAssignments,
 } from "../type";
+import { ShiftDetailModal } from "./ShiftDetailModal";
+
 
 type ShiftWeekScheduleTableProps = {
   shifts: ShiftWithAssignments[];
@@ -39,6 +42,7 @@ type TooltipPosition = {
 type WeekShiftTooltipProps = {
   shift: ShiftWithAssignments;
   statusLabel: string;
+  hasReplacement: boolean;
   position: TooltipPosition;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
@@ -124,7 +128,7 @@ function GuardRow({
   const handleMouseEnter = () => {
     if (!rowRef.current) return;
     const rect = rowRef.current.getBoundingClientRect();
-    
+
     let left = rect.right + 12;
     let top = rect.top;
     if (left + 300 > window.innerWidth - 12) {
@@ -176,22 +180,85 @@ function GuardRow({
 
 type WeekShiftCardProps = {
   shift: ShiftWithAssignments;
+  onShiftClick: (shift: ShiftWithAssignments) => void;
 };
 
-const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
 const TOOLTIP_WIDTH = 340;
 const TOOLTIP_GAP = 12;
 const WEEK_DAY_COLUMN_WIDTH = 240;
 
-const WEEK_DAY_LABELS = [
-  "THỨ 2",
-  "THỨ 3",
-  "THỨ 4",
-  "THỨ 5",
-  "THỨ 6",
-  "THỨ 7",
-  "CN",
-];
+function ReplacementGuardRow({
+  repGuard,
+  assignment,
+  shift,
+}: {
+  repGuard: {
+    guard_id: string;
+    full_name: string;
+    phone_number: string | null;
+  };
+  assignment: ShiftAssignment;
+  shift: ShiftWithAssignments;
+}) {
+  const rowRef = useRef<HTMLDivElement | null>(null);
+  const [showSubTooltip, setShowSubTooltip] = useState(false);
+  const [subTooltipPosition, setSubTooltipPosition] = useState<TooltipPosition | null>(null);
+
+  const handleMouseEnter = () => {
+    if (!rowRef.current) return;
+    const rect = rowRef.current.getBoundingClientRect();
+
+    let left = rect.right + 12;
+    let top = rect.top;
+    if (left + 300 > window.innerWidth - 12) {
+      left = rect.left - 300 - 12;
+    }
+    setSubTooltipPosition({ top, left });
+    setShowSubTooltip(true);
+  };
+
+  const handleMouseLeave = () => {
+    setShowSubTooltip(false);
+  };
+
+  return (
+    <>
+      <div
+        ref={rowRef}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="ml-4 flex items-center justify-between gap-3 rounded bg-purple-50/50 px-2 py-1.5 border border-purple-100/50 hover:bg-purple-100/80 cursor-pointer transition-colors"
+      >
+        <div className="flex min-w-0 items-center gap-2">
+          <UserRound size={13} className="shrink-0 text-purple-600" />
+          <p className="truncate text-xs font-semibold text-purple-900">
+            {repGuard.full_name}
+          </p>
+        </div>
+        <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[9px] font-bold text-purple-700">
+          Thay thế
+        </span>
+      </div>
+
+      {showSubTooltip && subTooltipPosition && (
+        <GuardSubTooltip
+          assignment={assignment}
+          shift={shift}
+          position={subTooltipPosition}
+        />
+      )}
+    </>
+  );
+}
+
+const getWeekDayLabels = (locale: string) => {
+  const baseDate = new Date(Date.UTC(2026, 0, 5)); // 2026-01-05 is a Monday
+  return Array.from({ length: 7 }).map((_, i) => {
+    const date = new Date(baseDate);
+    date.setUTCDate(baseDate.getUTCDate() + i);
+    return date.toLocaleDateString(locale, { weekday: "short" }).toUpperCase();
+  });
+};
 
 const getStatusLabel = (status: ShiftAssignmentStatus) => {
   if (status === "assigned") {
@@ -199,7 +266,11 @@ const getStatusLabel = (status: ShiftAssignmentStatus) => {
   }
 
   if (status === "completed") {
-    return "Hoàn thành";
+    return "Đang trực";
+  }
+
+  if (status === "late") {
+    return "Đi trễ";
   }
 
   return "Vắng mặt";
@@ -214,21 +285,20 @@ const getStatusStyle = (status: ShiftAssignmentStatus) => {
     return "bg-emerald-100 text-emerald-700 border-emerald-300";
   }
 
+  if (status === "late") {
+    return "bg-amber-100 text-amber-700 border-amber-300";
+  }
+
   return "bg-red-100 text-red-700 border-red-300";
 };
 
 const formatTime = (date: string) => {
-  return new Intl.DateTimeFormat("vi-VN", {
-    timeZone: VIETNAM_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(date));
+  return formatTimeHelper(date);
 };
 
-const getVietnamDateKey = (date: Date) => {
+const getLocalDateKey = (date: Date) => {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: VIETNAM_TIME_ZONE,
+    timeZone: getUserTimeZone(),
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -267,7 +337,9 @@ const getStartOfWeekKey = (dateKey: string) => {
 };
 
 const buildWeekDays = (weekStartDate?: string): WeekDay[] => {
-  const todayKey = getVietnamDateKey(new Date());
+  const userLocale = getUserLocale();
+  const weekDayLabels = getWeekDayLabels(userLocale);
+  const todayKey = getLocalDateKey(new Date());
 
   const baseDateKey = weekStartDate ?? todayKey;
   const startOfWeekKey = getStartOfWeekKey(baseDateKey);
@@ -279,20 +351,22 @@ const buildWeekDays = (weekStartDate?: string): WeekDay[] => {
     date.setUTCDate(startOfWeek.getUTCDate() + index);
 
     const dateKey = formatUtcDateKey(date);
-    const dayNumber = date.getUTCDate();
-    const monthNumber = date.getUTCMonth() + 1;
+    const dateLabel = new Intl.DateTimeFormat(userLocale, {
+      day: "numeric",
+      month: "numeric",
+    }).format(new Date(`${dateKey}T00:00:00`));
 
     return {
       date: dateKey,
-      dayLabel: WEEK_DAY_LABELS[index],
-      dateLabel: `${dayNumber}/${monthNumber}`,
+      dayLabel: weekDayLabels[index],
+      dateLabel,
       isToday: dateKey === todayKey,
     };
   });
 };
 
 const getShiftDateKey = (date: string) => {
-  return getVietnamDateKey(new Date(date));
+  return getLocalDateKey(new Date(date));
 };
 
 const getDateTimeValue = (date: string) => {
@@ -334,10 +408,12 @@ const getTooltipPosition = (element: HTMLButtonElement): TooltipPosition => {
 function WeekShiftTooltip({
   shift,
   statusLabel,
+  hasReplacement,
   position,
   onMouseEnter,
   onMouseLeave,
 }: WeekShiftTooltipProps) {
+  const firstAssignment = shift.assignments[0];
   return createPortal(
     <div
       onMouseEnter={onMouseEnter}
@@ -353,10 +429,20 @@ function WeekShiftTooltip({
           <p className="text-xs font-semibold uppercase text-slate-400">
             Trạng thái
           </p>
-
-          <p className="mt-1 text-sm font-semibold text-slate-800">
-            {statusLabel}
-          </p>
+          <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+            <span
+              className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusStyle(
+                firstAssignment.status,
+              )}`}
+            >
+              {statusLabel}
+            </span>
+            {hasReplacement && (
+              <span className="rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
+                Thay thế
+              </span>
+            )}
+          </div>
         </div>
 
         <div>
@@ -379,11 +465,20 @@ function WeekShiftTooltip({
 
           <div className="mt-2 space-y-1.5">
             {shift.assignments.map((assignment) => (
-              <GuardRow
-                key={assignment.assignment_id}
-                assignment={assignment}
-                shift={shift}
-              />
+              <div key={assignment.assignment_id} className="space-y-1">
+                <GuardRow
+                  assignment={assignment}
+                  shift={shift}
+                />
+                {assignment.replacement_guards && assignment.replacement_guards.map((rep) => (
+                  <ReplacementGuardRow
+                    key={rep.guard_id}
+                    repGuard={rep}
+                    assignment={assignment}
+                    shift={shift}
+                  />
+                ))}
+              </div>
             ))}
           </div>
         </div>
@@ -431,6 +526,7 @@ export function ShiftWeekScheduleTable({
   selectedLocation,
   weekStartDate,
 }: ShiftWeekScheduleTableProps) {
+  const [selectedShift, setSelectedShift] = useState<ShiftWithAssignments | null>(null);
   const weekDays = buildWeekDays(weekStartDate);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef({
@@ -505,78 +601,88 @@ export function ShiftWeekScheduleTable({
   }
 
   return (
-    <div
-      ref={scrollRef}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={stopDragging}
-      onMouseLeave={stopDragging}
-      className={`overflow-x-auto overflow-y-visible rounded-sm border border-slate-300 bg-white ${
-        isDragging ? "cursor-grabbing select-none" : "cursor-grab"
-      }`}
-    >
+    <>
       <div
-        style={{
-          width: `${WEEK_DAY_COLUMN_WIDTH * visibleWeekDays.length}px`,
-        }}
+        ref={scrollRef}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={stopDragging}
+        onMouseLeave={stopDragging}
+        className={`overflow-x-auto overflow-y-visible rounded-sm border border-slate-300 bg-white ${isDragging ? "cursor-grabbing select-none" : "cursor-grab"
+          }`}
       >
         <div
-          className="grid border-b border-slate-300"
           style={{
-            gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
+            width: `${WEEK_DAY_COLUMN_WIDTH * visibleWeekDays.length}px`,
           }}
         >
-          {visibleWeekDays.map((day) => (
-            <div
-              key={day.date}
-              className={`border-r border-slate-300 px-4 py-3 text-center ${
-                day.isToday ? "bg-blue-700 text-white" : "bg-slate-100"
-              }`}
-            >
-              <p
-                className={`text-xs font-bold ${
-                  day.isToday ? "text-white" : "text-slate-600"
-                }`}
+          <div
+            className="grid border-b border-slate-300"
+            style={{
+              gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
+            }}
+          >
+            {visibleWeekDays.map((day) => (
+              <div
+                key={day.date}
+                className={`border-r border-slate-300 px-4 py-3 text-center ${day.isToday ? "bg-blue-700 text-white" : "bg-slate-100"
+                  }`}
               >
-                {day.dayLabel}
-              </p>
+                <p
+                  className={`text-xs font-bold ${day.isToday ? "text-white" : "text-slate-600"
+                    }`}
+                >
+                  {day.dayLabel}
+                </p>
 
-              <p
-                className={`text-xl font-bold ${
-                  day.isToday ? "text-white" : "text-slate-900"
-                }`}
-              >
-                {day.dateLabel}
-              </p>
-            </div>
-          ))}
-        </div>
-
-        <div
-          className="grid min-h-[640px]"
-          style={{
-            gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
-          }}
-        >
-          {visibleWeekDays.map((day) => (
-            <div
-              key={day.date}
-              className="min-h-[640px] border-r border-slate-300 bg-white p-3"
-            >
-              <div className="space-y-3">
-                {day.shifts.map((shift) => (
-                  <WeekShiftCard key={shift.shift_id} shift={shift} />
-                ))}
+                <p
+                  className={`text-xl font-bold ${day.isToday ? "text-white" : "text-slate-900"
+                    }`}
+                >
+                  {day.dateLabel}
+                </p>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
+
+          <div
+            className="grid min-h-[640px]"
+            style={{
+              gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
+            }}
+          >
+            {visibleWeekDays.map((day) => (
+              <div
+                key={day.date}
+                className="min-h-[640px] border-r border-slate-300 bg-white p-3"
+              >
+                <div className="space-y-3">
+                  {day.shifts.map((shift) => (
+                    <WeekShiftCard
+                      key={shift.shift_id}
+                      shift={shift}
+                      onShiftClick={(s) => setSelectedShift(s)}
+                    />
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+
+      {selectedShift && (
+        <ShiftDetailModal
+          open={!!selectedShift}
+          shift={selectedShift}
+          onClose={() => setSelectedShift(null)}
+        />
+      )}
+    </>
   );
 }
 
-function WeekShiftCard({ shift }: WeekShiftCardProps) {
+function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
   const cardRef = useRef<HTMLButtonElement | null>(null);
   const [tooltipPosition, setTooltipPosition] =
     useState<TooltipPosition | null>(null);
@@ -587,6 +693,7 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
     return (
       <button
         type="button"
+        onClick={() => onShiftClick(shift)}
         className="w-full rounded-md border border-dashed border-orange-400 bg-orange-50 px-3 py-2 text-left text-orange-700"
       >
         <div className="flex items-start justify-between gap-2">
@@ -601,9 +708,9 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
           </span>
         </div>
 
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium">
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-medium min-w-0">
           <MapPin size={12} className="shrink-0" />
-          <span className="whitespace-nowrap">{shift.location}</span>
+          <span className="truncate" title={shift.location}>{shift.location}</span>
         </div>
       </button>
     );
@@ -611,6 +718,11 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
 
   const firstAssignment = shift.assignments[0];
   const extraGuardCount = shift.assignments.length - 1;
+  const hasReplacement = shift.assignments.some(
+    (assign) =>
+      (assign.replacement_guard_ids && assign.replacement_guard_ids.length > 0) ||
+      (assign.replacement_guards && assign.replacement_guards.length > 0)
+  );
   const statusLabel = getStatusLabel(firstAssignment.status);
 
   const [showTooltip, setShowTooltip] = useState(false);
@@ -652,11 +764,12 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
       <button
         ref={cardRef}
         type="button"
+        onClick={() => onShiftClick(shift)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         className="w-full rounded-md border border-blue-200 bg-blue-100 px-3 py-2 text-left text-blue-900 shadow-sm transition-all duration-300 hover:bg-blue-200"
       >
-        <div className="mb-1.5 flex items-center justify-between gap-2">
+        <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
           <span
             className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusStyle(
               firstAssignment.status,
@@ -664,6 +777,11 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
           >
             {statusLabel}
           </span>
+          {hasReplacement && (
+            <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
+              Thay thế
+            </span>
+          )}
         </div>
 
         <div className="flex items-center gap-2 overflow-visible">
@@ -691,9 +809,9 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
           <span className="whitespace-nowrap">{shift.shift_name}</span>
         </div>
 
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-700 min-w-0">
           <MapPin size={12} className="shrink-0" />
-          <span className="whitespace-nowrap">{shift.location}</span>
+          <span className="truncate" title={shift.location}>{shift.location}</span>
         </div>
       </button>
 
@@ -701,6 +819,7 @@ function WeekShiftCard({ shift }: WeekShiftCardProps) {
         <WeekShiftTooltip
           shift={shift}
           statusLabel={statusLabel}
+          hasReplacement={hasReplacement}
           position={tooltipPosition}
           onMouseEnter={handleTooltipMouseEnter}
           onMouseLeave={handleTooltipMouseLeave}

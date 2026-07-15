@@ -14,11 +14,11 @@ import type {
   ShiftWithAssignments,
 } from "@/features/shift/type";
 
-const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
+import { getUserTimeZone } from "@/utils/dateTime";
 
-const getVietnamTodayKey = () => {
+const getTodayKey = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
-    timeZone: VIETNAM_TIME_ZONE,
+    timeZone: getUserTimeZone(),
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
@@ -140,13 +140,14 @@ function ShiftScheduleSkeleton({ viewMode }: ShiftScheduleSkeletonProps) {
 
 export default function ShiftSchedulePage() {
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
-  const [selectedLocation, setSelectedLocation] = useState("all");
-  const [currentDate, setCurrentDate] = useState(getVietnamTodayKey());
+  const [selectedLocation, setSelectedLocation] = useState("");
+  const [currentDate, setCurrentDate] = useState(getTodayKey());
   const [shifts, setShifts] = useState<ShiftWithAssignments[]>([]);
   const [contracts, setContracts] = useState<ContractOption[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [isCreateShiftModalOpen, setIsCreateShiftModalOpen] = useState(false);
+
 
   const fetchContracts = useCallback(async () => {
     try {
@@ -159,6 +160,9 @@ export default function ShiftSchedulePage() {
   }, []);
 
   const fetchShifts = useCallback(async () => {
+    if (!selectedLocation) {
+      return;
+    }
     try {
       setIsLoading(true);
       setErrorMessage("");
@@ -208,6 +212,16 @@ export default function ShiftSchedulePage() {
     };
   }, [fetchShifts]);
 
+  useEffect(() => {
+    const handleRefresh = () => {
+      void fetchShifts();
+    };
+    window.addEventListener("refresh-shifts", handleRefresh);
+    return () => {
+      window.removeEventListener("refresh-shifts", handleRefresh);
+    };
+  }, [fetchShifts]);
+
   const handleCreatedShift = async () => {
     await fetchShifts();
     await fetchContracts();
@@ -217,23 +231,19 @@ export default function ShiftSchedulePage() {
     return getUniqueLocationsFromContracts(contracts);
   }, [contracts]);
 
+  useEffect(() => {
+    if (locationOptions.length > 0 && !selectedLocation) {
+      setSelectedLocation(locationOptions[0].address);
+    }
+  }, [locationOptions, selectedLocation]);
+
   const tableLocations = useMemo(() => {
     const contractLocations = getUniqueLocationsFromContracts(contracts).map((c) => c.address);
-
-    if (selectedLocation === "all") {
-      return Array.from(
-        new Set(
-          shifts
-            .map((shift) => shift.contract_address)
-            .filter((address): address is string => Boolean(address)),
-        ),
-      );
-    }
 
     return contractLocations.filter(
       (location) => location === selectedLocation,
     );
-  }, [contracts, shifts, selectedLocation]);
+  }, [contracts, selectedLocation]);
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">

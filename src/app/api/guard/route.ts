@@ -46,6 +46,7 @@ export async function GET(request: NextRequest) {
       gender: searchParams.get("gender"),
       status: searchParams.get("status"),
       workStatus: searchParams.get("workStatus"),
+      timeZone: request.headers.get("x-timezone") || undefined,
     });
 
     return NextResponse.json(result, {

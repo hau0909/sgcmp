@@ -7,13 +7,10 @@ import type {
   GuardShiftGroupedByDate,
   SplitShiftSegment,
 } from "../type";
+import { getUserTimeZone, getUserLocale, formatTime as formatTimeHelper, formatDate as formatDateHelper } from "@/utils/dateTime";
 
 export const formatTime = (date: string) => {
-  return new Intl.DateTimeFormat("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(date));
+  return formatTimeHelper(date);
 };
 
 export const getSlotIdByShift = (shift: Shift) => {
@@ -72,7 +69,7 @@ export const formatDateKey = (dateValue: string) => {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
-    timeZone: "Asia/Ho_Chi_Minh",
+    timeZone: getUserTimeZone(),
   }).formatToParts(new Date(dateValue));
 
   const year = parts.find((part) => part.type === "year")?.value;
@@ -83,12 +80,7 @@ export const formatDateKey = (dateValue: string) => {
 };
 
 export const formatTimes = (dateValue: string) => {
-  return new Intl.DateTimeFormat("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  }).format(new Date(dateValue));
+  return formatTimeHelper(dateValue);
 };
 
 export const groupShiftsByDate = (
@@ -122,26 +114,15 @@ export const startOfWeekMondayDateKey = (dateKey: string) => {
 };
 
 export const formatShiftTime = (startTime: string, endTime: string) => {
-  const start = new Date(startTime).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
-
-  const end = new Date(endTime).toLocaleTimeString("vi-VN", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
-  });
+  const start = formatTimeHelper(startTime);
+  const end = formatTimeHelper(endTime);
 
   return `${start} - ${end}`;
 };
 
 export const isValidUuid = (value: string) => {
   const uuidRegex =
-    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
   return uuidRegex.test(value);
 };

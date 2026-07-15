@@ -1,4 +1,4 @@
-const VIETNAM_TIME_ZONE_OFFSET = "+07:00";
+import { localTimeToUtc } from "./dateTime";
 
 export const isValidDateKey = (date: string) => {
   return /^\d{4}-\d{2}-\d{2}$/.test(date);
@@ -36,21 +36,22 @@ export const getStartOfWeekKey = (dateKey: string) => {
   return formatUtcDateKey(date);
 };
 
-export const getDayDateRange = (dateKey: string) => {
+export const getDayDateRange = (dateKey: string, timeZone?: string) => {
   const nextDateKey = addDaysToDateKey(dateKey, 1);
 
   return {
-    startTime: `${dateKey}T00:00:00${VIETNAM_TIME_ZONE_OFFSET}`,
-    endTime: `${nextDateKey}T00:00:00${VIETNAM_TIME_ZONE_OFFSET}`,
+    startTime: localTimeToUtc(dateKey, "00:00:00", timeZone),
+    endTime: localTimeToUtc(nextDateKey, "00:00:00", timeZone),
   };
 };
 
-export const getWeekDateRange = (dateKey: string) => {
+export const getWeekDateRange = (dateKey: string, timeZone?: string) => {
   const startOfWeekKey = getStartOfWeekKey(dateKey);
   const nextWeekKey = addDaysToDateKey(startOfWeekKey, 7);
 
   return {
-    startTime: `${startOfWeekKey}T00:00:00${VIETNAM_TIME_ZONE_OFFSET}`,
-    endTime: `${nextWeekKey}T00:00:00${VIETNAM_TIME_ZONE_OFFSET}`,
+    startTime: localTimeToUtc(startOfWeekKey, "00:00:00", timeZone),
+    endTime: localTimeToUtc(nextWeekKey, "00:00:00", timeZone),
   };
 };
+

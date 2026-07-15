@@ -1,5 +1,6 @@
 import type { ShiftWithAssignments, TimeSlot } from "../type";
 import { getShiftCellKey, getSlotIdByShift } from "../utils/shift.utils";
+import { formatTime as formatTimeHelper } from "@/utils/dateTime";
 import { ShiftCard } from "./ShiftCard";
 import { ShiftWeekScheduleTable } from "./ShiftWeekScheduleTable";
 
@@ -20,7 +21,6 @@ type ShiftSegment = {
 
 const LOCATION_COLUMN_WIDTH = 220;
 const TIME_SLOT_COLUMN_WIDTH = 220;
-const VIETNAM_TIME_ZONE = "Asia/Ho_Chi_Minh";
 
 const getDateTimeValue = (date: string) => {
   return new Date(date).getTime();
@@ -31,12 +31,7 @@ const getShiftContractAddress = (shift: ShiftWithAssignments) => {
 };
 
 const formatVietnamTime = (date: string) => {
-  return new Intl.DateTimeFormat("vi-VN", {
-    timeZone: VIETNAM_TIME_ZONE,
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  }).format(new Date(date));
+  return formatTimeHelper(date);
 };
 
 const getMinutesFromTime = (time: string) => {

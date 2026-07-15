@@ -412,6 +412,7 @@ export const handleGetAllGuards = async ({
   gender,
   status,
   workStatus,
+  timeZone,
 }: HandleGetAllGuardsInput): Promise<HandleGetAllGuardsResult> => {
   try {
     const profile = await getCurrentUserProfileService();
@@ -486,6 +487,7 @@ export const handleGetAllGuards = async ({
       gender: genderVal,
       status: statusVal,
       workStatus: workStatusVal,
+      timeZone: timeZone || undefined,
     });
 
     return {

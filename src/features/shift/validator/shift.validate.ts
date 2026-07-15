@@ -1,4 +1,5 @@
 import type { CreateShiftInput } from "../type";
+import { localTimeToUtc } from "@/utils/dateTime";
 
 export const validateCreateShiftInput = (input: CreateShiftInput) => {
   if (!input.contract_id) {
@@ -91,17 +92,19 @@ export const validateShiftDateInContract = ({
   endTime,
   contractStartDate,
   contractEndDate,
+  timeZone,
 }: {
   startTime: string;
   endTime: string;
   contractStartDate: string;
   contractEndDate: string;
+  timeZone?: string;
 }) => {
   const shiftStartTime = new Date(startTime);
   const shiftEndTime = new Date(endTime);
 
-  const contractStartTime = new Date(`${contractStartDate}T00:00:00+07:00`);
-  const contractEndTime = new Date(`${contractEndDate}T23:59:59+07:00`);
+  const contractStartTime = new Date(localTimeToUtc(contractStartDate, "00:00:00", timeZone));
+  const contractEndTime = new Date(localTimeToUtc(contractEndDate, "23:59:59", timeZone));
 
   if (shiftStartTime < contractStartTime) {
     throw new Error(
