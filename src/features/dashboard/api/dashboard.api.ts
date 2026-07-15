@@ -24,7 +24,7 @@ export const requestGetActiveGuardsOnShift = (
 ): Promise<MetricWithTrend> => {
   const params = new URLSearchParams({ companyId });
   return fetcher(
-    `/api/dashboard/active-guards?${params.toString()}`,
+    `/api/dashboard/company/active-guards?${params.toString()}`,
     { method: "GET" },
   ) as Promise<MetricWithTrend>;
 };
@@ -38,7 +38,7 @@ export const requestGetActiveContracts = (
 ): Promise<MetricWithTrend> => {
   const params = new URLSearchParams({ companyId });
   return fetcher(
-    `/api/dashboard/active-contracts?${params.toString()}`,
+    `/api/dashboard/company/active-contracts?${params.toString()}`,
     { method: "GET" },
   ) as Promise<MetricWithTrend>;
 };
@@ -52,7 +52,7 @@ export const requestGetPendingReports = (
 ): Promise<MetricWithTrend> => {
   const params = new URLSearchParams({ companyId });
   return fetcher(
-    `/api/dashboard/pending-reports?${params.toString()}`,
+    `/api/dashboard/company/pending-reports?${params.toString()}`,
     { method: "GET" },
   ) as Promise<MetricWithTrend>;
 };
@@ -73,7 +73,7 @@ export const requestGetRating = (
 ): Promise<RatingWithTrend> => {
   const params = new URLSearchParams({ companyId });
   return fetcher(
-    `/api/dashboard/rating?${params.toString()}`,
+    `/api/dashboard/company/rating?${params.toString()}`,
     { method: "GET" },
   ) as Promise<RatingWithTrend>;
 };
@@ -110,7 +110,7 @@ export const requestGetDashboardSubscription = (
 ): Promise<DashboardSubscriptionResult> => {
   const params = new URLSearchParams({ companyId });
   return fetcher(
-    `/api/dashboard/subscription?${params.toString()}`,
+    `/api/dashboard/company/subscription?${params.toString()}`,
     { method: "GET" },
   ) as Promise<DashboardSubscriptionResult>;
 };
@@ -128,7 +128,7 @@ export const requestGetWeeklyShifts = (
 ): Promise<WeeklyShiftsResultItem[]> => {
   const params = new URLSearchParams({ companyId });
   return fetcher(
-    `/api/dashboard/weekly-shifts?${params.toString()}`,
+    `/api/dashboard/company/weekly-shifts?${params.toString()}`,
     { method: "GET" },
   ) as Promise<WeeklyShiftsResultItem[]>;
 };
@@ -143,7 +143,7 @@ export const requestGetShiftStatusToday = (
 ): Promise<ShiftStatusResultItem[]> => {
   const params = new URLSearchParams({ companyId });
   return fetcher(
-    `/api/dashboard/shift-status-today?${params.toString()}`,
+    `/api/dashboard/company/shift-status-today?${params.toString()}`,
     { method: "GET" },
   ) as Promise<ShiftStatusResultItem[]>;
 };
@@ -163,7 +163,7 @@ export const requestGetTodayGuards = (
 ): Promise<TodayGuardListItem[]> => {
   const params = new URLSearchParams({ companyId });
   return fetcher(
-    `/api/dashboard/today-guards?${params.toString()}`,
+    `/api/dashboard/company/today-guards?${params.toString()}`,
     { method: "GET" },
   ) as Promise<TodayGuardListItem[]>;
 };
@@ -185,7 +185,7 @@ export const requestGetRecentActivities = (
 ): Promise<RecentActivityItem[]> => {
   const params = new URLSearchParams({ companyId });
   return fetcher(
-    `/api/dashboard/recent-activities?${params.toString()}`,
+    `/api/dashboard/company/recent-activities?${params.toString()}`,
     { method: "GET" },
   ) as Promise<RecentActivityItem[]>;
 };

@@ -156,14 +156,14 @@ const getActivityConfig = (subType: string) => {
         icon: <Clock3 className="w-4 h-4" />,
         className: "bg-amber-50 border-amber-200 text-amber-700",
       };
-      
+
     // Replacement
     case "replacement_dispatched":
       return {
         icon: <UserRoundCog className="w-4 h-4" />,
         className: "bg-blue-50 border-blue-200 text-blue-700",
       };
-      
+
     // Report
     case "report_pending":
       return {
@@ -185,7 +185,7 @@ const getActivityConfig = (subType: string) => {
         icon: <CircleX className="w-4 h-4" />,
         className: "bg-surface-container-high border-outline-variant text-on-surface-variant/80",
       };
-      
+
     // Contract
     case "contract_confirmed":
       return {
@@ -207,7 +207,7 @@ const getActivityConfig = (subType: string) => {
         icon: <CalendarClock className="w-4 h-4" />,
         className: "bg-orange-50 border-orange-200 text-orange-700",
       };
-      
+
     // System
     case "system_coordinator_active":
       return {
@@ -224,7 +224,7 @@ const getActivityConfig = (subType: string) => {
         icon: <CreditCard className="w-4 h-4" />,
         className: "bg-purple-50 border-purple-200 text-purple-700",
       };
-      
+
     default:
       return {
         icon: <Users className="w-4 h-4" />,
@@ -490,13 +490,12 @@ export default function CompanyDashboardPage() {
               </div>
             ) : activeGuards?.percentChange !== null && activeGuards?.percentChange !== undefined ? (
               <div
-                className={`flex items-center gap-1 text-sm font-semibold ${
-                  activeGuards.trend === "up"
-                    ? "text-emerald-700"
-                    : activeGuards.trend === "down"
+                className={`flex items-center gap-1 text-sm font-semibold ${activeGuards.trend === "up"
+                  ? "text-emerald-700"
+                  : activeGuards.trend === "down"
                     ? "text-red-600"
                     : "text-on-surface-variant"
-                }`}
+                  }`}
               >
                 {activeGuards.trend === "up" && <TrendingUp className="w-4 h-4" />}
                 {activeGuards.trend === "down" && <TrendingDown className="w-4 h-4" />}
@@ -537,13 +536,12 @@ export default function CompanyDashboardPage() {
               <span className="inline-block w-32 h-4 bg-surface-container rounded animate-pulse" />
             ) : activeContracts?.percentChange !== null && activeContracts?.percentChange !== undefined ? (
               <div
-                className={`flex items-center gap-1 text-sm font-semibold ${
-                  activeContracts.trend === "up"
-                    ? "text-emerald-700"
-                    : activeContracts.trend === "down"
+                className={`flex items-center gap-1 text-sm font-semibold ${activeContracts.trend === "up"
+                  ? "text-emerald-700"
+                  : activeContracts.trend === "down"
                     ? "text-red-600"
                     : "text-on-surface-variant"
-                }`}
+                  }`}
               >
                 {activeContracts.trend === "up" && <TrendingUp className="w-4 h-4" />}
                 {activeContracts.trend === "down" && <TrendingDown className="w-4 h-4" />}
@@ -620,13 +618,12 @@ export default function CompanyDashboardPage() {
               <span className="inline-block w-32 h-4 bg-surface-container rounded animate-pulse" />
             ) : rating?.percentChange !== null && rating?.percentChange !== undefined ? (
               <div
-                className={`flex items-center gap-1 text-sm font-semibold ${
-                  rating.trend === "up"
-                    ? "text-emerald-700"
-                    : rating.trend === "down"
+                className={`flex items-center gap-1 text-sm font-semibold ${rating.trend === "up"
+                  ? "text-emerald-700"
+                  : rating.trend === "down"
                     ? "text-red-600"
                     : "text-on-surface-variant"
-                }`}
+                  }`}
               >
                 {rating.trend === "up" && <TrendingUp className="w-4 h-4" />}
                 {rating.trend === "down" && <TrendingDown className="w-4 h-4" />}
@@ -671,11 +668,10 @@ export default function CompanyDashboardPage() {
                 variant="ghost"
                 aria-pressed={chartView === "line"}
                 onClick={() => setChartView("line")}
-                className={`h-8 flex-1 px-3 text-xs font-semibold transition-all sm:flex-none ${
-                  chartView === "line"
-                    ? "bg-sky-600 text-white shadow-sm hover:bg-sky-700 hover:text-white"
-                    : "text-sky-700 hover:bg-sky-100 hover:text-sky-900"
-                }`}
+                className={`h-8 flex-1 px-3 text-xs font-semibold transition-all sm:flex-none ${chartView === "line"
+                  ? "bg-sky-600 text-white shadow-sm hover:bg-sky-700 hover:text-white"
+                  : "text-sky-700 hover:bg-sky-100 hover:text-sky-900"
+                  }`}
               >
                 Ca trực 7 ngày
               </Button>
@@ -686,11 +682,10 @@ export default function CompanyDashboardPage() {
                 variant="ghost"
                 aria-pressed={chartView === "radar"}
                 onClick={() => setChartView("radar")}
-                className={`h-8 flex-1 px-3 text-xs font-semibold transition-all sm:flex-none ${
-                  chartView === "radar"
-                    ? "bg-sky-600 text-white shadow-sm hover:bg-sky-700 hover:text-white"
-                    : "text-sky-700 hover:bg-sky-100 hover:text-sky-900"
-                }`}
+                className={`h-8 flex-1 px-3 text-xs font-semibold transition-all sm:flex-none ${chartView === "radar"
+                  ? "bg-sky-600 text-white shadow-sm hover:bg-sky-700 hover:text-white"
+                  : "text-sky-700 hover:bg-sky-100 hover:text-sky-900"
+                  }`}
               >
                 Trạng thái ca
               </Button>
@@ -838,9 +833,8 @@ export default function CompanyDashboardPage() {
                           >
                             <div className="flex items-center gap-2.5">
                               <span
-                                className={`h-2.5 w-2.5 shrink-0 rounded-full ${
-                                  config.dotClass
-                                } ${config.animate ? "animate-pulse" : ""}`}
+                                className={`h-2.5 w-2.5 shrink-0 rounded-full ${config.dotClass
+                                  } ${config.animate ? "animate-pulse" : ""}`}
                               />
 
                               <span className="text-sm font-medium text-on-surface-variant">
@@ -905,11 +899,10 @@ export default function CompanyDashboardPage() {
                   Gói dịch vụ hiện tại
                 </h3>
                 <div className="flex flex-col gap-1 items-end">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase text-center ${
-                    subInfo.subscription?.status === "active"
-                      ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                      : "bg-red-50 text-red-700 border border-red-200"
-                  }`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase text-center ${subInfo.subscription?.status === "active"
+                    ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                    : "bg-red-50 text-red-700 border border-red-200"
+                    }`}>
                     {subInfo.subscription?.status === "active" ? "HOẠT ĐỘNG" : "HẾT HẠN"}
                   </span>
                   {subInfo.subscription && (
@@ -936,7 +929,7 @@ export default function CompanyDashboardPage() {
                   </div>
                 </div>
               </div>
-              
+
               {/* Coordinator Resource */}
               <div className="mb-2 flex justify-between text-xs text-on-surface-variant font-semibold">
                 <span>Sử dụng tài nguyên: Nhân viên điều phối</span>
@@ -1068,7 +1061,7 @@ export default function CompanyDashboardPage() {
 
                     return (
                       <tr
-                        key={emp.id ?? idx}
+                        key={`${emp.id}-${idx}`}
                         className="border-b border-outline-variant/30 hover:bg-surface-container-low/40 transition-colors group"
                       >
                         <td className="px-6 py-4 font-mono text-primary font-semibold text-xs">
@@ -1127,9 +1120,8 @@ export default function CompanyDashboardPage() {
                             className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusConfig.badgeClass}`}
                           >
                             <span
-                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${
-                                statusConfig.animate ? "animate-pulse" : ""
-                              }`}
+                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${statusConfig.animate ? "animate-pulse" : ""
+                                }`}
                             />
                             {emp.status}
                           </span>
@@ -1153,7 +1145,7 @@ export default function CompanyDashboardPage() {
           <div className="p-4 border-t border-outline-variant bg-surface-container-low/20 flex justify-center">
             <button
               onClick={() => setIsGuardsModalOpen(true)}
-              className="text-secondary font-bold text-xs hover:underline"
+              className="text-secondary cursor-pointer font-bold text-xs hover:underline"
             >
               Xem toàn bộ danh sách
             </button>
@@ -1219,7 +1211,7 @@ export default function CompanyDashboardPage() {
           </div>
           <button
             onClick={() => setIsActivitiesModalOpen(true)}
-            className="mt-6 pt-4 border-t border-outline-variant/40 text-secondary font-bold text-xs text-center hover:underline"
+            className="mt-6 pt-4 cursor-pointer border-t border-outline-variant/40 text-secondary font-bold text-xs text-center hover:underline"
           >
             Xem tất cả lịch sử
           </button>
@@ -1298,7 +1290,7 @@ export default function CompanyDashboardPage() {
 
                       return (
                         <tr
-                          key={emp.id ?? idx}
+                          key={`${emp.id}-${idx}`}
                           className="border-b border-outline-variant/30 hover:bg-surface-container-low/40 transition-colors group"
                         >
                           <td className="px-6 py-4 font-mono text-primary font-semibold text-xs">
@@ -1351,9 +1343,8 @@ export default function CompanyDashboardPage() {
                               className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusConfig.badgeClass}`}
                             >
                               <span
-                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${
-                                  statusConfig.animate ? "animate-pulse" : ""
-                                }`}
+                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${statusConfig.animate ? "animate-pulse" : ""
+                                  }`}
                               />
                               {emp.status}
                             </span>
@@ -1422,11 +1413,10 @@ export default function CompanyDashboardPage() {
                 <button
                   key={tab.value}
                   onClick={() => setActivityFilter(tab.value)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${
-                    activityFilter === tab.value
-                      ? "bg-primary text-on-primary shadow-sm"
-                      : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
-                  }`}
+                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${activityFilter === tab.value
+                    ? "bg-primary text-on-primary shadow-sm"
+                    : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
+                    }`}
                 >
                   {tab.label}
                 </button>
