@@ -232,6 +232,7 @@ export function CustomerContractDetailContainer({
         hasReviewed={contract.has_reviewed}
         canComplete={canComplete}
         onCompleteContract={() => setIsCompleteModalOpen(true)}
+        contract={contract}
       />
 
       {/* Pending banner */}
