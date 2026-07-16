@@ -2,10 +2,11 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, Check } from "lucide-react";
+import { ArrowLeft, Clock, Check, FileText } from "lucide-react";
 import { ContractStatus } from "@/types/Enum";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { exportContractDocx } from "../utils/exportDocx";
 
 interface ContractDetailHeaderProps {
   contractCode: string;
@@ -15,6 +16,7 @@ interface ContractDetailHeaderProps {
   hasContractFile: boolean;
   hasGuards: boolean;
   onSignCompany?: () => void;
+  contract?: any;
 }
 
 export function ContractDetailHeader({
@@ -25,6 +27,7 @@ export function ContractDetailHeader({
   hasContractFile,
   hasGuards,
   onSignCompany,
+  contract,
 }: ContractDetailHeaderProps) {
   // Map statuses to appropriate styles and labels
   const getStatusDisplay = (status: ContractStatus) => {
@@ -118,6 +121,18 @@ export function ContractDetailHeader({
             )}
           </span>
         </div>
+
+        {/* Tải file Word */}
+        {contract && (
+          <Button
+            onClick={() => exportContractDocx(contract)}
+            variant="outline"
+            className="font-bold border-primary text-primary hover:bg-primary/5 px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Tải file Word</span>
+          </Button>
+        )}
 
         {status !== "pending_signatures" && (
           <Badge

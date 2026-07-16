@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import {
   requestGetCompanyById,
   requestGetAvailableServices,
@@ -11,6 +12,7 @@ import {
   requestGetCompanyActivityImages,
   requestCreateCompanyPublishRequest,
 } from "@/features/company/api/company.api";
+import { requestCheckSubscription } from "@/features/subscription/api/subscription.api";
 import { CompanyStatus } from "@/types/Enum";
 import { Service, CompanyServiceData } from "@/features/company/types";
 import { useAuthStore } from "@/store/auth.store";
@@ -126,6 +128,7 @@ export default function MyCompanyDetail() {
   const [toastVisible, setToastVisible] = useState(false);
 
   const [activeViewerImg, setActiveViewerImg] = useState<string | null>(null);
+  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean>(false);
 
   const [companyServices, setCompanyServices] = useState<CompanyServiceData[]>(
     [],
@@ -647,9 +650,13 @@ export default function MyCompanyDetail() {
       try {
         setLoading(true);
 
-        const [data, servs] = await Promise.all([
+        const [data, servs, subCheck] = await Promise.all([
           requestGetCompanyById(company_id),
           requestGetAvailableServices(),
+          requestCheckSubscription(company_id).catch((err) => {
+            console.error("Lỗi khi kiểm tra gói dịch vụ:", err);
+            return { isActive: false, subscription: null, hasSubscription: false };
+          }),
         ]);
 
         if (data) {
@@ -673,6 +680,10 @@ export default function MyCompanyDetail() {
         if (servs) {
           setAvailableServices(servs);
         }
+
+        if (subCheck) {
+          setHasActiveSubscription(!!subCheck.isActive);
+        }
       } catch (err) {
         console.error("Lỗi khi tải thông tin công ty:", err);
       } finally {
@@ -694,7 +705,7 @@ export default function MyCompanyDetail() {
   const hasServices = companyServices && companyServices.length >= 1;
 
   const isProfileComplete =
-    hasLogo && hasBanner && hasOtherImages && hasServices;
+    hasLogo && hasBanner && hasOtherImages && hasServices && hasActiveSubscription;
 
   if (loading) {
     return (
@@ -895,6 +906,27 @@ export default function MyCompanyDetail() {
                         {hasServices
                           ? `(Đã hoàn thành: ${companyServices.length} dịch vụ)`
                           : "(Chưa có dịch vụ nào)"}
+                      </span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <span
+                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasActiveSubscription ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
+                      >
+                        {hasActiveSubscription ? "✓" : "○"}
+                      </span>
+                      <span>
+                        Đăng ký gói dịch vụ hoạt động{" "}
+                        {hasActiveSubscription ? (
+                          "(Đã đăng ký)"
+                        ) : (
+                          <span>
+                            (Chưa có gói hoạt động -{" "}
+                            <Link href="/billing" className="text-blue-600 hover:underline font-bold">
+                              Đăng ký ngay
+                            </Link>
+                            )
+                          </span>
+                        )}
                       </span>
                     </li>
                   </ul>

@@ -2,9 +2,10 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, CheckCircle2, PenLine, Star } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, PenLine, Star, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { exportContractDocx } from "../utils/exportDocx";
 
 type ContractStatus = "pending_signatures" | "active" | "completed" | "cancelled";
 
@@ -20,6 +21,7 @@ interface CustomerContractDetailHeaderProps {
   hasReviewed?: boolean;
   canComplete?: boolean;
   onCompleteContract?: () => void;
+  contract?: any;
 }
 
 const STATUS_MAP: Record<ContractStatus, { label: string; className: string }> = {
@@ -88,6 +90,7 @@ export function CustomerContractDetailHeader({
   hasReviewed = false,
   canComplete = false,
   onCompleteContract,
+  contract,
 }: CustomerContractDetailHeaderProps) {
   const statusInfo = STATUS_MAP[status] ?? {
     label: "Không xác định",
@@ -115,6 +118,18 @@ export function CustomerContractDetailHeader({
       <div className="flex flex-wrap items-center gap-3">
         <SignatureChip label="Bạn" agreed={customerAgreed} />
         <SignatureChip label="Công ty" agreed={companyAgreed} />
+
+        {/* Tải file Word */}
+        {contract && (
+          <Button
+            onClick={() => exportContractDocx(contract)}
+            variant="outline"
+            className="font-bold border-primary text-primary hover:bg-primary/5 px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+          >
+            <FileText className="w-4 h-4" />
+            <span>Tải file Word</span>
+          </Button>
+        )}
 
         {status !== "pending_signatures" && (
           <Badge

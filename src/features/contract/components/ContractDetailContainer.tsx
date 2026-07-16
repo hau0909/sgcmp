@@ -224,6 +224,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
         hasContractFile={!!detailedData.contractFileUrl}
         hasGuards={!!contract.guard_assigned && contract.guard_assigned.length > 0}
         onSignCompany={() => setIsSignModalOpen(true)}
+        contract={contract}
       />
 
       {/* Bento Grid Layout */}
