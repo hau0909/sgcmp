@@ -8,7 +8,7 @@ import { UserCircle } from "lucide-react";
 
 export default function ProfilePage() {
   return (
-    <RoleGuard allowedRoles={["customer", "guard", "Coordinator", "admin", "company-admin"]}>
+    <RoleGuard allowedRoles={["customer", "guard", "coordinator", "admin", "company-admin"]}>
       <div className="min-h-screen bg-surface text-on-surface antialiased">
         <Header />
         <main className="pt-28 pb-12 max-w-7xl mx-auto w-full px-6 space-y-6">

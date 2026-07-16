@@ -24,7 +24,7 @@ import {
 type UserRole =
   | "customer"
   | "guard"
-  | "Coordinator"
+  | "coordinator"
   | "admin"
   | "company-admin";
 
