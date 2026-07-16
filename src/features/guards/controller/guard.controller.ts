@@ -545,7 +545,7 @@ export const handleGetGuardDetail = async (
       }
 
       companyId = companyIdResult;
-    } else if (profile.role === "Coordinator") {
+    } else if (profile.role === "coordinator") {
       const coordinatorCompanyId = await getCoordinatorByCompanyIdService(
         profile.user_id,
       );
@@ -648,7 +648,7 @@ export const handleUpdateGuardDetail = async (
       }
 
       companyId = companyIdResult;
-    } else if (profile.role === "Coordinator") {
+    } else if (profile.role === "coordinator") {
       const coordinatorCompanyId = await getCoordinatorByCompanyIdService(
         profile.user_id,
       );

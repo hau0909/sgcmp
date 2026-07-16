@@ -114,7 +114,7 @@ export const uploadGuardAvatar = async ({
     throw new Error("Không tìm thấy hồ sơ người dùng hiện tại.");
   }
 
-  if (currentProfile.role !== "Coordinator") {
+  if (currentProfile.role !== "coordinator") {
     throw new Error("Bạn không có quyền tải ảnh bảo vệ.");
   }
 
@@ -198,7 +198,7 @@ export const uploadGuardFile = async ({
     throw new Error("Không tìm thấy hồ sơ người dùng hiện tại.");
   }
 
-  if (currentProfile.role !== "Coordinator") {
+  if (currentProfile.role !== "coordinator") {
     throw new Error("Bạn không có quyền tải ảnh bảo vệ.");
   }
 

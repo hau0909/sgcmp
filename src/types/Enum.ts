@@ -3,7 +3,7 @@ export type UserRole =
   | "admin"
   | "company-admin"
   | "guard"
-  | "Coordinator";
+  | "coordinator";
 
 export type GeneralStatus = "active" | "unactive";
 

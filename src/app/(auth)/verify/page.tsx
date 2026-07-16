@@ -35,7 +35,7 @@ const getRedirectPathByRole = (role: UserRole) => {
     return LOGIN_PATH;
   }
 
-  if (roleValue === "Coordinator") {
+  if (roleValue === "coordinator") {
     return LOGIN_PATH;
   }
 

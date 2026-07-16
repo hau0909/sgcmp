@@ -133,7 +133,7 @@ export const handleCreateCoordinator = async (
       password: tempPass,
       fullName: payload.fullName,
       phoneNumber: payload.phoneNumber,
-      role: "Coordinator",
+      role: "coordinator",
       tempPass,
       tempPasswordExpiresAt,
     });

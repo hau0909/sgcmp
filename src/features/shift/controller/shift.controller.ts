@@ -137,7 +137,7 @@ export const handleGetShiftContracts = async () => {
       }
 
       companyId = company;
-    } else if (profile.role === "Coordinator") {
+    } else if (profile.role === "coordinator") {
       const coordinatorCompanyId = await getCoordinatorByCompanyIdService(
         profile.id,
       );
@@ -222,7 +222,7 @@ export const handleCreateWorkShift = async (request: Request) => {
       );
     }
 
-    if (profile.role !== "Coordinator" && profile.role !== "company-admin") {
+    if (profile.role !== "coordinator" && profile.role !== "company-admin") {
       return Response.json(
         {
           message: "Bạn không có quyền tạo ca trực",
@@ -490,7 +490,7 @@ const resolveShiftCompanyId = async () => {
     return companyId;
   }
 
-  if (profile.role === "Coordinator") {
+  if (profile.role === "coordinator") {
     const companyId = await getCoordinatorByCompanyIdService(profile.id);
 
     if (!companyId) {
@@ -1043,7 +1043,7 @@ export const handleGetGuardAvailability = async (request: Request) => {
       );
     }
 
-    if (profile.role !== "Coordinator" && profile.role !== "company-admin") {
+    if (profile.role !== "coordinator" && profile.role !== "company-admin") {
       return Response.json(
         { message: "Bạn không có quyền kiểm tra lịch bảo vệ" },
         { status: 403 },

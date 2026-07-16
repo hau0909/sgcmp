@@ -97,7 +97,7 @@ export default function CoordinatorLayout({
   ];
 
   return (
-    <RoleGuard allowedRoles={["Coordinator"]}>
+    <RoleGuard allowedRoles={["coordinator"]}>
       <div className="min-h-screen bg-surface flex text-on-surface antialiased">
         {/* Backdrop for Mobile Sidebar */}
         {mobileSidebarOpen && (
