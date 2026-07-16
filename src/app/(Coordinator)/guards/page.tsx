@@ -15,6 +15,7 @@ import Image from "next/image";
 import { requestGetAllGuards } from "@/features/guards/api/guard.api";
 import { requestGetGuardAvailability } from "@/features/shift/api/shift.api";
 import type { GuardListItem, GuardProfileItem } from "@/features/guards/type";
+import { getEndOfDayInTimeZone, getUserTimeZone } from "@/utils/dateTime";
 
 const PAGE_SIZE = 10;
 
@@ -270,14 +271,8 @@ export default function GuardListScreen() {
         // Shift endTime forward by 1 second to cover exact boundary starts
         const nowPlus1sStr = new Date(now.getTime() + 1000).toISOString();
 
-        // Calculate today's end time in Vietnam local time (+07:00)
-        const vnTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-        const year = vnTime.getUTCFullYear();
-        const month = String(vnTime.getUTCMonth() + 1).padStart(2, "0");
-        const day = String(vnTime.getUTCDate()).padStart(2, "0");
-        const dateKey = `${year}-${month}-${day}`;
-
-        const todayEnd = `${dateKey}T23:59:59+07:00`;
+        // Calculate today's end time in user local time
+        const todayEnd = getEndOfDayInTimeZone(now, getUserTimeZone());
 
         const [nowResult, futureResult] = await Promise.all([
           requestGetGuardAvailability({

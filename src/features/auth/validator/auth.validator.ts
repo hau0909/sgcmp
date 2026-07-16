@@ -94,6 +94,14 @@ export const validatePassword = (password: string) => {
   return null;
 };
 
+export const validatePasswordLogin = (password: string) => {
+  if (!password) {
+    return "Vui lòng nhập mật khẩu";
+  }
+
+  return null;
+};
+
 export const validateConfirmPassword = (
   password: string,
   confirmPassword: string,
@@ -178,7 +186,7 @@ export const validateLoginInput = ({ email, password }: LoginInput) => {
   const emailError = validateEmail(email);
   if (emailError) return emailError;
 
-  const passwordError = validatePassword(password);
+  const passwordError = validatePasswordLogin(password);
   if (passwordError) return passwordError;
 
   return null;

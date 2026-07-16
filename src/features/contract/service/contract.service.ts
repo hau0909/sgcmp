@@ -2,6 +2,7 @@ import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
 import { CustomerContract } from "../types";
 import { getCurrentUserProfileService } from "@/features/auth/service/auth.service";
+import { getProfileByUserIdService } from "@/features/profile/service/profile.service";
 import { getCompanyByOwnerIdService, getCoordinatorByCompanyIdService } from "@/features/guards/service/guard.service";
 import {
   getContracts,
@@ -75,6 +76,7 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
   const booking = item.bookings;
   const profile = booking?.profiles;
   const service = booking?.services;
+  const company = booking?.companies;
   const serviceName = service?.name || "Dịch vụ chưa xác định";
 
   // Format price to VND currency string
@@ -85,6 +87,41 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
       currency: "VND",
     }).format(Number(booking.quoted_price));
   }
+
+  // Fetch company owner (representative) profile
+  let ownerName = "Chưa cập nhật";
+  if (company?.owner_id) {
+    const ownerProfile = await getProfileByUserIdService(company.owner_id);
+    if (ownerProfile) {
+      ownerName = ownerProfile.full_name || "Chưa cập nhật";
+    }
+  }
+
+  // Fetch assigned guards profiles
+  let assignedGuards: { full_name: string; phone_number: string; cccd: string }[] = [];
+  const guardIds = item.guard_assigned || [];
+  if (guardIds.length > 0) {
+    const supabaseServer = await createClient();
+    const { data: profilesData } = await supabaseServer
+      .from("profiles")
+      .select(`
+        full_name,
+        phone_number,
+        identities (
+          identity_id
+        )
+      `)
+      .in("user_id", guardIds);
+    if (profilesData) {
+      assignedGuards = profilesData.map((p: any) => ({
+        full_name: p.full_name || "Bảo vệ chưa đặt tên",
+        phone_number: p.phone_number || "Chưa có SĐT",
+        cccd: p.identities?.[0]?.identity_id || "........................",
+      }));
+    }
+  }
+
+  const formattedCompanyAddress = await formatAddressService(company?.address);
 
   return {
     contract_id: item.contract_id,
@@ -136,6 +173,27 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
           : null,
       }
       : null,
+
+    // Compiled company, customer, and guard fields for contract exporting
+    company: {
+      name: company?.company_name || "Công ty chưa xác định",
+      phone: company?.phone || "Chưa cập nhật",
+      email: company?.email || "Chưa cập nhật",
+      address: formattedCompanyAddress || "Chưa cập nhật",
+      tax_code: company?.business_license_no || "Chưa cập nhật",
+      representative: ownerName,
+      position: "Đại diện pháp luật",
+    },
+    customer: {
+      company_name: "........................",
+      address: profile?.address || "Chưa cập nhật",
+      tax_code: "........................",
+      phone: profile?.phone_number || "Chưa cập nhật",
+      email: profile?.email || "Chưa cập nhật",
+      representative: profile?.full_name || "Khách hàng không tên",
+      position: "........................",
+    },
+    assigned_guards_list: assignedGuards,
   };
 };
 
@@ -376,6 +434,7 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
   const booking = item.bookings;
   const service = booking?.services;
   const company = booking?.companies;
+  const profile = booking?.profiles;
   const serviceName = service?.name || "Dịch vụ chưa xác định";
   const companyName = company?.company_name || "Công ty chưa xác định";
 
@@ -388,6 +447,39 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
       style: "currency",
       currency: "VND",
     }).format(Number(booking.quoted_price));
+  }
+
+  // Fetch company owner (representative) profile
+  let ownerName = "Chưa cập nhật";
+  if (company?.owner_id) {
+    const ownerProfile = await getProfileByUserIdService(company.owner_id);
+    if (ownerProfile) {
+      ownerName = ownerProfile.full_name || "Chưa cập nhật";
+    }
+  }
+
+  // Fetch assigned guards profiles
+  let assignedGuards: { full_name: string; phone_number: string; cccd: string }[] = [];
+  const guardIds = item.guard_assigned || [];
+  if (guardIds.length > 0) {
+    const supabaseServer = await createClient();
+    const { data: profilesData } = await supabaseServer
+      .from("profiles")
+      .select(`
+        full_name,
+        phone_number,
+        identities (
+          identity_id
+        )
+      `)
+      .in("user_id", guardIds);
+    if (profilesData) {
+      assignedGuards = profilesData.map((p: any) => ({
+        full_name: p.full_name || "Bảo vệ chưa đặt tên",
+        phone_number: p.phone_number || "Chưa có SĐT",
+        cccd: p.identities?.[0]?.identity_id || "........................",
+      }));
+    }
   }
 
   const formattedCompanyAddress = await formatAddressService(company?.address);
@@ -426,8 +518,21 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
       name: companyName,
       phone: company?.phone || "Chưa cập nhật",
       email: company?.email || "Chưa cập nhật",
-      address: formattedCompanyAddress,
+      address: formattedCompanyAddress || "Chưa cập nhật",
+      tax_code: company?.business_license_no || "Chưa cập nhật",
+      representative: ownerName,
+      position: "Đại diện pháp luật",
     },
+    customer: {
+      company_name: "........................",
+      address: profile?.address || "Chưa cập nhật",
+      tax_code: "........................",
+      phone: profile?.phone_number || "Chưa cập nhật",
+      email: profile?.email || "Chưa cập nhật",
+      representative: profile?.full_name || "Khách hàng không tên",
+      position: "........................",
+    },
+    assigned_guards_list: assignedGuards,
   };
 };
 

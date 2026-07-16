@@ -3,7 +3,7 @@ export type UserRole =
   | "admin"
   | "company-admin"
   | "guard"
-  | "Coordinator";
+  | "coordinator";
 
 export type GeneralStatus = "active" | "unactive";
 
@@ -27,12 +27,13 @@ export type BookingStatus = "pending" | "quoted" | "accepted" | "rejected" | "ca
 
 export type ImageType = 'logo' | 'banner' | 'other';
 
-export type ShiftAssignmentStatus = "assigned" | "completed" | "absent";
+export type ShiftAssignmentStatus = "assigned" | "completed" | "absent" | "late";
 
 export enum ShiftImgType {
   checkin = "checkin",
   checkout = "checkout",
   incident = "incident",
+  late = "late",
   other = "other",
 }
 
@@ -40,4 +41,4 @@ export type VerificationStatus = "pending" | "approved" | "rejected";
 
 export type ReportType = "LATE" | "ABSENT" | "BAD_ATTITUDE" | "SLEEPING" | "OTHER";
 
-export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";

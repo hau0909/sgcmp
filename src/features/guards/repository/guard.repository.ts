@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { getEndOfDayInTimeZone } from "@/utils/dateTime";
 
 import type {
   InsertGuardInformationParams,
@@ -113,7 +114,7 @@ export const uploadGuardAvatar = async ({
     throw new Error("Không tìm thấy hồ sơ người dùng hiện tại.");
   }
 
-  if (currentProfile.role !== "Coordinator") {
+  if (currentProfile.role !== "coordinator") {
     throw new Error("Bạn không có quyền tải ảnh bảo vệ.");
   }
 
@@ -197,7 +198,7 @@ export const uploadGuardFile = async ({
     throw new Error("Không tìm thấy hồ sơ người dùng hiện tại.");
   }
 
-  if (currentProfile.role !== "Coordinator") {
+  if (currentProfile.role !== "coordinator") {
     throw new Error("Bạn không có quyền tải ảnh bảo vệ.");
   }
 
@@ -270,6 +271,7 @@ export const getAllGuards = async ({
   gender,
   status,
   workStatus,
+  timeZone,
 }: GetAllGuardsRepositoryParams): Promise<GetAllGuardsRepositoryResult> => {
   const supabase = await createClient();
 
@@ -327,12 +329,7 @@ export const getAllGuards = async ({
     const activeUserIds = Array.from(new Set((activeAssignments ?? []).map((a) => a.guard_id)));
 
     // 2. Get user IDs that have any shift today (active or future today)
-    const vnTime = new Date(now.getTime() + 7 * 60 * 60 * 1000);
-    const year = vnTime.getUTCFullYear();
-    const month = String(vnTime.getUTCMonth() + 1).padStart(2, "0");
-    const day = String(vnTime.getUTCDate()).padStart(2, "0");
-    const dateKey = `${year}-${month}-${day}`;
-    const todayEnd = `${dateKey}T23:59:59+07:00`;
+    const todayEnd = getEndOfDayInTimeZone(now, timeZone);
 
     const { data: upcomingAssignments, error: upcomingErr } = await supabase
       .from("shift_assignments")

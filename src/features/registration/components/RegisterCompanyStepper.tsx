@@ -2,9 +2,19 @@
 
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ArrowRight, Send, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowRight,
+  Send,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
+} from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
-import { requestRegisterAccount, requestLogout } from "@/features/auth/api/auth.api";
+import {
+  requestRegisterAccount,
+  requestLogout,
+} from "@/features/auth/api/auth.api";
 import { RegisterPayload } from "@/features/auth/types";
 import { createClient } from "@/lib/supabase/client";
 import { requestSubmitRegistration } from "../api/registration.api";
@@ -15,7 +25,11 @@ import StepReview from "./StepReview";
 import StepSignUp from "./StepSignUp";
 
 const generateUUID = (): string => {
-  if (typeof window !== "undefined" && window.crypto && window.crypto.randomUUID) {
+  if (
+    typeof window !== "undefined" &&
+    window.crypto &&
+    window.crypto.randomUUID
+  ) {
     return window.crypto.randomUUID();
   }
   return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -37,7 +51,9 @@ export default function RegisterCompanyStepper() {
   const [successCode, setSuccessCode] = useState<string | null>(null);
   const [consentChecked, setConsentChecked] = useState(false);
   // Signup payload collected from StepSignUp (guest flow)
-  const [signupPayload, setSignupPayload] = useState<RegisterPayload | null>(null);
+  const [signupPayload, setSignupPayload] = useState<RegisterPayload | null>(
+    null,
+  );
 
   // Form State
   const [formData, setFormData] = useState({
@@ -135,10 +151,13 @@ export default function RegisterCompanyStepper() {
   const validateStep1 = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.fullName.trim()) newErrors.fullName = "Họ và tên không được để trống";
+    if (!formData.fullName.trim())
+      newErrors.fullName = "Họ và tên không được để trống";
     if (!formData.phoneNumber.trim()) {
       newErrors.phoneNumber = "Số điện thoại không được để trống";
-    } else if (!/^(0|\+84)[0-9]{9,10}$/.test(formData.phoneNumber.replace(/\s/g, ""))) {
+    } else if (
+      !/^(0|\+84)[0-9]{9,10}$/.test(formData.phoneNumber.replace(/\s/g, ""))
+    ) {
       newErrors.phoneNumber = "Số điện thoại không hợp lệ";
     }
 
@@ -149,7 +168,8 @@ export default function RegisterCompanyStepper() {
     }
 
     if (!formData.issueDate) newErrors.issueDate = "Vui lòng chọn ngày cấp";
-    if (!formData.issuePlace.trim()) newErrors.issuePlace = "Vui lòng nhập nơi cấp";
+    if (!formData.issuePlace.trim())
+      newErrors.issuePlace = "Vui lòng nhập nơi cấp";
 
     if (!formData.frontFile && !formData.frontUrl) {
       newErrors.frontFile = "Vui lòng upload mặt trước CCCD";
@@ -165,14 +185,17 @@ export default function RegisterCompanyStepper() {
   const validateStep2 = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!formData.companyName.trim()) newErrors.companyName = "Tên công ty không được để trống";
+    if (!formData.companyName.trim())
+      newErrors.companyName = "Tên công ty không được để trống";
     if (!formData.businessLicenseNo.trim()) {
       newErrors.businessLicenseNo = "Mã số doanh nghiệp không được để trống";
     }
 
-    if (formData.cityId === "") newErrors.cityId = "Vui lòng chọn Tỉnh/Thành phố";
+    if (formData.cityId === "")
+      newErrors.cityId = "Vui lòng chọn Tỉnh/Thành phố";
     if (formData.wardId === "") newErrors.wardId = "Vui lòng chọn Phường/Xã";
-    if (!formData.street.trim()) newErrors.street = "Vui lòng nhập địa chỉ chi tiết";
+    if (!formData.street.trim())
+      newErrors.street = "Vui lòng nhập địa chỉ chi tiết";
 
     if (!formData.companyEmail.trim()) {
       newErrors.companyEmail = "Email liên hệ không được để trống";
@@ -219,7 +242,11 @@ export default function RegisterCompanyStepper() {
   };
 
   // Storage Uploader Helper
-  const uploadToStorage = async (file: File, bucket: string, path: string): Promise<string> => {
+  const uploadToStorage = async (
+    file: File,
+    bucket: string,
+    path: string,
+  ): Promise<string> => {
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(path, file, {
@@ -242,7 +269,10 @@ export default function RegisterCompanyStepper() {
     if (!validateStep3()) return;
 
     if (!signupPayload) {
-      setErrors({ general: "Thông tin tài khoản bị thiếu. Vui lòng quay lại bước đầu tiên." });
+      setErrors({
+        general:
+          "Thông tin tài khoản bị thiếu. Vui lòng quay lại bước đầu tiên.",
+      });
       return;
     }
 
@@ -260,7 +290,9 @@ export default function RegisterCompanyStepper() {
       });
 
       if (!registerResult.success) {
-        const msg = registerResult.message || "Đăng ký tài khoản thất bại. Vui lòng thử lại.";
+        const msg =
+          registerResult.message ||
+          "Đăng ký tài khoản thất bại. Vui lòng thử lại.";
         setErrors({ general: msg });
         return;
       }
@@ -268,7 +300,9 @@ export default function RegisterCompanyStepper() {
       // Extract the newly created userId from Supabase signUp response
       const uid = registerResult.account?.user?.id ?? null;
       if (!uid) {
-        setErrors({ general: "Không thể xác định ID tài khoản. Vui lòng thử lại." });
+        setErrors({
+          general: "Không thể xác định ID tài khoản. Vui lòng thử lại.",
+        });
         return;
       }
 
@@ -278,41 +312,70 @@ export default function RegisterCompanyStepper() {
       // 1. Upload Step 1 files to 'profiles' bucket if they are raw files
       let finalAvatarUrl = formData.avatarUrl;
       if (formData.avatarFile) {
-        const ext = formData.avatarFile.name.split(".").pop()?.toLowerCase() || "";
-        finalAvatarUrl = await uploadToStorage(formData.avatarFile, "profiles", `${uid}/avatar.${ext}`);
+        const ext =
+          formData.avatarFile.name.split(".").pop()?.toLowerCase() || "";
+        finalAvatarUrl = await uploadToStorage(
+          formData.avatarFile,
+          "profiles",
+          `${uid}/avatar.${ext}`,
+        );
       }
 
       let finalFrontUrl = formData.frontUrl;
       if (formData.frontFile) {
-        const ext = formData.frontFile.name.split(".").pop()?.toLowerCase() || "";
-        finalFrontUrl = await uploadToStorage(formData.frontFile, "profiles", `${uid}/identity/front.${ext}`);
+        const ext =
+          formData.frontFile.name.split(".").pop()?.toLowerCase() || "";
+        finalFrontUrl = await uploadToStorage(
+          formData.frontFile,
+          "profiles",
+          `${uid}/identity/front.${ext}`,
+        );
       }
 
       let finalBackUrl = formData.backUrl;
       if (formData.backFile) {
-        const ext = formData.backFile.name.split(".").pop()?.toLowerCase() || "";
-        finalBackUrl = await uploadToStorage(formData.backFile, "profiles", `${uid}/identity/back.${ext}`);
+        const ext =
+          formData.backFile.name.split(".").pop()?.toLowerCase() || "";
+        finalBackUrl = await uploadToStorage(
+          formData.backFile,
+          "profiles",
+          `${uid}/identity/back.${ext}`,
+        );
       }
 
       // 2. Upload Step 2 files to 'companies' bucket
       let finalLogoUrl = formData.logoUrl;
       if (formData.logoFile) {
-        const ext = formData.logoFile.name.split(".").pop()?.toLowerCase() || "";
-        finalLogoUrl = await uploadToStorage(formData.logoFile, "companies", `${companyId}/images/logo.${ext}`);
+        const ext =
+          formData.logoFile.name.split(".").pop()?.toLowerCase() || "";
+        finalLogoUrl = await uploadToStorage(
+          formData.logoFile,
+          "companies",
+          `${companyId}/images/logo.${ext}`,
+        );
       }
 
       let finalLicenseUrl = formData.licenseUrl;
       if (formData.licenseFile) {
-        const ext = formData.licenseFile.name.split(".").pop()?.toLowerCase() || "";
-        finalLicenseUrl = await uploadToStorage(formData.licenseFile, "companies", `${companyId}/lisence.${ext}`);
+        const ext =
+          formData.licenseFile.name.split(".").pop()?.toLowerCase() || "";
+        finalLicenseUrl = await uploadToStorage(
+          formData.licenseFile,
+          "companies",
+          `${companyId}/lisence.${ext}`,
+        );
       }
 
       // 3. Upload gallery images to 'companies' bucket in parallel
       const galleryUrls = await Promise.all(
         formData.galleryFiles.map((file, idx) => {
           const ext = file.name.split(".").pop()?.toLowerCase() || "";
-          return uploadToStorage(file, "companies", `${companyId}/images/gallery-${idx}.${ext}`);
-        })
+          return uploadToStorage(
+            file,
+            "companies",
+            `${companyId}/images/gallery-${idx}.${ext}`,
+          );
+        }),
       );
 
       // 4. Construct API payload
@@ -344,7 +407,10 @@ export default function RegisterCompanyStepper() {
           phone: formData.companyPhone,
           description: formData.description || null,
         },
-        images: [] as { imageUrl: string; imageType: "logo" | "banner" | "other" }[],
+        images: [] as {
+          imageUrl: string;
+          imageType: "logo" | "banner" | "other";
+        }[],
       };
 
       // Push logo URL into images table if created
@@ -369,11 +435,16 @@ export default function RegisterCompanyStepper() {
       if (res?.success && res.registrationCode) {
         setSuccessCode(res.registrationCode);
       } else {
-        setErrors({ general: res?.message || "Đăng ký thất bại. Vui lòng thử lại." });
+        setErrors({
+          general: res?.message || "Đăng ký thất bại. Vui lòng thử lại.",
+        });
       }
     } catch (err) {
       console.error("Submit registration error:", err);
-      const errorMessage = err instanceof Error ? err.message : "Lỗi hệ thống khi gửi thông tin đăng ký.";
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : "Lỗi hệ thống khi gửi thông tin đăng ký.";
       setErrors({ general: errorMessage });
     } finally {
       setSubmitting(false);
@@ -388,8 +459,6 @@ export default function RegisterCompanyStepper() {
     );
   }
 
-
-
   // Render Success Screen
   if (successCode) {
     return (
@@ -397,11 +466,14 @@ export default function RegisterCompanyStepper() {
         <div className="w-16 h-16 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 mx-auto">
           <CheckCircle2 className="w-10 h-10" />
         </div>
-        
+
         <div className="space-y-2">
-          <h2 className="text-2xl font-bold text-on-surface">Hồ sơ đã được gửi thành công!</h2>
+          <h2 className="text-2xl font-bold text-on-surface">
+            Hồ sơ đã được gửi thành công!
+          </h2>
           <p className="text-sm text-on-surface-variant max-w-md mx-auto leading-relaxed">
-            Hồ sơ đăng ký doanh nghiệp bảo vệ của bạn đã được tiếp nhận và đưa vào danh sách chờ duyệt.
+            Hồ sơ đăng ký doanh nghiệp bảo vệ của bạn đã được tiếp nhận và đưa
+            vào danh sách chờ duyệt.
           </p>
         </div>
 
@@ -415,7 +487,9 @@ export default function RegisterCompanyStepper() {
         </div>
 
         <p className="text-xs text-on-surface-variant/80 max-w-md mx-auto leading-relaxed">
-          * Thông thường quá trình xét duyệt hồ sơ pháp lý sẽ mất từ 1 - 2 ngày làm việc. Chúng tôi sẽ gửi thông báo email cho người đại diện khi có kết quả.
+          * Thông thường quá trình xét duyệt hồ sơ pháp lý sẽ mất từ 1 - 2 ngày
+          làm việc. Chúng tôi sẽ gửi thông báo email cho người đại diện khi có
+          kết quả.
         </p>
 
         <div className="pt-2 flex justify-center gap-4">
@@ -453,9 +527,7 @@ export default function RegisterCompanyStepper() {
         )}
 
         {/* Render Step View */}
-        {currentStep === 1 && (
-          <StepSignUp onSuccess={handleSignUpSuccess} />
-        )}
+        {currentStep === 1 && <StepSignUp onSuccess={handleSignUpSuccess} />}
         {formStep === 1 && (
           <StepPersonal
             formData={formData}

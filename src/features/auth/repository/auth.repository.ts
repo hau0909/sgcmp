@@ -17,7 +17,7 @@ export const registerAccount = async ({
 }: RegisterParams) => {
   const supabase = await createClient();
 
-  const isTemporaryAccount = role === "guard" || role === "Coordinator";
+  const isTemporaryAccount = role === "guard" || role === "coordinator";
 
   const { data, error } = await supabase.auth.signUp({
     email,
@@ -123,7 +123,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
     companyId = data.company_id;
   }
 
-  if (activeProfile.role === "Coordinator") {
+  if (activeProfile.role === "coordinator") {
     const { data, error } = await supabase
       .from("coordinators")
       .select("company_id")

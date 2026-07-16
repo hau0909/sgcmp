@@ -19,7 +19,7 @@ interface NavLink {
 type UserRole =
   | "customer"
   | "guard"
-  | "Coordinator"
+  | "coordinator"
   | "admin"
   | "company-admin";
 
