@@ -70,50 +70,48 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     await handleUpdateRegistrationStatus(id, status, note);
 
-    // Send email notification asynchronously
+    // Send email notification
     if (detail) {
       const recipientEmail = detail.companies?.profiles?.email || detail.companies?.email;
       if (recipientEmail) {
-        (async () => {
-          try {
-            const repName = detail.companies?.profiles?.full_name || "Quý đối tác";
-            const companyName = detail.companies?.company_name || "";
-            const createdAt = new Date(detail.created_at).toLocaleString("vi-VN");
-            const registrationCode = detail.registration_code;
-            
-            if (status === "approved") {
-              const loginUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/login`;
-              const html = getApprovedEmailHtml({
-                repName,
-                companyName,
-                createdAt,
-                registrationCode,
-                loginUrl
-              });
-              await sendEmail({
-                to: recipientEmail,
-                subject: `[SGCMP] Thông báo phê duyệt hồ sơ đăng ký doanh nghiệp thành công`,
-                html
-              });
-            } else if (status === "rejected") {
-              const editUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/register`;
-              const html = getRejectedEmailHtml({
-                repName,
-                companyName,
-                createdAt,
-                rejectReason: note || "Không có lý do chi tiết",
-                editUrl
-              });
-              await sendEmail({
-                to: recipientEmail,
-                subject: `[SGCMP] Thông báo từ chối hồ sơ đăng ký doanh nghiệp`,
-                html
-              });
-            }
-          } catch (emailErr) {
-            console.error("Error sending status email:", emailErr);
+        try {
+          const repName = detail.companies?.profiles?.full_name || "Quý đối tác";
+          const companyName = detail.companies?.company_name || "";
+          const createdAt = new Date(detail.created_at).toLocaleString("vi-VN");
+          const registrationCode = detail.registration_code;
+
+          if (status === "approved") {
+            const loginUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/login`;
+            const html = getApprovedEmailHtml({
+              repName,
+              companyName,
+              createdAt,
+              registrationCode,
+              loginUrl
+            });
+            await sendEmail({
+              to: recipientEmail,
+              subject: `[SGCMP] Thông báo phê duyệt hồ sơ đăng ký doanh nghiệp thành công`,
+              html
+            });
+          } else if (status === "rejected") {
+            const editUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/register`;
+            const html = getRejectedEmailHtml({
+              repName,
+              companyName,
+              createdAt,
+              rejectReason: note || "Không có lý do chi tiết",
+              editUrl
+            });
+            await sendEmail({
+              to: recipientEmail,
+              subject: `[SGCMP] Thông báo từ chối hồ sơ đăng ký doanh nghiệp`,
+              html
+            });
           }
-        })();
+        } catch (emailErr) {
+          console.error("Error sending status email:", emailErr);
+        }
       } else {
         console.warn(`[SMTP warning] No recipient email found for registration ${id}. Skipping email.`);
       }

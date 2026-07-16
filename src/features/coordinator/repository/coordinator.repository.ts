@@ -123,3 +123,17 @@ export const updateCoordinatorInfo = async (
 
   if (identityError) throw identityError;
 };
+
+export const getCoordinatorCountByCompanyId = async (
+  companyId: string,
+): Promise<number> => {
+  const supabaseServer = await createClient();
+
+  const { count, error } = await supabaseServer
+    .from("coordinators")
+    .select("*", { count: "exact", head: true })
+    .eq("company_id", companyId);
+
+  if (error) throw error;
+  return count ?? 0;
+};
