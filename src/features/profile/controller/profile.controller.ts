@@ -1,30 +1,7 @@
 import {
   updateProfileService,
-  activateProfileService,
 } from "../service/profile.service";
 import { getCurrentUserProfileService } from "@/features/auth/service/auth.service";
-
-export const handleActivateProfile = async (): Promise<{
-  success: boolean;
-  message: string;
-}> => {
-  try {
-    const currentProfile = await getCurrentUserProfileService();
-
-    if (!currentProfile) {
-      return { success: false, message: "Người dùng chưa đăng nhập" };
-    }
-
-    await activateProfileService(currentProfile.user_id);
-    return { success: true, message: "Kích hoạt tài khoản thành công" };
-  } catch (error: any) {
-    console.error("[Profile Controller] Lỗi kích hoạt profile:", error);
-    return {
-      success: false,
-      message: error?.message || "Kích hoạt tài khoản thất bại",
-    };
-  }
-};
 
 export const handleUpdateProfile = async (
   userId: string,

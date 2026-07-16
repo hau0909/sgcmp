@@ -156,6 +156,7 @@ export type TodayGuardListItem = {
   contractCode: string | null;
   contractName: string | null;
   status: string;
+  timeRange: string;
 };
 
 export const requestGetTodayGuards = (

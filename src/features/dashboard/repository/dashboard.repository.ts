@@ -468,11 +468,11 @@ export const getProfilesByIds = async (ids: string[]) => {
 
 export const getRecentShiftsAndAssignments = async (
   companyId: string,
-  startDate: string,
-  endDate: string,
+  startDate?: string,
+  endDate?: string,
 ) => {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("shifts")
     .select(`
       shift_id,
@@ -496,9 +496,16 @@ export const getRecentShiftsAndAssignments = async (
         updated_at
       )
     `)
-    .eq("contracts.bookings.company_id", companyId)
-    .gte("start_time", startDate)
-    .lte("start_time", endDate);
+    .eq("contracts.bookings.company_id", companyId);
+
+  if (startDate) {
+    query = query.gte("start_time", startDate);
+  }
+  if (endDate) {
+    query = query.lte("start_time", endDate);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Không thể lấy shifts cho hoạt động gần đây: ${error.message}`);
@@ -582,7 +589,7 @@ export const getRecentCoordinators = async (limitVal: number) => {
   const { data, error } = await supabase
     .from("profiles")
     .select("user_id, full_name, created_at")
-    .eq("role", "Coordinator")
+    .eq("role", "coordinator")
     .order("created_at", { ascending: false })
     .limit(limitVal);
 

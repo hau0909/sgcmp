@@ -345,6 +345,12 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
   const list: any[] = [];
   const now = new Date();
 
+  const formatTime = (dateStr: string) => {
+    const d = new Date(dateStr);
+    const pad = (num: number) => num.toString().padStart(2, "0");
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   for (const shift of shifts) {
     const shiftStart = new Date(shift.start_time);
     const shiftEnd = new Date(shift.end_time);
@@ -377,7 +383,10 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
         branch: shift.shift_name,
         contractCode: `HD-${(shift.contracts as any).contract_id.slice(0, 8).toUpperCase()}`,
         contractName: (shift.contracts as any).bookings?.services?.name || "Dịch vụ bảo vệ",
-        status: origLabel
+        status: origLabel,
+        timeRange: origCheckIn 
+          ? `Check-in lúc ${formatTime(origCheckIn)}` 
+          : formatTime(shift.start_time)
       });
 
       // 2. Replacement guards
@@ -391,7 +400,8 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
             branch: `${shift.shift_name} (Thay thế)`,
             contractCode: `HD-${(shift.contracts as any).contract_id.slice(0, 8).toUpperCase()}`,
             contractName: (shift.contracts as any).bookings?.services?.name || "Dịch vụ bảo vệ",
-            status: "Thay ca"
+            status: "Thay ca",
+            timeRange: formatTime(shift.start_time)
           });
         });
       }
@@ -416,12 +426,9 @@ export interface RecentActivityItem {
 export const getRecentActivitiesService = async (companyId: string): Promise<RecentActivityItem[]> => {
   const activities: RecentActivityItem[] = [];
   const today = new Date();
-  const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-  const startOfYesterday = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0).toISOString();
-  const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
 
   // 1. Attendance & Replacements
-  const shifts = await getRecentShiftsAndAssignments(companyId, startOfYesterday, endOfToday);
+  const shifts = await getRecentShiftsAndAssignments(companyId);
   
   const guardIds = new Set<string>();
   for (const s of shifts) {
@@ -454,12 +461,17 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
     const minutes = pad(date.getMinutes());
     const time = `${hours}:${minutes}`;
 
+    const day = pad(date.getDate());
+    const month = pad(date.getMonth() + 1);
+    const year = date.getFullYear();
+    const fullDate = `${day}/${month}/${year}`;
+
     if (isToday) {
-      return time;
+      return `Hôm nay, ${fullDate}, ${time}`;
     } else if (isYesterday) {
-      return `Hôm qua, ${time}`;
+      return `Hôm qua, ${fullDate}, ${time}`;
     } else {
-      return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}, ${time}`;
+      return `${fullDate}, ${time}`;
     }
   };
 
@@ -541,7 +553,7 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
   }
 
   // 2. Reports
-  const reports = await getRecentReports(companyId, 10);
+  const reports = await getRecentReports(companyId, 1000);
   const reportTypeLabels: Record<string, string> = {
     LATE: "Đi muộn",
     ABSENT: "Vắng mặt",
@@ -603,7 +615,7 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
   }
 
   // 3. Contracts
-  const contracts = await getRecentContracts(companyId, 10);
+  const contracts = await getRecentContracts(companyId, 1000);
   for (const contract of contracts) {
     const code = `HD-${contract.contract_id.slice(0, 8).toUpperCase()}`;
 
@@ -638,7 +650,7 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
   }
 
   // 4. Bookings
-  const bookings = await getRecentBookings(companyId, 5);
+  const bookings = await getRecentBookings(companyId, 1000);
   for (const booking of bookings) {
     activities.push({
       id: `act-bkg-p-${booking.booking_id}`,
@@ -653,7 +665,7 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
   }
 
   // 5. Activated coordinators
-  const activatedCoordinators = await getRecentCoordinators(5);
+  const activatedCoordinators = await getRecentCoordinators(1000);
   for (const coord of activatedCoordinators) {
     activities.push({
       id: `act-sys-coord-${coord.user_id}`,
@@ -670,5 +682,5 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
   // Sort activities by timestamp descending
   activities.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
 
-  return activities.slice(0, 20); // Top 20 activities
+  return activities;
 };
