@@ -71,48 +71,46 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
 
     await handleUpdateCompanyPublishRequestStatus(requestId, status, note);
 
-    // Send email asynchronously
+    // Send email
     if (detail) {
       const recipientEmail = detail.requested_by?.email || detail.company?.email;
       if (recipientEmail) {
-        (async () => {
-          try {
-            const repName = detail.requested_by?.full_name || "Quý đối tác";
-            const companyName = detail.company?.company_name || "";
-            const createdAt = new Date(detail.requested_at).toLocaleString("vi-VN");
+        try {
+          const repName = detail.requested_by?.full_name || "Quý đối tác";
+          const companyName = detail.company?.company_name || "";
+          const createdAt = new Date(detail.requested_at).toLocaleString("vi-VN");
 
-            if (status === "APPROVED") {
-              const marketplaceUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/companies/${detail.company_id}`;
-              const html = getPublishRequestApprovedEmailHtml({
-                repName,
-                companyName,
-                createdAt,
-                marketplaceUrl,
-              });
-              await sendEmail({
-                to: recipientEmail,
-                subject: `[SGCMP] Thông báo phê duyệt yêu cầu công khai thông tin doanh nghiệp thành công`,
-                html,
-              });
-            } else if (status === "REJECTED") {
-              const editUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/companies/${detail.company_id}`;
-              const html = getPublishRequestRejectedEmailHtml({
-                repName,
-                companyName,
-                createdAt,
-                rejectReason: note || "Không có lý do chi tiết",
-                editUrl,
-              });
-              await sendEmail({
-                to: recipientEmail,
-                subject: `[SGCMP] Thông báo từ chối yêu cầu công khai thông tin doanh nghiệp`,
-                html,
-              });
-            }
-          } catch (emailErr) {
-            console.error("Error sending publish request email:", emailErr);
+          if (status === "APPROVED") {
+            const marketplaceUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/companies/${detail.company_id}`;
+            const html = getPublishRequestApprovedEmailHtml({
+              repName,
+              companyName,
+              createdAt,
+              marketplaceUrl,
+            });
+            await sendEmail({
+              to: recipientEmail,
+              subject: `[SGCMP] Thông báo phê duyệt yêu cầu công khai thông tin doanh nghiệp thành công`,
+              html,
+            });
+          } else if (status === "REJECTED") {
+            const editUrl = `${process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000"}/companies/${detail.company_id}`;
+            const html = getPublishRequestRejectedEmailHtml({
+              repName,
+              companyName,
+              createdAt,
+              rejectReason: note || "Không có lý do chi tiết",
+              editUrl,
+            });
+            await sendEmail({
+              to: recipientEmail,
+              subject: `[SGCMP] Thông báo từ chối yêu cầu công khai thông tin doanh nghiệp`,
+              html,
+            });
           }
-        })();
+        } catch (emailErr) {
+          console.error("Error sending publish request email:", emailErr);
+        }
       } else {
         console.warn(`[SMTP warning] No recipient email found for publish request ${requestId}. Skipping email.`);
       }
