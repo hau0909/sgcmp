@@ -1,118 +1,32 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ChevronDown, X } from "lucide-react";
-
-type PendingTaskItem = {
-  id: string;
-  stt: number;
-  category: "register" | "urgent" | "compliance";
-  categoryText: string;
-  time: string;
-  title: string;
-  description: string;
-  status: "pending_approval" | "pending_resolve" | "pending_renew";
-  statusText: string;
-};
-
-const pendingTasks: PendingTaskItem[] = [
-  {
-    id: "1",
-    stt: 1,
-    category: "register",
-    categoryText: "ĐĂNG KÝ MỚI",
-    time: "2 giờ trước",
-    title: "Công ty Bảo vệ An Ninh Nam Sài Gòn",
-    description: "Hồ sơ đăng ký doanh nghiệp cần xét duyệt điều khoản...",
-    status: "pending_approval",
-    statusText: "Chờ duyệt",
-  },
-  {
-    id: "2",
-    stt: 2,
-    category: "urgent",
-    categoryText: "HỖ TRỢ KHẨN CẤP",
-    time: "45 phút trước",
-    title: "Lỗi thanh toán API #9822",
-    description: "Giao dịch bị kẹt ở cổng thanh toán MoMo do timeout...",
-    status: "pending_resolve",
-    statusText: "Chờ xử lý",
-  },
-  {
-    id: "3",
-    stt: 3,
-    category: "compliance",
-    categoryText: "TUÂN THỦ",
-    time: "Hôm qua",
-    title: "Gia hạn chứng chỉ nghiệp vụ",
-    description: "120 bảo vệ tại Chi nhánh Hà Nội hết hạn chứng chỉ PCCC...",
-    status: "pending_renew",
-    statusText: "Cần gia hạn",
-  },
-  {
-    id: "4",
-    stt: 4,
-    category: "register",
-    categoryText: "ĐĂNG KÝ MỚI",
-    time: "3 giờ trước",
-    title: "Công ty Dịch vụ Bảo vệ Đại An",
-    description: "Yêu cầu kích hoạt tài khoản doanh nghiệp bảo vệ...",
-    status: "pending_approval",
-    statusText: "Chờ duyệt",
-  },
-  {
-    id: "5",
-    stt: 5,
-    category: "compliance",
-    categoryText: "TUÂN THỦ",
-    time: "5 giờ trước",
-    title: "Báo cáo kiểm định thiết bị an ninh",
-    description: "Báo cáo tuân thủ tiêu chuẩn thiết bị hàng năm...",
-    status: "pending_renew",
-    statusText: "Cần gia hạn",
-  },
-  {
-    id: "6",
-    stt: 6,
-    category: "urgent",
-    categoryText: "HỖ TRỢ KHẨN CẤP",
-    time: "6 giờ trước",
-    title: "Lỗi đồng bộ GPS tuần tra",
-    description: "Mất kết nối định vị đối với nhóm tuần tra ca đêm...",
-    status: "pending_resolve",
-    statusText: "Chờ xử lý",
-  },
-  {
-    id: "7",
-    stt: 7,
-    category: "register",
-    categoryText: "ĐĂNG KÝ MỚI",
-    time: "1 ngày trước",
-    title: "Công ty Bảo vệ Đông Á",
-    description: "Yêu cầu xét duyệt cấp chứng chỉ hoạt động mới...",
-    status: "pending_approval",
-    statusText: "Chờ duyệt",
-  },
-  {
-    id: "8",
-    stt: 8,
-    category: "compliance",
-    categoryText: "TUÂN THỦ",
-    time: "2 ngày trước",
-    title: "Chứng chỉ sơ cấp cứu bảo vệ",
-    description: "Hạn kiểm định kỹ năng sơ cấp cứu y tế của nhân viên...",
-    status: "pending_renew",
-    statusText: "Cần gia hạn",
-  },
-];
+import { ChevronDown, X, Loader2 } from "lucide-react";
+import { requestGetAdminPendingTasks, type PendingTaskItem } from "../api/dashboard.api";
 
 export function PendingTasksTable() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [tasks, setTasks] = useState<PendingTaskItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    requestGetAdminPendingTasks()
+      .then((data) => {
+        setTasks(data);
+      })
+      .catch((err) => {
+        console.error("Lỗi khi tải danh sách yêu cầu đang chờ xử lý:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   // Default display is first 5 tasks
-  const displayedTasks = pendingTasks.slice(0, 5);
+  const displayedTasks = tasks.slice(0, 5);
+
 
   const getCategoryBadge = (category: PendingTaskItem["category"], text: string) => {
     switch (category) {
@@ -181,7 +95,7 @@ export function PendingTasksTable() {
               Đang chờ xử lý
             </CardTitle>
             <span className="text-[11px] font-bold text-slate-400">
-              {pendingTasks.length} yêu cầu
+              {tasks.length} yêu cầu
             </span>
           </CardHeader>
           <CardContent className="p-0">
@@ -207,39 +121,56 @@ export function PendingTasksTable() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100/80">
-                  {displayedTasks.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
-                      <td className="py-3.5 px-5 text-xs text-slate-400 font-semibold text-center whitespace-nowrap">
-                        {item.stt}
-                      </td>
-                      <td className="py-3.5 px-5">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs font-bold text-slate-800 line-clamp-1">
-                            {item.title}
-                          </span>
-                          <span className="text-[11px] text-slate-500 line-clamp-1 leading-relaxed">
-                            {item.description}
-                          </span>
+                  {loading ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
+                        <div className="flex items-center justify-center gap-2">
+                          <Loader2 className="size-4 animate-spin text-blue-500" />
+                          <span>Đang tải danh sách...</span>
                         </div>
                       </td>
-                      <td className="py-3.5 px-5 text-xs text-slate-500 whitespace-nowrap">
-                        {item.time}
-                      </td>
-                      <td className="py-3.5 px-5 whitespace-nowrap">
-                        {getCategoryBadge(item.category, item.categoryText)}
-                      </td>
-                      <td className="py-3.5 px-5 whitespace-nowrap">
-                        {getStatusBadge(item.status, item.statusText)}
+                    </tr>
+                  ) : displayedTasks.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
+                        Không có yêu cầu nào đang chờ xử lý.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    displayedTasks.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="py-3.5 px-5 text-xs text-slate-400 font-semibold text-center whitespace-nowrap">
+                          {item.stt}
+                        </td>
+                        <td className="py-3.5 px-5">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-bold text-slate-800 line-clamp-1">
+                              {item.title}
+                            </span>
+                            <span className="text-[11px] text-slate-500 line-clamp-1 leading-relaxed">
+                              {item.description}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-5 text-xs text-slate-500 whitespace-nowrap">
+                          {item.time}
+                        </td>
+                        <td className="py-3.5 px-5 whitespace-nowrap">
+                          {getCategoryBadge(item.category, item.categoryText)}
+                        </td>
+                        <td className="py-3.5 px-5 whitespace-nowrap">
+                          {getStatusBadge(item.status, item.statusText)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
           </CardContent>
         </div>
 
-        {pendingTasks.length > 5 && (
+        {tasks.length > 5 && (
           <div className="p-4 border-t border-slate-100 flex justify-center">
             <Button
               variant="outline"
@@ -271,7 +202,7 @@ export function PendingTasksTable() {
                   Tất cả yêu cầu đang chờ xử lý
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Tổng số {pendingTasks.length} yêu cầu cần được xử lý trong hệ thống
+                  Tổng số {tasks.length} yêu cầu cần được xử lý trong hệ thống
                 </p>
               </div>
               <button 
@@ -305,32 +236,40 @@ export function PendingTasksTable() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-150">
-                  {pendingTasks.map((item) => (
-                    <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
-                      <td className="py-3.5 px-5 text-xs text-slate-400 font-semibold text-center whitespace-nowrap">
-                        {item.stt}
-                      </td>
-                      <td className="py-3.5 px-5">
-                        <div className="flex flex-col gap-0.5">
-                          <span className="text-xs font-bold text-slate-800">
-                            {item.title}
-                          </span>
-                          <span className="text-[11px] text-slate-500 leading-relaxed">
-                            {item.description}
-                          </span>
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-5 text-xs text-slate-500 whitespace-nowrap">
-                        {item.time}
-                      </td>
-                      <td className="py-3.5 px-5 whitespace-nowrap">
-                        {getCategoryBadge(item.category, item.categoryText)}
-                      </td>
-                      <td className="py-3.5 px-5 whitespace-nowrap">
-                        {getStatusBadge(item.status, item.statusText)}
+                  {tasks.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
+                        Không có yêu cầu nào đang chờ xử lý.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    tasks.map((item) => (
+                      <tr key={item.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="py-3.5 px-5 text-xs text-slate-400 font-semibold text-center whitespace-nowrap">
+                          {item.stt}
+                        </td>
+                        <td className="py-3.5 px-5">
+                          <div className="flex flex-col gap-0.5">
+                            <span className="text-xs font-bold text-slate-800">
+                              {item.title}
+                            </span>
+                            <span className="text-[11px] text-slate-500 leading-relaxed">
+                              {item.description}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-5 text-xs text-slate-500 whitespace-nowrap">
+                          {item.time}
+                        </td>
+                        <td className="py-3.5 px-5 whitespace-nowrap">
+                          {getCategoryBadge(item.category, item.categoryText)}
+                        </td>
+                        <td className="py-3.5 px-5 whitespace-nowrap">
+                          {getStatusBadge(item.status, item.statusText)}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>

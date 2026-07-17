@@ -1,129 +1,73 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { CheckCircle2, Clock, AlertTriangle, ChevronRight, HelpCircle, X } from "lucide-react";
-
-type ActivityStep = {
-  id: string;
-  time: string;
-  timeAgo: string;
-  action: string;
-  target: string;
-  status: "success" | "pending" | "done" | "failed";
-  statusText: string;
-};
-
-const steps: ActivityStep[] = [
-  {
-    id: "1",
-    time: "10:24 AM",
-    timeAgo: "2 giờ trước",
-    action: "Phê duyệt doanh nghiệp",
-    target: "Vingroup Security Services",
-    status: "success",
-    statusText: "THÀNH CÔNG",
-  },
-  {
-    id: "2",
-    time: "09:15 AM",
-    timeAgo: "3 giờ trước",
-    action: "Thanh toán mới",
-    target: "Techcombank Corporate",
-    status: "pending",
-    statusText: "ĐANG CHỜ",
-  },
-  {
-    id: "3",
-    time: "08:50 AM",
-    timeAgo: "4 giờ trước",
-    action: "Cập nhật hệ thống",
-    target: "Node-AP-Southeast-1",
-    status: "done",
-    statusText: "HOÀN TẤT",
-  },
-  {
-    id: "4",
-    time: "07:30 AM",
-    timeAgo: "5 giờ trước",
-    action: "Cảnh báo bảo mật",
-    target: "User: admin_test_01",
-    status: "failed",
-    statusText: "BỊ TỪ CHỐI",
-  },
-  {
-    id: "5",
-    time: "06:10 AM",
-    timeAgo: "6 giờ trước",
-    action: "Tạo lịch trực mới",
-    target: "Chi nhánh Quận 1",
-    status: "done",
-    statusText: "HOÀN TẤT",
-  },
-  {
-    id: "6",
-    time: "05:00 AM",
-    timeAgo: "7 giờ trước",
-    action: "Yêu cầu hỗ trợ kỹ thuật",
-    target: "Khách hàng: Nguyễn Văn A",
-    status: "success",
-    statusText: "THÀNH CÔNG",
-  },
-  {
-    id: "7",
-    time: "04:30 AM",
-    timeAgo: "8 giờ trước",
-    action: "Cập nhật hồ sơ bảo vệ",
-    target: "Guard: Trần Văn B",
-    status: "done",
-    statusText: "HOÀN TẤT",
-  },
-  {
-    id: "8",
-    time: "03:00 AM",
-    timeAgo: "9 giờ trước",
-    action: "Sao lưu dữ liệu định kỳ",
-    target: "System Backup Manager",
-    status: "done",
-    statusText: "HOÀN TẤT",
-  },
-];
+import { Building2, FilePlus2, Globe, BadgeCheck, CircleX, Loader2, ChevronRight, X } from "lucide-react";
+import { requestGetAdminRecentActivities, type ActivityItem } from "../api/dashboard.api";
 
 export function RecentActivitiesSteps() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [activities, setActivities] = useState<ActivityItem[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    requestGetAdminRecentActivities()
+      .then((data) => {
+        setActivities(data);
+      })
+      .catch((err) => {
+        console.error("Lỗi khi tải nhật ký hoạt động gần đây:", err);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []);
 
   // Show max 5 items by default
-  const displayedSteps = steps.slice(0, 5);
+  const displayedSteps = activities.slice(0, 5);
 
-  const getStatusIcon = (status: ActivityStep["status"]) => {
-    switch (status) {
-      case "success":
-      case "done":
-        return (
-          <div className="z-10 flex items-center justify-center size-6 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 shadow-sm">
-            <CheckCircle2 className="size-3.5" />
-          </div>
-        );
-      case "pending":
-        return (
-          <div className="z-10 flex items-center justify-center size-6 rounded-full bg-blue-50 border border-blue-200 text-blue-600 shadow-sm animate-pulse">
-            <Clock className="size-3.5" />
-          </div>
-        );
-      case "failed":
-        return (
-          <div className="z-10 flex items-center justify-center size-6 rounded-full bg-rose-50 border border-rose-200 text-rose-600 shadow-sm">
-            <AlertTriangle className="size-3.5" />
-          </div>
-        );
-      default:
-        return (
-          <div className="z-10 flex items-center justify-center size-6 rounded-full bg-slate-50 border border-slate-200 text-slate-500 shadow-sm">
-            <HelpCircle className="size-3.5" />
-          </div>
-        );
+
+  const getActivityIcon = (iconName: ActivityItem["iconName"], iconColor: ActivityItem["iconColor"]) => {
+    let colorClasses = "bg-slate-50 border-slate-200 text-slate-600";
+    if (iconColor === "blue") {
+      colorClasses = "bg-blue-50 border-blue-200 text-blue-600";
+    } else if (iconColor === "purple") {
+      colorClasses = "bg-purple-50 border-purple-200 text-purple-600 animate-pulse";
+    } else if (iconColor === "green") {
+      colorClasses = "bg-emerald-50 border-emerald-200 text-emerald-600";
+    } else if (iconColor === "red") {
+      colorClasses = "bg-rose-50 border-rose-200 text-rose-600";
     }
+
+    const iconProps = { className: "size-3.5" };
+
+    let iconComponent = null;
+    switch (iconName) {
+      case "Building2":
+        iconComponent = <Building2 {...iconProps} />;
+        break;
+      case "FilePlus2":
+        iconComponent = <FilePlus2 {...iconProps} />;
+        break;
+      case "Globe":
+        iconComponent = <Globe {...iconProps} />;
+        break;
+      case "BadgeCheck":
+        iconComponent = <BadgeCheck {...iconProps} />;
+        break;
+      case "CircleX":
+        iconComponent = <CircleX {...iconProps} />;
+        break;
+      default:
+        iconComponent = null;
+    }
+
+    return (
+      <div className={`z-10 flex items-center justify-center size-6 rounded-full border shadow-sm ${colorClasses}`}>
+        {iconComponent}
+      </div>
+    );
   };
 
   return (
@@ -141,32 +85,43 @@ export function RecentActivitiesSteps() {
               <div className="absolute left-[11px] top-2 bottom-2 w-0.5 bg-slate-100 border-l border-dashed border-slate-200" />
 
               <div className="space-y-6">
-                {displayedSteps.map((step) => (
-                  <div key={step.id} className="relative flex gap-4 items-start pl-8 group">
-                    {/* Stepper Node Icon */}
-                    <div className="absolute left-0 top-0">
-                      {getStatusIcon(step.status)}
-                    </div>
-
-                    {/* Stepper Content */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2 mb-1">
-                        <span className="text-[10px] text-slate-400 font-bold tracking-wider">
-                          {step.time}
-                        </span>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {step.timeAgo}
-                        </span>
-                      </div>
-                      <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0047a0] transition-colors leading-none mb-1.5">
-                        {step.action}
-                      </h4>
-                      <p className="text-[11px] text-slate-500 truncate">
-                        {step.target}
-                      </p>
-                    </div>
+                {loading ? (
+                  <div className="flex items-center justify-center py-10 text-xs text-slate-400 gap-2">
+                    <Loader2 className="size-4 animate-spin text-blue-500" />
+                    <span>Đang tải hoạt động...</span>
                   </div>
-                ))}
+                ) : displayedSteps.length === 0 ? (
+                  <div className="text-center py-10 text-xs text-slate-400">
+                    Không có hoạt động nào gần đây.
+                  </div>
+                ) : (
+                  displayedSteps.map((step) => (
+                    <div key={step.id} className="relative flex gap-4 items-start pl-8 group">
+                      {/* Stepper Node Icon */}
+                      <div className="absolute left-0 top-0">
+                        {getActivityIcon(step.iconName, step.iconColor)}
+                      </div>
+
+                      {/* Stepper Content */}
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center justify-between gap-2 mb-1">
+                          <span className="text-[10px] text-slate-400 font-bold tracking-wider">
+                            {step.time}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {step.timeAgo}
+                          </span>
+                        </div>
+                        <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0047a0] transition-colors leading-none mb-1.5">
+                          {step.action}
+                        </h4>
+                        <p className="text-[11px] text-slate-500 truncate">
+                          {step.target}
+                        </p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           </CardContent>
@@ -202,7 +157,7 @@ export function RecentActivitiesSteps() {
                   Nhật ký hoạt động gần đây
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Tổng hợp {steps.length} hoạt động gần nhất của hệ thống
+                  Tổng hợp {activities.length} hoạt động gần nhất của hệ thống
                 </p>
               </div>
               <button 
@@ -220,32 +175,38 @@ export function RecentActivitiesSteps() {
                 <div className="absolute left-[23px] top-2 bottom-2 w-0.5 bg-slate-100 border-l border-dashed border-slate-200" />
 
                 <div className="space-y-6">
-                  {steps.map((step) => (
-                    <div key={step.id} className="relative flex gap-4 items-start pl-8 group">
-                      {/* Stepper Node Icon */}
-                      <div className="absolute left-0 top-0">
-                        {getStatusIcon(step.status)}
-                      </div>
-
-                      {/* Stepper Content */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="text-[10px] text-slate-400 font-bold tracking-wider">
-                            {step.time}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-medium">
-                            {step.timeAgo}
-                          </span>
-                        </div>
-                        <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0047a0] transition-colors leading-none mb-1.5">
-                          {step.action}
-                        </h4>
-                        <p className="text-xs text-slate-500 leading-relaxed">
-                          {step.target}
-                        </p>
-                      </div>
+                  {activities.length === 0 ? (
+                    <div className="text-center py-10 text-xs text-slate-400">
+                      Không có hoạt động nào gần đây.
                     </div>
-                  ))}
+                  ) : (
+                    activities.map((step) => (
+                      <div key={step.id} className="relative flex gap-4 items-start pl-8 group">
+                        {/* Stepper Node Icon */}
+                        <div className="absolute left-0 top-0">
+                          {getActivityIcon(step.iconName, step.iconColor)}
+                        </div>
+
+                        {/* Stepper Content */}
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2 mb-1">
+                            <span className="text-[10px] text-slate-400 font-bold tracking-wider">
+                              {step.time}
+                            </span>
+                            <span className="text-[10px] text-slate-400 font-medium">
+                              {step.timeAgo}
+                            </span>
+                          </div>
+                          <h4 className="text-xs font-bold text-slate-800 group-hover:text-[#0047a0] transition-colors leading-none mb-1.5">
+                            {step.action}
+                          </h4>
+                          <p className="text-xs text-slate-500 leading-relaxed">
+                            {step.target}
+                          </p>
+                        </div>
+                      </div>
+                    ))
+                  )}
                 </div>
               </div>
             </div>
