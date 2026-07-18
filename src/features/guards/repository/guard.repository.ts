@@ -1,5 +1,4 @@
 import { createClient } from "@/lib/supabase/server";
-import { createAdminClient } from "@/lib/supabase/admin";
 import { getEndOfDayInTimeZone } from "@/utils/dateTime";
 
 import type {
@@ -143,9 +142,9 @@ export const uploadGuardAvatar = async ({
   const file_name = `avatar-${Date.now()}.${file_extension}`;
   const file_path = `${user_id}/avatar/${file_name}`;
 
-  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
 
-  const { data: upload_data, error: upload_error } = await supabaseAdmin.storage
+  const { data: upload_data, error: upload_error } = await supabase.storage
     .from(bucket_name)
     .upload(file_path, file, {
       contentType: file.type,
@@ -160,7 +159,7 @@ export const uploadGuardAvatar = async ({
 
   const {
     data: { publicUrl: public_url },
-  } = supabaseAdmin.storage.from(bucket_name).getPublicUrl(file_path);
+  } = supabase.storage.from(bucket_name).getPublicUrl(file_path);
 
   return {
     file_path: upload_data.path,
@@ -238,9 +237,9 @@ export const uploadGuardFile = async ({
     file_path = `${user_id}/identity/${file_name}`;
   }
 
-  const supabaseAdmin = createAdminClient();
+  const supabase = await createClient();
 
-  const { data: upload_data, error: upload_error } = await supabaseAdmin.storage
+  const { data: upload_data, error: upload_error } = await supabase.storage
     .from(bucket_name)
     .upload(file_path, file, {
       contentType: file.type,
@@ -255,7 +254,7 @@ export const uploadGuardFile = async ({
 
   const {
     data: { publicUrl: public_url },
-  } = supabaseAdmin.storage.from(bucket_name).getPublicUrl(file_path);
+  } = supabase.storage.from(bucket_name).getPublicUrl(file_path);
 
   return {
     file_path: upload_data.path,

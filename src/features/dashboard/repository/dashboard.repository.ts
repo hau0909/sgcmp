@@ -468,11 +468,11 @@ export const getProfilesByIds = async (ids: string[]) => {
 
 export const getRecentShiftsAndAssignments = async (
   companyId: string,
-  startDate: string,
-  endDate: string,
+  startDate?: string,
+  endDate?: string,
 ) => {
   const supabase = await createClient();
-  const { data, error } = await supabase
+  let query = supabase
     .from("shifts")
     .select(`
       shift_id,
@@ -496,9 +496,16 @@ export const getRecentShiftsAndAssignments = async (
         updated_at
       )
     `)
-    .eq("contracts.bookings.company_id", companyId)
-    .gte("start_time", startDate)
-    .lte("start_time", endDate);
+    .eq("contracts.bookings.company_id", companyId);
+
+  if (startDate) {
+    query = query.gte("start_time", startDate);
+  }
+  if (endDate) {
+    query = query.lte("start_time", endDate);
+  }
+
+  const { data, error } = await query;
 
   if (error) {
     throw new Error(`Không thể lấy shifts cho hoạt động gần đây: ${error.message}`);
@@ -582,7 +589,7 @@ export const getRecentCoordinators = async (limitVal: number) => {
   const { data, error } = await supabase
     .from("profiles")
     .select("user_id, full_name, created_at")
-    .eq("role", "Coordinator")
+    .eq("role", "coordinator")
     .order("created_at", { ascending: false })
     .limit(limitVal);
 
@@ -591,3 +598,334 @@ export const getRecentCoordinators = async (limitVal: number) => {
   }
   return data || [];
 };
+
+export const getCompletedPayments = async (): Promise<{ amount: number; created_at: string }[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("payments")
+    .select("amount, created_at")
+    .eq("payment_status", "completed");
+
+  if (error) {
+    throw new Error(`Không thể lấy danh sách thanh toán: ${error.message}`);
+  }
+
+  return data || [];
+};
+
+export const countTotalCompaniesByStatus = async (
+  statuses: string[],
+): Promise<number> => {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("companies")
+    .select("company_id", { count: "exact", head: true })
+    .in("status", statuses);
+
+  if (error) {
+    throw new Error(`Không thể đếm tổng số doanh nghiệp: ${error.message}`);
+  }
+
+  return count ?? 0;
+};
+
+export const countTotalCompaniesByStatusLastMonth = async (
+  statuses: string[],
+  currentMonthStart: string,
+): Promise<number> => {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("companies")
+    .select("company_id", { count: "exact", head: true })
+    .in("status", statuses)
+    .lt("created_at", currentMonthStart);
+
+  if (error) {
+    throw new Error(`Không thể đếm tổng số doanh nghiệp tháng trước: ${error.message}`);
+  }
+
+  return count ?? 0;
+};
+
+export const countTotalUsersByRoleAndStatus = async (
+  roles: string[],
+  status: string,
+): Promise<number> => {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("profiles")
+    .select("user_id", { count: "exact", head: true })
+    .in("role", roles)
+    .eq("status", status);
+
+  if (error) {
+    throw new Error(`Không thể đếm tổng số người dùng: ${error.message}`);
+  }
+
+  return count ?? 0;
+};
+
+export const countTotalUsersByRoleAndStatusLastMonth = async (
+  roles: string[],
+  status: string,
+  currentMonthStart: string,
+): Promise<number> => {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("profiles")
+    .select("user_id", { count: "exact", head: true })
+    .in("role", roles)
+    .eq("status", status)
+    .lt("created_at", currentMonthStart);
+
+  if (error) {
+    throw new Error(`Không thể đếm tổng số người dùng tháng trước: ${error.message}`);
+  }
+
+  return count ?? 0;
+};
+
+export const countCompanyPublishRequestsByStatus = async (
+  status: string,
+): Promise<number> => {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("company_publish_requests")
+    .select("request_id", { count: "exact", head: true })
+    .eq("status", status);
+
+  if (error) {
+    throw new Error(`Không thể đếm yêu cầu công khai: ${error.message}`);
+  }
+
+  return count ?? 0;
+};
+
+export const countCompanyPublishRequestsByStatusLastMonth = async (
+  status: string,
+  currentMonthStart: string,
+): Promise<number> => {
+  const supabase = await createClient();
+
+  const { count, error } = await supabase
+    .from("company_publish_requests")
+    .select("request_id", { count: "exact", head: true })
+    .eq("status", status)
+    .lt("requested_at", currentMonthStart);
+
+  if (error) {
+    throw new Error(`Không thể đếm yêu cầu công khai tháng trước: ${error.message}`);
+  }
+
+  return count ?? 0;
+};
+
+export const getApprovedCompaniesBaselineCount = async (startDate: string): Promise<number> => {
+  const supabase = await createClient();
+  const { count, error } = await supabase
+    .from("registrations")
+    .select("registration_id", { count: "exact", head: true })
+    .eq("status", "approved")
+    .lt("updated_at", startDate);
+
+  if (error) {
+    throw new Error(`Không thể tính số lượng doanh nghiệp được duyệt ban đầu: ${error.message}`);
+  }
+  return count ?? 0;
+};
+
+export const getApprovedCompaniesAfter = async (startDate: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("registrations")
+    .select("updated_at")
+    .eq("status", "approved")
+    .gte("updated_at", startDate)
+    .order("updated_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Không thể lấy danh sách doanh nghiệp được duyệt: ${error.message}`);
+  }
+  return data || [];
+};
+
+export const getCompletedPaymentsAfter = async (startDate: string) => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("payments")
+    .select("amount, created_at")
+    .eq("payment_status", "completed")
+    .gte("created_at", startDate)
+    .order("created_at", { ascending: true });
+
+  if (error) {
+    throw new Error(`Không thể lấy danh sách thanh toán thành công: ${error.message}`);
+  }
+  return data || [];
+};
+
+export const getPlanDistribution = async (): Promise<{ planName: string; count: number }[]> => {
+  const supabase = await createClient();
+  const today = new Date().toISOString().split("T")[0];
+
+  // 1. Fetch all plans
+  const { data: plansData, error: plansError } = await supabase
+    .from("plans")
+    .select("plan_id, plan_name")
+    .eq("is_active", true);
+
+  if (plansError) {
+    throw new Error(`Không thể lấy danh sách gói dịch vụ: ${plansError.message}`);
+  }
+
+  // 2. Fetch active subscriptions
+  const { data: subsData, error: subsError } = await supabase
+    .from("subscriptions")
+    .select("plan_id")
+    .eq("status", "active")
+    .lte("start_date", today)
+    .gte("end_date", today);
+
+  if (subsError) {
+    throw new Error(`Không thể lấy danh sách đăng ký gói dịch vụ: ${subsError.message}`);
+  }
+
+  const counts: Record<number, number> = {};
+  subsData.forEach((sub: any) => {
+    counts[sub.plan_id] = (counts[sub.plan_id] || 0) + 1;
+  });
+
+  return plansData.map((plan: any) => ({
+    planName: plan.plan_name,
+    count: counts[plan.plan_id] || 0,
+  }));
+};
+
+export interface PendingRegistrationRaw {
+  registration_id: string;
+  created_at: string;
+  status: string;
+  companies: {
+    company_name: string;
+    description: string | null;
+  } | null;
+}
+
+export interface PendingPublishRequestRaw {
+  request_id: string;
+  requested_at: string;
+  status: string;
+  notes: string | null;
+  companies: {
+    company_name: string;
+    description: string | null;
+  } | null;
+}
+
+export const getPendingRegistrations = async (): Promise<PendingRegistrationRaw[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("registrations")
+    .select("registration_id, created_at, status, companies(company_name, description)")
+    .eq("status", "pending")
+    .order("created_at", { ascending: false });
+
+
+  if (error) {
+    throw new Error(`Không thể lấy danh sách doanh nghiệp chờ duyệt: ${error.message}`);
+  }
+
+  return (data as any) || [];
+};
+
+export const getPendingPublishRequests = async (): Promise<PendingPublishRequestRaw[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("company_publish_requests")
+    .select("request_id, requested_at, status, notes, companies(company_name, description)")
+    .eq("status", "PENDING")
+    .order("requested_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Không thể lấy danh sách yêu cầu công khai: ${error.message}`);
+  }
+
+  return (data as any) || [];
+};
+
+export const getFirstAdminName = async (): Promise<string> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("role", "admin")
+    .limit(1)
+    .maybeSingle();
+  return data?.full_name || "Admin Nguyễn Minh";
+};
+
+export interface ActivityRegistrationRaw {
+  registration_id: string;
+  registration_code: string;
+  status: string;
+  created_at: string;
+  updated_at: string;
+  companies: {
+    company_name: string;
+  } | null;
+}
+
+export interface ActivityPublishRequestRaw {
+  request_id: string;
+  status: string;
+  requested_at: string;
+  processed_at: string | null;
+  notes: string | null;
+  reject_reason: string | null;
+  approved_by: string | null;
+  companies: {
+    company_name: string;
+  } | null;
+}
+
+export const getRecentRegistrationsForActivities = async (): Promise<ActivityRegistrationRaw[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("registrations")
+    .select("registration_id, registration_code, status, created_at, updated_at, companies(company_name)")
+    .order("updated_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Không thể lấy danh sách đăng ký cho hoạt động: ${error.message}`);
+  }
+
+  return (data as any) || [];
+};
+
+export const getRecentPublishRequestsForActivities = async (): Promise<ActivityPublishRequestRaw[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("company_publish_requests")
+    .select("request_id, status, requested_at, processed_at, notes, reject_reason, approved_by, companies(company_name)")
+    .order("requested_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Không thể lấy danh sách yêu cầu công khai cho hoạt động: ${error.message}`);
+  }
+
+  return (data as any) || [];
+};
+
+
+
+
+
+
+
+
