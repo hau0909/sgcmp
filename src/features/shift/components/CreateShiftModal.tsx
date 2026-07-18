@@ -83,6 +83,19 @@ const getGuardProfile = (profiles: GuardListItem["profiles"]) => {
   return profiles;
 };
 
+const formatMinutesFriendly = (minutes: number): string => {
+  if (minutes <= 0) return "0 phút";
+  const hrs = Math.floor(minutes / 60);
+  const mins = Math.round(minutes % 60);
+  if (hrs > 0 && mins > 0) {
+    return `${hrs} giờ ${mins} phút`;
+  }
+  if (hrs > 0) {
+    return `${hrs} giờ`;
+  }
+  return `${mins} phút`;
+};
+
 const diffMinutes = calculateDurationMinutes;
 
 /** Add N minutes to "HH:mm" → "HH:mm" (wraps past midnight) */
@@ -587,7 +600,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
   const guardEndResult =
     guardTotal > 0 ? Math.min(guardPage * GUARD_PAGE_SIZE, guardTotal) : 0;
 
-  // ── Guard status resolver ──────────────────────────────────────────────────
   const getGuardStatusAndInfo = useCallback((guardId: string, profileStatus: string | null) => {
     if (profileStatus !== "active") {
       return {
@@ -605,10 +617,14 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     // Cumulative minutes from other segments in the modal + DB
     const dbMinutes = availData?.assignedMinutesToday ?? 0;
     let currentModalMinutes = 0;
-    if (activeSlot && activeSlot.segments) {
-      for (const seg of activeSlot.segments) {
-        if (seg.id !== activeSegmentId && seg.assignedGuardIds?.includes(guardId)) {
-          currentModalMinutes += seg.durationMinutes || 0;
+    if (slots) {
+      for (const slot of slots) {
+        if (slot.segments) {
+          for (const seg of slot.segments) {
+            if (seg.id !== activeSegmentId && seg.assignedGuardIds?.includes(guardId)) {
+              currentModalMinutes += seg.durationMinutes || 0;
+            }
+          }
         }
       }
     }
@@ -649,7 +665,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       afterHours: totalAfterActiveSeg,
       isDisabled,
     };
-  }, [guardAvailabilityMap, activeSlot, activeSegmentId, activeSegment, activeSegmentGuards]);
+  }, [guardAvailabilityMap, slots, activeSegmentId, activeSegment, activeSegmentGuards]);
 
   // ── Slot validation errors ─────────────────────────────────────────────────
   const slotErrors = useMemo<Record<number, string[]>>(() => {
@@ -1711,14 +1727,14 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                           const timeLabel =
                             slot.segments && slot.segments.length > 0
                               ? slot.segments
-                                  .map((seg) =>
-                                    seg.startTime && seg.endTime
-                                      ? `${seg.startTime}–${seg.endTime}`
-                                      : seg.startTime
-                                        ? `${seg.startTime}–?`
-                                        : "?"
-                                  )
-                                  .join(" | ")
+                                .map((seg) =>
+                                  seg.startTime && seg.endTime
+                                    ? `${seg.startTime}–${seg.endTime}`
+                                    : seg.startTime
+                                      ? `${seg.startTime}–?`
+                                      : "?"
+                                )
+                                .join(" | ")
                               : slot.bookingTimeSlot;
 
                           return (
@@ -1768,8 +1784,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
                         // Calculate split duration and validation
                         const validation = validateSplitSegments(slot.bookingTimeSlot, slot.segments || []);
-                        const canAddMore = validation.splitDurationMinutes < validation.originalDurationMinutes && 
-                          slot.segments && slot.segments.length > 0 && 
+                        const canAddMore = validation.splitDurationMinutes < validation.originalDurationMinutes &&
+                          slot.segments && slot.segments.length > 0 &&
                           slot.segments[slot.segments.length - 1].endTime !== "";
 
                         return (
@@ -1823,7 +1839,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                     <span className="text-xs font-semibold text-slate-500 w-16">
                                       Ca nhỏ {segIdx + 1}
                                     </span>
-                                    
+
                                     {/* Start time input */}
                                     <div className="flex-1">
                                       <div className="relative">
@@ -2281,8 +2297,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                       type="button"
                       disabled={info.isDisabled}
                       onClick={() => handleToggleGuard(guard)}
-                      className={`w-full rounded-md border p-4 text-left transition ${
-                        isSelected
+                      className={`w-full rounded-md border p-4 text-left transition ${isSelected
                           ? "border-blue-600 bg-blue-50"
                           : info.status === "assigned"
                             ? "border-indigo-300 bg-indigo-50/40"
@@ -2291,7 +2306,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                               : info.status === "unavailable"
                                 ? "border-slate-200 bg-slate-50 opacity-60"
                                 : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
-                      } ${info.isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+                        } ${info.isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
                     >
                       <div className="flex items-center gap-3">
                         {/* Avatar with status dot */}
@@ -2308,10 +2323,9 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             )}
                           </div>
                           <span
-                            className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${
-                              isSelected ? "bg-blue-600" :
-                              info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-500" : "bg-slate-400"
-                            }`}
+                            className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${isSelected ? "bg-blue-600" :
+                                info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-500" : "bg-slate-400"
+                              }`}
                           />
                         </div>
 
@@ -2322,10 +2336,9 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                               {profile?.full_name ?? "Chưa cập nhật"}
                             </p>
                             <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
-                                isSelected ? "bg-blue-100 text-blue-700" :
-                                info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"
-                              }`}
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${isSelected ? "bg-blue-100 text-blue-700" :
+                                  info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"
+                                }`}
                             >
                               {isSelected && <CheckCircle2 size={10} />}
                               {(info.status === "conflict" || info.reason.includes("Vượt quá")) && <AlertTriangle size={10} />}
@@ -2336,18 +2349,17 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             {profile?.phone_number ?? "—"} · {profile?.email ?? "—"}
                           </p>
                           <div className="mt-2 flex gap-4 text-xs text-slate-500">
-                            <span>Đã có: <strong className="font-semibold">{(info.dbHours / 60).toFixed(1)} giờ</strong></span>
-                            <span>Sau khi chọn: <strong className="font-semibold text-blue-700">{(info.afterHours / 60).toFixed(1)} giờ</strong></span>
+                            <span>Đã có: <strong className="font-semibold">{formatMinutesFriendly(info.dbHours)}</strong></span>
+                            <span>Sau khi chọn: <strong className="font-semibold text-blue-700">{formatMinutesFriendly(info.afterHours)}</strong></span>
                           </div>
                         </div>
 
                         {/* Selection circle */}
                         <div
-                          className={`flex h-5 w-5 items-center justify-center rounded-full border transition ${
-                            isSelected
+                          className={`flex h-5 w-5 items-center justify-center rounded-full border transition ${isSelected
                               ? "border-blue-700 bg-blue-700"
                               : "border-slate-300 bg-white"
-                          }`}
+                            }`}
                         >
                           {isSelected && (
                             <CheckCircle2 size={14} className="text-white" />

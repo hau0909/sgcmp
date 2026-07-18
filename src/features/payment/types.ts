@@ -1,4 +1,5 @@
 import { PaymentMethod, PaymentStatus } from "@/types/Enum";
+import { Payment as DbPayment } from "@/types/Payment";
 
 export interface UpsertBankAccountPayload {
   bank_code: string;
@@ -20,6 +21,29 @@ export type Payment = {
 
 export type DateRange = { start: Date | null; end: Date | null };
 
+export interface GetAllPaymentsAdminOptions {
+  status?: PaymentStatus | "all";
+  keyword?: string;
+  page?: number;
+  pageSize?: number;
+  startDate?: string;
+  endDate?: string;
+}
+
+
+export interface PaymentWithCompany extends DbPayment {
+  company_name: string | null;
+  company_logo_url: string | null;
+  plan_name: string | null;
+}
+
+export interface PaginatedPayments {
+  data: PaymentWithCompany[];
+  total: number;
+  page: number;
+  pageSize: number;
+  totalPages: number;
+}
 export const statusOptions = [
   { value: "all", label: "Tất cả trạng thái" },
   { value: "completed", label: "Thành công" },
@@ -27,63 +51,16 @@ export const statusOptions = [
   { value: "failed", label: "Thất bại" },
 ];
 
-export const packageOptions = [
-  { value: "all", label: "Tất cả gói" },
-  { value: "Basic", label: "Basic" },
-  { value: "Standard", label: "Standard" },
-  { value: "Enterprise", label: "Enterprise" },
-];
 
-export const PAYMENT_DATA: Payment[] = [
-  {
-    id: "TXN-84920",
-    companyName: "VinaApp Corp",
-    companyShortName: "VA",
-    packageName: "Enterprise",
-    amount: 45_000_000,
-    paymentMethod: "bank_transfer",
-    paidAt: "25/05/2024 14:30",
-    status: "completed",
-  },
-  {
-    id: "TXN-84919",
-    companyName: "Hanoisoft JSC",
-    companyShortName: "HS",
-    packageName: "Standard",
-    amount: 12_500_000,
-    paymentMethod: "credit_card",
-    paidAt: "25/05/2024 11:15",
-    status: "pending",
-  },
-  {
-    id: "TXN-84918",
-    companyName: "Minh Bao Logistics",
-    companyShortName: "MB",
-    packageName: "Basic",
-    amount: 4_200_000,
-    paymentMethod: "e_wallet",
-    paidAt: "24/05/2024 09:45",
-    status: "failed",
-  },
-  {
-    id: "TXN-84917",
-    companyName: "Global Link",
-    companyShortName: "GL",
-    packageName: "Enterprise",
-    amount: 45_000_000,
-    paymentMethod: "bank_transfer",
-    paidAt: "24/05/2024 08:00",
-    status: "completed",
-  },
-  {
-    id: "TXN-84916",
-    companyName: "Techno City",
-    companyShortName: "TC",
-    packageName: "Standard",
-    amount: 12_500_000,
-    paymentMethod: "credit_card",
-    paidAt: "23/05/2024 16:20",
-    status: "refunded",
-  },
-];
+export interface PaymentSummaryAdminOptions {
+  keyword?: string;
+  startDate?: string;
+  endDate?: string;
+}
 
+export interface PaymentSummaryAdminResult {
+  totalRevenue: number;
+  successCount: number;
+  pendingCount: number;
+  failedCount: number;
+}
