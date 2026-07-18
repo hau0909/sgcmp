@@ -35,6 +35,7 @@ import type {
   ShiftSlotConfigStatus,
   GuardShiftStatus,
   SplitShiftSegment,
+  GuardAvailabilityInfo,
 } from "../type";
 import {
   toMinutes,
@@ -106,6 +107,13 @@ const formatLocalDate = (date: Date): string => {
 const nextDate = (date: string): string => {
   const d = new Date(`${date}T00:00:00`);
   d.setDate(d.getDate() + 1);
+  return formatLocalDate(d);
+};
+
+const addDays = (dStr: string, days: number): string => {
+  const [yr, mo, dy] = dStr.split("-").map(Number);
+  const d = new Date(yr, mo - 1, dy);
+  d.setDate(d.getDate() + days);
   return formatLocalDate(d);
 };
 
@@ -201,6 +209,7 @@ const buildSlot = (raw: string, index: number): ShiftSlot => {
     startMinutes: startMin,
     endMinutes: exceedsMax ? startMin : endMin,
     durationMinutes: exceedsMax ? 0 : dur,
+    assignedGuardIds: [],
   };
 
   return {
@@ -347,9 +356,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
   const [filterMode, setFilterMode] = useState<FilterMode>("all");
 
   // ── Guard selection & conflict detection ──────────────────────────────────
-  const [selectedGuardIds, setSelectedGuardIds] = useState<string[]>([]);
-  // guardId → true means conflict exists for active slot
-  const [conflictMap, setConflictMap] = useState<Record<string, boolean>>({});
+  const [activeSegmentId, setActiveSegmentId] = useState<string | null>(null);
+  const [guardAvailabilityMap, setGuardAvailabilityMap] = useState<Record<string, GuardAvailabilityInfo>>({});
   const [isCheckingConflicts, setIsCheckingConflicts] = useState(false);
 
   // ── Submission state ───────────────────────────────────────────────────────
@@ -373,6 +381,25 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
   const requiredGuards = selectedContract?.guards_per_slot ?? 1;
   const activeSlot = slots[activeSlotIndex] ?? null;
+
+  const activeSegment = useMemo(() => {
+    if (!activeSlot || !activeSegmentId) return null;
+    return activeSlot.segments?.find((s) => s.id === activeSegmentId) ?? null;
+  }, [activeSlot, activeSegmentId]);
+
+  const activeSegmentGuards = useMemo(() => {
+    return activeSegment?.assignedGuardIds ?? [];
+  }, [activeSegment]);
+
+  const isGuardsValid = useMemo(() => {
+    if (slots.length === 0) return false;
+    return slots.every((slot) => {
+      if (slot.configStatus !== "configured") return false;
+      return (slot.segments || []).every((seg) => {
+        return (seg.assignedGuardIds || []).length === requiredGuards;
+      });
+    });
+  }, [slots, requiredGuards]);
 
   const configuredSlots = useMemo(
     () => slots.filter((s) => s.configStatus === "configured"),
@@ -561,15 +588,68 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     guardTotal > 0 ? Math.min(guardPage * GUARD_PAGE_SIZE, guardTotal) : 0;
 
   // ── Guard status resolver ──────────────────────────────────────────────────
-  const resolveGuardStatus = useCallback(
-    (guardId: string, profileStatus: string | null): GuardShiftStatus => {
-      if (profileStatus !== "active") return "unavailable";
-      if (selectedGuardIds.includes(guardId)) return "selected";
-      if (conflictMap[guardId] === true) return "conflict";
-      return "available";
-    },
-    [selectedGuardIds, conflictMap],
-  );
+  const getGuardStatusAndInfo = useCallback((guardId: string, profileStatus: string | null) => {
+    if (profileStatus !== "active") {
+      return {
+        status: "unavailable" as GuardShiftStatus,
+        reason: "Không hoạt động",
+        dbHours: 0,
+        afterHours: 0,
+        isDisabled: true,
+      };
+    }
+
+    const availData = guardAvailabilityMap[guardId];
+    const hasDbConflict = availData?.hasConflict ?? false;
+
+    // Cumulative minutes from other segments in the modal + DB
+    const dbMinutes = availData?.assignedMinutesToday ?? 0;
+    let currentModalMinutes = 0;
+    if (activeSlot && activeSlot.segments) {
+      for (const seg of activeSlot.segments) {
+        if (seg.id !== activeSegmentId && seg.assignedGuardIds?.includes(guardId)) {
+          currentModalMinutes += seg.durationMinutes || 0;
+        }
+      }
+    }
+
+    const totalBeforeActiveSeg = dbMinutes + currentModalMinutes;
+    const activeSegDuration = activeSegment?.durationMinutes ?? 0;
+    const totalAfterActiveSeg = totalBeforeActiveSeg + activeSegDuration;
+    const exceedsDaily = totalAfterActiveSeg > 8 * 60;
+    const exceedsWeekly = availData?.exceedsWeeklyLimit ?? false;
+
+    const isSelected = activeSegmentGuards.includes(guardId);
+
+    let status: GuardShiftStatus = "available";
+    let reason = availData?.reason || "Có thể phân công";
+    let isDisabled = false;
+
+    if (isSelected) {
+      status = "selected";
+      reason = "Đã chọn";
+    } else if (hasDbConflict) {
+      status = "conflict";
+      reason = availData?.reason || "Trùng với ca trực khác";
+      isDisabled = true;
+    } else if (exceedsDaily) {
+      status = "conflict";
+      reason = `Vượt quá 8 giờ làm việc trong ngày (${(totalAfterActiveSeg / 60).toFixed(1)}h)`;
+      isDisabled = true;
+    } else if (exceedsWeekly) {
+      status = "conflict";
+      reason = availData?.reason || "Vượt quá 48 giờ làm việc trong tuần";
+      isDisabled = true;
+    }
+
+    return {
+      status,
+      reason,
+      dbHours: dbMinutes + currentModalMinutes,
+      afterHours: totalAfterActiveSeg,
+      isDisabled,
+    };
+  }, [guardAvailabilityMap, activeSlot, activeSegmentId, activeSegment, activeSegmentGuards]);
 
   // ── Slot validation errors ─────────────────────────────────────────────────
   const slotErrors = useMemo<Record<number, string[]>>(() => {
@@ -607,7 +687,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     readySlots.length > 0 &&
     slots.every((s) => s.configStatus === "configured") &&
     Object.keys(slotErrors).length === 0 &&
-    selectedGuardIds.length === requiredGuards &&
+    isGuardsValid &&
     generatedDates.length > 0 &&
     !periodError &&
     !isSubmitting,
@@ -713,6 +793,19 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     }
   }, [refDate]);
 
+  // Sync activeSegmentId when activeSlotIndex or slots change
+  useEffect(() => {
+    const slot = slots[activeSlotIndex];
+    if (slot && slot.segments && slot.segments.length > 0) {
+      const exists = slot.segments.some((s) => s.id === activeSegmentId);
+      if (!exists) {
+        setActiveSegmentId(slot.segments[0].id);
+      }
+    } else {
+      setActiveSegmentId(null);
+    }
+  }, [activeSlotIndex, slots, activeSegmentId]);
+
   // ── Conflict check: re-run when active slot time or guard list changes ─────
   useEffect(() => {
     if (guards.length === 0) return;
@@ -726,56 +819,44 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
       if (allIds.length === 0) return;
 
-      let startISO = "";
-      let endISO = "";
+      const activeStart = activeSegment?.startTime || activeSlot?.bookingStart || "00:00";
+      const activeEnd = activeSegment?.endTime || activeSlot?.bookingEnd || "23:59";
 
-      if (freeTimeMode === "today") {
-        const todayStr = formatLocalDate(new Date());
-        startISO = toISO(todayStr, "00:00");
-        endISO = toISO(todayStr, "23:59");
-      } else if (freeTimeMode === "day") {
+      const proposedShifts: { startTime: string; endTime: string }[] = [];
+
+      if (generatedDates.length > 0 && activeSlot) {
+        const origStartMin = toMinutes(activeSlot.bookingStart);
+        const segSMin = toMinutes(activeStart);
+        const segDur = calculateDurationMinutes(activeStart, activeEnd);
+        const segStartRel = (segSMin - origStartMin + 24 * 60) % (24 * 60);
+
+        const startOffsetDays = Math.floor((origStartMin + segStartRel) / (24 * 60));
+        const endOffsetDays = Math.floor((origStartMin + segStartRel + segDur) / (24 * 60));
+
+        for (const date of generatedDates) {
+          const segStartDate = addDays(date, startOffsetDays);
+          const segEndDate = addDays(date, endOffsetDays);
+          const segStartISO = toISO(segStartDate, activeStart);
+          const segEndISO = toISO(segEndDate, activeEnd);
+          proposedShifts.push({ startTime: segStartISO, endTime: segEndISO });
+        }
+      } else {
         const targetDate = filterDate || refDate;
-        startISO = toISO(targetDate, "00:00");
-        endISO = toISO(targetDate, "23:59");
-      } else if (freeTimeMode === "week") {
-        const targetWeekDate = filterWeekDate || refDate;
-        startISO = toISO(targetWeekDate, "00:00");
-        try {
-          const [yr, mo, dy] = targetWeekDate.split("-").map(Number);
-          const wEnd = new Date(yr, mo - 1, dy);
-          wEnd.setDate(wEnd.getDate() + 7);
-          endISO = toISO(formatLocalDate(wEnd), "23:59");
-        } catch {
-          endISO = toISO(targetWeekDate, "23:59");
-        }
-      } else if (freeTimeMode === "month") {
-        const targetMonth = filterMonth || refDate.substring(0, 7);
-        try {
-          const [yr, mo] = targetMonth.split("-").map(Number);
-          startISO = toISO(`${targetMonth}-01`, "00:00");
-          const mEnd = new Date(yr, mo, 0);
-          endISO = toISO(formatLocalDate(mEnd), "23:59");
-        } catch {
-          startISO = toISO(refDate, "00:00");
-          endISO = toISO(refDate, "23:59");
-        }
-      } else if (freeTimeMode === "custom") {
-        if (!customStartDate || !customEndDate) return;
-        startISO = toISO(customStartDate, customStartTime || "00:00");
-        endISO = toISO(customEndDate, customEndTime || "23:59");
+        const startISO = toISO(targetDate, activeStart);
+        const endISO = toISO(targetDate, activeEnd);
+        proposedShifts.push({ startTime: startISO, endTime: endISO });
       }
 
-      if (!startISO || !endISO) return;
+      if (proposedShifts.length === 0) return;
 
       try {
         setIsCheckingConflicts(true);
         const res = await requestGetGuardAvailability({
           guardIds: allIds,
-          startTime: startISO,
-          endTime: endISO,
+          proposedShifts,
         });
 
-        if (res.data) setConflictMap(res.data);
+        if (res.data) setGuardAvailabilityMap(res.data);
       } catch {
         // best-effort
       } finally {
@@ -788,18 +869,14 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    freeTimeMode,
+    generatedDates,
     filterDate,
-    filterWeekDate,
-    filterMonth,
-    customStartDate,
-    customStartTime,
-    customEndDate,
-    customEndTime,
+    refDate,
+    activeSegment?.startTime,
+    activeSegment?.endTime,
     activeSlot?.bookingStart,
     activeSlot?.bookingEnd,
     guards,
-    refDate,
   ]);
 
   // ── Form reset ─────────────────────────────────────────────────────────────
@@ -813,8 +890,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     setPeriodValue(1);
     setLatestShiftDate(null);
     setScheduledDates([]);
-    setSelectedGuardIds([]);
-    setConflictMap({});
+    setActiveSegmentId(null);
+    setGuardAvailabilityMap({});
     setSearchKeyword("");
     setDebouncedSearch("");
     setGuards([]);
@@ -845,8 +922,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     setContractId(value);
     setSubmitError("");
     setSubmitSuccess("");
-    setSelectedGuardIds([]);
-    setConflictMap({});
+    setActiveSegmentId(null);
+    setGuardAvailabilityMap({});
     setLatestShiftDate(null);
     setScheduledDates([]);
 
@@ -933,6 +1010,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
   };
 
   const handleAddSegment = (slotIdx: number) => {
+    let createdSegId = "";
     setSlots((prev) => {
       const updated = [...prev];
       const slot = updated[slotIdx];
@@ -972,7 +1050,9 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
         startMinutes: startMin,
         endMinutes: endMin,
         durationMinutes: calculateDurationMinutes(newStart, newEnd),
+        assignedGuardIds: [],
       };
+      createdSegId = newSeg.id;
 
       const newSegments = [...segments, newSeg];
       const validation = validateSplitSegments(slot.bookingTimeSlot, newSegments);
@@ -984,6 +1064,9 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       };
       return updated;
     });
+    if (createdSegId) {
+      setActiveSegmentId(createdSegId);
+    }
     setSubmitError("");
   };
 
@@ -1014,16 +1097,139 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     const profile = getGuardProfile(guard.profiles);
     if (!profile?.user_id) return;
 
-    const status = resolveGuardStatus(profile.user_id, profile.status);
-    if (status === "conflict" || status === "unavailable") return;
+    if (!activeSegmentId) return;
 
-    const isSelected = selectedGuardIds.includes(profile.user_id);
-    if (isSelected) {
-      setSelectedGuardIds((prev) => prev.filter((id) => id !== profile.user_id));
+    const info = getGuardStatusAndInfo(profile.user_id, profile.status);
+    if (info.isDisabled && info.status !== "selected") return;
+
+    setSlots((prev) => {
+      return prev.map((slot, sIdx) => {
+        if (sIdx !== activeSlotIndex) return slot;
+
+        const segments = (slot.segments || []).map((seg) => {
+          if (seg.id !== activeSegmentId) return seg;
+
+          const currentGuards = seg.assignedGuardIds || [];
+          const isSelected = currentGuards.includes(profile.user_id);
+
+          let newGuards = [];
+          if (isSelected) {
+            newGuards = currentGuards.filter((id) => id !== profile.user_id);
+          } else {
+            if (currentGuards.length >= requiredGuards) return seg;
+            newGuards = [...currentGuards, profile.user_id];
+          }
+
+          return { ...seg, assignedGuardIds: newGuards };
+        });
+
+        return { ...slot, segments };
+      });
+    });
+  };
+
+  // ── Auto Assign & Copy ──────────────────────────────────────────────────────
+  const handleAutoAssign = () => {
+    if (!activeSlot || !activeSegmentId || !activeSegment) return;
+    setSubmitError("");
+    setSubmitSuccess("");
+
+    const availableGuards = guards
+      .map((g) => {
+        const p = getGuardProfile(g.profiles);
+        if (!p?.user_id) return null;
+        const info = getGuardStatusAndInfo(p.user_id, p.status);
+        return { guard: g, info, user_id: p.user_id };
+      })
+      .filter((item): item is { guard: GuardListItem; info: any; user_id: string } => {
+        return item !== null && !item.info.isDisabled && item.info.status !== "selected";
+      });
+
+    const needed = requiredGuards - activeSegmentGuards.length;
+    if (needed <= 0) return;
+
+    const toAssign = availableGuards.slice(0, needed).map((item) => item.user_id);
+
+    if (toAssign.length < needed) {
+      setSubmitError(`Không đủ bảo vệ phù hợp cho ca này. Còn thiếu ${needed - toAssign.length} bảo vệ.`);
+    }
+
+    setSlots((prev) => {
+      return prev.map((slot, sIdx) => {
+        if (sIdx !== activeSlotIndex) return slot;
+        return {
+          ...slot,
+          segments: (slot.segments || []).map((seg) => {
+            if (seg.id !== activeSegmentId) return seg;
+            return {
+              ...seg,
+              assignedGuardIds: [...(seg.assignedGuardIds || []), ...toAssign],
+            };
+          }),
+        };
+      });
+    });
+  };
+
+  const handleCopyFromPrevious = () => {
+    if (!activeSlot || !activeSegmentId || activeSlotIndex < 0) return;
+    setSubmitError("");
+    setSubmitSuccess("");
+
+    const activeSlotSegments = activeSlot.segments || [];
+    const segIdx = activeSlotSegments.findIndex(s => s.id === activeSegmentId);
+
+    let prevGuardIds: string[] = [];
+
+    if (segIdx > 0) {
+      prevGuardIds = activeSlotSegments[segIdx - 1].assignedGuardIds || [];
+    } else if (activeSlotIndex > 0) {
+      const prevSlot = slots[activeSlotIndex - 1];
+      if (prevSlot && prevSlot.segments && prevSlot.segments.length > 0) {
+        prevGuardIds = prevSlot.segments[prevSlot.segments.length - 1].assignedGuardIds || [];
+      }
+    }
+
+    if (prevGuardIds.length === 0) {
+      setSubmitError("Không tìm thấy danh sách bảo vệ ở ca trước để sao chép.");
       return;
     }
-    if (selectedGuardIds.length >= requiredGuards) return;
-    setSelectedGuardIds((prev) => [...prev, profile.user_id]);
+
+    const validIds: string[] = [];
+    const invalidInfo: string[] = [];
+
+    for (const gid of prevGuardIds) {
+      const guardItem = guards.find(g => getGuardProfile(g.profiles)?.user_id === gid);
+      const p = guardItem ? getGuardProfile(guardItem.profiles) : null;
+
+      const info = getGuardStatusAndInfo(gid, p?.status ?? null);
+      if (info.isDisabled) {
+        const name = p?.full_name || gid;
+        invalidInfo.push(`${name} (${info.reason})`);
+      } else {
+        validIds.push(gid);
+      }
+    }
+
+    if (invalidInfo.length > 0) {
+      setSubmitError(`Đã lọc bỏ các bảo vệ không phù hợp: ${invalidInfo.join(", ")}`);
+    }
+
+    setSlots((prev) => {
+      return prev.map((slot, sIdx) => {
+        if (sIdx !== activeSlotIndex) return slot;
+        return {
+          ...slot,
+          segments: (slot.segments || []).map((seg) => {
+            if (seg.id !== activeSegmentId) return seg;
+            return {
+              ...seg,
+              assignedGuardIds: validIds,
+            };
+          }),
+        };
+      });
+    });
   };
 
   // ── Submit: batch shift generation ────────────────────────────────────────
@@ -1065,46 +1271,76 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
       for (const date of generatedDates) {
         for (const slot of readySlots) {
-          const startISO = toISO(date, slot.bookingStart);
-          const endISO =
-            slot.bookingEnd <= slot.bookingStart
-              ? toISO(nextDate(date), slot.bookingEnd)
-              : toISO(date, slot.bookingEnd);
+          const origStartMin = toMinutes(slot.bookingStart);
 
-          // Per-date conflict check
-          let assignedIds = [...selectedGuardIds];
+          // Build the segments splits payload
+          const splitsPayload = await Promise.all((slot.segments || []).map(async (seg) => {
+            const segSMin = toMinutes(seg.startTime);
+            const segDur = calculateDurationMinutes(seg.startTime, seg.endTime);
+            const segStartRel = (segSMin - origStartMin + 24 * 60) % (24 * 60);
 
-          try {
-            const cRes = await requestGetGuardAvailability({
-              guardIds: allActiveIds,
-              startTime: startISO,
-              endTime: endISO,
-            });
+            const startOffsetDays = Math.floor((origStartMin + segStartRel) / (24 * 60));
+            const endOffsetDays = Math.floor((origStartMin + segStartRel + segDur) / (24 * 60));
 
-            const dateMap = cRes.data ?? {};
+            const segStartDate = addDays(date, startOffsetDays);
+            const segEndDate = addDays(date, endOffsetDays);
 
-            // Remove selected guards who conflict on this date
-            const conflictFree = selectedGuardIds.filter((id) => !dateMap[id]);
+            const segStartISO = toISO(segStartDate, seg.startTime);
+            const segEndISO = toISO(segEndDate, seg.endTime);
 
-            if (conflictFree.length < requiredGuards) {
-              // Auto-fill replacements from the active pool
-              const replacements = allActiveIds
-                .filter((id) => !dateMap[id] && !conflictFree.includes(id))
-                .slice(0, requiredGuards - conflictFree.length);
+            let segAssignedIds = [...(seg.assignedGuardIds || [])];
 
-              assignedIds = [...conflictFree, ...replacements];
+            try {
+              const cRes = await requestGetGuardAvailability({
+                guardIds: allActiveIds,
+                startTime: segStartISO,
+                endTime: segEndISO,
+              });
 
-              if (assignedIds.length < requiredGuards) {
-                warnings.push(
-                  `${formatDateVN(date)} (${slot.bookingStart}–${slot.bookingEnd}): ` +
-                  `Không đủ bảo vệ (${assignedIds.length}/${requiredGuards}).`,
-                );
+              const dateMap = cRes.data ?? {};
+
+              // Filter out conflicting guards (either direct conflict, daily or weekly check)
+              const conflictFree = (seg.assignedGuardIds || []).filter((id) => {
+                const avail = dateMap[id];
+                return !avail || (!avail.hasConflict && !avail.exceedsDailyLimit && !avail.exceedsWeeklyLimit);
+              });
+
+              if (conflictFree.length < requiredGuards) {
+                // Auto-fill replacements from the active pool
+                const replacements = allActiveIds
+                  .filter((id) => {
+                    const avail = dateMap[id];
+                    return (!avail || (!avail.hasConflict && !avail.exceedsDailyLimit && !avail.exceedsWeeklyLimit)) && !conflictFree.includes(id);
+                  })
+                  .slice(0, requiredGuards - conflictFree.length);
+
+                segAssignedIds = [...conflictFree, ...replacements];
+
+                if (segAssignedIds.length < requiredGuards) {
+                  warnings.push(
+                    `${formatDateVN(date)} (${seg.startTime}–${seg.endTime}): ` +
+                    `Không đủ bảo vệ (${segAssignedIds.length}/${requiredGuards}).`,
+                  );
+                }
+              } else {
+                segAssignedIds = conflictFree.slice(0, requiredGuards);
               }
-            } else {
-              assignedIds = conflictFree.slice(0, requiredGuards);
+            } catch {
+              // best-effort
             }
-          } catch {
-            // best-effort; fall back to selected IDs
+
+            return {
+              start_time: segStartISO,
+              end_time: segEndISO,
+              guard_id: segAssignedIds,
+            };
+          }));
+
+          // Skip shift creation if any segment has insufficient guards (warnings are already collected)
+          const hasInsufficient = splitsPayload.some((sp) => sp.guard_id.length < requiredGuards);
+          if (hasInsufficient) {
+            skipped += slot.segments?.length || 1;
+            continue;
           }
 
           // Strict date-range validation for the shift
@@ -1114,7 +1350,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
           if (!lastSeg) continue;
 
-          const origStartMin = toMinutes(slot.bookingStart);
           const sMin = toMinutes(lastSeg.startTime);
           const dur = calculateDurationMinutes(lastSeg.startTime, lastSeg.endTime);
           const startRel = (sMin - origStartMin + 24 * 60) % (24 * 60);
@@ -1139,24 +1374,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
           }
 
           try {
-            // Build the segments splits payload
-            const splitsPayload = (slot.segments || []).map((seg) => {
-              const segSMin = toMinutes(seg.startTime);
-              const segDur = calculateDurationMinutes(seg.startTime, seg.endTime);
-              const segStartRel = (segSMin - origStartMin + 24 * 60) % (24 * 60);
-
-              const startOffsetDays = Math.floor((origStartMin + segStartRel) / (24 * 60));
-              const endOffsetDays = Math.floor((origStartMin + segStartRel + segDur) / (24 * 60));
-
-              const segStartDate = addDays(date, startOffsetDays);
-              const segEndDate = addDays(date, endOffsetDays);
-
-              return {
-                start_time: toISO(segStartDate, seg.startTime),
-                end_time: toISO(segEndDate, seg.endTime),
-              };
-            });
-
             const res = await requestCreateWorkShift({
               contract_id: contractId,
               shift_name: shiftName.trim(),
@@ -1164,7 +1381,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               end_time: splitsPayload[0].end_time,
               required_guards: requiredGuards,
               location,
-              guard_id: assignedIds,
+              guard_id: splitsPayload[0].guard_id,
               original_slot: slot.bookingTimeSlot,
               splits: splitsPayload,
             });
@@ -1232,24 +1449,25 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     return guards.filter((guard) => {
       const profile = getGuardProfile(guard.profiles);
       if (!profile?.user_id) return false;
-      const status = resolveGuardStatus(profile.user_id, profile.status);
-      if (filterMode === "available") return status === "available";
-      if (filterMode === "conflict") return status === "conflict";
-      if (filterMode === "unavailable") return status === "unavailable";
+      const info = getGuardStatusAndInfo(profile.user_id, profile.status);
+      if (filterMode === "available") return info.status === "available";
+      if (filterMode === "conflict") return info.status === "conflict" || info.reason.includes("Vượt quá");
+      if (filterMode === "unavailable") return info.status === "unavailable";
       return true;
     });
-  }, [guards, filterMode, resolveGuardStatus]);
+  }, [guards, filterMode, getGuardStatusAndInfo]);
 
   const statusCounts = useMemo(() => {
     const counts = { available: 0, conflict: 0, unavailable: 0, selected: 0 };
     guards.forEach((guard) => {
       const profile = getGuardProfile(guard.profiles);
       if (!profile?.user_id) return;
-      const status = resolveGuardStatus(profile.user_id, profile.status);
+      const info = getGuardStatusAndInfo(profile.user_id, profile.status);
+      const status = info.status;
       if (status in counts) counts[status as keyof typeof counts]++;
     });
     return counts;
-  }, [guards, resolveGuardStatus]);
+  }, [guards, getGuardStatusAndInfo]);
 
   if (!open) return null;
 
@@ -1841,7 +2059,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                   <span className="text-sm font-medium text-slate-600">
                     Đã chọn:{" "}
                     <span className="font-bold text-blue-700">
-                      {selectedGuardIds.length}/{requiredGuards}
+                      {activeSegmentGuards.length}/{requiredGuards}
                     </span>{" "}
                     bảo vệ
                   </span>
@@ -2052,26 +2270,28 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 filteredGuards.map((guard) => {
                   const profile = getGuardProfile(guard.profiles);
                   const uid = profile?.user_id ?? "";
-                  const status = resolveGuardStatus(uid, profile?.status ?? null);
-                  const cfg = GUARD_STATUS_CFG[status];
-                  const isDisabled = status === "conflict" || status === "unavailable";
+                  const info = getGuardStatusAndInfo(uid, profile?.status ?? null);
+
+                  const cfg = GUARD_STATUS_CFG[info.status];
+                  const isSelected = info.status === "selected";
 
                   return (
                     <button
                       key={guard.guard_id}
                       type="button"
-                      disabled={isDisabled}
+                      disabled={info.isDisabled}
                       onClick={() => handleToggleGuard(guard)}
-                      className={`w-full rounded-md border p-4 text-left transition ${status === "selected"
-                        ? "border-blue-600 bg-blue-50"
-                        : status === "assigned"
-                          ? "border-indigo-300 bg-indigo-50/40"
-                          : status === "conflict"
-                            ? "border-red-200 bg-red-50/30"
-                            : status === "unavailable"
-                              ? "border-slate-200 bg-slate-50 opacity-60"
-                              : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
-                        } ${isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
+                      className={`w-full rounded-md border p-4 text-left transition ${
+                        isSelected
+                          ? "border-blue-600 bg-blue-50"
+                          : info.status === "assigned"
+                            ? "border-indigo-300 bg-indigo-50/40"
+                            : info.status === "conflict" || info.reason.includes("Vượt quá")
+                              ? "border-red-200 bg-red-50/30"
+                              : info.status === "unavailable"
+                                ? "border-slate-200 bg-slate-50 opacity-60"
+                                : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
+                      } ${info.isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
                     >
                       <div className="flex items-center gap-3">
                         {/* Avatar with status dot */}
@@ -2088,7 +2308,10 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             )}
                           </div>
                           <span
-                            className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${cfg.dot}`}
+                            className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${
+                              isSelected ? "bg-blue-600" :
+                              info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-500" : "bg-slate-400"
+                            }`}
                           />
                         </div>
 
@@ -2099,26 +2322,34 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                               {profile?.full_name ?? "Chưa cập nhật"}
                             </p>
                             <span
-                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${cfg.badge}`}
+                              className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
+                                isSelected ? "bg-blue-100 text-blue-700" :
+                                info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"
+                              }`}
                             >
-                              {status === "selected" && <CheckCircle2 size={10} />}
-                              {status === "conflict" && <AlertTriangle size={10} />}
-                              {cfg.label}
+                              {isSelected && <CheckCircle2 size={10} />}
+                              {(info.status === "conflict" || info.reason.includes("Vượt quá")) && <AlertTriangle size={10} />}
+                              {info.reason}
                             </span>
                           </div>
                           <p className="mt-1 text-sm text-slate-500">
                             {profile?.phone_number ?? "—"} · {profile?.email ?? "—"}
                           </p>
+                          <div className="mt-2 flex gap-4 text-xs text-slate-500">
+                            <span>Đã có: <strong className="font-semibold">{(info.dbHours / 60).toFixed(1)} giờ</strong></span>
+                            <span>Sau khi chọn: <strong className="font-semibold text-blue-700">{(info.afterHours / 60).toFixed(1)} giờ</strong></span>
+                          </div>
                         </div>
 
                         {/* Selection circle */}
                         <div
-                          className={`flex h-5 w-5 items-center justify-center rounded-full border transition ${status === "selected"
-                            ? "border-blue-700 bg-blue-700"
-                            : "border-slate-300 bg-white"
-                            }`}
+                          className={`flex h-5 w-5 items-center justify-center rounded-full border transition ${
+                            isSelected
+                              ? "border-blue-700 bg-blue-700"
+                              : "border-slate-300 bg-white"
+                          }`}
                         >
-                          {status === "selected" && (
+                          {isSelected && (
                             <CheckCircle2 size={14} className="text-white" />
                           )}
                         </div>

@@ -72,18 +72,34 @@ export const validateCreateShiftInput = (input: CreateShiftInput) => {
     throw new Error("Vui lòng nhập vị trí trực cụ thể");
   }
 
-  if (!Array.isArray(input.guard_id)) {
-    throw new Error("Danh sách bảo vệ không hợp lệ");
-  }
+  if (input.splits && input.splits.length > 0) {
+    for (let i = 0; i < input.splits.length; i++) {
+      const split = input.splits[i];
+      if (!Array.isArray(split.guard_id)) {
+        throw new Error(`Danh sách bảo vệ cho ca tách thứ ${i + 1} không hợp lệ`);
+      }
+      if (split.guard_id.length !== input.required_guards) {
+        throw new Error(`Mỗi ca tách cần chọn đúng ${input.required_guards} bảo vệ`);
+      }
+      const uniqueGuards = new Set(split.guard_id);
+      if (uniqueGuards.size !== split.guard_id.length) {
+        throw new Error(`Danh sách bảo vệ cho ca tách thứ ${i + 1} không được trùng lặp`);
+      }
+    }
+  } else {
+    if (!Array.isArray(input.guard_id)) {
+      throw new Error("Danh sách bảo vệ không hợp lệ");
+    }
 
-  if (input.guard_id.length !== input.required_guards) {
-    throw new Error("Số bảo vệ được chọn phải bằng số lượng bảo vệ cần");
-  }
+    if (input.guard_id.length !== input.required_guards) {
+      throw new Error(`Số bảo vệ được chọn phải bằng số lượng bảo vệ cần (${input.required_guards} bảo vệ)`);
+    }
 
-  const uniqueGuardIds = new Set(input.guard_id);
+    const uniqueGuardIds = new Set(input.guard_id);
 
-  if (uniqueGuardIds.size !== input.guard_id.length) {
-    throw new Error("Danh sách bảo vệ không được trùng lặp");
+    if (uniqueGuardIds.size !== input.guard_id.length) {
+      throw new Error("Danh sách bảo vệ không được trùng lặp");
+    }
   }
 };
 

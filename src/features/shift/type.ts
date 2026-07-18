@@ -84,6 +84,7 @@ export type SplitShiftSegment = {
   startMinutes: number;
   endMinutes: number;
   durationMinutes: number;
+  assignedGuardIds?: string[];
 };
 
 export type CreateShiftInput = {
@@ -95,7 +96,7 @@ export type CreateShiftInput = {
   location: string;
   guard_id: string[];
   original_slot?: string;
-  splits?: { start_time: string; end_time: string }[];
+  splits?: { start_time: string; end_time: string; guard_id: string[] }[];
 };
 
 export type ShiftSlotConfigStatus =
@@ -121,9 +122,22 @@ export type GuardShiftStatus =
   | "conflict"
   | "unavailable";
 
+export type GuardAvailabilityInfo = {
+  guardId: string;
+  hasConflict: boolean;
+  assignedMinutesToday: number;
+  proposedMinutes: number;
+  totalMinutesAfterAssign: number;
+  exceedsDailyLimit: boolean;
+  assignedMinutesThisWeek: number;
+  totalMinutesWeekAfterAssign: number;
+  exceedsWeeklyLimit: boolean;
+  reason: string;
+};
+
 export type GuardAvailabilityResponse = {
   message: string;
-  data: Record<string, boolean>; // guardId -> true means conflict exists
+  data: Record<string, GuardAvailabilityInfo>;
 };
 
 export type ShiftOptionResponse = {

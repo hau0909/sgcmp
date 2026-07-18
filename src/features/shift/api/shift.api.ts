@@ -14,14 +14,16 @@ export const requestGetGuardAvailability = async ({
   guardIds,
   startTime,
   endTime,
+  proposedShifts,
 }: {
   guardIds: string[];
-  startTime: string;
-  endTime: string;
+  startTime?: string;
+  endTime?: string;
+  proposedShifts?: { startTime: string; endTime: string }[];
 }): Promise<GuardAvailabilityResponse> => {
   return fetcher("/api/shifts/guards/availability", {
     method: "POST",
-    body: JSON.stringify({ guardIds, startTime, endTime }),
+    body: JSON.stringify({ guardIds, startTime, endTime, proposedShifts }),
   });
 };
 
