@@ -4,17 +4,7 @@ import {
   updateProfile,
   getProfileByUserId,
   getProfilesByUserIds,
-  activateProfileByUserId,
 } from "../repository/profile.repository";
-
-export const activateProfileService = async (
-  userId: string,
-): Promise<void> => {
-  if (!userId) {
-    throw new Error("User ID là bắt buộc khi kích hoạt Profile.");
-  }
-  await activateProfileByUserId(userId);
-};
 
 export const updateProfileService = async (
   userId: string,

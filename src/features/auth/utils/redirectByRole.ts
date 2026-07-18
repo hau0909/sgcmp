@@ -11,7 +11,7 @@ export const getRedirectPathByRole = (
       return "/dashboard";
 
     case "admin":
-      return "/registrations";
+      return "/admin";
 
     case "guard":
       return "/overview";

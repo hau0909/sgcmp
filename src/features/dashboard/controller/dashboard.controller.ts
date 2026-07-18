@@ -8,8 +8,22 @@ import {
   getShiftStatusTodayService,
   getTodayGuardsStatusListService,
   getRecentActivitiesService,
+  getAdminRevenueService,
+  getAdminTotalCompaniesService,
+  getAdminPublishedCompaniesService,
+  getAdminTotalUsersService,
+  getAdminPendingApprovalCompaniesService,
+  getAdminPendingPublicationRequestsService,
+  getAdminGrowthService,
+  getAdminPlanDistributionService,
+  getAdminPendingTasksService,
+  getAdminRecentActivitiesService,
+  type GrowthDataPoint,
+  type PlanDistributionItem,
   type MetricWithTrend,
   type RatingWithTrend,
+  type PendingTaskItem,
+  type ActivityItem,
 } from "../service/dashboard.service";
 
 export const handleGetActiveGuardsOnShift = async (
@@ -65,3 +79,47 @@ export const handleGetRecentActivities = async (
 ) => {
   return await getRecentActivitiesService(companyId);
 };
+
+export const handleGetAdminRevenue = async (): Promise<MetricWithTrend> => {
+  return await getAdminRevenueService();
+};
+
+export const handleGetAdminTotalCompanies = async (): Promise<MetricWithTrend> => {
+  return await getAdminTotalCompaniesService();
+};
+
+export const handleGetAdminPublishedCompanies = async (): Promise<MetricWithTrend> => {
+  return await getAdminPublishedCompaniesService();
+};
+
+export const handleGetAdminTotalUsers = async (): Promise<MetricWithTrend> => {
+  return await getAdminTotalUsersService();
+};
+
+export const handleGetAdminPendingApprovalCompanies = async (): Promise<MetricWithTrend> => {
+  return await getAdminPendingApprovalCompaniesService();
+};
+
+export const handleGetAdminPendingPublicationRequests = async (): Promise<MetricWithTrend> => {
+  return await getAdminPendingPublicationRequestsService();
+};
+
+export const handleGetAdminGrowth = async (range: "6m" | "1y"): Promise<GrowthDataPoint[]> => {
+  return await getAdminGrowthService(range);
+};
+
+export const handleGetAdminPlanDistribution = async (): Promise<PlanDistributionItem[]> => {
+  return await getAdminPlanDistributionService();
+};
+
+export const handleGetAdminPendingTasks = async (): Promise<PendingTaskItem[]> => {
+  return await getAdminPendingTasksService();
+};
+
+export const handleGetAdminRecentActivities = async (): Promise<ActivityItem[]> => {
+  return await getAdminRecentActivitiesService();
+};
+
+
+
+

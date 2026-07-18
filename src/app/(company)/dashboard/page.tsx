@@ -103,7 +103,23 @@ interface Employee {
 
 type ChartView = "line" | "radar";
 
-
+const getFormattedDate = () => {
+  const days = [
+    "Chủ Nhật",
+    "Thứ Hai",
+    "Thứ Ba",
+    "Thứ Tư",
+    "Thứ Năm",
+    "Thứ Sáu",
+    "Thứ Bảy",
+  ];
+  const today = new Date();
+  const dayName = days[today.getDay()];
+  const date = today.getDate();
+  const month = today.getMonth() + 1;
+  const year = today.getFullYear();
+  return `${dayName}, ${date} tháng ${month}, ${year}`;
+};
 
 const weeklyShiftChartConfig = {
   totalAssignments: {
@@ -457,6 +473,7 @@ export default function CompanyDashboardPage() {
           <h2 className="text-2xl font-bold text-on-surface">
             Tổng quan hệ thống
           </h2>
+          <p className="text-sm text-slate-500 mt-1">{getFormattedDate()}</p>
         </div>
         <button className="bg-surface-container-lowest border border-outline-variant text-primary font-medium px-4 py-2 rounded flex items-center gap-2 hover:bg-surface-container-low transition-colors shadow-sm active:scale-95 duration-100">
           <Download className="w-5 h-5" />
@@ -1016,6 +1033,10 @@ export default function CompanyDashboardPage() {
                   </th>
 
                   <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
+                    Thời gian
+                  </th>
+
+                  <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
                     Dịch vụ
                   </th>
 
@@ -1043,6 +1064,9 @@ export default function CompanyDashboardPage() {
                       </td>
                       <td className="px-6 py-4">
                         <div className="h-4 w-32 bg-surface-container rounded" />
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="h-4 w-16 bg-surface-container rounded" />
                       </td>
                       <td className="px-6 py-4">
                         <div className="space-y-2">
@@ -1092,6 +1116,10 @@ export default function CompanyDashboardPage() {
                           {emp.branch}
                         </td>
 
+                        <td className="px-6 py-4 text-on-surface-variant text-xs font-semibold whitespace-nowrap">
+                          {emp.timeRange || "Chưa rõ"}
+                        </td>
+
                         <td className="px-6 py-4">
                           {emp.contractCode ? (
                             <div className="flex flex-col gap-1">
@@ -1132,7 +1160,7 @@ export default function CompanyDashboardPage() {
                 ) : (
                   <tr>
                     <td
-                      colSpan={5}
+                      colSpan={6}
                       className="px-6 py-8 text-center text-on-surface-variant font-medium"
                     >
                       Không tìm thấy nhân viên nào
@@ -1272,6 +1300,9 @@ export default function CompanyDashboardPage() {
                       Vị trí
                     </th>
                     <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
+                      Thời gian
+                    </th>
+                    <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
                       Dịch vụ
                     </th>
                     <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
@@ -1317,6 +1348,9 @@ export default function CompanyDashboardPage() {
                           <td className="px-6 py-4 text-on-surface-variant text-xs font-medium">
                             {emp.branch}
                           </td>
+                          <td className="px-6 py-4 text-on-surface-variant text-xs font-semibold whitespace-nowrap">
+                            {emp.timeRange || "Chưa rõ"}
+                          </td>
                           <td className="px-6 py-4">
                             {emp.contractCode ? (
                               <div className="flex flex-col gap-1">
@@ -1355,7 +1389,7 @@ export default function CompanyDashboardPage() {
                   ) : (
                     <tr>
                       <td
-                        colSpan={5}
+                        colSpan={6}
                         className="px-6 py-8 text-center text-on-surface-variant font-medium"
                       >
                         Không tìm thấy nhân viên nào
