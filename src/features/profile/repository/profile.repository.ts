@@ -69,19 +69,3 @@ export const getProfilesByUserIds = async (
 
   return (data as Profile[]) || [];
 };
-
-export const activateProfileByUserId = async (
-  userId: string,
-): Promise<void> => {
-  const { createAdminClient } = await import("@/lib/supabase/admin");
-  const admin = createAdminClient();
-
-  const { error } = await admin
-    .from("profiles")
-    .update({ status: "active" })
-    .eq("user_id", userId);
-
-  if (error) {
-    throw error;
-  }
-};

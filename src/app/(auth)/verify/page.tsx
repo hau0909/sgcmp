@@ -15,7 +15,7 @@ import { CheckCircle, XCircle, Loader2, MailCheck } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
 import { UserRole } from "@/types/Enum";
-import { requestActivateProfile } from "@/features/auth/api/auth.api";
+import { getRedirectPathByRole } from "@/features/auth/utils/redirectByRole";
 
 type VerifyStatus = "loading" | "success" | "error";
 
@@ -25,22 +25,7 @@ type AuthProfile = {
   company_id: string | null;
 };
 
-const LOGIN_PATH = "/login"
-const DEFAULT_HOME_PATH = "/";
 
-const getRedirectPathByRole = (role: UserRole) => {
-  const roleValue = String(role);
-
-  if (roleValue === "guard") {
-    return LOGIN_PATH;
-  }
-
-  if (roleValue === "coordinator") {
-    return LOGIN_PATH;
-  }
-
-  return DEFAULT_HOME_PATH;
-};
 
 const extractAuthProfile = (payload: any): AuthProfile | null => {
   const data = payload?.data;
@@ -135,17 +120,6 @@ function VerifyEmailContent() {
   );
 
   const redirectAfterVerify = useCallback(async () => {
-    // Kích hoạt profile: unactive → active
-    try {
-      await requestActivateProfile();
-    } catch (activateErr: any) {
-      console.error(
-        "[Verify Email] Activate profile failed:",
-        activateErr?.message,
-      );
-      // Không throw – vẫn tiếp tục redirect để không block người dùng
-    }
-
     const response = await fetch("/api/auth/user", {
       method: "GET",
       credentials: "include",

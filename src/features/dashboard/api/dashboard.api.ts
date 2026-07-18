@@ -156,6 +156,7 @@ export type TodayGuardListItem = {
   contractCode: string | null;
   contractName: string | null;
   status: string;
+  timeRange: string;
 };
 
 export const requestGetTodayGuards = (
@@ -189,3 +190,120 @@ export const requestGetRecentActivities = (
     { method: "GET" },
   ) as Promise<RecentActivityItem[]>;
 };
+
+export const requestGetAdminRevenue = (): Promise<MetricWithTrend> => {
+  return fetcher(
+    "/api/dashboard/admin/revenue",
+    { method: "GET" }
+  ) as Promise<MetricWithTrend>;
+};
+
+export const requestGetAdminTotalCompanies = (): Promise<MetricWithTrend> => {
+  return fetcher(
+    "/api/dashboard/admin/companies/total",
+    { method: "GET" }
+  ) as Promise<MetricWithTrend>;
+};
+
+export const requestGetAdminPublishedCompanies = (): Promise<MetricWithTrend> => {
+  return fetcher(
+    "/api/dashboard/admin/companies/published",
+    { method: "GET" }
+  ) as Promise<MetricWithTrend>;
+};
+
+export const requestGetAdminTotalUsers = (): Promise<MetricWithTrend> => {
+  return fetcher(
+    "/api/dashboard/admin/user",
+    { method: "GET" }
+  ) as Promise<MetricWithTrend>;
+};
+
+export const requestGetAdminPendingApprovalCompanies = (): Promise<MetricWithTrend> => {
+  return fetcher(
+    "/api/dashboard/admin/companies/pending-approval",
+    { method: "GET" }
+  ) as Promise<MetricWithTrend>;
+};
+
+export const requestGetAdminPendingPublicationRequests = (): Promise<MetricWithTrend> => {
+  return fetcher(
+    "/api/dashboard/admin/companies/pending-publication",
+    { method: "GET" }
+  ) as Promise<MetricWithTrend>;
+};
+
+export interface GrowthDataPoint {
+  name: string;
+  revenue: number;
+  companies: number;
+  fill: string;
+}
+
+export const requestGetAdminGrowth = (range: "6m" | "1y"): Promise<GrowthDataPoint[]> => {
+  return fetcher(
+    `/api/dashboard/admin/growth?range=${range}`,
+    { method: "GET" }
+  ) as Promise<GrowthDataPoint[]>;
+};
+
+export interface PlanDistributionItem {
+  name: string;
+  count: number;
+  value: number;
+  color: string;
+}
+
+export const requestGetAdminPlanDistribution = (): Promise<PlanDistributionItem[]> => {
+  return fetcher(
+    "/api/dashboard/admin/plans/distribution",
+    { method: "GET" }
+  ) as Promise<PlanDistributionItem[]>;
+};
+
+export type PendingTaskItem = {
+  id: string;
+  stt: number;
+  category: "register" | "urgent" | "compliance";
+  categoryText: string;
+  time: string;
+  title: string;
+  description: string;
+  status: "pending_approval" | "pending_resolve" | "pending_renew";
+  statusText: string;
+};
+
+export const requestGetAdminPendingTasks = (): Promise<PendingTaskItem[]> => {
+  return fetcher(
+    "/api/dashboard/admin/pending-task",
+    { method: "GET" }
+  ) as Promise<PendingTaskItem[]>;
+};
+
+export type ActivityItem = {
+  id: string;
+  time: string;
+  timeAgo: string;
+  action: string;
+  target: string;
+  status: "success" | "pending" | "done" | "failed";
+  iconName: "Building2" | "FilePlus2" | "Globe" | "BadgeCheck" | "CircleX";
+  iconColor: "blue" | "purple" | "green" | "red";
+};
+
+export const requestGetAdminRecentActivities = (): Promise<ActivityItem[]> => {
+  return fetcher(
+    "/api/dashboard/admin/recent-activities",
+    { method: "GET" }
+  ) as Promise<ActivityItem[]>;
+};
+
+
+
+
+
+
+
+
+
+

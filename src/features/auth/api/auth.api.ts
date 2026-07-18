@@ -9,15 +9,6 @@ export const requestRegisterAccount = async (payload: RegisterPayload) => {
 
   return result;
 };
-
-export const requestActivateProfile = async () => {
-  const result = await fetcher("/api/auth/activate", {
-    method: "POST",
-  });
-
-  return result;
-};
-
 export const requestLoginAccount = async (payload: LoginPayload) => {
   const result = await fetcher("/api/auth/login", {
     method: "POST",
