@@ -19,6 +19,7 @@ import {
   X,
   Globe,
   Landmark,
+  BadgeDollarSign
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
@@ -52,7 +53,13 @@ export default function AdminLayout({
         pathname === "/publish-requests" ||
         pathname.startsWith("/publish-requests/"),
     },
-
+    {
+      name: "Lịch sử thanh toán",
+      href: "/payment-history",
+      icon: BadgeDollarSign,
+      active:
+        pathname === "/payment-history" || pathname.startsWith("/payment-history/"),
+    },
     {
       name: "Tài khoản Ngân hàng",
       href: "/bank-accounts",
@@ -116,11 +123,10 @@ export default function AdminLayout({
                   href={link.href}
                   onClick={() => setMobileSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg font-body text-sm font-semibold transition-all duration-150 group
-                  ${
-                    link.active
+                  ${link.active
                       ? "bg-[#4db2ff] text-[#00436a] scale-95 transition-transform"
                       : "text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] transition-transform"
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5 transition-colors shrink-0" />
                   <span>{link.name}</span>

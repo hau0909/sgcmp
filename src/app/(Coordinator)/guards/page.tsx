@@ -294,9 +294,11 @@ export default function GuardListScreen() {
 
         const mapped: Record<string, { isOnDuty: boolean; hasUpcomingShiftToday: boolean }> = {};
         for (const userId of guardUserIds) {
+          const nowVal = nowData[userId];
+          const futureVal = futureData[userId];
           mapped[userId] = {
-            isOnDuty: !!nowData[userId],
-            hasUpcomingShiftToday: !!futureData[userId],
+            isOnDuty: nowVal ? (typeof nowVal === "object" ? !!(nowVal as any).hasConflict : !!nowVal) : false,
+            hasUpcomingShiftToday: futureVal ? (typeof futureVal === "object" ? !!(futureVal as any).hasConflict : !!futureVal) : false,
           };
         }
 

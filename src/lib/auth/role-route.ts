@@ -7,7 +7,7 @@ export type UserRole =
 
 export const roleHomePath: Record<UserRole, string> = {
   customer: "/",
-  admin: "/registrations",
+  admin: "/admin",
   "company-admin": "/dashboard",
   guard: "/guard",
   coordinator: "/guards",
