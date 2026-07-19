@@ -54,6 +54,7 @@ export default function AdminLayout({
         pathname === "/publish-requests" ||
         pathname.startsWith("/publish-requests/"),
     },
+
     {
       name: "Lịch sử thanh toán",
       href: "/payment-history",
@@ -75,6 +76,13 @@ export default function AdminLayout({
       icon: Landmark,
       active:
         pathname === "/bank-accounts" || pathname.startsWith("/bank-accounts/"),
+    },
+    {
+      name: "Quản lý tài khoản",
+      href: "/accounts",
+      icon: Users,
+      active:
+        pathname === "/accounts" || pathname.startsWith("/accounts/"),
     },
   ];
 
