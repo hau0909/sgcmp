@@ -5,7 +5,7 @@ export type UserRole =
   | "guard"
   | "coordinator";
 
-export type GeneralStatus = "active" | "unactive";
+export type GeneralStatus = "active" | "unactive" | "banned";
 
 export type CompanyStatus =
   | "draft"
@@ -21,13 +21,26 @@ export type PaymentMethod = "bank_transfer" | "credit_card" | "e_wallet";
 
 export type PaymentStatus = "pending" | "completed" | "failed" | "refunded";
 
-export type ContractStatus = "pending_signatures" | "active" | "completed" | "cancelled";
+export type ContractStatus =
+  | "pending_signatures"
+  | "active"
+  | "completed"
+  | "cancelled";
 
-export type BookingStatus = "pending" | "quoted" | "accepted" | "rejected" | "canceled";
+export type BookingStatus =
+  | "pending"
+  | "quoted"
+  | "accepted"
+  | "rejected"
+  | "canceled";
 
-export type ImageType = 'logo' | 'banner' | 'other';
+export type ImageType = "logo" | "banner" | "other";
 
-export type ShiftAssignmentStatus = "assigned" | "completed" | "absent" | "late";
+export type ShiftAssignmentStatus =
+  | "assigned"
+  | "completed"
+  | "absent"
+  | "late";
 
 export enum ShiftImgType {
   checkin = "checkin",
@@ -39,6 +52,11 @@ export enum ShiftImgType {
 
 export type VerificationStatus = "pending" | "approved" | "rejected";
 
-export type ReportType = "LATE" | "ABSENT" | "BAD_ATTITUDE" | "SLEEPING" | "OTHER";
+export type ReportType =
+  | "LATE"
+  | "ABSENT"
+  | "BAD_ATTITUDE"
+  | "SLEEPING"
+  | "OTHER";
 
 export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
