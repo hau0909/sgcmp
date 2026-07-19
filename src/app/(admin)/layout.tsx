@@ -21,6 +21,7 @@ import {
   Landmark,
   BadgeDollarSign,
   Layers,
+  Package,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
@@ -83,6 +84,14 @@ export default function AdminLayout({
       icon: Users,
       active:
         pathname === "/accounts" || pathname.startsWith("/accounts/"),
+    },
+    {
+      name: "Quản lý gói dịch vụ",
+      href: "/service-packages",
+      icon: Package,
+      active:
+        pathname === "/service-packages" ||
+        pathname.startsWith("/service-packages/"),
     },
   ];
 
@@ -205,14 +214,16 @@ export default function AdminLayout({
                 <Menu className="w-6 h-6" />
               </button>
 
-              <div className="hidden sm:flex items-center bg-[#eff4ff] rounded-full px-4 py-2 border border-[#c3c6d3] focus-within:border-secondary transition-colors w-full max-w-md">
-                <Search className="text-[#434751] w-5 h-5 mr-2 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm đăng ký, doanh nghiệp..."
-                  className="bg-transparent border-none outline-none text-sm text-[#0b1c30] w-full placeholder-on-surface-variant"
-                />
-              </div>
+              {!pathname.startsWith("/service-packages") && (
+                <div className="hidden sm:flex items-center bg-[#eff4ff] rounded-full px-4 py-2 border border-[#c3c6d3] focus-within:border-secondary transition-colors w-full max-w-md">
+                  <Search className="text-[#434751] w-5 h-5 mr-2 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm đăng ký, doanh nghiệp..."
+                    className="bg-transparent border-none outline-none text-sm text-[#0b1c30] w-full placeholder-on-surface-variant"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Right Utilities */}
