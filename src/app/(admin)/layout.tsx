@@ -19,7 +19,8 @@ import {
   X,
   Globe,
   Landmark,
-  BadgeDollarSign
+  BadgeDollarSign,
+  Layers,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
@@ -60,6 +61,14 @@ export default function AdminLayout({
       active:
         pathname === "/payment-history" || pathname.startsWith("/payment-history/"),
     },
+    {
+      name: "Dịch vụ",
+      href: "/services",
+      icon: Layers,
+      active:
+        pathname === "/services" || pathname.startsWith("/services/"),
+    },
+
     {
       name: "Tài khoản Ngân hàng",
       href: "/bank-accounts",
