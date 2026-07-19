@@ -13,6 +13,13 @@ import {
   switchActiveBankAccountService,
   deactivateBankAccountService,
   deleteBankAccountService,
+  getAllPaymentsAdminService,
+  type GetAllPaymentsAdminOptions,
+  type PaginatedPayments,
+  type PaymentWithCompany,
+  getPaymentSummaryAdminService,
+  type PaymentSummaryAdminOptions,
+  type PaymentSummaryAdminResult,
 } from "../service/payment.service";
 import { PaymentMethod, PaymentStatus } from "@/types/Enum";
 import { UpsertBankAccountPayload } from "../types";
@@ -53,6 +60,26 @@ export const handleGetPaymentById = async (
 export const handleSePayWebhook = async (payload: any): Promise<boolean> => {
   const result = await handleSePayWebhookService(payload);
   return result;
+};
+
+// ─── Admin ───────────────────────────────────────────────────────────────────
+
+export const handleGetAllPaymentsAdmin = async (): Promise<PaymentWithCompany[]> => {
+  return await getAllPaymentsAdminService();
+};
+
+export const handleGetPaymentSummaryAdmin = async (
+  options: PaymentSummaryAdminOptions = {},
+): Promise<PaymentSummaryAdminResult> => {
+  return await getPaymentSummaryAdminService(options);
+};
+
+export {
+  type GetAllPaymentsAdminOptions,
+  type PaginatedPayments,
+  type PaymentWithCompany,
+  type PaymentSummaryAdminOptions,
+  type PaymentSummaryAdminResult,
 };
 
 // ─── Bank Account ────────────────────────────────────────────────────────────

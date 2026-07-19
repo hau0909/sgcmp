@@ -68,7 +68,8 @@ const checkCoordinatorPermission = async () => {
     throw new Error("Bạn chưa đăng nhập.");
   }
 
-  if (current_profile.role?.toLowerCase() !== "coordinator") {
+  const role = current_profile.role?.toLowerCase();
+  if (role !== "coordinator" && role !== "company-admin") {
     throw new Error("Bạn không có quyền thực hiện chức năng này.");
   }
 
@@ -81,14 +82,17 @@ export const handleCreateGuardAccount = async (
   try {
     const current_profile = await checkCoordinatorPermission();
 
-    const company_id = await getCoordinatorByCompanyIdService(
-      current_profile.user_id,
-    );
+    let company_id = "";
+    if (current_profile.role?.toLowerCase() === "company-admin") {
+      company_id = await getCompanyByOwnerIdService(current_profile.user_id) || "";
+    } else {
+      company_id = await getCoordinatorByCompanyIdService(current_profile.user_id) || "";
+    }
 
     if (!company_id) {
       return {
         success: false,
-        message: "Không tìm thấy công ty của Coordinator.",
+        message: "Không tìm thấy công ty của tài khoản.",
       };
     }
 
@@ -302,14 +306,17 @@ export const handleInsertGuardInformation = async (
   try {
     const current_profile = await checkCoordinatorPermission();
 
-    const company_id = await getCoordinatorByCompanyIdService(
-      current_profile.user_id,
-    );
+    let company_id = "";
+    if (current_profile.role?.toLowerCase() === "company-admin") {
+      company_id = await getCompanyByOwnerIdService(current_profile.user_id) || "";
+    } else {
+      company_id = await getCoordinatorByCompanyIdService(current_profile.user_id) || "";
+    }
 
     if (!company_id) {
       return {
         success: false,
-        message: "Không tìm thấy công ty của Coordinator.",
+        message: "Không tìm thấy công ty của tài khoản.",
       };
     }
 
@@ -736,14 +743,17 @@ export const handleCheckGuardQuota = async () => {
   try {
     const current_profile = await checkCoordinatorPermission();
 
-    const company_id = await getCoordinatorByCompanyIdService(
-      current_profile.user_id,
-    );
+    let company_id = "";
+    if (current_profile.role?.toLowerCase() === "company-admin") {
+      company_id = await getCompanyByOwnerIdService(current_profile.user_id) || "";
+    } else {
+      company_id = await getCoordinatorByCompanyIdService(current_profile.user_id) || "";
+    }
 
     if (!company_id) {
       return {
         success: false,
-        message: "Không tìm thấy công ty của Coordinator.",
+        message: "Không tìm thấy công ty của tài khoản.",
       };
     }
 
