@@ -6,24 +6,26 @@ import { Users, Loader2, UserRound, Phone, Mail } from "lucide-react";
 import { requestGetCustomerGuardsByContract } from "@/features/guards/api/guard.api";
 import { useAuthStore } from "@/store/auth.store";
 import type { GuardListItem } from "@/features/guards/type";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CustomerContractGuardsInfoProps {
   contractId: string;
 }
 
-const formatGender = (gender: string | null | undefined) => {
+const formatGender = (gender: string | null | undefined, dict: any) => {
   const g = gender?.trim().toLowerCase() || "";
   if (g === "male" || g === "nam") {
-    return { label: "Nam", className: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300" };
+    return { label: dict.contract.detail.gender_male, className: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300" };
   }
   if (g === "female" || g === "nữ" || g === "nư") {
-    return { label: "Nữ", className: "bg-pink-100 text-pink-800 dark:bg-pink-950/40 dark:text-pink-300" };
+    return { label: dict.contract.detail.gender_female, className: "bg-pink-100 text-pink-800 dark:bg-pink-950/40 dark:text-pink-300" };
   }
-  return { label: "Khác", className: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300" };
+  return { label: dict.contract.detail.gender_other, className: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300" };
 };
 
 export function CustomerContractGuardsInfo({ contractId }: CustomerContractGuardsInfoProps) {
   const customerId = useAuthStore((state) => state.user_id) || "";
+  const { dict } = useTranslation();
   const [assignedGuards, setAssignedGuards] = useState<GuardListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -68,10 +70,10 @@ export function CustomerContractGuardsInfo({ contractId }: CustomerContractGuard
         <div>
           <h3 className="text-base font-bold text-on-surface flex items-center gap-2 font-headline">
             <Users className="w-5 h-5 text-primary" />
-            <span>Phân công bảo vệ</span>
+            <span>{dict.contract.detail.guards_info_title}</span>
           </h3>
           <p className="text-xs text-on-surface-variant mt-1 font-body">
-            Danh sách nhân sự bảo vệ phụ trách hợp đồng này.
+            {dict.contract.detail.guards_info_desc}
           </p>
         </div>
       </div>
@@ -83,9 +85,9 @@ export function CustomerContractGuardsInfo({ contractId }: CustomerContractGuard
       ) : assignedGuards.length === 0 ? (
         <div className="text-center py-10 border-2 border-dashed border-outline-variant/50 rounded-xl bg-surface-container-low/30">
           <UserRound className="w-10 h-10 text-outline-variant mx-auto mb-2.5" />
-          <p className="text-sm font-semibold text-on-surface">Chưa phân công bảo vệ</p>
+          <p className="text-sm font-semibold text-on-surface">{dict.contract.detail.guards_not_assigned}</p>
           <p className="text-xs text-on-surface-variant mt-1 max-w-xs mx-auto">
-            Hệ thống đang điều phối nhân sự. Danh sách bảo vệ sẽ được cập nhật sau khi phân công.
+            {dict.contract.detail.guards_not_assigned_desc}
           </p>
         </div>
       ) : (
@@ -115,7 +117,7 @@ export function CustomerContractGuardsInfo({ contractId }: CustomerContractGuard
 
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-bold text-on-surface truncate">
-                    {profile.full_name || "Bảo vệ không tên"}
+                    {profile.full_name || dict.contract.detail.guard_unnamed}
                   </h4>
                   <div className="flex flex-col gap-0.5 mt-1">
                     {profile.phone_number && (
@@ -135,7 +137,7 @@ export function CustomerContractGuardsInfo({ contractId }: CustomerContractGuard
 
                 <div className="shrink-0 text-right">
                   {(() => {
-                    const genderInfo = formatGender(profile.gender);
+                    const genderInfo = formatGender(profile.gender, dict);
                     return (
                       <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${genderInfo.className}`}>
                         {genderInfo.label}

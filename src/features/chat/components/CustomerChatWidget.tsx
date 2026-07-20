@@ -14,6 +14,7 @@ import {
 import { Message } from '@/types/Message';
 import { ConversationWithDetails } from '@/features/chat/types';
 import { supabase } from '@/lib/supabase';
+import { useTranslation } from '@/components/providers/LanguageProvider';
 
 interface CustomerChatWidgetProps {
   companyId?: string;
@@ -27,6 +28,8 @@ interface CustomerChatWidgetProps {
 }
 
 export function CustomerChatWidget({ companyId: initCompanyId, companyName: initCompanyName, defaultOpen = false, onClose, embedded = false }: CustomerChatWidgetProps = {}) {
+  const { dict, locale } = useTranslation();
+  const dateLocale = locale === 'en' ? 'en-US' : 'vi-VN';
   const [isOpen, setIsOpen] = useState(defaultOpen);
   const [mounted, setMounted] = useState(false);
 
@@ -285,11 +288,11 @@ export function CustomerChatWidget({ companyId: initCompanyId, companyName: init
 
   const formatTime = (dateStr: string) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    return new Date(dateStr).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
-    <div ref={widgetRef} className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div ref={widgetRef} className="fixed bottom-[5.5rem] right-6 z-50 flex flex-col items-end">
       {/* Popover Window */}
       {isOpen && (
         <div className="bg-surface border border-outline-variant rounded-2xl shadow-xl w-[340px] sm:w-[380px] h-[520px] mb-4 flex flex-col overflow-hidden text-on-surface animate-in slide-in-from-bottom-5">
@@ -317,11 +320,11 @@ export function CustomerChatWidget({ companyId: initCompanyId, companyName: init
                   </Button>
                 )}
                 <span className="font-bold text-primary truncate max-w-[220px]">
-                  {activeCompanyName || 'Hội thoại'}
+                  {activeCompanyName || dict.chat?.default_conversation || 'Hội thoại'}
                 </span>
               </div>
             ) : (
-              <span className="font-bold text-primary text-lg tracking-tight">Tin nhắn</span>
+              <span className="font-bold text-primary text-lg tracking-tight">{dict.chat?.title || "Tin nhắn"}</span>
             )}
           </div>
 
@@ -333,16 +336,16 @@ export function CustomerChatWidget({ companyId: initCompanyId, companyName: init
                 <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mb-4">
                   <MessageSquare className="w-8 h-8" />
                 </div>
-                <h3 className="text-lg font-bold text-on-surface mb-2">Xin chào!</h3>
+                <h3 className="text-lg font-bold text-on-surface mb-2">{dict.chat?.hello || "Xin chào!"}</h3>
                 <p className="text-sm text-on-surface-variant mb-6 leading-relaxed">
-                  Vui lòng đăng nhập để trò chuyện với các công ty.
+                  {dict.chat?.login_prompt || "Vui lòng đăng nhập để trò chuyện với các công ty."}
                 </p>
                 <Button
                   onClick={() => router.push('/login')}
                   className="w-full bg-primary hover:bg-primary/90 text-on-primary font-bold shadow-sm transition-transform active:scale-95"
                 >
                   <LogIn className="w-4 h-4 mr-2" />
-                  Đăng nhập
+                  {dict.chat?.login_btn || "Đăng nhập"}
                 </Button>
               </div>
             ) : isInConversation ? (
@@ -350,20 +353,20 @@ export function CustomerChatWidget({ companyId: initCompanyId, companyName: init
               <div className="flex-1 flex flex-col overflow-hidden">
                 <div className="flex-1 p-4 overflow-y-auto space-y-4">
                   {isLoadingMsgs ? (
-                    <div className="text-center text-on-surface-variant text-sm py-8">Đang tải...</div>
+                    <div className="text-center text-on-surface-variant text-sm py-8">{dict.chat?.loading || "Đang tải..."}</div>
                   ) : messages.length === 0 ? (
                     <div className="flex-1 flex flex-col items-center justify-center text-center p-6">
                       <div className="w-14 h-14 bg-primary/10 rounded-full flex items-center justify-center mb-3">
                         <MessageSquare className="w-7 h-7 text-primary/60" />
                       </div>
-                      <p className="font-semibold text-on-surface text-sm mb-1">Chưa có tin nhắn nào</p>
-                      <p className="text-xs text-on-surface-variant leading-relaxed">Hãy gửi tin nhắn đầu tiên để bắt đầu cuộc trò chuyện!</p>
+                      <p className="font-semibold text-on-surface text-sm mb-1">{dict.chat?.no_messages || "Chưa có tin nhắn nào"}</p>
+                      <p className="text-xs text-on-surface-variant leading-relaxed">{dict.chat?.first_message_prompt || "Hãy gửi tin nhắn đầu tiên để bắt đầu cuộc trò chuyện!"}</p>
                     </div>
                   ) : (
                     messages.map((msg, index) => {
                       const isMe = msg.sender_id === userId;
-                      const msgDate = new Date(msg.created_at).toLocaleDateString('vi-VN');
-                      const prevMsgDate = index > 0 ? new Date(messages[index - 1].created_at).toLocaleDateString('vi-VN') : null;
+                      const msgDate = new Date(msg.created_at).toLocaleDateString(dateLocale);
+                      const prevMsgDate = index > 0 ? new Date(messages[index - 1].created_at).toLocaleDateString(dateLocale) : null;
                       const showDateSeparator = msgDate !== prevMsgDate;
 
                       return (
@@ -371,7 +374,7 @@ export function CustomerChatWidget({ companyId: initCompanyId, companyName: init
                           {showDateSeparator && (
                             <div className="flex justify-center my-3">
                               <span className="bg-surface-container-high text-on-surface-variant text-[11px] px-3 py-1 rounded-full font-medium shadow-sm">
-                                {msgDate === new Date().toLocaleDateString('vi-VN') ? 'Hôm nay' : msgDate}
+                                {msgDate === new Date().toLocaleDateString(dateLocale) ? (dict.chat?.today || 'Hôm nay') : msgDate}
                               </span>
                             </div>
                           )}
@@ -415,7 +418,7 @@ export function CustomerChatWidget({ companyId: initCompanyId, companyName: init
                     <textarea
                       id="customer-chat-input"
                       rows={1}
-                      placeholder="Nhập tin nhắn..."
+                      placeholder={dict.chat?.input_placeholder_customer || "Nhập tin nhắn..."}
                       value={newMessage}
                       onChange={(e) => {
                         setNewMessage(e.target.value);
@@ -442,7 +445,7 @@ export function CustomerChatWidget({ companyId: initCompanyId, companyName: init
                   <Search className="absolute left-7 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant group-focus-within:text-primary transition-colors" />
                   <input
                     type="text"
-                    placeholder="Tìm theo tên công ty..."
+                    placeholder={dict.chat?.search_company || "Tìm theo tên công ty..."}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="w-full pl-9 pr-4 py-2 bg-surface-container-low border border-outline-variant/60 rounded-xl text-[13px] focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all placeholder:text-on-surface-variant"
@@ -451,11 +454,11 @@ export function CustomerChatWidget({ companyId: initCompanyId, companyName: init
                 
                 <div className="flex-1 overflow-y-auto">
                   {isLoadingConvs ? (
-                    <div className="p-6 text-center text-on-surface-variant text-sm">Đang tải...</div>
+                    <div className="p-6 text-center text-on-surface-variant text-sm">{dict.chat?.loading || "Đang tải..."}</div>
                   ) : filteredConversations.length === 0 ? (
                     <div className="flex flex-col items-center justify-center h-full text-center p-6 text-on-surface-variant text-sm">
                       <MessageSquare className="w-10 h-10 mb-3 opacity-30" />
-                      {searchQuery ? 'Không tìm thấy kết quả.' : 'Chưa có hội thoại nào.'}
+                      {searchQuery ? (dict.chat?.no_results || 'Không tìm thấy kết quả.') : (dict.chat?.no_conversations || 'Chưa có hội thoại nào.')}
                     </div>
                   ) : (
                     filteredConversations.map((conv) => (
@@ -476,14 +479,14 @@ export function CustomerChatWidget({ companyId: initCompanyId, companyName: init
                       <div className="flex-1 min-w-0">
                         <div className="flex items-start justify-between">
                           <span className="font-semibold text-on-surface text-sm truncate">
-                            {conv.customer_name || `Hội thoại #${conv.conversation_id.slice(0, 8)}`}
+                            {conv.customer_name || `${dict.chat?.default_conversation || "Hội thoại"} #${conv.conversation_id.slice(0, 8)}`}
                           </span>
                           <span className="text-[11px] text-on-surface-variant shrink-0 mt-0.5">
                             {formatTime(conv.updated_at)}
                           </span>
                         </div>
                         <p className="text-xs text-on-surface-variant mt-1 line-clamp-1 leading-relaxed">
-                          {conv.latest_message || 'Chưa có tin nhắn'}
+                          {conv.latest_message || dict.chat?.no_messages_yet || 'Chưa có tin nhắn'}
                         </p>
                       </div>
                     </div>

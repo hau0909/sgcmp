@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { MapPin, Phone, Mail, Shield } from "lucide-react";
+import { MapPin, Phone, Mail } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CompanyDetailSidebarProps {
   location: string;
@@ -14,12 +15,13 @@ export default function CompanyDetailSidebar({
   phone,
   email,
 }: CompanyDetailSidebarProps) {
+  const { dict } = useTranslation();
   return (
     <div className="w-full lg:w-1/3 space-y-6">
       {/* Basic Info */}
       <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-xs">
         <h3 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider mb-4">
-          Thông tin cơ bản
+          {dict.customer.company_detail.basic_info_title}
         </h3>
         <ul className="space-y-4 text-body-sm">
           <li className="flex items-start gap-3">
@@ -48,3 +50,4 @@ export default function CompanyDetailSidebar({
     </div>
   );
 }
+

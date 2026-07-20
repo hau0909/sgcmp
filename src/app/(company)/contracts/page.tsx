@@ -8,10 +8,12 @@ import { ContractFilters } from "@/features/contract/components/ContractFilters"
 import { ContractTable } from "@/features/contract/components/ContractTable";
 import { requestGetContracts } from "@/features/contract/api/contract.api";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function ContractsPage() {
   const router = useRouter();
   const companyId = useAuthStore((state) => state.company_id);
+  const { dict } = useTranslation();
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -96,7 +98,7 @@ export default function ContractsPage() {
     )}`;
     const downloadAnchor = document.createElement("a");
     downloadAnchor.setAttribute("href", jsonStr);
-    downloadAnchor.setAttribute("download", `danh_sach_hop_dong_${new Date().toISOString().slice(0, 10)}.json`);
+    downloadAnchor.setAttribute("download", `${dict.company_contracts?.export_filename || "danh_sach_hop_dong"}_${new Date().toISOString().slice(0, 10)}.json`);
     document.body.appendChild(downloadAnchor);
     downloadAnchor.click();
     downloadAnchor.remove();
@@ -128,7 +130,7 @@ export default function ContractsPage() {
       {isLoading ? (
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-12 text-center shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
-          <p className="text-xs text-on-surface-variant/80 font-medium">Đang tải danh sách hợp đồng...</p>
+          <p className="text-xs text-on-surface-variant/80 font-medium">{dict.company_contracts?.loading || "Đang tải danh sách hợp đồng..."}</p>
         </div>
       ) : (
         <ContractTable

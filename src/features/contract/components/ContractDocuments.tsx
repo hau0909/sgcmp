@@ -2,6 +2,7 @@
 
 import React, { useState, useRef } from "react";
 import { FolderOpen, FileText, Eye, Download, UploadCloud, X } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface ContractDocumentsProps {
   contractFileUrl: string | null;
@@ -18,6 +19,7 @@ export function ContractDocuments({
   onDeleteFile,
   isReadOnly = false,
 }: ContractDocumentsProps) {
+  const { dict } = useTranslation();
   const [isDragging, setIsDragging] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,7 +51,7 @@ export function ContractDocuments({
 
   const handleFile = (file: File) => {
     if (file.type !== "application/pdf") {
-      alert("Hệ thống chỉ chấp nhận tệp định dạng PDF!");
+      alert(dict.contract_detail?.pdf_only || "Hệ thống chỉ chấp nhận tệp định dạng PDF!");
       return;
     }
     
@@ -67,17 +69,17 @@ export function ContractDocuments({
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm mt-2">
       <h3 className="text-base font-bold text-on-surface mb-4 flex items-center gap-2 border-b border-outline-variant/30 pb-2 font-headline">
         <FolderOpen className="w-5 h-5 text-secondary" />
-        <span>Tài liệu hợp đồng</span>
+        <span>{dict.contract_detail?.documents || "Tài liệu hợp đồng"}</span>
       </h3>
 
       {isUploading ? (
         <div className="flex flex-col items-center justify-center p-8 border border-outline-variant rounded-xl bg-surface-bright/40 text-center">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
           <p className="text-sm font-semibold text-on-surface font-headline">
-            Đang tải lên tệp hợp đồng...
+            {dict.contract_detail?.uploading_file || "Đang tải lên tệp hợp đồng..."}
           </p>
           <p className="text-xs text-on-surface-variant/80 mt-1 max-w-xs leading-normal">
-            Hệ thống đang xử lý tài liệu đính kèm.
+            {dict.contract_detail?.processing_file || "Hệ thống đang xử lý tài liệu đính kèm."}
           </p>
         </div>
       ) : contractFileUrl ? (
@@ -91,7 +93,7 @@ export function ContractDocuments({
                 Hop_Dong_P2P_{contractCode}.pdf
               </p>
               <p className="text-xs text-on-surface-variant font-mono mt-0.5">
-                PDF Document &bull; Tài liệu đã tải lên
+                PDF Document &bull; {dict.contract_detail?.uploaded_file || "Tài liệu đã tải lên"}
               </p>
             </div>
           </div>
@@ -104,7 +106,7 @@ export function ContractDocuments({
               className="px-3 py-1.5 text-xs font-semibold text-secondary hover:bg-secondary/5 rounded-lg border border-outline-variant/60 hover:border-secondary transition-all flex items-center gap-1 cursor-pointer"
             >
               <Eye className="w-3.5 h-3.5" />
-              <span>Xem trực tuyến</span>
+              <span>{dict.contract_detail?.view_online || "Xem trực tuyến"}</span>
             </a>
             <a
               href={contractFileUrl}
@@ -112,13 +114,13 @@ export function ContractDocuments({
               className="px-3 py-1.5 text-xs font-semibold text-primary hover:bg-primary/5 rounded-lg border border-outline-variant/60 hover:border-primary transition-all flex items-center gap-1 cursor-pointer"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Tải xuống</span>
+              <span>{dict.contract_detail?.download || "Tải xuống"}</span>
             </a>
             {onDeleteFile && !isReadOnly && (
               <button
                 onClick={onDeleteFile}
                 className="p-1.5 text-error hover:bg-red-50 dark:hover:bg-red-950/20 rounded-lg border border-outline-variant/60 hover:border-red-300 transition-all cursor-pointer"
-                title="Xóa tài liệu"
+                title={dict.contract_detail?.delete_file || "Xóa tài liệu"}
               >
                 <X className="w-4 h-4" />
               </button>
@@ -129,10 +131,10 @@ export function ContractDocuments({
         <div className="flex flex-col items-center justify-center p-8 border border-outline-variant/60 rounded-xl text-center bg-surface-bright/40">
           <FileText className="w-10 h-10 mb-2 text-on-surface-variant/40" />
           <p className="text-sm font-semibold text-on-surface-variant font-headline">
-            Không có tệp tài liệu hợp đồng đính kèm
+            {dict.contract_detail?.no_file_attached || "Không có tệp tài liệu hợp đồng đính kèm"}
           </p>
           <p className="text-xs text-on-surface-variant/60 mt-1">
-            Không thể tải tài liệu khi hợp đồng đã có chữ ký của khách hàng.
+            {dict.contract_detail?.readonly_file || "Không thể tải tài liệu khi hợp đồng đã có chữ ký của khách hàng."}
           </p>
         </div>
       ) : (
@@ -157,13 +159,13 @@ export function ContractDocuments({
             ${isDragging ? "text-primary animate-bounce" : "text-on-surface-variant/60 group-hover:text-primary"}`} 
           />
           <p className="text-sm font-semibold text-on-surface group-hover:text-primary transition-colors font-headline">
-            Kéo thả tệp hợp đồng PDF vào đây
+            {dict.contract_detail?.drag_drop_file || "Kéo thả tệp hợp đồng PDF vào đây"}
           </p>
           <p className="text-xs text-on-surface-variant/80 mt-1 max-w-xs leading-normal font-body">
-            Hoặc <span className="text-primary font-bold underline group-hover:text-primary/90">bấm để chọn tệp</span> từ thiết bị của bạn
+            {dict.contract_detail?.or || "Hoặc"} <span className="text-primary font-bold underline group-hover:text-primary/90">{dict.contract_detail?.click_to_select || "bấm để chọn tệp"}</span> {dict.contract_detail?.from_device || "từ thiết bị của bạn"}
           </p>
           <p className="text-[10px] text-on-surface-variant/60 mt-2 font-mono">
-            Hỗ trợ định dạng PDF tối đa 10MB
+            {dict.contract_detail?.max_size || "Hỗ trợ định dạng PDF tối đa 10MB"}
           </p>
         </div>
       )}

@@ -8,6 +8,7 @@ import RoleGuard from "@/components/auth/RoleGuard";
 import { createClient } from "@/lib/supabase/client";
 import { requestGetUserProfile } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   Menu,
   X,
@@ -51,6 +52,7 @@ export default function GuardLayout({
 }>) {
   const pathname = usePathname() || "/guard";
   const router = useRouter();
+  const { dict } = useTranslation();
 
   const [menuOpen, setMenuOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -62,13 +64,13 @@ export default function GuardLayout({
 
   const bottomLinks = [
     {
-      name: "Bảng điều khiển",
+      name: dict.layout_guard.dashboard,
       href: "/overview",
       icon: LayoutDashboard,
       active: pathname === "/overview" || pathname.startsWith("/overview"),
     },
     {
-      name: "Lịch trình",
+      name: dict.layout_guard.schedule,
       href: "/guard-schedule",
       icon: CalendarDays,
       active:
@@ -76,7 +78,7 @@ export default function GuardLayout({
         pathname.startsWith("/guard-schedule"),
     },
     {
-      name: "Ca trực",
+      name: dict.layout_guard.shift,
       href: "/guard-shift",
       icon: ClipboardCheck,
       active:
@@ -87,7 +89,7 @@ export default function GuardLayout({
   const menuLinks = [
     ...bottomLinks,
     {
-      name: "Hồ sơ",
+      name: dict.layout_guard.profile,
       href: "/profile",
       icon: UserRound,
       active: pathname === "/profile" || pathname.startsWith("/profile/"),
@@ -184,7 +186,7 @@ export default function GuardLayout({
             <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
               <div className="flex items-center gap-2 text-sm font-extrabold text-[#0b4f9c]">
                 <ShieldCheck className="h-5 w-5" />
-                <span>BẢO VỆ</span>
+                <span>{dict.layout_guard.role}</span>
               </div>
 
               <button
@@ -215,14 +217,14 @@ export default function GuardLayout({
 
                 <div className="min-w-0">
                   <p className="truncate text-sm font-extrabold text-slate-800">
-                    {profile?.full_name ?? "Nhân viên bảo vệ"}
+                    {profile?.full_name ?? dict.layout_guard.default_name}
                   </p>
 
                   <p className="truncate text-xs font-medium text-slate-500">
                     {profile?.email ??
                       (checkingAuth
-                        ? "Đang kiểm tra tài khoản"
-                        : "Chưa cập nhật email")}
+                        ? dict.layout_guard.checking_account
+                        : dict.layout_guard.no_email)}
                   </p>
                 </div>
               </div>
@@ -257,7 +259,7 @@ export default function GuardLayout({
                 className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-red-600 transition-all hover:bg-red-50"
               >
                 <LogOut className="h-5 w-5" />
-                <span>Đăng xuất</span>
+                <span>{dict.layout_guard.logout}</span>
               </button>
             </div>
           </aside>
@@ -277,7 +279,7 @@ export default function GuardLayout({
               className="flex min-w-0 items-center justify-center gap-2 text-sm font-extrabold tracking-wide text-[#0b4f9c] sm:text-base"
             >
               <ShieldCheck className="h-5 w-5 shrink-0" />
-              <span className="truncate">CỔNG THÔNG TIN BẢO VỆ</span>
+              <span className="truncate">{dict.layout_guard.portal_title}</span>
             </Link>
 
             <button

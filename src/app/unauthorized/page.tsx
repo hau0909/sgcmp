@@ -5,12 +5,14 @@ import { Suspense } from "react";
 import { ShieldAlert, ArrowLeft, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 function UnauthorizedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reason = searchParams.get("reason");
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const { dict } = useTranslation();
 
   const isInactive = reason === "inactive";
 
@@ -39,14 +41,14 @@ function UnauthorizedContent() {
 
         {/* Title */}
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          {isInactive ? "Hồ sơ chưa được kích hoạt" : "Không có quyền truy cập"}
+          {isInactive ? dict.pages.unauthorized.inactive_title : dict.pages.unauthorized.access_denied_title}
         </h1>
 
         {/* Description */}
         <p className="mt-4 text-sm leading-relaxed text-slate-600">
           {isInactive
-            ? "Hồ sơ Coordinator/Guard của bạn hiện tại chưa được kích hoạt trong hệ thống. Vui lòng liên hệ với quản trị viên để kích hoạt tài khoản của bạn."
-            : "Tài khoản của bạn không có quyền truy cập vào trang này."}
+            ? dict.pages.unauthorized.inactive_desc
+            : dict.pages.unauthorized.no_access_desc}
         </p>
 
         {/* Action Buttons */}
@@ -57,7 +59,7 @@ function UnauthorizedContent() {
             className="flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
           >
             <ArrowLeft className="h-4 w-4" />
-            <span>Quay lại</span>
+            <span>{dict.pages.unauthorized.go_back}</span>
           </button>
 
           <button
@@ -66,7 +68,7 @@ function UnauthorizedContent() {
             className="flex items-center justify-center gap-2 rounded-lg bg-blue-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900 transition"
           >
             <LogOut className="h-4 w-4" />
-            <span>Đăng xuất & Đăng nhập</span>
+            <span>{dict.pages.unauthorized.logout_login}</span>
           </button>
         </div>
       </div>

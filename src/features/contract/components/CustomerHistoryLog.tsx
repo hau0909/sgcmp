@@ -1,7 +1,7 @@
 "use client";
 
-import React from "react";
 import { History } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface HistoryItem {
   time: string;
@@ -15,11 +15,13 @@ interface CustomerHistoryLogProps {
 }
 
 export function CustomerHistoryLog({ history }: CustomerHistoryLogProps) {
+  const { dict } = useTranslation();
+
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm h-full">
       <h3 className="text-base font-bold text-on-surface mb-6 flex items-center gap-2 border-b border-outline-variant/30 pb-2 font-headline">
         <History className="w-5 h-5 text-secondary" />
-        <span>Lịch sử thay đổi</span>
+        <span>{dict.contract.detail.history_log_title}</span>
       </h3>
 
       <div className="relative border-l border-outline-variant/60 ml-3 space-y-6 pb-2">

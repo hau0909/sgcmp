@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { AlertTriangle, Loader2, Send, Upload, X } from "lucide-react";
 import { Contract } from "@/types/Contract";
 import { ReportType } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CustomerReportFormProps {
   contracts: Contract[];
@@ -24,6 +25,7 @@ export function CustomerReportForm({
   isSubmitting,
   onCancel,
 }: CustomerReportFormProps) {
+  const { dict } = useTranslation();
   const [selectedContractId, setSelectedContractId] = useState("");
   const [type, setType] = useState<ReportType>("LATE");
   const [description, setDescription] = useState("");
@@ -51,7 +53,7 @@ export function CustomerReportForm({
     const file = e.target.files?.[0];
     if (file) {
       if (file.size > 5 * 1024 * 1024) {
-        setErrorMessage("Kích thước tệp quá lớn. Vui lòng chọn ảnh dưới 5MB.");
+        setErrorMessage(dict.report.form.error_file_size || "Kích thước tệp quá lớn. Vui lòng chọn ảnh dưới 5MB.");
         return;
       }
       setImageFile(file);
@@ -75,12 +77,12 @@ export function CustomerReportForm({
     setErrorMessage(null);
 
     if (!selectedContractId) {
-      setErrorMessage("Vui lòng chọn hợp đồng đang áp dụng.");
+      setErrorMessage(dict.report.form.error_contract || "Vui lòng chọn hợp đồng đang áp dụng.");
       return;
     }
 
     if (!description.trim()) {
-      setErrorMessage("Vui lòng mô tả chi tiết nội dung sự việc.");
+      setErrorMessage(dict.report.form.error_description || "Vui lòng mô tả chi tiết nội dung sự việc.");
       return;
     }
 
@@ -99,8 +101,8 @@ export function CustomerReportForm({
       <div className="bg-[#eff4ff] border-b border-[#acc7ff] p-5 flex items-center gap-3">
         <AlertTriangle className="w-6 h-6 text-primary shrink-0" />
         <div>
-          <h3 className="font-bold text-on-surface text-base">Gửi báo cáo / Phản ánh mới</h3>
-          <p className="text-xs text-on-surface-variant">Chọn đúng hợp đồng đang sử dụng và cung cấp chi tiết sự việc để được xử lý nhanh nhất.</p>
+          <h3 className="font-bold text-on-surface text-base">{dict.report.form.title}</h3>
+          <p className="text-xs text-on-surface-variant">{dict.report.form.subtitle}</p>
         </div>
       </div>
 
@@ -115,7 +117,7 @@ export function CustomerReportForm({
         {/* Contract dropdown */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-bold text-on-surface uppercase tracking-wider">
-            Hợp đồng áp dụng <span className="text-red-500">*</span>
+            {dict.report.form.contract_label} <span className="text-red-500">*</span>
           </label>
           {isLoadingContracts ? (
             <div className="h-10 rounded border border-outline-variant flex items-center px-3 gap-2 bg-slate-50">
@@ -129,7 +131,7 @@ export function CustomerReportForm({
               className="bg-white rounded border border-outline-variant focus:border-primary outline-none text-sm text-on-surface px-3 py-2 w-full h-10 cursor-pointer"
               required
             >
-              <option value="">-- Chọn hợp đồng đang sử dụng --</option>
+              <option value="">-- {dict.report.form.contract_placeholder} --</option>
               {displayContracts.map((c) => {
                 const dateInfo = c.end_date 
                   ? ` (Hết hạn: ${new Date(c.end_date).toLocaleDateString("vi-VN")})`
@@ -147,7 +149,7 @@ export function CustomerReportForm({
         {/* Type of Incident */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-bold text-on-surface uppercase tracking-wider">
-            Vấn đề khiếu nại <span className="text-red-500">*</span>
+            {dict.report.form.type_label} <span className="text-red-500">*</span>
           </label>
           <select
             value={type}
@@ -166,10 +168,10 @@ export function CustomerReportForm({
         {/* Description */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-bold text-on-surface uppercase tracking-wider">
-            Mô tả chi tiết diễn biến sự việc <span className="text-red-500">*</span>
+            {dict.report.form.desc_label} <span className="text-red-500">*</span>
           </label>
           <textarea
-            placeholder="Vui lòng cung cấp chi tiết thông tin: thời gian xảy ra, tên nhân viên (nếu có), diễn biến sự việc chi tiết nhất có thể để chúng tôi tiến hành xác minh và xử lý."
+            placeholder={dict.report.form.desc_placeholder}
             value={description}
             onChange={(e) => setDescription(e.target.value.slice(0, 500))}
             className="bg-white rounded border border-outline-variant focus:border-primary outline-none text-sm text-on-surface px-3 py-2 w-full min-h-36 resize-y leading-relaxed"
@@ -184,7 +186,7 @@ export function CustomerReportForm({
         {/* Attached Image */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-bold text-on-surface uppercase tracking-wider">
-            Ảnh đính kèm
+            {dict.report.form.attachment_label}
           </label>
           
           <div className="flex items-center gap-4">
@@ -237,7 +239,7 @@ export function CustomerReportForm({
             onClick={onCancel}
             className="px-5 py-2.5 border border-slate-200 hover:bg-slate-100 transition-colors rounded text-sm font-semibold text-slate-700 cursor-pointer font-body"
           >
-            Hủy bỏ
+            {dict.report.form.cancel}
           </button>
           <button
             type="submit"
@@ -246,11 +248,11 @@ export function CustomerReportForm({
           >
             {isSubmitting ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" /> Đang gửi...
+                <Loader2 className="w-4 h-4 animate-spin" /> {dict.report.form.submitting}
               </>
             ) : (
               <>
-                <Send className="w-4 h-4" /> Gửi phản ánh
+                <Send className="w-4 h-4" /> {dict.report.form.submit}
               </>
             )}
           </button>

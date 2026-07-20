@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Building2, Phone, Mail, MapPin, ShieldCheck } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CustomerCompanyInfoProps {
   companyName: string;
@@ -36,10 +37,13 @@ function InfoRow({
 
 export function CustomerCompanyInfo({
   companyName,
-  phone = "Chưa cập nhật",
-  email = "Chưa cập nhật",
-  address = "Chưa cập nhật",
+  phone,
+  email,
+  address,
 }: CustomerCompanyInfoProps) {
+  const { dict } = useTranslation();
+  const notUpdated = dict.contract.detail.not_updated;
+
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative overflow-hidden">
       {/* Decorative accent */}
@@ -47,28 +51,28 @@ export function CustomerCompanyInfo({
 
       <h3 className="text-base font-bold text-on-surface mb-4 flex items-center gap-2 border-b border-outline-variant/30 pb-2 font-headline">
         <ShieldCheck className="w-5 h-5 text-secondary" />
-        <span>Thông tin công ty cung cấp dịch vụ</span>
+        <span>{dict.contract.detail.company_info_title}</span>
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6 mt-2">
         <InfoRow
-          label="Tên công ty"
+          label={dict.contract.detail.company_name}
           value={companyName}
           icon={<Building2 className="w-3.5 h-3.5" />}
         />
         <InfoRow
-          label="Số điện thoại"
-          value={phone}
+          label={dict.contract.detail.phone}
+          value={phone || notUpdated}
           icon={<Phone className="w-3.5 h-3.5" />}
         />
         <InfoRow
-          label="Email"
-          value={email}
+          label={dict.contract.detail.email}
+          value={email || notUpdated}
           icon={<Mail className="w-3.5 h-3.5" />}
         />
         <InfoRow
-          label="Địa chỉ"
-          value={address}
+          label={dict.contract.detail.address}
+          value={address || notUpdated}
           icon={<MapPin className="w-3.5 h-3.5" />}
         />
       </div>

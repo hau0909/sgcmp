@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Search } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CoordinatorFiltersProps {
   search: string;
@@ -16,13 +17,14 @@ export function CoordinatorFilters({
   status,
   onStatusChange,
 }: CoordinatorFiltersProps) {
+  const { dict } = useTranslation();
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 mb-6 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
         {/* Search */}
         <div className="md:col-span-8 flex flex-col">
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-            Tìm kiếm
+            {dict.coordinator?.search_label || "Tìm kiếm"}
           </label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-[16px] h-[16px]" />
@@ -30,7 +32,10 @@ export function CoordinatorFilters({
               type="text"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Tìm kiếm theo tên, email, sđt..."
+              placeholder={
+                dict.coordinator?.search_placeholder ||
+                "Tìm kiếm theo tên, email, sđt..."
+              }
               className="w-full pl-9 pr-3 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
@@ -39,7 +44,7 @@ export function CoordinatorFilters({
         {/* Status Filter */}
         <div className="md:col-span-4 flex flex-col">
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-            Trạng thái
+            {dict.coordinator?.status_label || "Trạng thái"}
           </label>
           <div className="relative">
             <select
@@ -47,9 +52,15 @@ export function CoordinatorFilters({
               onChange={(e) => onStatusChange(e.target.value)}
               className="w-full pl-3 pr-8 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer"
             >
-              <option value="">Tất cả trạng thái</option>
-              <option value="Hoạt động">Hoạt động</option>
-              <option value="Vô hiệu hóa">Vô hiệu hóa</option>
+              <option value="">
+                {dict.coordinator?.status_all || "Tất cả trạng thái"}
+              </option>
+              <option value="Hoạt động">
+                {dict.coordinator?.status_active || "Hoạt động"}
+              </option>
+              <option value="Vô hiệu hóa">
+                {dict.coordinator?.status_inactive || "Vô hiệu hóa"}
+              </option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-on-surface-variant">
               <svg

@@ -9,6 +9,7 @@ import {
   Clock,
   FileText,
 } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CustomerServiceInfoProps {
   serviceName: string;
@@ -27,36 +28,38 @@ export function CustomerServiceInfo({
   timeSlots = [],
   description = null,
 }: CustomerServiceInfoProps) {
+  const { dict } = useTranslation();
+
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative overflow-hidden flex-1">
       <div className="absolute top-0 right-0 w-24 h-24 bg-secondary/5 rounded-bl-full pointer-events-none" />
 
       <h3 className="text-base font-bold text-on-surface mb-4 flex items-center gap-2 border-b border-outline-variant/30 pb-2 font-headline">
         <Briefcase className="w-5 h-5 text-secondary" />
-        <span>Thông tin dịch vụ</span>
+        <span>{dict.contract.detail.service_info_title}</span>
       </h3>
 
       <div className="space-y-4">
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Dịch vụ
+            {dict.contract.detail.service_name}
           </span>
           <span className="text-sm font-semibold text-on-surface">{serviceName}</span>
         </div>
 
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Số lượng bảo vệ
+            {dict.contract.detail.quantity}
           </span>
           <span className="text-sm font-semibold text-on-surface font-mono flex items-center gap-1.5">
             <Users className="w-4 h-4 text-outline-variant" />
-            {quantity} nhân sự
+            {quantity} {dict.contract.detail.guards_unit}
           </span>
         </div>
 
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Thời hạn hợp đồng
+            {dict.contract.detail.duration}
           </span>
           <span className="text-sm font-semibold text-on-surface font-mono flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-outline-variant" />
@@ -66,7 +69,7 @@ export function CustomerServiceInfo({
 
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Địa điểm thực hiện
+            {dict.contract.detail.location}
           </span>
           <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
             <MapPin className="w-4 h-4 text-outline-variant" />
@@ -77,7 +80,7 @@ export function CustomerServiceInfo({
         {timeSlots.length > 0 && (
           <div className="flex flex-col pt-1">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
-              Khung giờ làm việc
+              {dict.contract.detail.time_slots}
             </span>
             <div className="flex flex-wrap gap-2">
               {timeSlots.map((slot, idx) => (
@@ -96,7 +99,7 @@ export function CustomerServiceInfo({
         {description && (
           <div className="flex flex-col pt-2 border-t border-outline-variant/30">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-              Ghi chú / Yêu cầu thêm
+              {dict.contract.detail.note}
             </span>
             <div className="text-xs text-on-surface-variant bg-surface-container-low/50 border border-outline-variant/30 rounded-lg p-3 leading-relaxed flex gap-2">
               <FileText className="w-4 h-4 text-outline-variant mt-0.5 shrink-0" />

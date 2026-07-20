@@ -1,321 +1,183 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Link from "next/link";
 import { useParams, useSearchParams, useRouter } from "next/navigation";
-import { ArrowRight, ShieldCheck, CheckCircle2, Loader2 } from "lucide-react";
-import { buttonVariants } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-import { LANDING_PLANS } from "./plans-data";
+import { CheckCircle2, ArrowRight, Loader2 } from "lucide-react";
 import { Payment } from "@/types/Payment";
+import { Plan } from "@/types/Plan";
 import { requestGetPaymentById } from "@/features/payment/api/payment.api";
-
-const getSelectedPlan = (id: string) => {
-  const normId = String(id).toLowerCase();
-  const found =
-    LANDING_PLANS.find(
-      (p) =>
-        p.id === normId ||
-        normId.includes(p.id) ||
-        p.id.includes(normId) ||
-        (normId === "1" && p.id === "co-ban") ||
-        (normId === "2" && p.id === "chuyen-nghiep") ||
-        (normId === "3" && p.id === "doanh-nghiep"),
-    ) || LANDING_PLANS[2]; // Default to Doanh nghiệp
-
-  return found;
-};
-
-const getPlanNumericId = (id: string): number => {
-  const norm = String(id).toLowerCase();
-  if (norm.includes("co-ban") || norm === "1") return 1;
-  if (norm.includes("chuyen-nghiep") || norm === "2") return 2;
-  if (norm.includes("doanh-nghiep") || norm === "3") return 3;
-  return 3;
-};
+import { requestGetAllPlans } from "@/features/subscription/api/subscription.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
+import { formatPrice } from "@/utils/formatPrice";
 
 export default function PaymentSuccessScreen() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
+  const { dict, locale } = useTranslation();
+  const dateLocale = locale === "en" ? "en-US" : "vi-VN";
 
-  const planId = (params.planId as string) || "doanh-nghiep";
+  const planId = params.planId as string;
   const paymentIdParam = searchParams.get("paymentId");
 
-  const plan = getSelectedPlan(planId);
-  const planNumericId = getPlanNumericId(planId);
-
   const [payment, setPayment] = useState<Payment | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [plan, setPlan] = useState<Plan | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    if (paymentIdParam) {
-      setLoading(true);
-      requestGetPaymentById(paymentIdParam)
-        .then((res) => {
-          if (res.success && res.data) {
-            if (res.data.payment_status !== "completed") {
-              router.replace("/billing");
-              return;
-            }
-            setPayment(res.data);
-          } else {
-            router.replace("/billing");
-          }
-        })
-        .catch((err) => {
-          console.error("Error loading success payment details:", err);
-          router.replace("/billing");
-        })
-        .finally(() => setLoading(false));
-    } else {
+    if (!paymentIdParam) {
       router.replace("/billing");
+      return;
     }
-  }, [paymentIdParam, router]);
 
-  // Fallback / Mock Data if no payment from DB is loaded
-  const displayPaymentId = payment ? payment.payment_id : "8f3b9c7a-d21e-4f3a-96c8-10b2a3d4e5f6";
-  const displaySubscriptionId = payment ? payment.subscription_id : "7e12f45a-c98b-4d7e-961d-8472bf62c301";
-  const displayCompanyId = payment ? payment.company_id : "3d4e5f6a-7b8c-9d0e-1f2a-3b4c5d6e7f8g";
-  const displayTransactionCode = payment ? payment.transaction_code : `SGCMP ORD789${plan.id.toUpperCase()}`;
-  
-  const getPaymentMethodLabel = (method: string) => {
-    if (method === "bank_transfer") return "Chuyen Khoan";
-    if (method === "credit_card") return "The Tin Dung";
-    if (method === "e_wallet") return "Vi Dien Tu";
-    return method;
-  };
-  const displayPaymentMethod = payment ? getPaymentMethodLabel(payment.payment_method) : "Chuyen Khoan";
-  const displayPaymentStatus = payment ? payment.payment_status.toUpperCase() : "PENDING";
-  const displayAmount = payment ? payment.amount : plan.priceVal;
+    const fetchData = async () => {
+      setLoading(true);
+      try {
+        const [paymentRes, plans] = await Promise.all([
+          requestGetPaymentById(paymentIdParam),
+          requestGetAllPlans(),
+        ]);
 
-  // Formatting dates
-  const baseDate = payment
-    ? (payment.paid_at ? new Date(payment.paid_at) : new Date(payment.created_at))
-    : new Date();
+        if (paymentRes.success && paymentRes.data) {
+          if (paymentRes.data.payment_status !== "completed") {
+            router.replace("/billing");
+            return;
+          }
+          setPayment(paymentRes.data);
 
-  const formatDateTime = (date: Date) => {
-    return date.toLocaleString("vi-VN", {
-      timeZone: "Asia/Ho_Chi_Minh",
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false,
-    });
-  };
+          // Find plan by payment's plan_id or route planId
+          const matchedPlan =
+            plans.find((p) => p.plan_id === paymentRes.data!.plan_id) ||
+            plans.find((p) => p.plan_id.toString() === planId) ||
+            null;
+          setPlan(matchedPlan);
+        } else {
+          router.replace("/billing");
+        }
+      } catch (err) {
+        console.error("Error loading payment success details:", err);
+        router.replace("/billing");
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString("vi-VN", {
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    });
-  };
+    fetchData();
+  }, [paymentIdParam, planId, router]);
 
-  const createdAtFormatted = payment
-    ? formatDateTime(new Date(payment.created_at))
-    : formatDateTime(new Date());
-
-  const paidAtFormatted = payment && payment.paid_at
-    ? formatDateTime(new Date(payment.paid_at))
-    : (payment ? "Chưa xác nhận" : "null (Đang chờ)");
-
-  const startDateFormatted = formatDate(baseDate);
-  
-  const endDate = new Date(baseDate);
-  endDate.setDate(baseDate.getDate() + 30);
-  const endDateFormatted = formatDate(endDate);
-
-  const subscriptionStatus = payment && payment.payment_status === "completed" ? "ACTIVE" : "PENDING";
-  const autoRenew = "true";
-  const updatedAtFormatted = payment && payment.paid_at
-    ? formatDate(new Date(payment.paid_at))
-    : "null";
-
-  const amountFormatted = new Intl.NumberFormat("vi-VN").format(displayAmount);
-
-  if (paymentIdParam && loading && !payment) {
+  if (loading) {
     return (
-      <div className="flex-1 max-w-[950px] w-full mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-[400px]">
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-7 flex flex-col items-center justify-center shadow-lg w-full min-h-[350px]">
+      <div className="flex-1 max-w-md w-full mx-auto px-4 py-8 flex flex-col items-center justify-center min-h-[400px]">
+        <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-8 flex flex-col items-center justify-center shadow-lg w-full min-h-[300px]">
           <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
-          <p className="text-xs text-on-surface-variant font-medium font-body">Đang tải thông tin giao dịch thành công...</p>
+          <p className="text-xs text-on-surface-variant font-medium font-body">
+            {dict.payment?.loading_tx || "Đang tải thông tin giao dịch..."}
+          </p>
         </div>
       </div>
     );
   }
 
-  return (
-    <div className="flex-1 max-w-[950px] w-full mx-auto px-4 py-4 md:py-8 flex flex-col items-center justify-center">
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-5 md:p-7 flex flex-col items-center text-center shadow-lg w-full relative overflow-hidden">
-        {/* Decorative subtle background pattern */}
-        <div className="absolute top-0 inset-x-0 h-1.5 bg-gradient-to-r from-secondary via-primary to-accent" />
+  if (!payment) return null;
 
-        {/* Success Icon (Static, premium design without animation) */}
-        <div className="w-14 h-14 rounded-full bg-green-500/10 border-4 border-green-500/20 flex items-center justify-center mb-3 relative">
-          <div className="absolute inset-0 rounded-full bg-green-500/5 blur-sm" />
-          <ShieldCheck className="w-7 h-7 text-green-600 relative z-10" />
+  // Data derived purely from real API
+  const displayTransactionCode = payment.transaction_code || payment.payment_id.slice(0, 12).toUpperCase();
+  const displayAmount = payment.amount;
+  const displayPaymentMethod =
+    payment.payment_method === "bank_transfer"
+      ? (dict.payment_success?.bank_transfer || "Chuyển khoản (Bank Transfer)")
+      : payment.payment_method;
+
+  const baseDate = payment.paid_at ? new Date(payment.paid_at) : new Date(payment.created_at);
+
+  const createdAtFormatted = baseDate.toLocaleString(dateLocale, {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  });
+
+  const endDate = new Date(baseDate);
+  endDate.setDate(baseDate.getDate() + 30);
+  const endDateFormatted = endDate.toLocaleDateString(dateLocale);
+
+  return (
+    <div className="flex-1 max-w-md w-full mx-auto px-4 py-6 md:py-10 flex flex-col items-center justify-center">
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 md:p-8 flex flex-col items-center text-center shadow-xl w-full relative overflow-hidden">
+        {/* Icon */}
+        <div className="w-16 h-16 rounded-full bg-primary/10 border-4 border-primary/20 flex items-center justify-center mb-4 text-primary">
+          <CheckCircle2 className="w-8 h-8 text-primary" />
         </div>
 
-        <h1 className="text-xl font-extrabold text-on-surface tracking-tight font-headline mb-1">
-          Thanh toán thành công!
+        {/* Title & Subtitle */}
+        <h1 className="text-2xl font-extrabold text-on-surface tracking-tight font-headline mb-1.5">
+          {dict.payment_success?.title || "Thanh toán thành công!"}
         </h1>
-
-        <p className="text-xs text-on-surface-variant font-medium font-body max-w-lg mb-5 leading-relaxed">
-          Giao dịch chuyển khoản đang được hệ thống đối soát tự động. Gói dịch
-          vụ của bạn sẽ được kích hoạt trong vòng <strong>5-10 phút</strong>.
+        <p className="text-xs text-on-surface-variant font-medium font-body mb-6">
+          {dict.payment_success?.subtitle || "Cảm ơn bạn đã lựa chọn dịch vụ của chúng tôi."}
         </p>
 
-        {/* Side-by-side Grid Layout */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full mb-6">
-          {/* Box 1: Subscription Plan Details */}
-          <div className="bg-surface-container-low rounded-xl p-4 border border-outline-variant/50 text-left text-xs flex flex-col gap-2.5 shadow-sm h-full">
-            <h3 className="font-bold text-on-surface border-b border-outline-variant/40 pb-1.5 text-[10px] uppercase tracking-wider text-on-surface-variant">
-              Thông tin gói dịch vụ
-            </h3>
+        {/* Transaction Details Box */}
+        <div className="w-full bg-surface-container-low border border-outline-variant/60 rounded-xl p-4 md:p-5 text-left mb-6 font-body">
+          <h2 className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant/80 border-b border-outline-variant/50 pb-2 mb-3">
+            {dict.payment_success?.tx_details_title || "CHI TIẾT GIAO DỊCH"}
+          </h2>
 
-            <div className="flex justify-between items-center mt-0.5">
-              <span className="font-medium text-on-surface-variant/80">Tên gói</span>
-              <span className="font-bold text-on-surface">{plan.name}</span>
-            </div>
-
-            <div className="flex justify-between items-center border-t border-outline-variant/20 pt-2.5">
-              <span className="font-medium text-on-surface-variant/80">Thời hạn sử dụng</span>
-              <span className="font-semibold text-on-surface">1 tháng</span>
-            </div>
-
+          <div className="flex flex-col gap-2.5 text-xs">
+            {/* Transaction Code */}
             <div className="flex justify-between items-center text-on-surface-variant">
-              <span className="font-medium text-on-surface-variant/80">Ngày bắt đầu</span>
-              <span className="font-semibold text-on-surface">{startDateFormatted}</span>
+              <span>{dict.payment_success?.col_tx_code || "Mã giao dịch"}</span>
+              <span className="font-mono font-bold text-on-surface">{displayTransactionCode}</span>
             </div>
 
-            <div className="flex justify-between items-center text-on-surface-variant">
-              <span className="font-medium text-on-surface-variant/80">Ngày kết thúc</span>
-              <span className="font-semibold text-on-surface">{endDateFormatted}</span>
-            </div>
-
-            <div className="flex justify-between items-center text-on-surface-variant">
-              <span className="font-medium text-on-surface-variant/80">Trạng thái đăng ký</span>
-              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-700 border border-amber-500/20">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse" />
-                {subscriptionStatus}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center text-on-surface-variant">
-              <span className="font-medium text-on-surface-variant/80">Tự động gia hạn</span>
-              <span className="font-semibold text-on-surface bg-surface-container-high px-1.5 py-0.5 rounded border border-outline-variant/30 text-[10px]">
-                {autoRenew}
-              </span>
-            </div>
-
-            <div className="flex justify-between items-center text-on-surface-variant">
-              <span className="font-medium text-on-surface-variant/80">Ngày cập nhật</span>
-              <span className="text-on-surface-variant/60 italic font-medium">{updatedAtFormatted}</span>
-            </div>
-
-            <div className="flex flex-col gap-2 border-t border-outline-variant/20 pt-2.5 flex-1">
-              <span className="font-medium text-on-surface-variant/80">Tính năng chính bao gồm:</span>
-              <ul className="flex flex-col gap-1.5 pl-1 text-[11px] text-on-surface-variant font-medium">
-                {plan.features.map((feature, index) => (
-                  <li key={index} className="flex items-center gap-1.5">
-                    <CheckCircle2 className="w-3.5 h-3.5 text-green-600 shrink-0" />
-                    <span className="break-words">{feature}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-
-          {/* Box 2: Payment Details */}
-          <div className="bg-surface-container-low rounded-xl p-4 border border-outline-variant/50 text-left text-xs flex flex-col gap-2.5 shadow-sm h-full">
-            <h3 className="font-bold text-on-surface border-b border-outline-variant/40 pb-1.5 text-[10px] uppercase tracking-wider text-on-surface-variant">
-              Thông tin chi tiết giao dịch
-            </h3>
-
-            <div className="flex flex-col gap-2.5 mt-0.5">
+            {/* Service Package Name */}
+            {plan && (
               <div className="flex justify-between items-center text-on-surface-variant">
-                <span className="font-medium text-on-surface-variant/80">Mã thanh toán</span>
-                <span className="font-mono text-[10px] font-bold text-on-surface bg-surface-container-high px-1.5 py-0.5 rounded border border-outline-variant/30">
-                  {displayPaymentId.slice(0, 8)}...{displayPaymentId.slice(-8)}
-                </span>
+                <span>{dict.payment_success?.col_service || "Gói dịch vụ"}</span>
+                <span className="font-semibold text-on-surface">{plan.plan_name}</span>
               </div>
-
-              <div className="flex justify-between items-center text-on-surface-variant">
-                <span className="font-medium text-on-surface-variant/80">Mã đăng ký</span>
-                <span className="font-mono text-[10px] font-bold text-on-surface bg-surface-container-high px-1.5 py-0.5 rounded border border-outline-variant/30">
-                  {displaySubscriptionId.slice(0, 8)}...{displaySubscriptionId.slice(-8)}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-on-surface-variant">
-                <span className="font-medium text-on-surface-variant/80">Mã doanh nghiệp</span>
-                <span className="font-mono text-[10px] font-bold text-on-surface bg-surface-container-high px-1.5 py-0.5 rounded border border-outline-variant/30">
-                  {displayCompanyId.slice(0, 8)}...{displayCompanyId.slice(-8)}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-on-surface-variant">
-                <span className="font-medium text-on-surface-variant/80">Mã gói</span>
-                <span className="font-bold text-on-surface bg-surface-container-high w-5 h-5 flex items-center justify-center rounded-full border border-outline-variant/30 text-[10px]">
-                  {planNumericId}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-on-surface-variant">
-                <span className="font-medium text-on-surface-variant/80">Phương thức</span>
-                <span className="font-semibold text-on-surface uppercase bg-surface-container-high px-1.5 py-0.5 rounded border border-outline-variant/30">
-                  {displayPaymentMethod}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-on-surface-variant border-t border-outline-variant/20 pt-2.5">
-                <span className="font-medium text-on-surface-variant/80">Số tiền</span>
-                <span className="font-bold text-primary">{amountFormatted} VNĐ</span>
-              </div>
-
-              <div className="flex justify-between items-center text-on-surface-variant">
-                <span className="font-medium text-on-surface-variant/80">Trạng thái</span>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-500/10 text-amber-700 border border-amber-500/20">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5 animate-pulse" />
-                  {displayPaymentStatus}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-on-surface-variant">
-                <span className="font-medium text-on-surface-variant/80">Mã đối soát</span>
-                <span className="font-mono font-bold text-on-surface bg-primary/5 text-primary border border-primary/20 px-2 py-0.5 rounded">
-                  {displayTransactionCode}
-                </span>
-              </div>
-
-              <div className="flex justify-between items-center text-on-surface-variant">
-                <span className="font-medium text-on-surface-variant/80">Ngày tạo</span>
-                <span className="font-semibold text-on-surface">{createdAtFormatted}</span>
-              </div>
-
-              <div className="flex justify-between items-center text-on-surface-variant">
-                <span className="font-medium text-on-surface-variant/80">Thanh toán lúc</span>
-                <span className="text-on-surface-variant/60 italic font-medium">{paidAtFormatted}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex flex-col sm:flex-row gap-4 w-full">
-          <a
-            href="/billing"
-            className={cn(
-              buttonVariants({ variant: "default", size: "lg" }),
-              "w-full font-bold text-xs flex items-center justify-center hover:opacity-95 transition-opacity bg-primary text-white cursor-pointer",
             )}
-          >
-            Quay lại Quản lý gói
-            <ArrowRight className="w-4 h-4 ml-1.5" />
-          </a>
+
+            {/* Amount */}
+            <div className="flex justify-between items-center text-on-surface-variant">
+              <span>{dict.payment_success?.col_amount || "Số tiền"}</span>
+              <span className="font-black text-primary text-sm">{formatPrice(displayAmount)} VNĐ</span>
+            </div>
+
+            {/* Method */}
+            <div className="flex justify-between items-center text-on-surface-variant">
+              <span>{dict.payment_success?.col_method || "Phương thức"}</span>
+              <span className="font-medium text-on-surface">{displayPaymentMethod}</span>
+            </div>
+
+            {/* Time */}
+            <div className="flex justify-between items-center text-on-surface-variant">
+              <span>{dict.payment_success?.col_time || "Thời gian"}</span>
+              <span className="font-mono text-on-surface-variant">{createdAtFormatted}</span>
+            </div>
+
+            {/* Expiry */}
+            <div className="flex justify-between items-center text-on-surface-variant">
+              <span>{dict.payment_success?.col_expiry || "Thời hạn sử dụng"}</span>
+              <span className="font-semibold text-on-surface">
+                {dict.payment_success?.expiry_until?.replace("{0}", endDateFormatted) || `Đến ${endDateFormatted}`}
+              </span>
+            </div>
+          </div>
         </div>
+
+        {/* Primary Action Button */}
+        <button
+          onClick={() => router.push("/billing")}
+          className="w-full bg-primary hover:bg-primary/95 text-on-primary font-bold py-3 px-6 rounded-xl shadow-md transition-transform active:scale-98 text-xs flex items-center justify-center gap-2 cursor-pointer"
+        >
+          <span>{dict.payment_success?.start_experience || "Bắt đầu trải nghiệm"}</span>
+          <ArrowRight className="w-4 h-4" />
+        </button>
+
       </div>
     </div>
   );

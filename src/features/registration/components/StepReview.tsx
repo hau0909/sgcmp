@@ -3,6 +3,7 @@
 import React, { useEffect, useState } from "react";
 import { User, ShieldCheck, Mail, Phone, CreditCard, Calendar, MapPin, Building, Hash, FileText } from "lucide-react";
 import { requestGetCities, requestGetWards } from "@/features/address";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface StepReviewProps {
   formData: {
@@ -43,12 +44,13 @@ export default function StepReview({
   setConsentChecked,
   errors,
 }: StepReviewProps) {
-  const [resolvedAddress, setResolvedAddress] = useState("Đang tải địa chỉ...");
+  const { dict } = useTranslation();
+  const [resolvedAddress, setResolvedAddress] = useState(dict.pages.registration.loading_address);
 
   useEffect(() => {
     async function resolveAddress() {
       if (formData.cityId === "" || formData.wardId === "") {
-        setResolvedAddress("Địa chỉ chưa hoàn thiện");
+        setResolvedAddress(dict.pages.registration.incomplete_address);
         return;
       }
 
@@ -68,10 +70,10 @@ export default function StepReview({
         if (wardName) parts.push(wardName);
         if (cityName) parts.push(cityName);
 
-        setResolvedAddress(parts.join(", ") || "Địa chỉ chưa xác định");
+        setResolvedAddress(parts.join(", ") || dict.pages.registration.unknown_address);
       } catch (err) {
         console.error("Resolve address error:", err);
-        setResolvedAddress(formData.street || "Địa chỉ chưa xác định");
+        setResolvedAddress(formData.street || dict.pages.registration.unknown_address);
       }
     }
 
@@ -102,7 +104,7 @@ export default function StepReview({
         return (
           <div className="w-full h-24 rounded-lg border border-outline-variant/60 flex flex-col items-center justify-center bg-surface-container gap-1 p-2 text-center text-xs">
             <FileText className="w-7 h-7 text-primary" />
-            <span className="font-semibold text-on-surface truncate w-full">Tài liệu PDF</span>
+            <span className="font-semibold text-on-surface truncate w-full">{dict.pages.registration.pdf_doc}</span>
           </div>
         );
       }
@@ -117,7 +119,7 @@ export default function StepReview({
     }
     return (
       <div className="w-full h-24 rounded-lg border border-dashed border-outline-variant flex items-center justify-center text-xs text-on-surface-variant bg-surface-container-low">
-        Chưa đính kèm
+        {dict.pages.registration.not_attached}
       </div>
     );
   };
@@ -125,9 +127,9 @@ export default function StepReview({
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="border-b border-outline-variant/30 pb-4">
-        <h3 className="text-lg font-bold text-on-surface">Rà soát thông tin đăng ký</h3>
+        <h3 className="text-lg font-bold text-on-surface">{dict.pages.registration.step_review_title}</h3>
         <p className="text-xs text-on-surface-variant">
-          Hãy kiểm tra kỹ toàn bộ hồ sơ của bạn trước khi bấm nút gửi.
+          {dict.pages.registration.step_review_desc}
         </p>
       </div>
 
@@ -139,7 +141,7 @@ export default function StepReview({
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-xs space-y-4">
             <h4 className="font-bold text-sm text-primary uppercase tracking-wide flex items-center gap-2">
               <User className="w-4 h-4" />
-              <span>Thông tin người đại diện</span>
+              <span>{dict.pages.registration.rep_info}</span>
             </h4>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -174,7 +176,7 @@ export default function StepReview({
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-xs space-y-4">
             <h4 className="font-bold text-sm text-primary uppercase tracking-wide flex items-center gap-2">
               <Building className="w-4 h-4" />
-              <span>Thông tin doanh nghiệp</span>
+              <span>{dict.pages.registration.comp_info}</span>
             </h4>
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
@@ -219,7 +221,7 @@ export default function StepReview({
           <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-xs space-y-4">
             <h4 className="font-bold text-sm text-primary uppercase tracking-wide flex items-center gap-2">
               <ShieldCheck className="w-4 h-4" />
-              <span>Tài liệu đính kèm</span>
+              <span>{dict.pages.registration.attached_docs}</span>
             </h4>
             
             <div className="space-y-4">
@@ -293,7 +295,7 @@ export default function StepReview({
             className="mt-1 w-4.5 h-4.5 rounded border-outline-variant text-primary focus:ring-primary focus:ring-1 cursor-pointer"
           />
           <span className="text-xs md:text-sm text-on-surface font-semibold leading-relaxed">
-            Tôi cam đoan mọi thông tin khai báo trên là chính xác, hợp pháp và hoàn toàn chịu trách nhiệm trước pháp luật về tính chân thực của hồ sơ này.
+            {dict.pages.registration.consent}
           </span>
         </label>
         {errors.consent && (

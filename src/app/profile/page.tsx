@@ -5,8 +5,10 @@ import ProfileForm from "@/features/profile/components/ProfileForm";
 import Header from "@/components/layout/Header";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { UserCircle } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function ProfilePage() {
+  const { dict } = useTranslation();
   return (
     <RoleGuard allowedRoles={["customer", "guard", "coordinator", "admin", "company-admin"]}>
       <div className="min-h-screen bg-surface text-on-surface antialiased">
@@ -20,10 +22,10 @@ export default function ProfilePage() {
               </div>
               <div>
                 <h1 className="text-2xl font-bold text-primary tracking-tight font-headline">
-                  Hồ sơ cá nhân
+                  {dict.pages.profile.title}
                 </h1>
                 <p className="text-sm text-on-surface-variant mt-0.5 font-body">
-                  Xem và cập nhật thông tin cá nhân của bạn.
+                  {dict.pages.profile.desc}
                 </p>
               </div>
             </div>

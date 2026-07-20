@@ -3,29 +3,30 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import RoleGuard from "@/components/auth/RoleGuard";
 import {
   Shield,
   LayoutDashboard,
   Package,
-  Settings,
-  HelpCircle,
   Star,
   Menu,
   X,
-  Search,
-  Bell,
-  ArrowUpCircle,
   Users,
   FileText,
   Calendar,
   Building2,
   MessageSquare,
   ClipboardCheck,
+  UserCircle,
+  LogOut,
+  ChevronDown,
 } from "lucide-react";
-import RoleGuard from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/store/auth.store";
 import { useSubscriptionStore } from "@/store/subscription.store";
 import { requestGetCompanyById } from "@/features/company/api/company.api";
+import { requestGetUserProfile } from "@/features/auth/api/auth.api";
+import { requestLogout } from "@/features/auth/api/auth.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function CompanyLayout({
   children,
@@ -34,9 +35,13 @@ export default function CompanyLayout({
 }>) {
   const pathname = usePathname();
   const router = useRouter();
+  const { dict } = useTranslation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string | null; avatar_url: string | null } | null>(null);
 
   const companyId = useAuthStore((state) => state.company_id);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const fetchSubscription = useSubscriptionStore(
     (state) => state.fetchSubscription,
   );
@@ -74,6 +79,29 @@ export default function CompanyLayout({
     }
   }, [companyId, fetchSubscription]);
 
+  useEffect(() => {
+    requestGetUserProfile().then((res) => {
+      if (res?.success && res.data) {
+        setUserProfile({
+          full_name: res.data.full_name ?? null,
+          email: res.data.email ?? null,
+          avatar_url: res.data.avatar_url ?? null,
+        });
+      }
+    });
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await requestLogout();
+    } finally {
+      clearAuth();
+      setUserDropdownOpen(false);
+      router.replace("/");
+      router.refresh();
+    }
+  };
+
   if (pathname.startsWith("/onboarding")) {
     return <>{children}</>;
   }
@@ -95,13 +123,13 @@ export default function CompanyLayout({
 
   const sidebarLinks = [
     {
-      name: "Tổng quan",
+      name: dict.layout_company.dashboard,
       href: "/dashboard",
       icon: LayoutDashboard,
       active: pathname === "/dashboard",
     },
     {
-      name: "Quản lý công ty",
+      name: dict.layout_company.my_company,
       href: "/my-company",
       icon: Building2,
       active: pathname === "/my-company" || pathname.startsWith("/my-company/"),
@@ -109,59 +137,57 @@ export default function CompanyLayout({
     ...(isActive
       ? [
           {
-            name: "Yêu cầu dịch vụ",
+            name: dict.layout_company.requests,
             href: "/requests",
             icon: Calendar,
             active:
               pathname === "/requests" || pathname.startsWith("/requests/"),
           },
           {
-            name: "Khảo sát yêu cầu",
+            name: dict.layout_company.verifications,
             href: "/verifications",
             icon: ClipboardCheck,
             active:
-              pathname === "/verifications" || pathname.startsWith("/verifications/"),
+              pathname === "/verifications" ||
+              pathname.startsWith("/verifications/"),
           },
           {
-            name: "Quản lý hợp đồng",
+            name: dict.layout_company.contracts,
             href: "/contracts",
             icon: FileText,
             active:
               pathname === "/contracts" || pathname.startsWith("/contracts/"),
           },
           {
-            name: "Tin nhắn",
-            href: "/chat",
-            icon: MessageSquare,
-            active: pathname === "/chat" || pathname.startsWith("/chat/"),
-          },
-        ]
-      : []),
-    {
-      name: "Quản lý gói dịch vụ",
-      href: "/billing",
-      icon: Package,
-      active: pathname === "/billing",
-    },
-    ...(isActive
-      ? [
-          {
-            name: "Phản hồi khách hàng",
-            href: "/list-reviews",
-            icon: Star,
-            active:
-              pathname === "/list-reviews" || pathname.startsWith("/list-reviews/"),
-          },
-          {
-            name: "Quản lý điều phối viên",
+            name: dict.layout_company.coordinators,
             href: "/coordinators",
             icon: Users,
             active:
               pathname === "/coordinators" ||
               pathname.startsWith("/coordinators/"),
           },
+          {
+            name: dict.layout_company.chat,
+            href: "/chat",
+            icon: MessageSquare,
+            active: pathname === "/chat" || pathname.startsWith("/chat/"),
+          },
+          {
+            name: dict.layout_company.reviews,
+            href: "/list-reviews",
+            icon: Star,
+            active:
+              pathname === "/list-reviews" ||
+              pathname.startsWith("/list-reviews/"),
+          },
         ]
       : []),
+    {
+      name: dict.layout_company.billing,
+      href: "/billing",
+      icon: Package,
+      active: pathname === "/billing",
+    },
   ];
 
   if (shouldBlockAccess) {
@@ -171,11 +197,11 @@ export default function CompanyLayout({
           <div className="text-center space-y-4">
             {isLoading ? (
               <p className="text-sm text-on-surface-variant font-medium animate-pulse font-body">
-                Đang kiểm tra quyền truy cập...
+                {dict.layout_company.checking_access}
               </p>
             ) : (
               <p className="text-sm text-on-surface-variant font-medium font-body">
-                Đang chuyển hướng đến trang quản lý gói dịch vụ...
+                {dict.layout_company.redirecting_billing}
               </p>
             )}
           </div>
@@ -212,7 +238,7 @@ export default function CompanyLayout({
                   SGCMP
                 </h2>
                 <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest mt-1">
-                  Quản lý doanh nghiệp
+                  {dict.layout_company.portal_title}
                 </p>
               </div>
             </div>
@@ -256,8 +282,6 @@ export default function CompanyLayout({
               );
             })}
           </nav>
-
-
         </aside>
 
         {/* Main Panel */}
@@ -275,58 +299,86 @@ export default function CompanyLayout({
 
               <div className="md:flex flex-col items-start gap-0.5 hidden">
                 <h1
-                  className="text-sm font-bold text-on-surface tracking-tight leading-tight truncate max-w-[280px]"
+                  className="text-sm font-bold text-on-surface tracking-tight leading-tight"
                   title={companyInfo?.name || ""}
                 >
-                  {companyInfo ? companyInfo.name : "Đang tải..."}
+                  {companyInfo ? companyInfo.name : dict.common.loading}
                 </h1>
                 {companyInfo?.ownerName && (
                   <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest">
-                    Người đại diện: {companyInfo.ownerName}
+                    {dict.layout_company.representative}:{" "}
+                    {companyInfo.ownerName}
                   </p>
                 )}
               </div>
             </div>
 
             {/* Right Header Options */}
-            <div className="flex items-center gap-4">
-              {/* Search Box */}
-              <div className="hidden sm:flex items-center bg-surface-container-low rounded-full px-3 py-1.5 border border-outline-variant focus-within:border-secondary transition-colors">
-                <Search className="w-4 h-4 text-on-surface-variant mr-2" />
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="bg-transparent border-none outline-none text-sm text-on-surface w-32 focus:w-48 transition-all duration-300 placeholder-on-surface-variant"
-                />
-              </div>
-
-              {/* Notification */}
-              <button className="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full" />
+            <div className="flex items-center gap-2 relative">
+              {/* User Dropdown Trigger */}
+              <button
+                type="button"
+                onClick={() => setUserDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-outline-variant hover:border-primary hover:bg-surface-container-low transition-all duration-200 cursor-pointer"
+              >
+                {userProfile?.avatar_url ? (
+                  <img
+                    src={userProfile.avatar_url}
+                    alt="avatar"
+                    className="w-7 h-7 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <UserCircle className="w-7 h-7 text-on-surface-variant shrink-0" />
+                )}
+                <div className="hidden sm:flex flex-col items-start leading-tight max-w-[140px]">
+                  <span className="text-xs font-semibold text-on-surface truncate w-full">
+                    {userProfile?.full_name || dict.common.loading}
+                  </span>
+                  <span className="text-[10px] text-on-surface-variant truncate w-full">
+                    {userProfile?.email || ""}
+                  </span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-on-surface-variant transition-transform duration-200 ${userDropdownOpen ? "rotate-180" : ""}`} />
               </button>
 
-              {/* Help */}
-              <button className="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low">
-                <HelpCircle className="w-5 h-5" />
-              </button>
-
-              {/* User Profile */}
-              <div className="w-8 h-8 rounded-full border border-outline-variant overflow-hidden cursor-pointer hover:border-primary transition-colors ml-2 shrink-0">
-                <img
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCObcfnyW9yatcX9gZtb5sRZ7mBWagdDK-hgW8GPIz8FAFVTZpYtfKoX1OmaNJ106xfVUOfRq2CxN9PDfbfcrv1rq6BTTZIwE1lOl8lOrYN8Lvwm2te3DnzO0Eg-tCUz1cjbAKDywgccnGkqvmTdP_QV2OJT8v4v-DZKBXlYRE0te4DjZpoEH7pDTWSTo44Y3zS9NddyIN6lWxqEndynE4cBdkDLl3g96Seo_AFZqWVvI6RZYYMksQez1VNREY018LTsE1-YzlHOi4N"
-                  alt="User profile photo"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              {/* Dropdown Menu */}
+              {userDropdownOpen && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setUserDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 top-11 z-50 w-48 rounded-xl border border-outline-variant/40 bg-surface-container-lowest shadow-xl overflow-hidden">
+                    <Link
+                      href="/profile"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                    >
+                      <UserCircle className="w-4 h-4" />
+                      <span>{dict.common.profile}</span>
+                    </Link>
+                    <div className="border-t border-outline-variant/30" />
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>{dict.common.logout}</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </header>
 
           {/* Page Content Viewport */}
           <main className="flex-1 overflow-y-auto bg-surface">{children}</main>
-          
+
           <footer className="py-4 text-center text-xs text-on-surface-variant/60 border-t border-outline-variant/30 bg-surface shrink-0">
-            &copy; {new Date().getFullYear()} Hệ thống quản lý. All rights reserved.
+            &copy; {new Date().getFullYear()}{" "}
+            {dict.layout_company.copyright_text}
           </footer>
         </div>
       </div>

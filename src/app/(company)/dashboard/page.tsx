@@ -35,6 +35,7 @@ import {
   CreditCard,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   requestGetActiveGuardsOnShift,
   requestGetActiveContracts,
@@ -103,49 +104,15 @@ interface Employee {
 
 type ChartView = "line" | "radar";
 
-const getFormattedDate = () => {
-  const days = [
-    "Chủ Nhật",
-    "Thứ Hai",
-    "Thứ Ba",
-    "Thứ Tư",
-    "Thứ Năm",
-    "Thứ Sáu",
-    "Thứ Bảy",
-  ];
-  const today = new Date();
-  const dayName = days[today.getDay()];
-  const date = today.getDate();
-  const month = today.getMonth() + 1;
-  const year = today.getFullYear();
-  return `${dayName}, ${date} tháng ${month}, ${year}`;
+const getFormattedDate = (locale: string) => {
+  const options: Intl.DateTimeFormatOptions = { 
+    weekday: 'long', 
+    year: 'numeric', 
+    month: 'long', 
+    day: 'numeric' 
+  };
+  return new Date().toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US', options);
 };
-
-const weeklyShiftChartConfig = {
-  totalAssignments: {
-    label: "Tổng lượt phân công",
-    color: "#3b82f6", // Blue
-  },
-  onTimeCheckins: {
-    label: "Điểm danh đúng giờ",
-    color: "#10b981", // Green
-  },
-  lateCheckins: {
-    label: "Điểm danh trễ",
-    color: "#f59e0b", // Yellow/Orange
-  },
-  absentGuards: {
-    label: "Vắng mặt",
-    color: "#ef4444", // Red
-  },
-} satisfies ChartConfig;
-
-const shiftStatusChartConfig = {
-  count: {
-    label: "Số bảo vệ",
-    color: "#6495ED", // Xanh nước biển
-  },
-} satisfies ChartConfig;
 
 
 
@@ -250,6 +217,33 @@ const getActivityConfig = (subType: string) => {
 };
 
 export default function CompanyDashboardPage() {
+  const { dict, locale } = useTranslation();
+
+  const weeklyShiftChartConfig = {
+    totalAssignments: {
+      label: dict.company_dashboard.weekly_shift.total_assignments,
+      color: "#3b82f6", // Blue
+    },
+    onTimeCheckins: {
+      label: dict.company_dashboard.weekly_shift.on_time_checkins,
+      color: "#10b981", // Green
+    },
+    lateCheckins: {
+      label: dict.company_dashboard.weekly_shift.late_checkins,
+      color: "#f59e0b", // Yellow/Orange
+    },
+    absentGuards: {
+      label: dict.company_dashboard.weekly_shift.absent,
+      color: "#ef4444", // Red
+    },
+  } satisfies ChartConfig;
+
+  const shiftStatusChartConfig = {
+    count: {
+      label: dict.company_dashboard.shift_status.guard_count,
+      color: "#6495ED", // Xanh nước biển
+    },
+  } satisfies ChartConfig;
   const [searchQuery, setSearchQuery] = useState("");
   const [chartView, setChartView] = useState<ChartView>("line");
   const [animateChart, setAnimateChart] = useState(false);
@@ -471,14 +465,10 @@ export default function CompanyDashboardPage() {
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-2xl font-bold text-on-surface">
-            Tổng quan hệ thống
+            {dict.company_dashboard.overview}
           </h2>
-          <p className="text-sm text-slate-500 mt-1">{getFormattedDate()}</p>
+          <p className="text-sm text-slate-500 mt-1">{getFormattedDate(locale)}</p>
         </div>
-        <button className="bg-surface-container-lowest border border-outline-variant text-primary font-medium px-4 py-2 rounded flex items-center gap-2 hover:bg-surface-container-low transition-colors shadow-sm active:scale-95 duration-100">
-          <Download className="w-5 h-5" />
-          <span>Xuất báo cáo</span>
-        </button>
       </div>
 
       {/* Key Metrics Grid */}
@@ -487,7 +477,7 @@ export default function CompanyDashboardPage() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-4 shadow-sm hover:border-outline transition-all">
           <div className="flex justify-between items-start">
             <span className="text-xs uppercase tracking-wider text-on-surface-variant font-bold">
-              Số lượng Bảo vệ đang trực
+              {dict.company_dashboard.active_guards}
             </span>
             <div className="w-8 h-8 rounded bg-surface-container-low flex items-center justify-center text-primary">
               <Users className="w-5 h-5" />
@@ -519,13 +509,13 @@ export default function CompanyDashboardPage() {
                 {activeGuards.trend === "neutral" && <Minus className="w-4 h-4" />}
                 <span>
                   {activeGuards.trend === "up" ? "+" : ""}
-                  {activeGuards.percentChange}% so với cùng giờ hôm qua
+                  {activeGuards.percentChange}% {dict.company_dashboard.compared_yesterday}
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-1 text-sm text-on-surface-variant font-medium">
                 <Minus className="w-4 h-4" />
-                <span>Không có dữ liệu hôm qua</span>
+                <span>{dict.company_dashboard.no_data_yesterday}</span>
               </div>
             )}
           </div>
@@ -535,7 +525,7 @@ export default function CompanyDashboardPage() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-4 shadow-sm hover:border-outline transition-all">
           <div className="flex justify-between items-start">
             <span className="text-xs uppercase tracking-wider text-on-surface-variant font-bold">
-              Hợp đồng hoạt động
+              {dict.company_dashboard.active_contracts}
             </span>
             <div className="w-8 h-8 rounded bg-surface-container-low flex items-center justify-center text-primary">
               <ReceiptText className="w-5 h-5" />
@@ -565,13 +555,13 @@ export default function CompanyDashboardPage() {
                 {activeContracts.trend === "neutral" && <Minus className="w-4 h-4" />}
                 <span>
                   {activeContracts.trend === "up" ? "+" : ""}
-                  {activeContracts.percentChange}% so với tháng trước
+                  {activeContracts.percentChange}% {dict.company_dashboard.compared_last_month}
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-1 text-sm text-on-surface-variant font-medium">
                 <Minus className="w-4 h-4" />
-                <span>Không có dữ liệu tháng trước</span>
+                <span>{dict.company_dashboard.no_data_last_month}</span>
               </div>
             )}
           </div>
@@ -581,7 +571,7 @@ export default function CompanyDashboardPage() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-4 shadow-sm hover:border-outline transition-all">
           <div className="flex justify-between items-start">
             <span className="text-xs uppercase tracking-wider text-on-surface-variant font-bold">
-              Báo cáo sự cố chờ xử lý
+              {dict.company_dashboard.pending_reports}
             </span>
             <div className="w-8 h-8 rounded bg-error-container flex items-center justify-center text-error">
               <AlertTriangle className="w-5 h-5" />
@@ -600,12 +590,12 @@ export default function CompanyDashboardPage() {
             ) : (pendingReports?.count ?? 0) > 0 ? (
               <div className="flex items-center gap-1 text-sm text-error font-semibold">
                 <AlertCircle className="w-4 h-4" />
-                <span>Cần xử lý ngay</span>
+                <span>{dict.company_dashboard.need_attention}</span>
               </div>
             ) : (
               <div className="flex items-center gap-1 text-sm text-on-surface-variant font-medium">
                 <Minus className="w-4 h-4" />
-                <span>Không có sự cố chờ xử lý</span>
+                <span>{dict.company_dashboard.no_pending_reports}</span>
               </div>
             )}
           </div>
@@ -615,7 +605,7 @@ export default function CompanyDashboardPage() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-4 shadow-sm hover:border-outline transition-all">
           <div className="flex justify-between items-start">
             <span className="text-xs uppercase tracking-wider text-on-surface-variant font-bold">
-              Điểm đánh giá
+              {dict.company_dashboard.avg_rating}
             </span>
             <div className="w-8 h-8 rounded bg-surface-container-low flex items-center justify-center text-primary">
               <StarCheck className="w-5 h-5" />
@@ -647,13 +637,13 @@ export default function CompanyDashboardPage() {
                 {rating.trend === "neutral" && <Minus className="w-4 h-4" />}
                 <span>
                   {rating.trend === "up" ? "+" : ""}
-                  {rating.percentChange}% so với tháng trước
+                  {rating.percentChange}% {dict.company_dashboard.compared_last_month}
                 </span>
               </div>
             ) : (
               <div className="flex items-center gap-1 text-sm text-on-surface-variant font-medium">
                 <Minus className="w-4 h-4" />
-                <span>Không có dữ liệu tháng trước</span>
+                <span>{dict.company_dashboard.no_data_last_month}</span>
               </div>
             )}
           </div>
@@ -668,13 +658,13 @@ export default function CompanyDashboardPage() {
             <div className="space-y-1">
               <CardTitle className="text-base text-on-surface">
                 {chartView === "line"
-                  ? "Ca trực của bảo vệ trong 7 ngày"
-                  : "Trạng thái ca trực của bảo vệ"}
+                  ? dict.company_dashboard.charts.weekly_title
+                  : dict.company_dashboard.charts.status_title}
               </CardTitle>
               <CardDescription className="text-xs text-on-surface-variant">
                 {chartView === "line"
-                  ? "Theo dõi tổng ca, ca đủ bảo vệ và ca còn thiếu bảo vệ theo từng ngày."
-                  : "Phân bổ số lượng bảo vệ theo trạng thái ca trực hiện tại."}
+                  ? dict.company_dashboard.charts.weekly_desc
+                  : dict.company_dashboard.charts.status_desc}
               </CardDescription>
             </div>
 
@@ -690,7 +680,7 @@ export default function CompanyDashboardPage() {
                   : "text-sky-700 hover:bg-sky-100 hover:text-sky-900"
                   }`}
               >
-                Ca trực 7 ngày
+                {dict.company_dashboard.charts.weekly_btn}
               </Button>
 
               <Button
@@ -704,7 +694,7 @@ export default function CompanyDashboardPage() {
                   : "text-sky-700 hover:bg-sky-100 hover:text-sky-900"
                   }`}
               >
-                Trạng thái ca
+                {dict.company_dashboard.charts.status_btn}
               </Button>
             </div>
           </CardHeader>
@@ -830,11 +820,11 @@ export default function CompanyDashboardPage() {
                   <div className="flex flex-col justify-center gap-4 lg:col-span-2">
                     <div className="mb-1">
                       <h4 className="text-sm font-bold text-on-surface">
-                        Chi tiết trạng thái
+                        {dict.company_dashboard.charts.status_details}
                       </h4>
 
                       <p className="mt-1 text-xs text-on-surface-variant">
-                        Số lượng bảo vệ theo trạng thái ca trực
+                        {dict.company_dashboard.charts.status_desc_2}
                       </p>
                     </div>
 
@@ -855,7 +845,7 @@ export default function CompanyDashboardPage() {
                               />
 
                               <span className="text-sm font-medium text-on-surface-variant">
-                                {item.status}
+                                {dict.company_dashboard.employee_status[status as keyof typeof dict.company_dashboard.employee_status] || item.status}
                               </span>
                             </div>
 
@@ -897,15 +887,15 @@ export default function CompanyDashboardPage() {
             <div>
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-base font-bold text-on-surface">
-                  Gói dịch vụ hiện tại
+                  {dict.company_dashboard.subscription.title}
                 </h3>
                 <span className="bg-red-50 text-red-700 border border-red-200 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase">
-                  CHƯA ĐĂNG KÝ
+                  {dict.company_dashboard.subscription.unregistered}
                 </span>
               </div>
               <div className="bg-surface-container-low border border-outline-variant/30 rounded-lg p-4 mb-6 text-center">
                 <p className="text-sm font-semibold text-on-surface-variant">
-                  Bạn đang sử dụng gói mặc định hoặc chưa đăng ký dịch vụ.
+                  {dict.company_dashboard.subscription.no_plan}
                 </p>
               </div>
             </div>
@@ -913,20 +903,15 @@ export default function CompanyDashboardPage() {
             <div>
               <div className="flex justify-between items-start mb-4">
                 <h3 className="text-base font-bold text-on-surface">
-                  Gói dịch vụ hiện tại
+                  {dict.company_dashboard.subscription.title}
                 </h3>
                 <div className="flex flex-col gap-1 items-end">
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase text-center ${subInfo.subscription?.status === "active"
                     ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
                     : "bg-red-50 text-red-700 border border-red-200"
                     }`}>
-                    {subInfo.subscription?.status === "active" ? "HOẠT ĐỘNG" : "HẾT HẠN"}
+                    {subInfo.subscription?.status === "active" ? dict.company_dashboard.subscription.active : dict.company_dashboard.subscription.expired}
                   </span>
-                  {subInfo.subscription && (
-                    <span className="bg-blue-50 text-blue-700 border border-blue-200 px-2 py-0.5 rounded-full text-[10px] font-bold tracking-wide uppercase">
-                      {subInfo.subscription.auto_renew ? "Tự động gia hạn" : "Gia hạn thủ công"}
-                    </span>
-                  )}
                 </div>
               </div>
               <div className="bg-surface-container-low border border-outline-variant/30 rounded-lg p-4 mb-6">
@@ -940,7 +925,7 @@ export default function CompanyDashboardPage() {
                     </h4>
                     {subInfo.subscription && (
                       <p className="text-xs text-on-surface-variant mt-1">
-                        Hạn dùng: {new Date(subInfo.subscription.end_date).toLocaleDateString("vi-VN")}
+                        {dict.company_dashboard.subscription.valid_until} {new Date(subInfo.subscription.end_date).toLocaleDateString("vi-VN")}
                       </p>
                     )}
                   </div>
@@ -949,7 +934,7 @@ export default function CompanyDashboardPage() {
 
               {/* Coordinator Resource */}
               <div className="mb-2 flex justify-between text-xs text-on-surface-variant font-semibold">
-                <span>Sử dụng tài nguyên: Nhân viên điều phối</span>
+                <span>{dict.company_dashboard.subscription.resource_coordinators}</span>
                 <span className="font-mono">
                   {subInfo.usage.coordinators}/{subInfo.plan.max_coordinators ?? "∞"}
                 </span>
@@ -966,13 +951,13 @@ export default function CompanyDashboardPage() {
               </div>
               <p className="text-[11px] text-on-surface-variant/80 text-right mb-6">
                 {subInfo.plan.max_coordinators
-                  ? `Còn ${Math.max(0, subInfo.plan.max_coordinators - subInfo.usage.coordinators)} nhân viên điều phối`
-                  : "Không giới hạn số lượng"}
+                  ? dict.company_dashboard.subscription.remaining_coordinators.replace("{0}", Math.max(0, subInfo.plan.max_coordinators - subInfo.usage.coordinators).toString())
+                  : dict.company_dashboard.subscription.unlimited}
               </p>
 
               {/* Guard Resource */}
               <div className="mb-2 flex justify-between text-xs text-on-surface-variant font-semibold">
-                <span>Sử dụng tài nguyên: Nhân viên bảo vệ</span>
+                <span>{dict.company_dashboard.subscription.resource_guards}</span>
                 <span className="font-mono">
                   {subInfo.usage.guards}/{subInfo.plan.max_guards ?? "∞"}
                 </span>
@@ -989,8 +974,8 @@ export default function CompanyDashboardPage() {
               </div>
               <p className="text-[11px] text-on-surface-variant/80 text-right mb-6">
                 {subInfo.plan.max_guards
-                  ? `Còn ${Math.max(0, subInfo.plan.max_guards - subInfo.usage.guards)} nhân viên bảo vệ`
-                  : "Không giới hạn số lượng"}
+                  ? dict.company_dashboard.subscription.remaining_guards.replace("{0}", Math.max(0, subInfo.plan.max_guards - subInfo.usage.guards).toString())
+                  : dict.company_dashboard.subscription.unlimited}
               </p>
             </div>
           )}
@@ -1003,13 +988,13 @@ export default function CompanyDashboardPage() {
         <div className="xl:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
           <div className="p-6 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-surface-container-lowest">
             <h3 className="text-base font-bold text-on-surface">
-              Trạng thái bảo vệ hôm nay
+              {dict.company_dashboard.guards_table.title}
             </h3>
             <div className="flex items-center gap-2 border border-outline-variant rounded px-3 py-1.5 bg-surface-container-lowest w-full sm:w-64 focus-within:border-secondary transition-all">
               <Search className="w-4 h-4 text-on-surface-variant" />
               <input
                 type="text"
-                placeholder="Tìm ID, tên hoặc dịch vụ..."
+                placeholder={dict.company_dashboard.guards_table.search}
                 className="bg-transparent border-none p-0 text-xs focus:ring-0 outline-none w-full placeholder-on-surface-variant"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
@@ -1021,27 +1006,27 @@ export default function CompanyDashboardPage() {
               <thead>
                 <tr className="bg-surface-container-low/50 border-b border-outline-variant">
                   <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    STT
+                    {dict.company_dashboard.guards_table.no}
                   </th>
 
                   <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    Họ & Tên
+                    {dict.company_dashboard.guards_table.fullname}
                   </th>
 
                   <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    Vị trí
+                    {dict.company_dashboard.guards_table.branch}
                   </th>
 
                   <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    Thời gian
+                    {dict.company_dashboard.guards_table.time}
                   </th>
 
                   <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    Dịch vụ
+                    {dict.company_dashboard.guards_table.service}
                   </th>
 
                   <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    Trạng thái
+                    {dict.company_dashboard.guards_table.status}
                   </th>
                 </tr>
               </thead>
@@ -1151,7 +1136,7 @@ export default function CompanyDashboardPage() {
                               className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${statusConfig.animate ? "animate-pulse" : ""
                                 }`}
                             />
-                            {emp.status}
+                            {dict.company_dashboard.employee_status[emp.status as keyof typeof dict.company_dashboard.employee_status] || emp.status}
                           </span>
                         </td>
                       </tr>
@@ -1163,7 +1148,7 @@ export default function CompanyDashboardPage() {
                       colSpan={6}
                       className="px-6 py-8 text-center text-on-surface-variant font-medium"
                     >
-                      Không tìm thấy nhân viên nào
+                      {dict.company_dashboard.guards_table.no_data}
                     </td>
                   </tr>
                 )}
@@ -1175,7 +1160,7 @@ export default function CompanyDashboardPage() {
               onClick={() => setIsGuardsModalOpen(true)}
               className="text-secondary cursor-pointer font-bold text-xs hover:underline"
             >
-              Xem toàn bộ danh sách
+              {dict.company_dashboard.guards_table.view_all}
             </button>
           </div>
         </div>
@@ -1184,7 +1169,7 @@ export default function CompanyDashboardPage() {
         <div className="xl:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col shadow-sm">
           <div className="flex justify-between items-center mb-6">
             <h3 className="text-base font-bold text-on-surface">
-              Hoạt động gần đây
+              {dict.company_dashboard.activities.title}
             </h3>
             <button className="text-on-surface-variant hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container-low">
               <Filter className="w-4 h-4" />
@@ -1233,7 +1218,7 @@ export default function CompanyDashboardPage() {
               })
             ) : (
               <div className="text-xs text-on-surface-variant/60 text-center py-8">
-                Không có hoạt động nào gần đây
+                {dict.company_dashboard.activities.no_data}
               </div>
             )}
           </div>
@@ -1241,7 +1226,7 @@ export default function CompanyDashboardPage() {
             onClick={() => setIsActivitiesModalOpen(true)}
             className="mt-6 pt-4 cursor-pointer border-t border-outline-variant/40 text-secondary font-bold text-xs text-center hover:underline"
           >
-            Xem tất cả lịch sử
+            {dict.company_dashboard.activities.view_more}
           </button>
         </div>
       </div>
@@ -1254,7 +1239,7 @@ export default function CompanyDashboardPage() {
             <div className="p-6 border-b border-outline-variant flex items-center justify-between bg-surface-container-low/20">
               <div>
                 <h3 className="text-lg font-bold text-on-surface">
-                  Trạng thái bảo vệ hôm nay
+                  {dict.company_dashboard.modals.guards_title}
                 </h3>
                 <p className="text-xs text-on-surface-variant mt-0.5">
                   Danh sách chi tiết toàn bộ nhân viên bảo vệ trong ngày hôm nay
@@ -1274,14 +1259,14 @@ export default function CompanyDashboardPage() {
                 <Search className="w-4 h-4 text-on-surface-variant" />
                 <input
                   type="text"
-                  placeholder="Tìm ID, tên hoặc dịch vụ..."
+                  placeholder={dict.company_dashboard.guards_table.search}
                   className="bg-transparent border-none p-0 text-xs focus:ring-0 outline-none w-full placeholder-on-surface-variant"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
               <div className="text-xs text-on-surface-variant font-semibold">
-                Hiển thị {filteredEmployees.length} nhân viên
+                {dict.company_dashboard.guards_table.showing.replace("{0}", filteredEmployees.length.toString())}
               </div>
             </div>
 
@@ -1291,22 +1276,22 @@ export default function CompanyDashboardPage() {
                 <thead className="sticky top-0 z-10 bg-surface-container-lowest border-b border-outline-variant">
                   <tr className="bg-surface-container-low/80 backdrop-blur-md">
                     <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      STT
+                      {dict.company_dashboard.guards_table.no}
                     </th>
                     <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      Họ & Tên
+                      {dict.company_dashboard.guards_table.fullname}
                     </th>
                     <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      Vị trí
+                      {dict.company_dashboard.guards_table.branch}
                     </th>
                     <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      Thời gian
+                      {dict.company_dashboard.guards_table.time}
                     </th>
                     <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      Dịch vụ
+                      {dict.company_dashboard.guards_table.service}
                     </th>
                     <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      Trạng thái
+                      {dict.company_dashboard.guards_table.status}
                     </th>
                   </tr>
                 </thead>
@@ -1349,7 +1334,7 @@ export default function CompanyDashboardPage() {
                             {emp.branch}
                           </td>
                           <td className="px-6 py-4 text-on-surface-variant text-xs font-semibold whitespace-nowrap">
-                            {emp.timeRange || "Chưa rõ"}
+                            {emp.timeRange || dict.company_dashboard.guards_table.unknown}
                           </td>
                           <td className="px-6 py-4">
                             {emp.contractCode ? (
@@ -1368,7 +1353,7 @@ export default function CompanyDashboardPage() {
                               </div>
                             ) : (
                               <span className="text-xs text-on-surface-variant/60">
-                                Chưa có dịch vụ
+                                {dict.company_dashboard.guards_table.no_service}
                               </span>
                             )}
                           </td>
@@ -1380,7 +1365,7 @@ export default function CompanyDashboardPage() {
                                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${statusConfig.animate ? "animate-pulse" : ""
                                   }`}
                               />
-                              {emp.status}
+                              {dict.company_dashboard.employee_status[emp.status as keyof typeof dict.company_dashboard.employee_status] || emp.status}
                             </span>
                           </td>
                         </tr>
@@ -1392,7 +1377,7 @@ export default function CompanyDashboardPage() {
                         colSpan={6}
                         className="px-6 py-8 text-center text-on-surface-variant font-medium"
                       >
-                        Không tìm thấy nhân viên nào
+                        {dict.company_dashboard.guards_table.no_data}
                       </td>
                     </tr>
                   )}
@@ -1406,7 +1391,7 @@ export default function CompanyDashboardPage() {
                 onClick={() => setIsGuardsModalOpen(false)}
                 className="px-4 py-2 border border-outline-variant rounded-md text-xs font-bold text-on-surface hover:bg-surface-container-high transition-colors"
               >
-                Đóng
+                {dict.company_dashboard.modals.close}
               </button>
             </div>
           </div>
@@ -1420,10 +1405,10 @@ export default function CompanyDashboardPage() {
             <div className="p-6 border-b border-outline-variant flex items-center justify-between bg-surface-container-low/20">
               <div>
                 <h3 className="text-lg font-bold text-on-surface">
-                  Lịch sử hoạt động gần đây
+                  {dict.company_dashboard.modals.activities_title}
                 </h3>
                 <p className="text-xs text-on-surface-variant mt-0.5">
-                  Theo dõi chi tiết toàn bộ các hoạt động, sự kiện và thay đổi hệ thống
+                  {dict.company_dashboard.modals.activities_desc}
                 </p>
               </div>
               <button
@@ -1437,12 +1422,12 @@ export default function CompanyDashboardPage() {
             {/* Filter Tabs */}
             <div className="px-6 py-4 border-b border-outline-variant/40 bg-surface-container-lowest flex flex-wrap gap-2">
               {[
-                { label: "Tất cả", value: "all" },
-                { label: "Điểm danh", value: "attendance" },
-                { label: "Thay ca", value: "replacement" },
-                { label: "Báo cáo", value: "report" },
-                { label: "Hợp đồng", value: "contract" },
-                { label: "Hệ thống", value: "system" },
+                { label: dict.company_dashboard.activities.filter_all, value: "all" },
+                { label: dict.company_dashboard.activities.filter_attendance, value: "attendance" },
+                { label: dict.company_dashboard.activities.filter_shift, value: "replacement" },
+                { label: dict.company_dashboard.activities.filter_incident, value: "report" },
+                { label: dict.company_dashboard.activities.filter_contract, value: "contract" },
+                { label: dict.company_dashboard.activities.filter_system, value: "system" },
               ].map((tab) => (
                 <button
                   key={tab.value}
@@ -1492,7 +1477,7 @@ export default function CompanyDashboardPage() {
                   })
                 ) : (
                   <div className="text-xs text-on-surface-variant/60 text-center py-12">
-                    Không có hoạt động nào thuộc danh mục này
+                    {dict.company_dashboard.activities.no_data_filter}
                   </div>
                 )}
               </div>
@@ -1504,7 +1489,7 @@ export default function CompanyDashboardPage() {
                 onClick={() => setIsActivitiesModalOpen(false)}
                 className="px-4 py-2 border border-outline-variant rounded-md text-xs font-bold text-on-surface hover:bg-surface-container-high transition-colors"
               >
-                Đóng
+                {dict.company_dashboard.modals.close}
               </button>
             </div>
           </div>

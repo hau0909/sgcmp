@@ -14,8 +14,10 @@ import { useAuthStore } from "@/store/auth.store";
 import { Plan } from "@/types/Plan";
 import { Payment } from "@/types/Payment";
 import { CurrentPlanWithSubscription } from "@/features/subscription/types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 function BillingContent() {
+  const { dict } = useTranslation();
   const companyId = useAuthStore((state) => state.company_id);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [currentPlan, setCurrentPlan] = useState<CurrentPlanWithSubscription | null>(null);
@@ -61,7 +63,7 @@ function BillingContent() {
     return (
       <div className="flex-1 p-6 lg:p-8 max-w-360 mx-auto w-full flex items-center justify-center min-h-[400px]">
         <p className="text-sm text-on-surface-variant font-medium">
-          Không tìm thấy thông tin tài khoản doanh nghiệp.
+          {dict.billing?.no_company || "Không tìm thấy thông tin tài khoản doanh nghiệp."}
         </p>
       </div>
     );
@@ -71,7 +73,7 @@ function BillingContent() {
     return (
       <div className="flex-1 p-6 lg:p-8 max-w-360 mx-auto w-full flex items-center justify-center min-h-[400px]">
         <p className="text-sm text-on-surface-variant font-medium animate-pulse">
-          Đang tải thông tin gói dịch vụ &amp; thanh toán...
+          {dict.billing?.loading || "Đang tải thông tin gói dịch vụ & thanh toán..."}
         </p>
       </div>
     );
@@ -83,10 +85,10 @@ function BillingContent() {
       <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 border-b border-outline-variant/60 pb-4">
         <div>
           <h2 className="text-2xl font-bold text-primary tracking-tight font-headline">
-            Quản lý Gói dịch vụ &amp; Thanh toán
+            {dict.billing?.title || "Quản lý Gói dịch vụ & Thanh toán"}
           </h2>
           <p className="text-sm text-on-surface-variant mt-1 font-body">
-            Xem thông tin gói hiện tại, nâng cấp và quản lý lịch sử giao dịch.
+            {dict.billing?.subtitle || "Xem thông tin gói hiện tại, nâng cấp và quản lý lịch sử giao dịch."}
           </p>
         </div>
       </div>
@@ -117,12 +119,13 @@ function BillingContent() {
 }
 
 export default function BillingPage() {
+  const { dict } = useTranslation();
   return (
     <Suspense
       fallback={
         <div className="flex-1 p-6 lg:p-8 max-w-360 mx-auto w-full flex items-center justify-center min-h-[400px]">
           <p className="text-sm text-on-surface-variant font-medium">
-            Đang tải thông tin gói dịch vụ &amp; thanh toán...
+            {dict.billing?.loading || "Đang tải thông tin gói dịch vụ & thanh toán..."}
           </p>
         </div>
       }

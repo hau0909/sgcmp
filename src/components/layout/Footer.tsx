@@ -1,6 +1,11 @@
+"use client";
+
 import Image from "next/image";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function Footer() {
+  const { dict } = useTranslation();
+
   return (
     <footer className="bg-surface-container text-on-surface-variant font-sans py-12 border-t border-outline-variant/30 mt-auto">
       <div className="max-w-7xl mx-auto px-8 flex flex-col md:flex-row justify-between items-center gap-6">
@@ -17,7 +22,7 @@ export default function Footer() {
             SGCMP
           </div>
           <p className="text-[13px] text-outline">
-            &copy; 2026 SGCMP. Bảo lưu mọi quyền.
+            &copy; {new Date().getFullYear()} {dict.footer.rights}
           </p>
         </div>
 
@@ -27,25 +32,25 @@ export default function Footer() {
             className="text-[13px] font-medium text-on-surface-variant hover:text-primary transition-colors duration-200"
             href="#"
           >
-            Điều khoản dịch vụ
+            {dict.footer.terms}
           </a>
           <a
             className="text-[13px] font-medium text-on-surface-variant hover:text-primary transition-colors duration-200"
             href="#"
           >
-            Chính sách bảo mật
+            {dict.footer.privacy}
           </a>
           <a
             className="text-[13px] font-medium text-on-surface-variant hover:text-primary transition-colors duration-200"
             href="#"
           >
-            Liên hệ
+            {dict.footer.contact}
           </a>
           <a
             className="text-[13px] font-medium text-on-surface-variant hover:text-primary transition-colors duration-200"
             href="#"
           >
-            Hỗ trợ
+            {dict.footer.support}
           </a>
         </nav>
       </div>

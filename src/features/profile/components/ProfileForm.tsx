@@ -16,6 +16,7 @@ import { requestGetUserProfile } from "@/features/auth/api/auth.api";
 import { requestUpdateProfile } from "../api/profile.api";
 import { useAuthStore } from "@/store/auth.store";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export type ProfileData = {
   id?: string;
@@ -39,6 +40,7 @@ export default function ProfileForm() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const { dict } = useTranslation();
 
   // Form states
   const [fullName, setFullName] = useState("");
@@ -161,7 +163,7 @@ export default function ProfileForm() {
       });
 
       if (result.success) {
-        setMessage({ type: "success", text: "Cập nhật hồ sơ thành công!" });
+        setMessage({ type: "success", text: dict.pages.profile_form.update_success });
         setIsEditing(false);
         setAvatarFile(null);
         // Update profile state with new values
@@ -194,13 +196,13 @@ export default function ProfileForm() {
   const genderLabel = (value: string) => {
     switch (value) {
       case "Nam":
-        return "Nam";
+        return dict.pages.profile_form.gender_male;
       case "Nữ":
-        return "Nữ";
+        return dict.pages.profile_form.gender_female;
       case "Khác":
-        return "Khác";
+        return dict.pages.profile_form.gender_other;
       default:
-        return "Chưa cập nhật";
+        return dict.pages.profile_form.not_updated;
     }
   };
 
@@ -221,7 +223,7 @@ export default function ProfileForm() {
     return (
       <div className="text-center py-10">
         <p className="text-on-surface-variant">
-          Không tìm thấy thông tin hồ sơ.
+          {dict.pages.profile_form.not_found}
         </p>
       </div>
     );
@@ -239,7 +241,7 @@ export default function ProfileForm() {
               <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
             )}
             <h3 className="text-xl font-bold text-on-surface mb-2">
-              {message.type === "success" ? "Thành công" : "Thông báo"}
+              {message.type === "success" ? dict.pages.profile_form.success_modal_title : dict.pages.profile_form.error_modal_title}
             </h3>
             <p className="text-on-surface-variant mb-6 leading-relaxed">
               {message.text}
@@ -249,7 +251,7 @@ export default function ProfileForm() {
               onClick={() => setMessage(null)}
               className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-semibold w-full hover:bg-primary-container hover:text-on-primary-container transition-all"
             >
-              Đóng
+              {dict.pages.profile_form.modal_close}
             </button>
           </div>
         </div>
@@ -259,27 +261,27 @@ export default function ProfileForm() {
         {/* Header with Edit Button */}
         <div className="flex items-center justify-between px-6 md:px-8 pt-6 md:pt-8">
           <h2 className="text-lg font-semibold text-on-surface">
-            Thông tin cá nhân
+            {dict.pages.profile_form.title}
           </h2>
           {!isEditing ? (
             <button
               type="button"
               onClick={handleEnableEditing}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-all cursor-pointer"
-              title="Chỉnh sửa hồ sơ"
+              title={dict.pages.profile_form.edit}
             >
               <Pencil className="w-4 h-4" />
-              <span>Chỉnh sửa</span>
+              <span>{dict.pages.profile_form.edit}</span>
             </button>
           ) : (
             <button
               type="button"
               onClick={handleCancelEditing}
               className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container-low hover:bg-surface-container rounded-xl transition-all cursor-pointer"
-              title="Hủy chỉnh sửa"
+              title={dict.pages.profile_form.cancel}
             >
               <X className="w-4 h-4" />
-              <span>Hủy</span>
+              <span>{dict.pages.profile_form.cancel}</span>
             </button>
           )}
         </div>
@@ -319,21 +321,21 @@ export default function ProfileForm() {
                     type="button"
                     onClick={() => fileInputRef.current?.click()}
                     className="absolute bottom-0 right-0 p-2 bg-primary text-on-primary rounded-full shadow-md hover:bg-primary-container hover:text-on-primary-container transition-colors"
-                    title="Cập nhật ảnh đại diện"
+                    title={dict.pages.profile_form.update_avatar_title}
                   >
                     <Camera className="w-5 h-5" />
                   </button>
                 </div>
                 <div className="text-center flex flex-col gap-2 mt-2">
                   <h3 className="font-semibold text-lg text-on-surface">
-                    {profile?.full_name || "Chưa cập nhật"}
+                    {profile?.full_name || dict.pages.profile_form.not_updated}
                   </h3>
                   {/* Link Xem Hồ Sơ */}
                   <Link
                     href="/profile"
                     className="text-sm font-medium text-primary hover:underline"
                   >
-                    Xem hồ sơ
+                    {dict.pages.profile_form.view_profile}
                   </Link>
                 </div>
               </div>
@@ -342,7 +344,7 @@ export default function ProfileForm() {
               <div className="flex-1 w-full grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-on-surface">
-                    Họ và tên
+                    {dict.pages.profile_form.full_name}
                   </label>
                   <input
                     type="text"
@@ -352,14 +354,14 @@ export default function ProfileForm() {
                     className={
                       isEditing ? inputEditableClass : inputReadonlyClass
                     }
-                    placeholder="Nhập họ và tên"
+                    placeholder={dict.pages.profile_form.full_name_placeholder}
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-on-surface">
-                    Email
+                    {dict.pages.profile_form.email}
                   </label>
                   <input
                     type="email"
@@ -371,7 +373,7 @@ export default function ProfileForm() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-on-surface">
-                    Số điện thoại
+                    {dict.pages.profile_form.phone}
                   </label>
                   <input
                     type="tel"
@@ -381,14 +383,14 @@ export default function ProfileForm() {
                     className={
                       isEditing ? inputEditableClass : inputReadonlyClass
                     }
-                    placeholder="Nhập số điện thoại"
+                    placeholder={dict.pages.profile_form.phone_placeholder}
                     required
                   />
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-on-surface">
-                    Giới tính
+                    {dict.pages.profile_form.gender}
                   </label>
                   {isEditing ? (
                     <select
@@ -396,10 +398,10 @@ export default function ProfileForm() {
                       onChange={(e) => setGender(e.target.value)}
                       className={inputEditableClass}
                     >
-                      <option value="">Chọn giới tính</option>
-                      <option value="Nam">Nam</option>
-                      <option value="Nữ">Nữ</option>
-                      <option value="Khác">Khác</option>
+                      <option value="">{dict.pages.profile_form.gender_select}</option>
+                      <option value="Nam">{dict.pages.profile_form.gender_male}</option>
+                      <option value="Nữ">{dict.pages.profile_form.gender_female}</option>
+                      <option value="Khác">{dict.pages.profile_form.gender_other}</option>
                     </select>
                   ) : (
                     <input
@@ -413,7 +415,7 @@ export default function ProfileForm() {
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium text-on-surface">
-                    Ngày sinh
+                    {dict.pages.profile_form.dob}
                   </label>
                   {isEditing ? (
                     <input
@@ -428,7 +430,7 @@ export default function ProfileForm() {
                       value={
                         dateOfBirth
                           ? new Date(dateOfBirth).toLocaleDateString("vi-VN")
-                          : "Chưa cập nhật"
+                          : dict.pages.profile_form.not_updated
                       }
                       readOnly
                       className={inputReadonlyClass}
@@ -438,7 +440,7 @@ export default function ProfileForm() {
 
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-medium text-on-surface">
-                    Địa chỉ
+                    {dict.pages.profile_form.address}
                   </label>
                   <input
                     type="text"
@@ -448,7 +450,7 @@ export default function ProfileForm() {
                     className={
                       isEditing ? inputEditableClass : inputReadonlyClass
                     }
-                    placeholder="Nhập địa chỉ"
+                    placeholder={dict.pages.profile_form.address_placeholder}
                   />
                 </div>
               </div>
@@ -462,7 +464,7 @@ export default function ProfileForm() {
                   onClick={handleCancelEditing}
                   className="px-6 py-2.5 text-on-surface-variant bg-surface-container-low hover:bg-surface-container rounded-xl font-medium transition-all cursor-pointer"
                 >
-                  Hủy
+                  {dict.pages.profile_form.cancel}
                 </button>
                 <button
                   type="submit"
@@ -470,7 +472,7 @@ export default function ProfileForm() {
                   className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-medium shadow-sm hover:bg-primary/90 hover:shadow-md transition-all flex items-center gap-2 disabled:opacity-70 disabled:cursor-not-allowed cursor-pointer"
                 >
                   {isSaving && <Loader2 className="w-4 h-4 animate-spin" />}
-                  {isSaving ? "Đang lưu..." : "Lưu thay đổi"}
+                  {isSaving ? dict.pages.profile_form.saving : dict.pages.profile_form.save}
                 </button>
               </div>
             )}
