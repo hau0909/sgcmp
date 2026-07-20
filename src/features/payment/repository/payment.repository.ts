@@ -2,7 +2,7 @@ import { supabase } from "@/lib/supabase";
 import { Payment } from "@/types/Payment";
 import { BankAccount } from "@/types/BankAccount";
 import { PaymentStatus } from "@/types/Enum";
-import { UpsertBankAccountPayload } from "../types";
+import { UpsertBankAccountPayload, GetAllPaymentsAdminOptions, PaginatedPayments, PaymentWithCompany, PaymentSummaryAdminOptions, PaymentSummaryAdminResult } from "../types";
 
 export const getPaymentHistoryByCompany = async (
   companyId: string,
@@ -95,6 +95,144 @@ export const getPaymentByTransactionCode = async (transactionCode: string): Prom
   }
 
   return (data as Payment) || null;
+};
+
+// ─── Admin ───────────────────────────────────────────────────────────────────
+
+export const getAllPaymentsAdmin = async (): Promise<PaymentWithCompany[]> => {
+  const { data, error } = await supabase
+    .from("payments")
+    .select("*")
+    .order("created_at", { ascending: false });
+
+  if (error) throw error;
+
+  const payments = (data as Payment[]) || [];
+
+  // Fetch company names & logos separately to avoid FK dependency
+  const companyIds = [...new Set(payments.map((p) => p.company_id).filter(Boolean))];
+  let companyInfoMap: Record<string, { company_name: string; company_logo_url: string | null }> = {};
+
+  if (companyIds.length > 0) {
+    const { data: companies } = await supabase
+      .from("companies")
+      .select("company_id, company_name, company_imgs(image_url, image_type)")
+      .in("company_id", companyIds);
+
+    if (companies) {
+      companyInfoMap = Object.fromEntries(
+        (companies as any[]).map((c) => {
+          const logoImg = Array.isArray(c.company_imgs)
+            ? c.company_imgs.find((img: any) => img.image_type === "logo")
+            : null;
+          return [
+            c.company_id,
+            {
+              company_name: c.company_name,
+              company_logo_url: logoImg?.image_url ?? null,
+            },
+          ];
+        }),
+      );
+    }
+  }
+
+  // Fetch plan names separately
+  const planIds = [...new Set(payments.map((p) => p.plan_id).filter(Boolean))];
+  let planNameMap: Record<number, string> = {};
+
+  if (planIds.length > 0) {
+    const { data: plans } = await supabase
+      .from("plans")
+      .select("plan_id, plan_name")
+      .in("plan_id", planIds);
+
+    if (plans) {
+      planNameMap = Object.fromEntries(
+        (plans as { plan_id: number; plan_name: string }[]).map((p) => [
+          p.plan_id,
+          p.plan_name,
+        ]),
+      );
+    }
+  }
+
+  const flattened: PaymentWithCompany[] = payments.map((p) => ({
+    ...p,
+    company_name: companyInfoMap[p.company_id]?.company_name ?? null,
+    company_logo_url: companyInfoMap[p.company_id]?.company_logo_url ?? null,
+    plan_name: planNameMap[p.plan_id] ?? null,
+  }));
+
+  return flattened;
+};
+
+
+export const getPaymentSummaryAdmin = async (
+  options: PaymentSummaryAdminOptions = {},
+): Promise<PaymentSummaryAdminResult> => {
+  const { keyword, startDate, endDate } = options;
+
+  let query = supabase.from("payments").select("payment_status, amount");
+
+  let matchedCompanyIds: string[] = [];
+  if (keyword) {
+    const { data: companies } = await supabase
+      .from("companies")
+      .select("company_id")
+      .ilike("company_name", `%${keyword}%`);
+    if (companies) {
+      matchedCompanyIds = companies.map((c: any) => c.company_id);
+    }
+  }
+
+  if (keyword) {
+    const orConditions = [`transaction_code.ilike.%${keyword}%`];
+    if (matchedCompanyIds.length > 0) {
+      orConditions.push(`company_id.in.(${matchedCompanyIds.map(id => `"${id}"`).join(",")})`);
+    } else {
+      orConditions.push(`company_id.ilike.%${keyword}%`);
+    }
+    query = query.or(orConditions.join(","));
+  }
+
+  if (startDate) {
+    query = query.gte("paid_at", startDate);
+  }
+
+  if (endDate) {
+    const end = new Date(endDate);
+    end.setDate(end.getDate() + 1);
+    query = query.lt("paid_at", end.toISOString().split("T")[0]);
+  }
+
+  const { data, error } = await query;
+  if (error) throw error;
+
+  const payments = data || [];
+
+  let totalRevenue = 0;
+  let successCount = 0;
+  let pendingCount = 0;
+  let failedCount = 0;
+
+  for (const p of payments) {
+    if (p.payment_status === "completed") {
+      totalRevenue += p.amount || 0;
+      successCount++;
+    } else if (p.payment_status === "pending") {
+      pendingCount++;
+    } else if (p.payment_status === "failed") {
+      failedCount++;
+    }
+  }
+
+  return {
+    totalRevenue,
+    successCount,
+    pendingCount,
+    failedCount,
+  };
 };
 
 // ─── Bank Account ────────────────────────────────────────────────────────────

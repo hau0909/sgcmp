@@ -21,6 +21,7 @@ import {
   Building2,
   MessageSquare,
   ClipboardCheck,
+  ArrowRightLeft,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/store/auth.store";
@@ -290,6 +291,15 @@ export default function CompanyLayout({
 
             {/* Right Header Options */}
             <div className="flex items-center gap-4">
+              {isActive && (
+                <Link
+                  href="/schedules"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary text-on-secondary hover:bg-secondary/90 transition-colors mr-2 animate-fade-in"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  Chuyển sang điều phối
+                </Link>
+              )}
               {/* Search Box */}
               <div className="hidden sm:flex items-center bg-surface-container-low rounded-full px-3 py-1.5 border border-outline-variant focus-within:border-secondary transition-colors">
                 <Search className="w-4 h-4 text-on-surface-variant mr-2" />

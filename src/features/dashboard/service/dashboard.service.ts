@@ -184,17 +184,17 @@ export const getDashboardSubscriptionService = async (
 
 export const getWeeklyShiftsService = async (companyId: string) => {
   const today = new Date();
-  const sevenDaysAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
+  
+  const sixDaysLater = new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000);
+  const endOfSixDaysLater = new Date(sixDaysLater.getFullYear(), sixDaysLater.getMonth(), sixDaysLater.getDate(), 23, 59, 59, 999).toISOString();
 
-  const startOf7DaysAgo = new Date(sevenDaysAgo.getFullYear(), sevenDaysAgo.getMonth(), sevenDaysAgo.getDate(), 0, 0, 0, 0).toISOString();
-  const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
+  const shifts = await getWeeklyShiftsData(companyId, startOfToday, endOfSixDaysLater);
 
-  const shifts = await getWeeklyShiftsData(companyId, startOf7DaysAgo, endOfToday);
-
-  // Initialize past 7 days list
+  // Initialize today + 6 future days list
   const daysList = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(today.getTime() + i * 24 * 60 * 60 * 1000);
     const dateStr = new Intl.DateTimeFormat("en-CA", {
       timeZone: "Asia/Ho_Chi_Minh",
     }).format(d);

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { ShieldAlert, ArrowLeft, LogOut } from "lucide-react";
+import { ShieldAlert, ArrowLeft, LogOut, Mail, Unlock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
 
@@ -13,6 +13,7 @@ function UnauthorizedContent() {
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
   const isInactive = reason === "inactive";
+  const isBanned = reason === "banned";
 
   const handleGoBack = () => {
     router.back();
@@ -39,31 +40,47 @@ function UnauthorizedContent() {
 
         {/* Title */}
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          {isInactive ? "Hồ sơ chưa được kích hoạt" : "Không có quyền truy cập"}
+          {isBanned
+            ? "Tài khoản đã bị khóa"
+            : isInactive
+              ? "Hồ sơ chưa được kích hoạt"
+              : "Không có quyền truy cập"}
         </h1>
 
         {/* Description */}
         <p className="mt-4 text-sm leading-relaxed text-slate-600">
-          {isInactive
-            ? "Hồ sơ Coordinator/Guard của bạn hiện tại chưa được kích hoạt trong hệ thống. Vui lòng liên hệ với quản trị viên để kích hoạt tài khoản của bạn."
-            : "Tài khoản của bạn không có quyền truy cập vào trang này."}
+          {isBanned
+            ? "Tài khoản của bạn đã bị khóa bởi quản trị viên. Vui lòng liên hệ hỗ trợ để biết thêm chi tiết."
+            : isInactive
+              ? "Hồ sơ Coordinator/Guard của bạn hiện tại chưa được kích hoạt trong hệ thống. Vui lòng liên hệ với quản trị viên để kích hoạt tài khoản của bạn."
+              : "Tài khoản của bạn không có quyền truy cập vào trang này."}
         </p>
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button
-            type="button"
-            onClick={handleGoBack}
-            className="flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>Quay lại</span>
-          </button>
+          {isBanned ? (
+            <button
+              type="button"
+              className="whitespace-nowrap flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+            >
+              <Unlock className="h-4 w-4" />
+              <span>Gỡ khóa tài khoản</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleGoBack}
+              className="whitespace-nowrap flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>Quay lại</span>
+            </button>
+          )}
 
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 rounded-lg bg-blue-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900 transition"
+            className="whitespace-nowrap flex items-center justify-center gap-2 rounded-lg bg-blue-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900 transition cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
             <span>Đăng xuất & Đăng nhập</span>

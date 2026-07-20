@@ -6,7 +6,7 @@ import {
   Users,
   ReceiptText,
   AlertTriangle,
-  StarCheck,
+  Star,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -618,7 +618,7 @@ export default function CompanyDashboardPage() {
               Điểm đánh giá
             </span>
             <div className="w-8 h-8 rounded bg-surface-container-low flex items-center justify-center text-primary">
-              <StarCheck className="w-5 h-5" />
+              <Star className="w-5 h-5" />
             </div>
           </div>
           <div>

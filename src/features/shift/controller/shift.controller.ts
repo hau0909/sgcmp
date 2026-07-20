@@ -18,6 +18,9 @@ import {
   getContractShiftRuleService,
   getShiftContractOptionsService,
   getOverlappingGuardShiftsService,
+  getGuardsShiftsOnDateService,
+  getGuardsShiftsInWeekService,
+  getGuardsShiftsInRangeService,
   getAllShiftsByDateRangeService,
   updateAssignedShiftAssignmentsToAbsentByShiftIdService,
   createShiftImageService,
@@ -44,6 +47,7 @@ import {
   getDayDateRange,
   getWeekDateRange,
   isValidDateKey,
+  getStartOfWeekKey,
 } from "@/utils/calcDate";
 
 import { getGuardShiftQueryParams } from "../utils/shift-server.utils";
@@ -244,10 +248,172 @@ export const handleCreateWorkShift = async (request: Request) => {
       location: body.location,
       guard_id: body.guard_id,
       original_slot: body.original_slot,
-      splits: body.splits,
+      splits: body.splits?.map((s) => ({
+        start_time: s.start_time,
+        end_time: s.end_time,
+        guard_id: s.guard_id,
+      })),
     };
 
     validateCreateShiftInput(input);
+
+    let companyId = "";
+    if (profile.role === "company-admin") {
+      companyId = (await getCompanyByOwnerIdService(profile.id)) || "";
+    } else if (profile.role === "coordinator") {
+      companyId = (await getCoordinatorByCompanyIdService(profile.id)) || "";
+    }
+
+    if (!companyId) {
+      return Response.json(
+        { message: "Không tìm thấy công ty của tài khoản" },
+        { status: 400 },
+      );
+    }
+
+    const allGuardIds = Array.from(
+      new Set(
+        input.splits && input.splits.length > 0
+          ? input.splits.flatMap((s) => s.guard_id)
+          : input.guard_id,
+      ),
+    );
+
+    const supabase = await createClient();
+
+    // 1. Fetch guards and check if they exist in guards table and belong to the correct company
+    const { data: guardsData, error: guardsError } = await supabase
+      .from("guards")
+      .select("guard_id, user_id, company_id")
+      .in("user_id", allGuardIds);
+
+    if (guardsError) {
+      return Response.json({ message: "Lỗi truy vấn thông tin bảo vệ" }, { status: 500 });
+    }
+
+    const guardIdsInDb = (guardsData || []).map((g) => g.user_id);
+    const missingGuards = allGuardIds.filter((id) => !guardIdsInDb.includes(id));
+    if (missingGuards.length > 0) {
+      return Response.json(
+        { message: "Một hoặc nhiều bảo vệ không tồn tại trong hệ thống hoặc không hợp lệ" },
+        { status: 400 },
+      );
+    }
+
+    const wrongCompanyGuards = (guardsData || []).filter((g) => g.company_id !== companyId);
+    if (wrongCompanyGuards.length > 0) {
+      return Response.json(
+        { message: "Một hoặc nhiều bảo vệ không thuộc công ty của bạn" },
+        { status: 400 },
+      );
+    }
+
+    // 2. Fetch profiles and check if status is active
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select("user_id, status, full_name")
+      .in("user_id", allGuardIds);
+
+    if (profilesError) {
+      return Response.json({ message: "Lỗi truy vấn hồ sơ bảo vệ" }, { status: 500 });
+    }
+
+    const profileMap: Record<string, { status: string; full_name: string }> = {};
+    for (const p of profilesData || []) {
+      profileMap[p.user_id] = { status: p.status || "", full_name: p.full_name || "" };
+    }
+
+    for (const id of allGuardIds) {
+      const p = profileMap[id];
+      if (!p || p.status !== "active") {
+        const name = p?.full_name || "Bảo vệ";
+        return Response.json(
+          { message: `Bảo vệ ${name} hiện tại không hoạt động (status != active)` },
+          { status: 400 },
+        );
+      }
+    }
+
+    const firstStartTime = input.splits && input.splits.length > 0 ? input.splits[0].start_time : input.start_time;
+    const d = new Date(firstStartTime);
+    d.setUTCHours(d.getUTCHours() + 7);
+    const dateStr = d.toISOString().split("T")[0];
+
+    const dbShifts = await getGuardsShiftsOnDateService({
+      guardIds: allGuardIds,
+      date: dateStr,
+    });
+
+    const dbWeekShifts = await getGuardsShiftsInWeekService({
+      guardIds: allGuardIds,
+      date: dateStr,
+    });
+
+    const guardDailyMinutes: Record<string, number> = {};
+    for (const gs of dbShifts) {
+      guardDailyMinutes[gs.guard_id] = (guardDailyMinutes[gs.guard_id] || 0) + gs.duration_minutes;
+    }
+
+    const guardWeeklyMinutes: Record<string, number> = {};
+    for (const gs of dbWeekShifts) {
+      guardWeeklyMinutes[gs.guard_id] = (guardWeeklyMinutes[gs.guard_id] || 0) + gs.duration_minutes;
+    }
+
+    if (input.splits && input.splits.length > 0) {
+      for (const split of input.splits) {
+        const start = new Date(split.start_time);
+        const end = new Date(split.end_time);
+        const durationMin = (end.getTime() - start.getTime()) / (1000 * 60);
+
+        for (const gid of split.guard_id) {
+          guardDailyMinutes[gid] = (guardDailyMinutes[gid] || 0) + durationMin;
+          guardWeeklyMinutes[gid] = (guardWeeklyMinutes[gid] || 0) + durationMin;
+        }
+      }
+    } else {
+      const start = new Date(input.start_time);
+      const end = new Date(input.end_time);
+      const durationMin = (end.getTime() - start.getTime()) / (1000 * 60);
+
+      for (const gid of input.guard_id) {
+        guardDailyMinutes[gid] = (guardDailyMinutes[gid] || 0) + durationMin;
+        guardWeeklyMinutes[gid] = (guardWeeklyMinutes[gid] || 0) + durationMin;
+      }
+    }
+
+    for (const [gid, totalMinutes] of Object.entries(guardDailyMinutes)) {
+      if (totalMinutes > 8 * 60) {
+        const guardName = profileMap[gid]?.full_name || "Bảo vệ";
+        const [yr, mo, dy] = dateStr.split("-");
+        const formattedDate = `${dy}/${mo}/${yr}`;
+        return Response.json(
+          {
+            success: false,
+            message: `Bảo vệ ${guardName} sẽ làm tổng cộng ${(totalMinutes / 60).toFixed(1)} giờ trong ngày ${formattedDate}, vượt quá giới hạn 8 giờ.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
+
+    for (const [gid, totalMinutes] of Object.entries(guardWeeklyMinutes)) {
+      if (totalMinutes > 48 * 60) {
+        const guardName = profileMap[gid]?.full_name || "Bảo vệ";
+        const startOfWeekKey = getStartOfWeekKey(dateStr);
+        const endOfWeekKey = addDaysToDateKey(startOfWeekKey, 6);
+        const [sYr, sMo, sDy] = startOfWeekKey.split("-");
+        const [eYr, eMo, eDy] = endOfWeekKey.split("-");
+        const formattedStart = `${sDy}/${sMo}/${sYr}`;
+        const formattedEnd = `${eDy}/${eMo}/${eYr}`;
+        return Response.json(
+          {
+            success: false,
+            message: `Bảo vệ ${guardName} sẽ làm tổng cộng ${(totalMinutes / 60).toFixed(1)} giờ trong tuần từ ${formattedStart} đến ${formattedEnd}, vượt quá giới hạn 48 giờ.`,
+          },
+          { status: 400 },
+        );
+      }
+    }
 
     const contractRule = await getContractShiftRuleService(input.contract_id);
 
@@ -356,15 +522,17 @@ export const handleCreateWorkShift = async (request: Request) => {
       // Check overlapping shifts for each segment
       for (const split of input.splits) {
         const overlappingShifts = await getOverlappingGuardShiftsService({
-          guardId: input.guard_id,
+          guardId: split.guard_id,
           startTime: split.start_time,
           endTime: split.end_time,
         });
 
         if (overlappingShifts.length > 0) {
+          const conflictGuardIds = overlappingShifts.map((s) => s.guard_id);
+          const conflictNames = conflictGuardIds.map((id) => profileMap[id]?.full_name || id).join(", ");
           return Response.json(
             {
-              message: "Một hoặc nhiều bảo vệ đã có ca trực trong khung giờ này",
+              message: `Bảo vệ (${conflictNames}) đã có lịch trực trùng lặp trong khung giờ này`,
               data: overlappingShifts,
             },
             {
@@ -382,6 +550,7 @@ export const handleCreateWorkShift = async (request: Request) => {
             ...input,
             start_time: split.start_time,
             end_time: split.end_time,
+            guard_id: split.guard_id,
           };
           const result = await createWorkShiftService({
             input: splitInput,
@@ -425,9 +594,11 @@ export const handleCreateWorkShift = async (request: Request) => {
       });
 
       if (overlappingShifts.length > 0) {
+        const conflictGuardIds = overlappingShifts.map((s) => s.guard_id);
+        const conflictNames = conflictGuardIds.map((id) => profileMap[id]?.full_name || id).join(", ");
         return Response.json(
           {
-            message: "Một hoặc nhiều bảo vệ đã có ca trực trong khung giờ này",
+            message: `Bảo vệ (${conflictNames}) đã có lịch trực trùng lặp trong khung giờ này`,
             data: overlappingShifts,
           },
           {
@@ -1052,14 +1223,20 @@ export const handleGetGuardAvailability = async (request: Request) => {
 
     const body = (await request.json()) as {
       guardIds: string[];
-      startTime: string;
-      endTime: string;
+      startTime?: string;
+      endTime?: string;
+      proposedShifts?: { startTime: string; endTime: string }[];
     };
+
+    let proposedShifts = body.proposedShifts;
+    if (!proposedShifts && body.startTime && body.endTime) {
+      proposedShifts = [{ startTime: body.startTime, endTime: body.endTime }];
+    }
 
     if (
       !Array.isArray(body.guardIds) ||
-      !body.startTime ||
-      !body.endTime
+      !Array.isArray(proposedShifts) ||
+      proposedShifts.length === 0
     ) {
       return Response.json(
         { message: "Thiếu thông tin kiểm tra lịch bảo vệ" },
@@ -1067,27 +1244,162 @@ export const handleGetGuardAvailability = async (request: Request) => {
       );
     }
 
-    const overlapping = await getOverlappingGuardShiftsService({
-      guardId: body.guardIds,
-      startTime: body.startTime,
-      endTime: body.endTime,
+    // Determine total date range to query
+    const startTimes = proposedShifts.map((ps) => new Date(ps.startTime).getTime());
+    const endTimes = proposedShifts.map((ps) => new Date(ps.endTime).getTime());
+    const minTime = new Date(Math.min(...startTimes));
+    const maxTime = new Date(Math.max(...endTimes));
+
+    // Convert to local dates to get week boundaries
+    minTime.setUTCHours(minTime.getUTCHours() + 7);
+    maxTime.setUTCHours(maxTime.getUTCHours() + 7);
+    const minDateStr = minTime.toISOString().split("T")[0];
+    const maxDateStr = maxTime.toISOString().split("T")[0];
+
+    const startOfWeekKey = getStartOfWeekKey(minDateStr);
+    const endOfWeekKey = addDaysToDateKey(getStartOfWeekKey(maxDateStr), 6);
+
+    const rangeStartISO = new Date(`${startOfWeekKey}T00:00:00+07:00`).toISOString();
+    const rangeEndISO = new Date(`${endOfWeekKey}T23:59:59+07:00`).toISOString();
+
+    const dbShifts = await getGuardsShiftsInRangeService({
+      guardIds: body.guardIds,
+      startTime: rangeStartISO,
+      endTime: rangeEndISO,
     });
 
-    // Build a conflict map: guardId -> true means conflict exists
-    const conflictMap: Record<string, boolean> = {};
+    const availabilityMap: Record<string, {
+      guardId: string;
+      hasConflict: boolean;
+      assignedMinutesToday: number;
+      proposedMinutes: number;
+      totalMinutesAfterAssign: number;
+      exceedsDailyLimit: boolean;
+      assignedMinutesThisWeek: number;
+      totalMinutesWeekAfterAssign: number;
+      exceedsWeeklyLimit: boolean;
+      reason: string;
+    }> = {};
 
     for (const guardId of body.guardIds) {
-      conflictMap[guardId] = false;
-    }
+      const guardShifts = dbShifts.filter((s) => s.guard_id === guardId);
 
-    for (const overlap of overlapping) {
-      conflictMap[overlap.guard_id] = true;
+      let firstConflictDate: string | null = null;
+      let firstExceedsDailyDate: string | null = null;
+      let firstExceedsWeeklyDate: string | null = null;
+
+      let lastProposedMinutes = 0;
+      let lastAssignedMinutesToday = 0;
+      let lastTotalMinutesAfterAssign = 0;
+      let lastAssignedMinutesThisWeek = 0;
+      let lastTotalMinutesWeekAfterAssign = 0;
+
+      for (const ps of proposedShifts) {
+        const startProposed = new Date(ps.startTime).getTime();
+        const endProposed = new Date(ps.endTime).getTime();
+        const proposedDuration = (endProposed - startProposed) / (1000 * 60);
+
+        const localProp = new Date(ps.startTime);
+        localProp.setUTCHours(localProp.getUTCHours() + 7);
+        const propDateStr = localProp.toISOString().split("T")[0];
+        const propWeekKey = getStartOfWeekKey(propDateStr);
+
+        // Daily shifts of this guard on propDateStr
+        let assignedToday = 0;
+        let hasConflict = false;
+
+        for (const gs of guardShifts) {
+          // Get local date of gs
+          const gsStart = new Date(gs.start_time);
+          gsStart.setUTCHours(gsStart.getUTCHours() + 7);
+          const gsDateStr = gsStart.toISOString().split("T")[0];
+
+          if (gsDateStr === propDateStr) {
+            assignedToday += gs.duration_minutes;
+            
+            const startDb = new Date(gs.start_time).getTime();
+            const endDb = new Date(gs.end_time).getTime();
+            if (startDb < endProposed && endDb > startProposed) {
+              hasConflict = true;
+            }
+          }
+        }
+
+        // Weekly shifts of this guard in propWeekKey
+        let assignedThisWeek = 0;
+        for (const gs of guardShifts) {
+          const gsStart = new Date(gs.start_time);
+          gsStart.setUTCHours(gsStart.getUTCHours() + 7);
+          const gsDateStr = gsStart.toISOString().split("T")[0];
+          const gsWeekKey = getStartOfWeekKey(gsDateStr);
+
+          if (gsWeekKey === propWeekKey) {
+            assignedThisWeek += gs.duration_minutes;
+          }
+        }
+
+        const totalToday = assignedToday + proposedDuration;
+        const totalWeek = assignedThisWeek + proposedDuration;
+
+        if (hasConflict && !firstConflictDate) {
+          firstConflictDate = propDateStr;
+        }
+        if (totalToday > 8 * 60 && !firstExceedsDailyDate) {
+          firstExceedsDailyDate = propDateStr;
+        }
+        if (totalWeek > 48 * 60 && !firstExceedsWeeklyDate) {
+          firstExceedsWeeklyDate = propDateStr;
+        }
+
+        // Keep last checked stats to return in map
+        lastProposedMinutes = proposedDuration;
+        lastAssignedMinutesToday = assignedToday;
+        lastTotalMinutesAfterAssign = totalToday;
+        lastAssignedMinutesThisWeek = assignedThisWeek;
+        lastTotalMinutesWeekAfterAssign = totalWeek;
+      }
+
+      let reason = "Có thể phân công";
+      let hasConflict = false;
+      let exceedsDailyLimit = false;
+      let exceedsWeeklyLimit = false;
+
+      const formatDateStrVN = (ds: string) => {
+        const [yr, mo, dy] = ds.split("-");
+        return `${dy}/${mo}/${yr}`;
+      };
+
+      if (firstConflictDate) {
+        hasConflict = true;
+        reason = `Trùng lịch ngày ${formatDateStrVN(firstConflictDate)}`;
+      } else if (firstExceedsDailyDate) {
+        exceedsDailyLimit = true;
+        reason = `Vượt quá 8 giờ ngày ${formatDateStrVN(firstExceedsDailyDate)}`;
+      } else if (firstExceedsWeeklyDate) {
+        exceedsWeeklyLimit = true;
+        const weekMon = getStartOfWeekKey(firstExceedsWeeklyDate);
+        const weekSun = addDaysToDateKey(weekMon, 6);
+        reason = `Vượt quá 48 giờ tuần ${formatDateStrVN(weekMon)} - ${formatDateStrVN(weekSun)}`;
+      }
+
+      availabilityMap[guardId] = {
+        guardId,
+        hasConflict,
+        assignedMinutesToday: lastAssignedMinutesToday,
+        proposedMinutes: lastProposedMinutes,
+        totalMinutesAfterAssign: lastTotalMinutesAfterAssign,
+        exceedsDailyLimit,
+        assignedMinutesThisWeek: lastAssignedMinutesThisWeek,
+        totalMinutesWeekAfterAssign: lastTotalMinutesWeekAfterAssign,
+        exceedsWeeklyLimit,
+        reason,
+      };
     }
 
     return Response.json(
       {
         message: "Kiểm tra lịch bảo vệ thành công",
-        data: conflictMap,
+        data: availabilityMap,
       },
       { status: 200 },
     );

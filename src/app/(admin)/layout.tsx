@@ -19,6 +19,9 @@ import {
   X,
   Globe,
   Landmark,
+  BadgeDollarSign,
+  Layers,
+  Package,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 
@@ -54,11 +57,41 @@ export default function AdminLayout({
     },
 
     {
+      name: "Lịch sử thanh toán",
+      href: "/payment-history",
+      icon: BadgeDollarSign,
+      active:
+        pathname === "/payment-history" || pathname.startsWith("/payment-history/"),
+    },
+    {
+      name: "Dịch vụ",
+      href: "/services",
+      icon: Layers,
+      active:
+        pathname === "/services" || pathname.startsWith("/services/"),
+    },
+
+    {
       name: "Tài khoản Ngân hàng",
       href: "/bank-accounts",
       icon: Landmark,
       active:
         pathname === "/bank-accounts" || pathname.startsWith("/bank-accounts/"),
+    },
+    {
+      name: "Quản lý tài khoản",
+      href: "/accounts",
+      icon: Users,
+      active:
+        pathname === "/accounts" || pathname.startsWith("/accounts/"),
+    },
+    {
+      name: "Quản lý gói dịch vụ",
+      href: "/service-packages",
+      icon: Package,
+      active:
+        pathname === "/service-packages" ||
+        pathname.startsWith("/service-packages/"),
     },
   ];
 
@@ -116,11 +149,10 @@ export default function AdminLayout({
                   href={link.href}
                   onClick={() => setMobileSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg font-body text-sm font-semibold transition-all duration-150 group
-                  ${
-                    link.active
+                  ${link.active
                       ? "bg-[#4db2ff] text-[#00436a] scale-95 transition-transform"
                       : "text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] transition-transform"
-                  }`}
+                    }`}
                 >
                   <Icon className="w-5 h-5 transition-colors shrink-0" />
                   <span>{link.name}</span>
@@ -182,14 +214,16 @@ export default function AdminLayout({
                 <Menu className="w-6 h-6" />
               </button>
 
-              <div className="hidden sm:flex items-center bg-[#eff4ff] rounded-full px-4 py-2 border border-[#c3c6d3] focus-within:border-secondary transition-colors w-full max-w-md">
-                <Search className="text-[#434751] w-5 h-5 mr-2 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm đăng ký, doanh nghiệp..."
-                  className="bg-transparent border-none outline-none text-sm text-[#0b1c30] w-full placeholder-on-surface-variant"
-                />
-              </div>
+              {!pathname.startsWith("/service-packages") && (
+                <div className="hidden sm:flex items-center bg-[#eff4ff] rounded-full px-4 py-2 border border-[#c3c6d3] focus-within:border-secondary transition-colors w-full max-w-md">
+                  <Search className="text-[#434751] w-5 h-5 mr-2 shrink-0" />
+                  <input
+                    type="text"
+                    placeholder="Tìm kiếm đăng ký, doanh nghiệp..."
+                    className="bg-transparent border-none outline-none text-sm text-[#0b1c30] w-full placeholder-on-surface-variant"
+                  />
+                </div>
+              )}
             </div>
 
             {/* Right Utilities */}
