@@ -8,10 +8,12 @@ import { Booking } from "@/features/booking/types";
 import { requestGetCustomerBookings } from "@/features/booking/api/booking.api";
 import { useAuthStore } from "@/store/auth.store";
 import { Calendar } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function MyRequestsPage() {
   const router = useRouter();
   const customerId = useAuthStore((state) => state.user_id);
+  const { dict } = useTranslation();
 
   // Bookings list state
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -88,10 +90,10 @@ export default function MyRequestsPage() {
           </div>
           <div>
             <h1 className="text-xl font-bold text-on-surface font-headline leading-tight">
-              Yêu cầu dịch vụ của tôi
+              {dict.customer.my_requests.title}
             </h1>
             <p className="text-xs text-on-surface-variant/80 font-body">
-              Danh sách các yêu cầu dịch vụ bảo vệ bạn đã gửi cho các doanh nghiệp.
+              {dict.customer.my_requests.desc}
             </p>
           </div>
         </div>
@@ -114,7 +116,7 @@ export default function MyRequestsPage() {
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-12 text-center shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-2"></div>
           <p className="text-xs text-on-surface-variant/80 font-medium">
-            Đang tải danh sách yêu cầu...
+            {dict.customer.my_requests.loading}
           </p>
         </div>
       ) : (

@@ -8,11 +8,13 @@ import { CustomerContractFilters } from "@/features/contract/components/Customer
 import { requestGetCustomerContracts } from "@/features/contract/api/contract.api";
 import { useAuthStore } from "@/store/auth.store";
 import { FileText } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 
 export default function CustomerContractsPage() {
   const router = useRouter();
   const customerId = useAuthStore((state) => state.user_id) || "";
+  const { dict } = useTranslation();
 
 
   // Filter state
@@ -83,10 +85,10 @@ export default function CustomerContractsPage() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-primary tracking-tight font-headline">
-              Danh sách hợp đồng
+              {dict.customer.my_contracts.title}
             </h1>
             <p className="text-sm text-on-surface-variant mt-0.5 font-body">
-              Theo dõi toàn bộ các hợp đồng dịch vụ bảo vệ của bạn.
+              {dict.customer.my_contracts.desc}
             </p>
           </div>
         </div>
@@ -110,7 +112,7 @@ export default function CustomerContractsPage() {
       {isLoading ? (
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-12 text-center shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
           <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
-          <p className="text-xs text-on-surface-variant/80 font-medium">Đang tải danh sách hợp đồng...</p>
+          <p className="text-xs text-on-surface-variant/80 font-medium">{dict.customer.my_contracts.loading}</p>
         </div>
       ) : (
         <CustomerContractTable

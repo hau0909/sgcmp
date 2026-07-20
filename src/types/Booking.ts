@@ -20,5 +20,7 @@ export interface Booking {
   // Virtual fields for UI rendering
   customer_name?: string;
   company_name?: string;
+  company_contact_person?: string;
   service_name?: string;
+  contract_status?: string;
 }

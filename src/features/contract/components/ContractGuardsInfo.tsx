@@ -6,6 +6,7 @@ import { Users, Search, X, Loader2, UserRound, Phone, Mail, Check, Lock, Plus, C
 import { requestGetAllGuards, requestGetGuardsByContract } from "@/features/guards/api/guard.api";
 import { requestAssignGuardsToContract } from "../api/contract.api";
 import type { GuardListItem } from "@/features/guards/type";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface ContractGuardsInfoProps {
   contractId: string;
@@ -13,18 +14,19 @@ interface ContractGuardsInfoProps {
   onGuardsUpdated?: (newGuardIds: string[]) => void;
 }
 
-const formatGender = (gender: string | null | undefined) => {
+const formatGender = (gender: string | null | undefined, dict: any) => {
   const g = gender?.trim().toLowerCase() || "";
   if (g === "male" || g === "nam") {
-    return { label: "Nam", className: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300" };
+    return { label: dict.contract_guards?.male || "Nam", className: "bg-blue-100 text-blue-800 dark:bg-blue-950/40 dark:text-blue-300" };
   }
   if (g === "female" || g === "nữ" || g === "nư") {
-    return { label: "Nữ", className: "bg-pink-100 text-pink-800 dark:bg-pink-950/40 dark:text-pink-300" };
+    return { label: dict.contract_guards?.female || "Nữ", className: "bg-pink-100 text-pink-800 dark:bg-pink-950/40 dark:text-pink-300" };
   }
-  return { label: "Khác", className: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300" };
+  return { label: dict.contract_guards?.other || "Khác", className: "bg-slate-100 text-slate-800 dark:bg-slate-900 dark:text-slate-300" };
 };
 
 export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated }: ContractGuardsInfoProps) {
+  const { dict } = useTranslation();
   const [assignedGuards, setAssignedGuards] = useState<GuardListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -48,7 +50,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
         setAssignedGuards(res.data?.guards || []);
       }
     } catch (err) {
-      console.error("Lỗi khi tải danh sách bảo vệ của hợp đồng:", err);
+      console.error(dict.contract_guards?.error_load_assigned || "Lỗi khi tải danh sách bảo vệ của hợp đồng:", err);
     } finally {
       setIsLoading(false);
     }
@@ -83,7 +85,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
           setModalTotalPages(res.data?.pagination?.totalPages || 1);
         }
       } catch (err) {
-        console.error("Lỗi khi tải danh sách tất cả bảo vệ:", err);
+        console.error(dict.contract_guards?.error_load_all || "Lỗi khi tải danh sách tất cả bảo vệ:", err);
       } finally {
         setIsLoadingAll(false);
       }
@@ -113,19 +115,19 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
       setIsSaving(true);
       const res = await requestAssignGuardsToContract(contractId, selectedGuardIds);
       if (res && res.success) {
-        setToastMessage({ text: "Cập nhật danh sách bảo vệ thành công!", type: "success" });
+        setToastMessage({ text: dict.contract_guards?.success_update || "Cập nhật danh sách bảo vệ thành công!", type: "success" });
         await fetchAssignedGuards();
         if (onGuardsUpdated) {
           onGuardsUpdated(selectedGuardIds);
         }
         setIsModalOpen(false);
       } else {
-        setToastMessage({ text: res.message || "Có lỗi xảy ra.", type: "error" });
+        setToastMessage({ text: res.message || dict.contract_guards?.error_generic || "Có lỗi xảy ra.", type: "error" });
       }
     } catch (err: unknown) {
       console.error(err);
       const errorObj = err as Error & { message?: string };
-      setToastMessage({ text: errorObj?.message || "Có lỗi xảy ra khi lưu.", type: "error" });
+      setToastMessage({ text: errorObj?.message || dict.contract_guards?.error_save || "Có lỗi xảy ra khi lưu.", type: "error" });
     } finally {
       setIsSaving(false);
       setTimeout(() => setToastMessage(null), 4000);
@@ -157,17 +159,17 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
         <div>
           <h3 className="text-base font-bold text-on-surface flex items-center gap-2 font-headline">
             <Users className="w-5 h-5 text-primary" />
-            <span>Phân công bảo vệ</span>
+            <span>{dict.contract_guards?.title || "Phân công bảo vệ"}</span>
           </h3>
           <p className="text-xs text-on-surface-variant mt-1 font-body">
-            Danh sách nhân sự bảo vệ phụ trách hợp đồng này.
+            {dict.contract_guards?.desc || "Danh sách nhân sự bảo vệ phụ trách hợp đồng này."}
           </p>
         </div>
 
         {customerAgreed ? (
           <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f1f5f9] border border-[#cbd5e1] rounded-lg text-xs font-semibold text-slate-600">
             <Lock className="w-3.5 h-3.5" />
-            <span>Đã khóa chỉnh sửa</span>
+            <span>{dict.contract_guards?.locked_edit || "Đã khóa chỉnh sửa"}</span>
           </div>
         ) : (
           <button
@@ -175,7 +177,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
             className="px-4 py-2 cursor-pointer bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold rounded-lg transition-all shadow-sm flex items-center gap-1.5"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Cập nhật bảo vệ</span>
+            <span>{dict.contract_guards?.update_btn || "Cập nhật bảo vệ"}</span>
           </button>
         )}
       </div>
@@ -187,11 +189,11 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
       ) : assignedGuards.length === 0 ? (
         <div className="text-center py-10 border-2 border-dashed border-outline-variant/50 rounded-xl bg-surface-container-low/30">
           <UserRound className="w-10 h-10 text-outline-variant mx-auto mb-2.5" />
-          <p className="text-sm font-semibold text-on-surface">Chưa phân công bảo vệ</p>
+          <p className="text-sm font-semibold text-on-surface">{dict.contract_guards?.no_guards || "Chưa phân công bảo vệ"}</p>
           <p className="text-xs text-on-surface-variant mt-1 max-w-xs mx-auto">
             {customerAgreed
-              ? "Hợp đồng đã ký bởi khách hàng mà không có bảo vệ nào được chỉ định."
-              : "Vui lòng nhấn nút cập nhật ở trên để phân công nhân sự bảo vệ cho hợp đồng này."}
+              ? dict.contract_guards?.no_guards_desc_locked || "Hợp đồng đã ký bởi khách hàng mà không có bảo vệ nào được chỉ định."
+              : dict.contract_guards?.no_guards_desc_unlocked || "Vui lòng nhấn nút cập nhật ở trên để phân công nhân sự bảo vệ cho hợp đồng này."}
           </p>
         </div>
       ) : (
@@ -221,7 +223,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
 
                 <div className="flex-1 min-w-0">
                   <h4 className="text-sm font-bold text-on-surface truncate">
-                    {profile.full_name || "Bảo vệ không tên"}
+                    {profile.full_name || dict.contract_guards?.unnamed_guard || "Bảo vệ không tên"}
                   </h4>
                   <div className="flex flex-col gap-0.5 mt-1">
                     {profile.phone_number && (
@@ -241,7 +243,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
 
                 <div className="shrink-0 text-right">
                   {(() => {
-                    const genderInfo = formatGender(profile.gender);
+                    const genderInfo = formatGender(profile.gender, dict);
                     return (
                       <span className={`inline-block px-2 py-0.5 rounded text-[10px] font-bold uppercase ${genderInfo.className}`}>
                         {genderInfo.label}
@@ -263,7 +265,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
             <div className="bg-[#eff4ff] border-b border-[#acc7ff] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[#024594]">
                 <Users className="w-5 h-5 shrink-0" />
-                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">Cập nhật danh sách bảo vệ</h3>
+                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">{dict.contract_guards?.modal_title || "Cập nhật danh sách bảo vệ"}</h3>
               </div>
               <button
                 onClick={() => setIsModalOpen(false)}
@@ -279,7 +281,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                 <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                 <input
                   type="text"
-                  placeholder="Tìm kiếm bảo vệ theo tên, số điện thoại, email..."
+                  placeholder={dict.contract_guards?.search_placeholder || "Tìm kiếm bảo vệ theo tên, số điện thoại, email..."}
                   value={searchKeyword}
                   onChange={(e) => {
                     setSearchKeyword(e.target.value);
@@ -298,7 +300,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                 </div>
               ) : allGuards.length === 0 ? (
                 <div className="text-center py-20 text-slate-500 text-sm">
-                  Không tìm thấy nhân viên bảo vệ hoạt động nào phù hợp.
+                  {dict.contract_guards?.no_guards_found || "Không tìm thấy nhân viên bảo vệ hoạt động nào phù hợp."}
                 </div>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
@@ -340,10 +342,10 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
 
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold text-slate-800 truncate">
-                            {profile.full_name || "Không tên"}
+                            {profile.full_name || dict.contract_guards?.unnamed || "Không tên"}
                           </p>
                           <p className="text-xs text-slate-500 truncate mt-0.5">
-                            {profile.phone_number || "Không có SĐT"}
+                            {profile.phone_number || dict.contract_guards?.no_phone || "Không có SĐT"}
                           </p>
                         </div>
                       </div>
@@ -365,7 +367,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                   <ChevronLeft className="w-4 h-4 text-slate-600" />
                 </button>
                 <span className="text-xs font-semibold text-slate-600">
-                  Trang {modalPage} / {modalTotalPages}
+                  {dict.contract_guards?.page || "Trang"} {modalPage} / {modalTotalPages}
                 </span>
                 <button
                   type="button"
@@ -381,7 +383,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
             {/* Modal Footer */}
             <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex items-center justify-between shrink-0">
               <div className="text-xs font-semibold text-slate-600">
-                Đã chọn: <span className="text-primary font-bold">{selectedGuardIds.length}</span> nhân sự
+                {dict.contract_guards?.selected || "Đã chọn:"} <span className="text-primary font-bold">{selectedGuardIds.length}</span> {dict.contract_guards?.guards_count || "nhân sự"}
               </div>
 
               <div className="flex gap-3">
@@ -390,7 +392,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                   className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded-lg text-sm font-semibold text-slate-700 cursor-pointer"
                   disabled={isSaving}
                 >
-                  Hủy bỏ
+                  {dict.contract_guards?.cancel || "Hủy bỏ"}
                 </button>
                 <button
                   onClick={handleSave}
@@ -398,7 +400,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                   disabled={isSaving}
                 >
                   {isSaving && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
-                  <span>Lưu thay đổi</span>
+                  <span>{dict.contract_guards?.save_changes || "Lưu thay đổi"}</span>
                 </button>
               </div>
             </div>

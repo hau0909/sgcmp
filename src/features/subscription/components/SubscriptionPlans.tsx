@@ -12,6 +12,8 @@ import {
   requestGetActiveBankAccount,
 } from "@/features/payment/api/payment.api";
 
+import { useTranslation } from "@/components/providers/LanguageProvider";
+
 export default function SubscriptionPlans({
   plans,
   currentPlan,
@@ -22,6 +24,7 @@ export default function SubscriptionPlans({
   companyId: string;
 }) {
   const router = useRouter();
+  const { dict } = useTranslation();
   const [loadingPlanId, setLoadingPlanId] = useState<number | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [activeBankAccount, setActiveBankAccount] = useState<
@@ -76,7 +79,7 @@ export default function SubscriptionPlans({
     <div className="space-y-4">
       <div className="flex justify-between items-center">
         <h3 className="text-base font-bold text-on-surface tracking-tight">
-          {currentPlan ? "Các Gói Dịch Vụ Khác" : "Các Gói Dịch Vụ"}
+          {currentPlan ? (dict.billing?.other_plans || "Các Gói Dịch Vụ Khác") : (dict.billing?.all_plans || "Các Gói Dịch Vụ")}
         </h3>
         {errorMsg && (
           <p className="text-xs font-semibold text-red-600 bg-red-50 px-3 py-1 rounded-md border border-red-200 animate-fade-in">
@@ -91,10 +94,9 @@ export default function SubscriptionPlans({
           <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-sm text-amber-700 font-medium">
             <span className="font-bold">
-              Thanh toán gói hiện không khả dụng.
+              {dict.billing?.payment_unavailable_title || "Thanh toán gói hiện không khả dụng."}
             </span>{" "}
-            Hệ thống chưa có tài khoản ngân hàng nào được kích hoạt. Vui lòng
-            liên hệ quản trị viên để được hỗ trợ.
+            {dict.billing?.payment_unavailable_desc || "Hệ thống chưa có tài khoản ngân hàng nào được kích hoạt. Vui lòng liên hệ quản trị viên để được hỗ trợ."}
           </p>
         </div>
       )}
@@ -118,7 +120,7 @@ export default function SubscriptionPlans({
             >
               {isCurrent && (
                 <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-primary text-on-primary text-[9px] font-black uppercase tracking-wider px-3 py-1 rounded-full shadow-sm">
-                  Gói Của Bạn
+                  {dict.billing?.your_plan || "Gói Của Bạn"}
                 </div>
               )}
 
@@ -137,7 +139,7 @@ export default function SubscriptionPlans({
                 >
                   {formatPrice(plan?.price)}{" "}
                   <span className="text-sm text-muted-foreground font-medium">
-                    VND/Tháng
+                    {dict.billing?.per_month || "VNĐ/Tháng"}
                   </span>
                 </span>
               </div>
@@ -203,7 +205,7 @@ export default function SubscriptionPlans({
                       className={`w-4 h-4 shrink-0 mt-0.5
                         ${isCurrent ? "text-primary" : "text-secondary"}`}
                     />
-                    <span>Tối đa {plan.max_coordinators} điều phối viên</span>
+                    <span>{dict.billing?.max_coordinators?.replace("{0}", plan.max_coordinators.toString()) || `Tối đa ${plan.max_coordinators} điều phối viên`}</span>
                   </li>
                 )}
                 {plan.max_guards !== null && (
@@ -215,7 +217,7 @@ export default function SubscriptionPlans({
                       className={`w-4 h-4 shrink-0 mt-0.5
                         ${isCurrent ? "text-primary" : "text-secondary"}`}
                     />
-                    <span>Tối đa {plan.max_guards} bảo vệ</span>
+                    <span>{dict.billing?.max_guards?.replace("{0}", plan.max_guards.toString()) || `Tối đa ${plan.max_guards} bảo vệ`}</span>
                   </li>
                 )}
               </ul>
@@ -225,7 +227,7 @@ export default function SubscriptionPlans({
                   disabled
                   className="w-full bg-surface-container-low text-on-surface-variant/70 font-bold py-2 rounded text-xs cursor-default select-none border border-outline-variant/30 text-center"
                 >
-                  Đang sử dụng
+                  {dict.billing?.current_using || "Đang sử dụng"}
                 </button>
               ) : showRegister ? (
                 paymentLoading ? (
@@ -234,7 +236,7 @@ export default function SubscriptionPlans({
                     className="w-full bg-primary/60 text-on-primary font-bold py-2 rounded text-xs flex items-center justify-center gap-1.5 cursor-not-allowed"
                   >
                     <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                    Đang tải...
+                    {dict.billing?.processing || "Đang tải..."}
                   </button>
                 ) : paymentUnavailable ? (
                   <button
@@ -242,7 +244,7 @@ export default function SubscriptionPlans({
                     title="Thanh toán hiện không khả dụng. Liên hệ admin."
                     className="w-full bg-surface-container-low text-on-surface-variant/70 font-bold py-2 rounded text-xs cursor-not-allowed select-none border border-outline-variant/30 text-center"
                   >
-                    Không khả dụng
+                    {dict.billing?.unavailable || "Không khả dụng"}
                   </button>
                 ) : (
                   <button
@@ -253,16 +255,16 @@ export default function SubscriptionPlans({
                     {loadingPlanId === plan.plan_id ? (
                       <>
                         <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        <span>Đang xử lý...</span>
+                        <span>{dict.billing?.processing || "Đang xử lý..."}</span>
                       </>
                     ) : (
-                      <span>Đăng ký ngay</span>
+                      <span>{dict.billing?.subscribe_now || "Đăng ký ngay"}</span>
                     )}
                   </button>
                 )
               ) : (
                 <button className="w-full bg-primary hover:bg-primary-container text-on-primary font-bold py-2 rounded text-xs transition-colors shadow-sm active:scale-98 cursor-pointer">
-                  Liên Hệ
+                  {dict.billing?.contact_us || "Liên Hệ"}
                 </button>
               )}
             </div>

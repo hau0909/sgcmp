@@ -2,9 +2,17 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { ChevronRight, FileText, ClipboardCheck, Plus, XCircle, AlertTriangle } from "lucide-react";
+import {
+  ChevronRight,
+  FileText,
+  ClipboardCheck,
+  Plus,
+  XCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { BookingStatus } from "../types";
 import { VerificationStatus } from "@/features/verification/types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface BookingDetailHeaderProps {
   bookingId: string;
@@ -24,7 +32,7 @@ export function BookingDetailHeader({
   bookingId,
   status,
   createdAt,
-  backUrl = "/requests",
+  backUrl = "/my-requests",
   contractId,
   isCustomer = false,
   verificationStatus,
@@ -33,24 +41,28 @@ export function BookingDetailHeader({
   isCreatingVerification = false,
   onCancelBooking,
 }: BookingDetailHeaderProps) {
+  const { dict } = useTranslation();
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   // Format receipt time
   const formattedDate = React.useMemo(() => {
     try {
       const date = new Date(createdAt);
-      return `Đã nhận: ${date.toLocaleTimeString("vi-VN", {
-        hour: "2-digit",
-        minute: "2-digit",
-      })} ${date.toLocaleDateString("vi-VN", {
+      return `${dict.booking.detail.header.received || "Đã nhận:"} ${date.toLocaleTimeString(
+        "vi-VN",
+        {
+          hour: "2-digit",
+          minute: "2-digit",
+        },
+      )} ${date.toLocaleDateString("vi-VN", {
         day: "2-digit",
         month: "2-digit",
         year: "numeric",
       })}`;
     } catch {
-      return "Đã nhận: Chưa rõ";
+      return `${dict.booking.detail.header.received || "Đã nhận:"} ${dict.booking.detail.header.unknown || "Chưa rõ"}`;
     }
-  }, [createdAt]);
+  }, [createdAt, dict.booking.detail.header]);
 
   const displayCode = `#REQ-${bookingId.slice(0, 5).toUpperCase()}`;
 
@@ -61,35 +73,35 @@ export function BookingDetailHeader({
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-surface-container-high text-on-surface border border-outline-variant transition-all duration-300">
             <span className="w-2 h-2 rounded-full bg-secondary mr-2 animate-pulse"></span>
-            Mới
+            {dict.booking.detail.header.status_pending || "Mới"}
           </span>
         );
       case "quoted":
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-amber-55/10 text-amber-700 dark:bg-amber-900/20 dark:text-amber-400 border border-amber-200 dark:border-amber-900/40 transition-all duration-300">
             <span className="w-2 h-2 rounded-full bg-amber-500 mr-2"></span>
-            Đã báo giá
+            {dict.booking.detail.header.status_quoted || "Đã báo giá"}
           </span>
         );
       case "accepted":
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-emerald-55/10 text-emerald-700 dark:bg-emerald-900/20 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/40 transition-all duration-300">
             <span className="w-2 h-2 rounded-full bg-emerald-500 mr-2"></span>
-            Đã duyệt
+            {dict.booking.detail.header.status_accepted || "Đã duyệt"}
           </span>
         );
       case "rejected":
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-red-55/10 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-900/40 transition-all duration-300">
             <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
-            Từ chối
+            {dict.booking.detail.header.status_rejected || "Từ chối"}
           </span>
         );
       case "canceled":
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-slate-55/10 text-slate-700 dark:bg-slate-900/20 dark:text-slate-400 border border-slate-200 dark:border-slate-900/40 transition-all duration-300">
             <span className="w-2 h-2 rounded-full bg-slate-500 mr-2"></span>
-            Đã hủy
+            {dict.booking.detail.header.status_canceled || "Đã hủy"}
           </span>
         );
       default:
@@ -103,19 +115,22 @@ export function BookingDetailHeader({
       case "pending":
         return (
           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-yellow-100 text-yellow-700 border border-yellow-200 whitespace-nowrap">
-            Khảo sát: Chờ duyệt
+            {dict.booking.detail.header.verification_pending ||
+              "Khảo sát: Chờ duyệt"}
           </span>
         );
       case "approved":
         return (
           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-green-100 text-green-700 border border-green-200 whitespace-nowrap">
-            Khảo sát: Đã duyệt
+            {dict.booking.detail.header.verification_approved ||
+              "Khảo sát: Đã duyệt"}
           </span>
         );
       case "rejected":
         return (
           <span className="inline-flex items-center px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-red-100 text-red-700 border border-red-200 whitespace-nowrap">
-            Khảo sát: Từ chối
+            {dict.booking.detail.header.verification_rejected ||
+              "Khảo sát: Từ chối"}
           </span>
         );
     }
@@ -129,11 +144,11 @@ export function BookingDetailHeader({
           href={backUrl}
           className="hover:text-primary transition-colors cursor-pointer"
         >
-          Yêu cầu
+          {dict.booking.detail.header.request_breadcrumb || "Yêu cầu"}
         </Link>
         <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant/60 shrink-0" />
         <span className="text-on-surface font-semibold">
-          Chi tiết {displayCode}
+          {dict.booking.detail.header.detail_code || "Chi tiết"} {displayCode}
         </span>
       </nav>
 
@@ -141,7 +156,10 @@ export function BookingDetailHeader({
       <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
         <div>
           <h2 className="text-2xl font-bold text-on-surface flex flex-wrap items-center gap-3">
-            <span>Chi tiết yêu cầu</span>
+            <span>
+              {dict.booking.detail.header.request_detail_title ||
+                "Chi tiết yêu cầu"}
+            </span>
             <span className="font-mono text-primary bg-primary-fixed px-2.5 py-0.5 rounded-md text-xs font-semibold tracking-tight border border-primary-fixed-dim shadow-[0_1px_2px_rgba(0,0,0,0.02)]">
               {displayCode}
             </span>
@@ -152,25 +170,33 @@ export function BookingDetailHeader({
         </div>
         <div className="flex shrink-0 items-center gap-2 flex-wrap justify-end">
           {/* Customer Cancel action */}
-          {isCustomer && status !== "accepted" && status !== "canceled" && onCancelBooking && (
-            <button
-              onClick={() => setIsCancelDialogOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg text-xs transition-all duration-100 active:scale-95 cursor-pointer"
-            >
-              <XCircle className="w-4 h-4 shrink-0" />
-              <span>Hủy yêu cầu</span>
-            </button>
-          )}
-          
+          {isCustomer &&
+            status !== "accepted" &&
+            status !== "canceled" &&
+            onCancelBooking && (
+              <button
+                onClick={() => setIsCancelDialogOpen(true)}
+                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-error/10 hover:bg-error/20 text-error font-semibold rounded-lg text-xs transition-all duration-100 active:scale-95 cursor-pointer"
+              >
+                <XCircle className="w-4 h-4 shrink-0" />
+                <span>
+                  {dict.booking.detail.header.cancel_booking || "Hủy yêu cầu"}
+                </span>
+              </button>
+            )}
+
           {/* Verification action button — only shown for non-customers */}
-          {!isCustomer && (
-            verificationStatus ? (
+          {!isCustomer &&
+            (verificationStatus ? (
               <button
                 onClick={onViewVerification}
                 className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg text-xs transition-all duration-100 active:scale-95 shadow-sm cursor-pointer"
               >
                 <ClipboardCheck className="w-4 h-4 shrink-0" />
-                <span>Xem khảo sát</span>
+                <span>
+                  {dict.booking.detail.header.view_verification ||
+                    "Xem khảo sát"}
+                </span>
               </button>
             ) : (
               <button
@@ -183,18 +209,27 @@ export function BookingDetailHeader({
                 ) : (
                   <Plus className="w-4 h-4 shrink-0" />
                 )}
-                <span>Tạo khảo sát</span>
+                <span>
+                  {dict.booking.detail.header.create_verification ||
+                    "Tạo khảo sát"}
+                </span>
               </button>
-            )
-          )}
+            ))}
           {renderStatusBadge()}
           {contractId && (
             <Link
-              href={isCustomer ? `/my-contracts/${contractId}` : `/contracts/${contractId}`}
+              href={
+                isCustomer
+                  ? `/my-contracts/${contractId}`
+                  : `/contracts/${contractId}`
+              }
               className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-primary hover:bg-primary/95 text-on-primary font-semibold rounded-lg text-xs transition-all duration-100 active:scale-95 shadow-sm cursor-pointer"
             >
               <FileText className="w-4 h-4 shrink-0" />
-              <span>Xem hợp đồng</span>
+              <span>
+                {dict.booking.detail.quotation_panel.go_to_contract ||
+                  "Xem hợp đồng"}
+              </span>
             </Link>
           )}
         </div>
@@ -208,9 +243,13 @@ export function BookingDetailHeader({
               <div className="flex items-center justify-center w-12 h-12 rounded-full bg-error/10 text-error mx-auto mb-4">
                 <AlertTriangle className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-center text-on-surface mb-2">Hủy yêu cầu dịch vụ</h3>
+              <h3 className="text-lg font-bold text-center text-on-surface mb-2">
+                {dict.booking.detail.header.cancel_confirm_title ||
+                  "Hủy yêu cầu dịch vụ"}
+              </h3>
               <p className="text-sm text-center text-on-surface-variant/80">
-                Bạn có chắc chắn muốn hủy yêu cầu dịch vụ này không? Hành động này không thể hoàn tác.
+                {dict.booking.detail.header.cancel_confirm_desc ||
+                  "Bạn có chắc chắn muốn hủy yêu cầu dịch vụ này không? Hành động này không thể hoàn tác."}
               </p>
             </div>
             <div className="flex items-center gap-3 p-4 bg-surface-container-low/50 border-t border-outline-variant/30">
@@ -218,7 +257,7 @@ export function BookingDetailHeader({
                 onClick={() => setIsCancelDialogOpen(false)}
                 className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm"
               >
-                Đóng
+                {dict.booking.detail.header.cancel_close || "Đóng"}
               </button>
               <button
                 onClick={() => {
@@ -227,7 +266,7 @@ export function BookingDetailHeader({
                 }}
                 className="flex-1 py-2.5 px-4 rounded-xl font-bold bg-error hover:bg-error/90 text-white transition-all active:scale-95 text-sm"
               >
-                Xác nhận hủy
+                {dict.booking.detail.header.cancel_submit || "Xác nhận hủy"}
               </button>
             </div>
           </div>

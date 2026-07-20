@@ -5,6 +5,7 @@ import { useState } from "react";
 import { Eye, EyeOff, UserPlus, Loader2 } from "lucide-react";
 import { isDisposableEmail, checkEmailExists, checkPhoneNumberExists } from "@/features/auth/validator/auth.validator";
 import { RegisterPayload } from "@/features/auth/types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type FormErrors = {
   fullName?: string;
@@ -30,6 +31,7 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
 
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
+  const { dict } = useTranslation();
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -39,35 +41,35 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
     const normalizedPhoneNumber = phoneNumber.replace(/\s/g, "");
 
     if (!trimmedFullName) {
-      newErrors.fullName = "Vui lòng nhập họ và tên";
+      newErrors.fullName = dict.pages.registration.err_name_required;
     } else if (trimmedFullName.length < 2) {
-      newErrors.fullName = "Họ và tên phải có ít nhất 2 ký tự";
+      newErrors.fullName = dict.pages.registration.err_name_short;
     }
 
     if (!trimmedEmail) {
-      newErrors.email = "Vui lòng nhập email";
+      newErrors.email = dict.pages.registration.err_email_required;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      newErrors.email = "Email không hợp lệ";
+      newErrors.email = dict.pages.registration.err_email_invalid;
     } else if (isDisposableEmail(trimmedEmail)) {
-      newErrors.email = "Không cho phép sử dụng email tạm thời";
+      newErrors.email = dict.pages.registration.err_email_disposable;
     }
 
     if (!normalizedPhoneNumber) {
-      newErrors.phone = "Vui lòng nhập số điện thoại";
+      newErrors.phone = dict.pages.registration.err_phone_required;
     } else if (!/^(0|\+84)[0-9]{9,10}$/.test(normalizedPhoneNumber)) {
-      newErrors.phone = "Số điện thoại không hợp lệ";
+      newErrors.phone = dict.pages.registration.err_phone_invalid;
     }
 
     if (!password) {
-      newErrors.password = "Vui lòng nhập mật khẩu";
+      newErrors.password = dict.pages.registration.err_password_required;
     } else if (password.length < 8) {
-      newErrors.password = "Mật khẩu phải có ít nhất 8 ký tự";
+      newErrors.password = dict.pages.registration.err_password_short;
     }
 
     if (!confirmPassword) {
-      newErrors.confirmPassword = "Vui lòng xác nhận mật khẩu";
+      newErrors.confirmPassword = dict.pages.registration.err_confirm_required;
     } else if (confirmPassword !== password) {
-      newErrors.confirmPassword = "Mật khẩu xác nhận không khớp";
+      newErrors.confirmPassword = dict.pages.registration.err_confirm_mismatch;
     }
 
     setErrors(newErrors);
@@ -91,13 +93,13 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
 
       const emailExists = await checkEmailExists(trimmedEmail);
       if (emailExists) {
-        setErrors((prev) => ({ ...prev, email: "Email này đã được đăng ký" }));
+        setErrors((prev) => ({ ...prev, email: dict.pages.registration.err_email_exists }));
         return;
       }
 
       const phoneExists = await checkPhoneNumberExists(normalizedPhoneNumber);
       if (phoneExists) {
-        setErrors((prev) => ({ ...prev, phone: "Số điện thoại này đã được đăng ký" }));
+        setErrors((prev) => ({ ...prev, phone: dict.pages.registration.err_phone_exists }));
         return;
       }
 
@@ -133,9 +135,9 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
           <UserPlus className="w-5 h-5 text-primary" />
         </div>
         <div>
-          <h2 className="text-xl font-bold text-on-surface">Thiết lập tài khoản mới</h2>
+          <h2 className="text-xl font-bold text-on-surface">{dict.pages.registration.signup_title}</h2>
           <p className="text-sm text-on-surface-variant mt-0.5">
-            Điền thông tin để thiết lập tài khoản và bắt đầu quy trình đăng ký doanh nghiệp
+            {dict.pages.registration.signup_desc}
           </p>
         </div>
       </div>
@@ -155,11 +157,11 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
           {/* Full Name */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-on-surface">
-              Họ và tên <span className="text-error">*</span>
+              {dict.pages.registration.full_name} <span className="text-error">*</span>
             </label>
             <input
               type="text"
-              placeholder="Nhập họ và tên đầy đủ"
+              placeholder={dict.pages.registration.full_name_placeholder}
               value={fullName}
               disabled={loading}
               onChange={(e) => {
@@ -176,7 +178,7 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
           {/* Phone */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-on-surface">
-              Số điện thoại <span className="text-error">*</span>
+              {dict.pages.registration.phone} <span className="text-error">*</span>
             </label>
             <input
               type="tel"
@@ -198,7 +200,7 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
         {/* Email */}
         <div>
           <label className="mb-1.5 block text-sm font-semibold text-on-surface">
-            Địa chỉ Email <span className="text-error">*</span>
+            {dict.pages.registration.email_label} <span className="text-error">*</span>
           </label>
           <input
             type="email"
@@ -221,7 +223,7 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
           {/* Password */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-on-surface">
-              Mật khẩu <span className="text-error">*</span>
+              {dict.pages.registration.password} <span className="text-error">*</span>
             </label>
             <div className="relative">
               <input
@@ -252,7 +254,7 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
           {/* Confirm Password */}
           <div>
             <label className="mb-1.5 block text-sm font-semibold text-on-surface">
-              Xác nhận mật khẩu <span className="text-error">*</span>
+              {dict.pages.registration.password_confirm} <span className="text-error">*</span>
             </label>
             <div className="relative">
               <input
@@ -287,7 +289,7 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
 
         {/* Password hint */}
         <p className="text-xs text-on-surface-variant">
-          Mật khẩu phải có ít nhất 8 ký tự.
+          {dict.pages.registration.password_hint}
         </p>
 
         {/* Submit */}
@@ -299,12 +301,12 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
           {loading ? (
             <>
               <Loader2 className="w-4 h-4 animate-spin" />
-              <span>Đang kiểm tra...</span>
+              <span>{dict.pages.registration.checking}</span>
             </>
           ) : (
             <>
               <UserPlus className="w-4 h-4" />
-              <span>Thiết lập tài khoản & Tiếp tục</span>
+              <span>{dict.pages.registration.submit_btn}</span>
             </>
           )}
         </button>

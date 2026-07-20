@@ -5,12 +5,14 @@ import { Suspense } from "react";
 import { ShieldAlert, ArrowLeft, LogOut, Mail, Unlock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 function UnauthorizedContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const reason = searchParams.get("reason");
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const { dict } = useTranslation();
 
   const isInactive = reason === "inactive";
   const isBanned = reason === "banned";
@@ -41,19 +43,19 @@ function UnauthorizedContent() {
         {/* Title */}
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
           {isBanned
-            ? "Tài khoản đã bị khóa"
+            ? (dict.pages.unauthorized.banned_title || "Tài khoản đã bị khóa")
             : isInactive
-              ? "Hồ sơ chưa được kích hoạt"
-              : "Không có quyền truy cập"}
+              ? dict.pages.unauthorized.inactive_title
+              : dict.pages.unauthorized.access_denied_title}
         </h1>
 
         {/* Description */}
         <p className="mt-4 text-sm leading-relaxed text-slate-600">
           {isBanned
-            ? "Tài khoản của bạn đã bị khóa bởi quản trị viên. Vui lòng liên hệ hỗ trợ để biết thêm chi tiết."
+            ? (dict.pages.unauthorized.banned_desc || "Tài khoản của bạn đã bị khóa bởi quản trị viên. Vui lòng liên hệ hỗ trợ để biết thêm chi tiết.")
             : isInactive
-              ? "Hồ sơ Coordinator/Guard của bạn hiện tại chưa được kích hoạt trong hệ thống. Vui lòng liên hệ với quản trị viên để kích hoạt tài khoản của bạn."
-              : "Tài khoản của bạn không có quyền truy cập vào trang này."}
+              ? dict.pages.unauthorized.inactive_desc
+              : dict.pages.unauthorized.no_access_desc}
         </p>
 
         {/* Action Buttons */}
@@ -64,7 +66,7 @@ function UnauthorizedContent() {
               className="whitespace-nowrap flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
             >
               <Unlock className="h-4 w-4" />
-              <span>Gỡ khóa tài khoản</span>
+              <span>{dict.pages.unauthorized.unlock_account || "Gỡ khóa tài khoản"}</span>
             </button>
           ) : (
             <button
@@ -73,7 +75,7 @@ function UnauthorizedContent() {
               className="whitespace-nowrap flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
             >
               <ArrowLeft className="h-4 w-4" />
-              <span>Quay lại</span>
+              <span>{dict.pages.unauthorized.go_back}</span>
             </button>
           )}
 
@@ -83,7 +85,7 @@ function UnauthorizedContent() {
             className="whitespace-nowrap flex items-center justify-center gap-2 rounded-lg bg-blue-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900 transition cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
-            <span>Đăng xuất & Đăng nhập</span>
+            <span>{dict.pages.unauthorized.logout_login}</span>
           </button>
         </div>
       </div>

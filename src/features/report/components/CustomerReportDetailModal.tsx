@@ -1,6 +1,7 @@
 import React from "react";
 import { X, FileText, CheckCircle, Clock } from "lucide-react";
 import { Report, REPORT_TYPE_LABELS } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CustomerReportDetailModalProps {
   report: Report;
@@ -8,30 +9,32 @@ interface CustomerReportDetailModalProps {
 }
 
 export function CustomerReportDetailModal({ report, onClose }: CustomerReportDetailModalProps) {
+  const { dict } = useTranslation();
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "RESOLVED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <CheckCircle className="w-3.5 h-3.5" /> Đã giải quyết
+            <CheckCircle className="w-3.5 h-3.5" /> {dict.report.filters.status_resolved}
           </span>
         );
       case "IN_PROGRESS":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            <Clock className="w-3.5 h-3.5" /> Đang xử lý
+            <Clock className="w-3.5 h-3.5" /> {dict.report.filters.status_in_progress}
           </span>
         );
       case "CLOSED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-            <CheckCircle className="w-3.5 h-3.5" /> Đã đóng
+            <CheckCircle className="w-3.5 h-3.5" /> {dict.report.filters.status_closed}
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-            <Clock className="w-3.5 h-3.5" /> Chờ tiếp nhận
+            <Clock className="w-3.5 h-3.5" /> {dict.report.filters.status_pending}
           </span>
         );
     }
@@ -55,7 +58,7 @@ export function CustomerReportDetailModal({ report, onClose }: CustomerReportDet
           <div className="flex items-center gap-2 text-primary">
             <FileText className="w-5 h-5 shrink-0" />
             <h3 className="font-bold text-on-surface text-lg font-headline">
-              Chi tiết phản ánh {report.report_code || report.id}
+              {dict.report.modal.detail_title} {report.report_code || report.id}
             </h3>
           </div>
           <button
@@ -69,34 +72,34 @@ export function CustomerReportDetailModal({ report, onClose }: CustomerReportDet
         {/* Modal body */}
         <div className="p-6 space-y-4 font-body text-sm overflow-y-auto flex-1">
           <div className="pb-3 border-b border-slate-100">
-            <span className="text-xs text-on-surface-variant font-medium">Trạng thái</span>
+            <span className="text-xs text-on-surface-variant font-medium">{dict.report.modal.status}</span>
             <div className="mt-1">{getStatusBadge(report.status)}</div>
           </div>
 
           <div className="space-y-1">
-            <span className="text-xs text-on-surface-variant font-medium">Hợp đồng liên quan</span>
+            <span className="text-xs text-on-surface-variant font-medium">{dict.report.modal.related_contract}</span>
             <p className="font-semibold text-on-surface">
               {report.contract_code || "N/A"}
             </p>
           </div>
 
           <div className="space-y-1">
-            <span className="text-xs text-on-surface-variant font-medium">Vấn đề khiếu nại</span>
+            <span className="text-xs text-on-surface-variant font-medium">{dict.report.modal.issue_type}</span>
             <p className="font-semibold text-on-surface">
-              {report.type ? (REPORT_TYPE_LABELS[report.type] || report.type) : "Chưa phân loại"}
+              {report.type ? (REPORT_TYPE_LABELS[report.type] || report.type) : dict.report.table.unclassified}
             </p>
           </div>
 
           <div className="space-y-1">
-            <span className="text-xs text-on-surface-variant font-medium">Nội dung phản ánh chi tiết</span>
+            <span className="text-xs text-on-surface-variant font-medium">{dict.report.modal.detail_desc}</span>
             <p className="text-on-surface bg-slate-50 border border-slate-100 p-3 rounded-lg leading-relaxed text-xs whitespace-pre-wrap">
-              {report.description || "(Không có mô tả chi tiết)"}
+              {report.description || dict.report.modal.no_desc}
             </p>
           </div>
 
           {report.image_url && (
             <div className="space-y-1">
-              <span className="text-xs text-on-surface-variant font-medium">Ảnh đính kèm</span>
+              <span className="text-xs text-on-surface-variant font-medium">{dict.report.modal.attachment}</span>
               <div className="border border-outline-variant rounded-lg overflow-hidden max-h-60 flex items-center justify-center bg-slate-50">
                 <img
                   src={report.image_url}

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Building2, ShieldCheck, FileCheck, Shield } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CompanyDetailLegalProps {
   businessLicenseNo: string;
@@ -14,10 +15,11 @@ export default function CompanyDetailLegal({
   securityLicenseNo,
   insuranceLevel,
 }: CompanyDetailLegalProps) {
+  const { dict } = useTranslation();
   return (
     <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs">
       <h2 className="text-headline-sm font-semibold text-on-surface mb-4 uppercase tracking-wider text-[12px] border-b border-outline-variant pb-2">
-        Pháp lý &amp; Giấy phép
+        {dict.customer.company_detail.legal_title}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         {/* Card 1 */}
@@ -27,7 +29,7 @@ export default function CompanyDetailLegal({
             <ShieldCheck className="text-secondary w-[20px] h-[20px]" />
           </div>
           <h3 className="text-body-sm font-semibold text-on-surface mb-1">
-            Đăng ký kinh doanh
+            {dict.customer.company_detail.business_license}
           </h3>
           <p className="text-[11px] font-mono text-outline-variant mt-auto">
             ID: {businessLicenseNo}
@@ -40,7 +42,7 @@ export default function CompanyDetailLegal({
             <ShieldCheck className="text-secondary w-[20px] h-[20px]" />
           </div>
           <h3 className="text-body-sm font-semibold text-on-surface mb-1">
-            GP Dịch vụ bảo vệ
+            {dict.customer.company_detail.security_license}
           </h3>
           <p className="text-[11px] font-mono text-outline-variant mt-auto">
             ID: {securityLicenseNo}
@@ -53,10 +55,10 @@ export default function CompanyDetailLegal({
             <ShieldCheck className="text-secondary w-[20px] h-[20px]" />
           </div>
           <h3 className="text-body-sm font-semibold text-on-surface mb-1">
-            Bảo hiểm trách nhiệm
+            {dict.customer.company_detail.insurance}
           </h3>
           <p className="text-[11px] font-mono text-outline-variant mt-auto">
-            Mức: {insuranceLevel}
+            {dict.customer.company_detail.level}: {insuranceLevel}
           </p>
         </div>
       </div>

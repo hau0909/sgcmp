@@ -2,12 +2,14 @@
 
 import React from "react";
 import { Quote, Award } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function CompanyDetailDirector() {
+  const { dict } = useTranslation();
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-xs">
       <h3 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider mb-4 flex items-center gap-2">
-        <Award className="w-4.5 h-4.5 text-primary" /> Ban lãnh đạo & Sáng lập
+        <Award className="w-4.5 h-4.5 text-primary" /> {dict.customer.company_detail.director_title}
       </h3>
       
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-4">

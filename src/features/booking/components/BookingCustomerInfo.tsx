@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Building2, Phone, Mail, MapPin, User } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface BookingCustomerInfoProps {
   customerName: string;
@@ -20,8 +21,10 @@ export function BookingCustomerInfo({
   email,
   address,
   title = "Thông tin khách hàng",
-  nameLabel = "Tên khách hàng / Công ty",
+  nameLabel,
 }: BookingCustomerInfoProps) {
+  const { dict } = useTranslation();
+  
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative overflow-hidden transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] duration-300 animate-in fade-in slide-in-from-top-3 duration-300">
       {/* Decorative top-right curved gradient block */}
@@ -29,14 +32,14 @@ export function BookingCustomerInfo({
 
       <h3 className="text-base font-bold text-on-surface mb-4 flex items-center gap-2 border-b border-outline-variant/30 pb-2 font-headline">
         <Building2 className="w-5 h-5 text-secondary" />
-        <span>{title}</span>
+        <span>{title || dict.booking.detail.info.customer_info_title}</span>
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Customer / Company Name */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            {nameLabel}
+            {nameLabel || dict.booking.detail.info.customer_name}
           </span>
           <span className="text-sm font-semibold text-on-surface">
             {customerName}
@@ -46,7 +49,7 @@ export function BookingCustomerInfo({
         {/* Contact Representative */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Người liên hệ
+            {dict.booking.detail.info.contact_person || "Người liên hệ"}
           </span>
           <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
             <User className="w-3.5 h-3.5 text-outline-variant" />
@@ -57,7 +60,7 @@ export function BookingCustomerInfo({
         {/* Telephone Number */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Số điện thoại
+            {dict.booking.detail.info.phone_number || "Số điện thoại"}
           </span>
           <span className="text-sm font-semibold text-on-surface font-mono flex items-center gap-1.5">
             <Phone className="w-3.5 h-3.5 text-outline-variant" />
@@ -68,7 +71,7 @@ export function BookingCustomerInfo({
         {/* Email */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Email
+            {dict.booking.detail.info.email || "Email"}
           </span>
           <a
             href={`mailto:${email}`}
@@ -82,7 +85,7 @@ export function BookingCustomerInfo({
         {/* Implementation Location */}
         <div className="flex flex-col md:col-span-2">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Địa chỉ triển khai
+            {dict.booking.detail.info.implementation_location || "Địa chỉ triển khai"}
           </span>
           <span className="text-sm font-semibold text-on-surface flex items-start gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-outline-variant mt-0.5" />

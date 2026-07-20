@@ -4,6 +4,7 @@ import React from "react";
 import { Check, Clock, X, FileText, FileSearch, Calculator, FileSignature } from "lucide-react";
 import { BookingStatus } from "../types";
 import { VerificationStatus } from "@/features/verification/types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type StepState = "completed" | "in-progress" | "error" | "upcoming";
 
@@ -24,6 +25,7 @@ interface BookingProgressProps {
   onViewVerification?: () => void;
   onViewContract?: () => void;
   isCustomer?: boolean;
+  contractStatus?: string | null;
 }
 
 export function BookingProgress({
@@ -33,13 +35,15 @@ export function BookingProgress({
   onViewVerification,
   onViewContract,
   isCustomer = false,
+  contractStatus,
 }: BookingProgressProps) {
+  const { dict } = useTranslation();
   
   // Step 1: Request
   const step1: StepData = {
     id: "request",
-    title: "Gửi yêu cầu",
-    description: "Đã nhận thông tin",
+    title: dict.booking.detail.progress.step_request || "Gửi yêu cầu",
+    description: dict.booking.detail.progress.desc_request_received || "Đã nhận thông tin",
     state: "completed", // Always completed if we are viewing the booking
     icon: FileText,
     isClickable: false,
@@ -47,24 +51,24 @@ export function BookingProgress({
 
   // Step 2: Verification
   let step2State: StepState = "upcoming";
-  let step2Desc = "Chưa tiến hành";
+  let step2Desc = dict.booking.detail.progress.desc_ver_upcoming || "Chưa tiến hành";
   if (verificationStatus === "approved") {
     step2State = "completed";
-    step2Desc = "Đã duyệt khảo sát";
+    step2Desc = dict.booking.detail.progress.desc_ver_approved || "Đã duyệt khảo sát";
   } else if (verificationStatus === "rejected") {
     step2State = "error";
-    step2Desc = "Khảo sát bị từ chối";
+    step2Desc = dict.booking.detail.progress.desc_ver_rejected || "Khảo sát bị từ chối";
   } else if (verificationStatus === "pending") {
     step2State = "in-progress";
-    step2Desc = "Đang chờ duyệt";
+    step2Desc = dict.booking.detail.progress.desc_ver_pending || "Đang chờ duyệt";
   } else if (verificationStatus === null) {
     step2State = "upcoming";
-    step2Desc = "Chưa tiến hành";
+    step2Desc = dict.booking.detail.progress.desc_ver_upcoming || "Chưa tiến hành";
   }
 
   const step2: StepData = {
     id: "verification",
-    title: "Khảo sát",
+    title: dict.booking.detail.progress.step_verification || "Khảo sát",
     description: step2Desc,
     state: step2State,
     icon: FileSearch,
@@ -74,46 +78,50 @@ export function BookingProgress({
 
   // Step 3: Quotation
   let step3State: StepState = "upcoming";
-  let step3Desc = "Chưa báo giá";
+  let step3Desc = dict.booking.detail.progress.desc_quote_upcoming || "Chưa báo giá";
   
   if (bookingStatus === "canceled") {
     step3State = "error";
-    step3Desc = "Đã hủy";
+    step3Desc = dict.booking.detail.progress.desc_quote_canceled || "Đã hủy";
   } else if (bookingStatus === "rejected") {
     step3State = "in-progress";
-    step3Desc = "Yêu cầu báo lại";
+    step3Desc = dict.booking.detail.progress.desc_quote_rejected || "Yêu cầu báo lại";
   } else if (bookingStatus === "accepted") {
     step3State = "completed";
-    step3Desc = "Đã chốt báo giá";
+    step3Desc = dict.booking.detail.progress.desc_quote_accepted || "Đã chốt báo giá";
   } else if (bookingStatus === "quoted") {
     step3State = "in-progress";
-    step3Desc = "Chờ khách duyệt";
+    step3Desc = dict.booking.detail.progress.desc_quote_quoted || "Chờ khách duyệt";
   } else if (bookingStatus === "pending" && step2State === "completed") {
     step3State = "in-progress";
-    step3Desc = "Đang chờ báo giá";
+    step3Desc = dict.booking.detail.progress.desc_quote_pending || "Đang chờ báo giá";
   }
 
   const step3: StepData = {
     id: "quotation",
-    title: "Báo giá",
+    title: dict.booking.detail.progress.step_quotation || "Báo giá",
     description: step3Desc,
     state: step3State,
     icon: Calculator,
     isClickable: false, // Usually no separate page for quotation, it's on this page
   };
 
-  // Step 4: Contract
   let step4State: StepState = "upcoming";
-  let step4Desc = "Chưa có hợp đồng";
+  let step4Desc = dict.booking.detail.progress.desc_contract_upcoming || "Chưa có hợp đồng";
   
   if (hasContract) {
-    step4State = "completed";
-    step4Desc = "Đã ký hợp đồng";
+    if (contractStatus === "pending_signatures") {
+      step4State = "in-progress";
+      step4Desc = dict.booking.detail.progress.desc_contract_pending || "Đã khởi tạo";
+    } else {
+      step4State = "completed";
+      step4Desc = dict.booking.detail.progress.desc_contract_done || "Đã ký hợp đồng";
+    }
   }
 
   const step4: StepData = {
     id: "contract",
-    title: "Hợp đồng",
+    title: dict.booking.detail.progress.step_contract || "Hợp đồng",
     description: step4Desc,
     state: step4State,
     icon: FileSignature,

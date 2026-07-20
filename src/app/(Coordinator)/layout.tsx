@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/store/auth.store";
 import { requestGetCompanyById } from "@/features/company/api/company.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   Shield,
   HelpCircle,
@@ -32,6 +33,7 @@ export default function CoordinatorLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const { dict } = useTranslation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const companyId = useAuthStore((state) => state.company_id);
   const role = useAuthStore((state) => state.role);
@@ -65,34 +67,34 @@ export default function CoordinatorLayout({
     };
   }, [companyId]);
 
-  // Sidebar Items in Vietnamese
+  // Sidebar Items
   const sidebarLinks = [
     {
-      name: "Ca trực",
+      name: dict.layout_coordinator.shift,
       href: "/schedules",
       icon: CalendarDays,
       active: pathname === "/schedules" || pathname.startsWith("/schedules/"),
     },
     {
-      name: "Đơn yêu cầu",
+      name: dict.layout_coordinator.bookings,
       href: "/bookings",
       icon: FileText,
       active: pathname === "/bookings" || pathname.startsWith("/bookings/"),
     },
     {
-      name: "Khảo sát yêu cầu",
+      name: dict.layout_coordinator.verifications,
       href: "/coor-verifications",
       icon: ClipboardCheck,
       active: pathname === "/coor-verifications" || pathname.startsWith("/coor-verifications/"),
     },
     {
-      name: "Bảo vệ",
+      name: dict.layout_coordinator.guards,
       href: "/guards",
       icon: ShieldUser,
       active: pathname === "/guards" || pathname.startsWith("/guards/"),
     },
     {
-      name: "Quản lý báo cáo",
+      name: dict.layout_coordinator.reports,
       href: "/coor-reports",
       icon: ShieldAlert,
       active: pathname === "/coor-reports" || pathname.startsWith("/coor-reports/"),
@@ -127,7 +129,9 @@ export default function CoordinatorLayout({
                   SGCMP
                 </h2>
                 <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest mt-1">
-                  {role === "company-admin" ? "Giám đốc" : "Điều phối viên"}
+                  {role === "company-admin" 
+                    ? (dict.layout_coordinator.director || "Giám đốc")
+                    : dict.layout_coordinator.role}
                 </p>
               </div>
             </div>
@@ -185,11 +189,11 @@ export default function CoordinatorLayout({
               </button>
               <div className="md:flex flex-col items-start gap-0.5 hidden">
                 <h1 className="text-sm font-bold text-on-surface tracking-tight leading-tight truncate max-w-[280px]" title={companyInfo?.name || ""}>
-                  {companyInfo ? companyInfo.name : "Đang tải..."}
+                  {companyInfo ? companyInfo.name : dict.common.loading}
                 </h1>
                 {companyInfo?.ownerName && (
                   <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest">
-                    Giám đốc: {companyInfo.ownerName}
+                    {dict.layout_coordinator.director}: {companyInfo.ownerName}
                   </p>
                 )}
               </div>
@@ -219,7 +223,7 @@ export default function CoordinatorLayout({
 
           {/* Page Content Viewport */}
           <main className="flex-1 overflow-y-auto bg-surface-bright">
-            <Suspense fallback={<div className="p-6 text-center text-sm text-on-surface-variant">Đang tải...</div>}>
+            <Suspense fallback={<div className="p-6 text-center text-sm text-on-surface-variant">{dict.common.loading}</div>}>
               {children}
             </Suspense>
           </main>

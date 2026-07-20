@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import type { UserRole } from "@/lib/auth/role-route";
 import { requestGetUserProfile } from "@/features/auth/api/auth.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type RouteGuardProps = {
   allowedRoles: UserRole[];
@@ -54,6 +55,7 @@ export default function RouteGuard({
   children,
 }: RouteGuardProps) {
   const router = useRouter();
+  const { dict } = useTranslation();
 
   const [checking, setChecking] = useState(true);
   const [allowed, setAllowed] = useState(false);
@@ -112,7 +114,7 @@ export default function RouteGuard({
   if (checking) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        Đang kiểm tra quyền truy cập...
+        {dict.pages.registration.checking}
       </div>
     );
   }

@@ -4,6 +4,7 @@ import React from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface ContractTableProps {
   contracts: Contract[];
@@ -13,38 +14,6 @@ interface ContractTableProps {
   onPageChange: (page: number) => void;
   onViewDetails?: (contractId: string) => void;
 }
-
-function getStatusBadge(status: ContractStatus) {
-  switch (status) {
-    case "pending_signatures":
-      return (
-        <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200">
-          Chờ chữ ký
-        </span>
-      );
-    case "active":
-      return (
-        <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200">
-          Đang hoạt động
-        </span>
-      );
-    case "completed":
-      return (
-        <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-emerald-50 text-emerald-700 border-emerald-200">
-          Đã hoàn thành
-        </span>
-      );
-    case "cancelled":
-      return (
-        <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-slate-100 text-slate-700 border-slate-300">
-          Đã hủy
-        </span>
-      );
-    default:
-      return null;
-  }
-}
-
 export function ContractTable({
   contracts,
   totalCount,
@@ -53,9 +22,42 @@ export function ContractTable({
   onPageChange,
   onViewDetails,
 }: ContractTableProps) {
+  const { dict, locale } = useTranslation();
+  const dateLocale = locale === "en" ? "en-US" : "vi-VN";
   const totalPages = Math.ceil(totalCount / limit) || 1;
   const startIdx = totalCount === 0 ? 0 : (page - 1) * limit + 1;
   const endIdx = Math.min(page * limit, totalCount);
+
+  function getStatusBadge(status: ContractStatus) {
+    switch (status) {
+      case "pending_signatures":
+        return (
+          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200">
+            {dict.company_contracts?.status_pending || "Chờ chữ ký"}
+          </span>
+        );
+      case "active":
+        return (
+          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200">
+            {dict.company_contracts?.status_active || "Đang hoạt động"}
+          </span>
+        );
+      case "completed":
+        return (
+          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-emerald-50 text-emerald-700 border-emerald-200">
+            {dict.company_contracts?.status_completed || "Đã hoàn thành"}
+          </span>
+        );
+      case "cancelled":
+        return (
+          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-slate-100 text-slate-700 border-slate-300">
+            {dict.company_contracts?.status_cancelled || "Đã hủy"}
+          </span>
+        );
+      default:
+        return null;
+    }
+  }
 
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex flex-col">
@@ -64,28 +66,28 @@ export function ContractTable({
           <thead>
             <tr className="bg-[#C4E2F5] border-b border-outline-variant">
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap w-16 text-center">
-                STT
+                {dict.company_contracts?.table_stt || "STT"}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Mã Hợp Đồng
+                {dict.company_contracts?.table_code || "Mã Hợp Đồng"}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Khách Hàng
+                {dict.company_contracts?.table_customer || "Khách Hàng"}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Dịch Vụ
+                {dict.company_contracts?.table_service || "Dịch Vụ"}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Ngày Tạo
+                {dict.company_contracts?.table_created || "Ngày Tạo"}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Thời Hạn
+                {dict.company_contracts?.table_duration || "Thời Hạn"}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Trạng Thái
+                {dict.company_contracts?.table_status || "Trạng Thái"}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap text-right w-32">
-                Hành Động
+                {dict.company_contracts?.table_actions || "Hành Động"}
               </th>
             </tr>
           </thead>
@@ -93,7 +95,7 @@ export function ContractTable({
             {contracts.length === 0 ? (
               <tr>
                 <td colSpan={8} className="py-8 text-center text-on-surface-variant/80 font-medium bg-surface-bright">
-                  Không tìm thấy hợp đồng nào.
+                  {dict.company_contracts?.no_data || "Không tìm thấy hợp đồng nào."}
                 </td>
               </tr>
             ) : (
@@ -115,12 +117,12 @@ export function ContractTable({
                     {contract.service_name}
                   </td>
                   <td className="px-4 py-1.5 whitespace-nowrap font-mono text-on-surface-variant">
-                    {contract.created_at ? new Date(contract.created_at).toLocaleDateString("vi-VN") : ""}
+                    {contract.created_at ? new Date(contract.created_at).toLocaleDateString(dateLocale) : ""}
                   </td>
                   <td className="px-4 py-1.5 whitespace-nowrap font-mono text-on-surface-variant">
-                    {contract.start_date ? new Date(contract.start_date).toLocaleDateString("vi-VN") : "-"} 
+                    {contract.start_date ? new Date(contract.start_date).toLocaleDateString(dateLocale) : "-"} 
                     {" - "}
-                    {contract.end_date ? new Date(contract.end_date).toLocaleDateString("vi-VN") : "-"}
+                    {contract.end_date ? new Date(contract.end_date).toLocaleDateString(dateLocale) : "-"}
                   </td>
                   <td className="px-4 py-1.5 whitespace-nowrap">{getStatusBadge(contract.status)}</td>
                   <td className="px-4 py-1.5 whitespace-nowrap text-right">
@@ -128,7 +130,7 @@ export function ContractTable({
                       onClick={() => onViewDetails?.(contract.contract_id)}
                       className="text-xs font-semibold text-secondary hover:text-primary transition-colors cursor-pointer"
                     >
-                      Xem chi tiết
+                        {dict.company_contracts?.view_detail || "Chi tiết"}
                     </button>
                   </td>
                 </tr>
@@ -141,7 +143,7 @@ export function ContractTable({
       {/* Pagination */}
       <div className="p-3 border-t border-outline-variant bg-surface-container-lowest flex items-center justify-between text-body-sm font-body-sm text-on-surface-variant border-t">
         <div>
-          Hiển thị {startIdx}-{endIdx} trong {totalCount} kết quả
+          {dict.company_contracts?.showing || "Hiển thị"} {startIdx}-{endIdx} {dict.company_contracts?.in || "trong"} {totalCount} {dict.company_contracts?.results || "kết quả"}
         </div>
         <div className="flex items-center gap-1">
           <button

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Search } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface BookingFiltersProps {
   search: string;
@@ -24,13 +25,15 @@ export function BookingFilters({
   endDate,
   onEndDateChange,
 }: BookingFiltersProps) {
+  const { dict } = useTranslation();
+
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 mb-6 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
       <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
         {/* Search */}
         <div className="md:col-span-5 flex flex-col">
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-            Tìm kiếm
+            {dict.booking.filters.search_label}
           </label>
           <div className="relative">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-[16px] h-[16px]" />
@@ -38,7 +41,7 @@ export function BookingFilters({
               type="text"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder="Mã Booking, Khách Hàng, Dịch Vụ, Địa Chỉ..."
+              placeholder={dict.booking.filters.search_placeholder}
               className="w-full pl-9 pr-3 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
@@ -47,7 +50,7 @@ export function BookingFilters({
         {/* Status Filter */}
         <div className="md:col-span-3 flex flex-col">
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-            Trạng thái
+            {dict.booking.filters.status_label}
           </label>
           <div className="relative">
             <select
@@ -55,11 +58,12 @@ export function BookingFilters({
               onChange={(e) => onStatusChange(e.target.value)}
               className="w-full pl-3 pr-8 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer"
             >
-              <option value="">Tất cả trạng thái</option>
-              <option value="pending">Mới (Chờ xử lý)</option>
-              <option value="quoted">Đã báo giá</option>
-              <option value="accepted">Đã duyệt</option>
-              <option value="rejected">Từ chối</option>
+              <option value="">{dict.booking.filters.status_all}</option>
+              <option value="pending">{dict.booking.filters.status_pending}</option>
+              <option value="quoted">{dict.booking.filters.status_quoted}</option>
+              <option value="accepted">{dict.booking.filters.status_accepted}</option>
+              <option value="rejected">{dict.booking.filters.status_rejected}</option>
+              <option value="canceled">{dict.booking.filters.status_canceled}</option>
             </select>
             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-on-surface-variant">
               <svg
@@ -77,7 +81,7 @@ export function BookingFilters({
         <div className="md:col-span-4 flex gap-3">
           <div className="flex-1 flex flex-col">
             <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-              Từ ngày gửi
+              {dict.booking.filters.start_date}
             </label>
             <input
               type="date"
@@ -88,7 +92,7 @@ export function BookingFilters({
           </div>
           <div className="flex-1 flex flex-col">
             <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-              Đến ngày gửi
+              {dict.booking.filters.end_date}
             </label>
             <input
               type="date"

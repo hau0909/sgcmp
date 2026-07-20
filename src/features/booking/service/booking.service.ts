@@ -1,6 +1,7 @@
 import { Booking, BookingWithCustomerProfile, BookingStatus } from "../types";
 import { getBookings, getBookingDetail, getBookingById, createBooking, updateBookingStatusAndPrice, getCustomerBookings, getActiveBookingsByAddressAndService } from "../repository/booking.repository";
 import { formatAddressService } from "@/features/address/service/address.service";
+import { getProfileByUserIdService } from "@/features/profile/service/profile.service";
 
 
 export const getBookingsService = async (
@@ -57,6 +58,16 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
   const companyRawAddress = Array.isArray(company) ? company[0]?.address : company?.address;
   const companyAddressFormatted = await formatAddressService(companyRawAddress);
 
+  const companyRaw = Array.isArray(company) ? company[0] : company;
+  const companyOwnerId = companyRaw?.owner_id;
+  let companyContactPerson = undefined;
+  if (companyOwnerId) {
+    const ownerProfile = await getProfileByUserIdService(companyOwnerId);
+    if (ownerProfile) {
+      companyContactPerson = ownerProfile.full_name || undefined;
+    }
+  }
+
   return {
     booking_id: item.booking_id,
     customer_id: item.customer_id,
@@ -99,10 +110,14 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
     company_email: Array.isArray(company)
       ? (company[0]?.email || "Chưa cập nhật")
       : (company?.email || "Chưa cập nhật"),
+    company_contact_person: companyContactPerson,
     company_address: companyAddressFormatted,
     contract_id: Array.isArray(item.contracts)
       ? (item.contracts[0]?.contract_id || null)
       : (item.contracts?.contract_id || null),
+    contract_status: Array.isArray(item.contracts)
+      ? (item.contracts[0]?.status || null)
+      : (item.contracts?.status || null),
   };
 };
 

@@ -2,6 +2,7 @@
 
 import React from "react";
 import { ShieldCheck, MessageSquare, Calendar } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CompanyDetailHeaderProps {
   name: string;
@@ -18,6 +19,7 @@ export default function CompanyDetailHeader({
   companyId,
   onOpenBookingModal,
 }: CompanyDetailHeaderProps) {
+  const { dict } = useTranslation();
   const handleOpenChat = () => {
     window.dispatchEvent(
       new CustomEvent("open-customer-chat", {
@@ -64,7 +66,7 @@ export default function CompanyDetailHeader({
                 {name}
               </h1>
               <span className="bg-surface-dim text-primary border border-primary/20 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider flex items-center gap-0.5 shrink-0">
-                <ShieldCheck className="w-3 h-3" /> Đã xác minh
+                <ShieldCheck className="w-3 h-3" /> {dict.customer.company_detail.verified}
               </span>
             </div>
           </div>
@@ -75,13 +77,13 @@ export default function CompanyDetailHeader({
             onClick={handleOpenChat}
             className="flex-1 sm:flex-none px-2.5 py-1.5 sm:px-3.5 sm:py-2 border border-primary text-primary font-semibold rounded-lg hover:bg-surface-container transition-colors text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
           >
-            <MessageSquare className="w-4 h-4" /> Nhắn tin
+            <MessageSquare className="w-4 h-4" /> {dict.customer.company_detail.chat_btn}
           </button>
           <button
             onClick={onOpenBookingModal}
             className="flex-1 sm:flex-none px-2.5 py-1.5 sm:px-3.5 sm:py-2 bg-primary text-on-primary font-semibold rounded-lg hover:bg-primary/90 transition-colors shadow-xs text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
           >
-            <Calendar className="w-4 h-4" /> Đặt dịch vụ
+            <Calendar className="w-4 h-4" /> {dict.customer.company_detail.book_btn}
           </button>
         </div>
       </div>

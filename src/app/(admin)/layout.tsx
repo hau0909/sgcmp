@@ -24,6 +24,7 @@ import {
   Package,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function AdminLayout({
   children,
@@ -31,24 +32,25 @@ export default function AdminLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const { dict } = useTranslation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
 
   const sidebarLinks = [
     {
-      name: "Bảng điều khiển",
+      name: dict.layout_admin.dashboard,
       href: "/admin",
       icon: LayoutDashboard,
       active: pathname === "/admin",
     },
     {
-      name: "Yêu cầu phê duyệt",
+      name: dict.layout_admin.approvals,
       href: "/registrations",
       icon: Building2,
       active:
         pathname === "/registrations" || pathname.startsWith("/registrations/"),
     },
     {
-      name: "Yêu cầu công khai",
+      name: dict.layout_admin.publish_requests,
       href: "/publish-requests",
       icon: Globe,
       active:
@@ -61,18 +63,18 @@ export default function AdminLayout({
       href: "/payment-history",
       icon: BadgeDollarSign,
       active:
-        pathname === "/payment-history" || pathname.startsWith("/payment-history/"),
+        pathname === "/payment-history" ||
+        pathname.startsWith("/payment-history/"),
     },
     {
       name: "Dịch vụ",
       href: "/services",
       icon: Layers,
-      active:
-        pathname === "/services" || pathname.startsWith("/services/"),
+      active: pathname === "/services" || pathname.startsWith("/services/"),
     },
 
     {
-      name: "Tài khoản Ngân hàng",
+      name: dict.layout_admin.bank_accounts,
       href: "/bank-accounts",
       icon: Landmark,
       active:
@@ -82,8 +84,7 @@ export default function AdminLayout({
       name: "Quản lý tài khoản",
       href: "/accounts",
       icon: Users,
-      active:
-        pathname === "/accounts" || pathname.startsWith("/accounts/"),
+      active: pathname === "/accounts" || pathname.startsWith("/accounts/"),
     },
     {
       name: "Quản lý gói dịch vụ",
@@ -124,7 +125,7 @@ export default function AdminLayout({
                   SecurityAdmin
                 </h1>
                 <p className="text-xs text-[#434751] font-medium font-body">
-                  Cổng Quản Trị
+                  {dict.layout_admin.portal_title}
                 </p>
               </div>
             </div>
@@ -149,10 +150,11 @@ export default function AdminLayout({
                   href={link.href}
                   onClick={() => setMobileSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg font-body text-sm font-semibold transition-all duration-150 group
-                  ${link.active
+                  ${
+                    link.active
                       ? "bg-[#4db2ff] text-[#00436a] scale-95 transition-transform"
                       : "text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] transition-transform"
-                    }`}
+                  }`}
                 >
                   <Icon className="w-5 h-5 transition-colors shrink-0" />
                   <span>{link.name}</span>
@@ -168,7 +170,7 @@ export default function AdminLayout({
               className="flex items-center gap-3 px-3 py-2 text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] rounded-lg font-body text-sm font-semibold transition-all"
             >
               <Settings className="w-5 h-5 shrink-0" />
-              <span>Cài đặt</span>
+              <span>{dict.layout_admin.settings}</span>
             </Link>
 
             <Link
@@ -176,7 +178,7 @@ export default function AdminLayout({
               className="flex items-center gap-3 px-3 py-2 text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] rounded-lg font-body text-sm font-semibold transition-all"
             >
               <HelpCircle className="w-5 h-5 shrink-0" />
-              <span>Hỗ trợ</span>
+              <span>{dict.layout_admin.support}</span>
             </Link>
 
             {/* User Profile Info Card */}
@@ -191,7 +193,7 @@ export default function AdminLayout({
 
               <div className="overflow-hidden">
                 <p className="text-[#0b1c30] text-xs font-semibold truncate">
-                  Admin Hệ Thống
+                  {dict.layout_admin.admin_name}
                 </p>
                 <p className="text-[#434751] text-[10px] truncate">
                   admin@security.vn
@@ -214,16 +216,14 @@ export default function AdminLayout({
                 <Menu className="w-6 h-6" />
               </button>
 
-              {!pathname.startsWith("/service-packages") && (
-                <div className="hidden sm:flex items-center bg-[#eff4ff] rounded-full px-4 py-2 border border-[#c3c6d3] focus-within:border-secondary transition-colors w-full max-w-md">
-                  <Search className="text-[#434751] w-5 h-5 mr-2 shrink-0" />
-                  <input
-                    type="text"
-                    placeholder="Tìm kiếm đăng ký, doanh nghiệp..."
-                    className="bg-transparent border-none outline-none text-sm text-[#0b1c30] w-full placeholder-on-surface-variant"
-                  />
-                </div>
-              )}
+              <div className="hidden sm:flex items-center bg-[#eff4ff] rounded-full px-4 py-2 border border-[#c3c6d3] focus-within:border-secondary transition-colors w-full max-w-md">
+                <Search className="text-[#434751] w-5 h-5 mr-2 shrink-0" />
+                <input
+                  type="text"
+                  placeholder="Tìm kiếm đăng ký, doanh nghiệp..."
+                  className="bg-transparent border-none outline-none text-sm text-[#0b1c30] w-full placeholder-on-surface-variant"
+                />
+              </div>
             </div>
 
             {/* Right Utilities */}
@@ -259,7 +259,7 @@ export default function AdminLayout({
               <Suspense
                 fallback={
                   <div className="p-6 text-center text-sm text-on-surface-variant">
-                    Đang tải...
+                    {dict.common.loading}
                   </div>
                 }
               >
@@ -279,14 +279,14 @@ export default function AdminLayout({
                   href="#"
                   className="text-on-surface-variant hover:text-primary text-sm transition-colors"
                 >
-                  Chính sách bảo mật
+                  {dict.footer.privacy}
                 </Link>
 
                 <Link
                   href="#"
                   className="text-on-surface-variant hover:text-primary text-sm transition-colors"
                 >
-                  Điều khoản sử dụng
+                  {dict.footer.terms}
                 </Link>
               </div>
             </footer>

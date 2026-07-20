@@ -23,6 +23,7 @@ import StepPersonal from "./StepPersonal";
 import StepCompany from "./StepCompany";
 import StepReview from "./StepReview";
 import StepSignUp from "./StepSignUp";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 const generateUUID = (): string => {
   if (
@@ -109,12 +110,14 @@ export default function RegisterCompanyStepper() {
     checkAndLogout();
   }, [userId, clearAuth]);
 
+  const { dict } = useTranslation();
+
   // Steps definition for the guest registration flow (4 steps)
   const steps = [
-    "Thiết lập tài khoản",
-    "Thông tin cá nhân & CCCD",
-    "Thông tin doanh nghiệp & Giấy phép",
-    "Xác nhận & Gửi",
+    dict.pages.registration.step1_label,
+    dict.pages.registration.step2_label,
+    dict.pages.registration.step3_label,
+    dict.pages.registration.step4_label,
   ];
 
   // The form steps start at index 2 (step 2 = personal info)
@@ -469,17 +472,16 @@ export default function RegisterCompanyStepper() {
 
         <div className="space-y-2">
           <h2 className="text-2xl font-bold text-on-surface">
-            Hồ sơ đã được gửi thành công!
+            {dict.pages.registration.success_msg}
           </h2>
           <p className="text-sm text-on-surface-variant max-w-md mx-auto leading-relaxed">
-            Hồ sơ đăng ký doanh nghiệp bảo vệ của bạn đã được tiếp nhận và đưa
-            vào danh sách chờ duyệt.
+            {dict.pages.registration.success_desc}
           </p>
         </div>
 
         <div className="p-4 bg-surface-container-low border border-outline-variant/60 rounded-xl max-w-sm mx-auto">
           <span className="text-xs text-on-surface-variant block uppercase tracking-wider font-semibold mb-1">
-            Mã hồ sơ đăng ký
+            {dict.pages.registration.registration_code}
           </span>
           <span className="font-mono text-lg font-bold text-primary tracking-wider">
             {successCode}
@@ -487,9 +489,7 @@ export default function RegisterCompanyStepper() {
         </div>
 
         <p className="text-xs text-on-surface-variant/80 max-w-md mx-auto leading-relaxed">
-          * Thông thường quá trình xét duyệt hồ sơ pháp lý sẽ mất từ 1 - 2 ngày
-          làm việc. Chúng tôi sẽ gửi thông báo email cho người đại diện khi có
-          kết quả.
+          {dict.pages.registration.save_code_hint}
         </p>
 
         <div className="pt-2 flex justify-center gap-4">
@@ -497,13 +497,13 @@ export default function RegisterCompanyStepper() {
             onClick={() => router.push("/")}
             className="border border-outline-variant hover:bg-surface-container-low text-on-surface py-2.5 px-6 rounded-xl text-sm font-semibold transition-all"
           >
-            Về Trang Chủ
+            {dict.pages.registration.home}
           </button>
           <button
             onClick={() => router.push("/profile")}
             className="bg-primary hover:bg-primary-container text-white py-2.5 px-6 rounded-xl text-sm font-semibold transition-all"
           >
-            Kiểm Tra Hồ Sơ
+            {dict.pages.registration.check_profile}
           </button>
         </div>
       </div>
@@ -568,7 +568,7 @@ export default function RegisterCompanyStepper() {
                 }`}
             >
               <ArrowLeft className="w-4 h-4" />
-              <span>Quay lại</span>
+              <span>{dict.pages.registration.back}</span>
             </button>
 
             {formStep < 3 ? (
@@ -577,7 +577,7 @@ export default function RegisterCompanyStepper() {
                 onClick={handleNext}
                 className="bg-primary hover:bg-primary-container text-white py-2 px-6 rounded-lg text-sm font-semibold transition-all flex items-center gap-1 active:scale-[0.98]"
               >
-                <span>Tiếp tục</span>
+                <span>{dict.pages.registration.next}</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
             ) : (
@@ -590,11 +590,11 @@ export default function RegisterCompanyStepper() {
                 {submitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    <span>Đang gửi hồ sơ...</span>
+                    <span>{dict.pages.registration.submitting}</span>
                   </>
                 ) : (
                   <>
-                    <span>Gửi hồ sơ đăng ký</span>
+                    <span>{dict.pages.registration.submit}</span>
                     <Send className="w-4 h-4" />
                   </>
                 )}

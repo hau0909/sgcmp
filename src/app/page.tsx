@@ -6,9 +6,10 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { LANDING_PLANS } from "@/features/payment/component/plans-data";
+import { getLandingPlans } from "@/features/payment/component/plans-data";
 import { useAuthStore } from "@/store/auth.store";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   ArrowRight,
   ChartColumn,
@@ -30,6 +31,8 @@ export default function Home() {
   const userId = useAuthStore((state) => state.user_id);
   const supabase = createClient();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const { dict } = useTranslation();
+  const landingPlans = getLandingPlans(dict);
 
   const handlePlanClick = async (e: React.MouseEvent, href: string) => {
     e.preventDefault();
@@ -83,15 +86,15 @@ export default function Home() {
               {/* Left Content Column */}
               <div className="flex flex-col gap-6 md:gap-8 max-w-xl text-left">
                 <h1 className="font-sans text-[42px] leading-12.5 md:text-[56px] md:leading-16 font-extrabold text-on-surface tracking-tight">
-                  Giải pháp quản lý bảo vệ{" "}
-                  <span className="text-primary bg-clip-text">tối ưu</span>{" "}
-                  SGCMP
+                  {dict.hero.title}{" "}
+                  <span className="text-primary bg-clip-text">
+                    {dict.hero.titleAccent}
+                  </span>{" "}
+                  {dict.hero.titleSuffix}
                 </h1>
 
                 <p className="font-sans text-[16px] leading-6.5 md:text-[18px] md:leading-7 text-on-surface-variant">
-                  Tối ưu hóa quy trình điều phối, giám sát ca trực và quản lý an
-                  ninh toàn diện cho doanh nghiệp. Vận hành chuyên nghiệp, tiết
-                  kiệm chi phí với dữ liệu thời gian thực.
+                  {dict.hero.description}
                 </p>
 
                 <div className="flex flex-col sm:flex-row gap-4 pt-2">
@@ -99,14 +102,14 @@ export default function Home() {
                     className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] text-[15px] h-12"
                     href="/register-company"
                   >
-                    Bắt đầu miễn phí
+                    {dict.hero.startFree}
                     <ArrowRight />
                   </a>
                   <a
                     className="border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low font-semibold px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 text-[15px] h-12"
                     href="#tinh-nang"
                   >
-                    Xem tính năng
+                    {dict.hero.features}
                   </a>
                 </div>
               </div>
@@ -136,10 +139,10 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="font-sans text-[11px] text-outline uppercase tracking-widest font-bold mb-0.5">
-                      Trạng thái hệ thống
+                      {dict.hero.systemStatus}
                     </p>
                     <p className="font-sans text-[15px] font-bold text-on-surface">
-                      Hoạt động ổn định
+                      {dict.hero.systemStatusActive}
                     </p>
                   </div>
                 </div>
@@ -151,10 +154,10 @@ export default function Home() {
                     </div>
                     <div>
                       <p className="font-sans text-[11px] text-outline uppercase tracking-widest font-bold">
-                        Hiệu suất vận hành
+                        {dict.hero.performance}
                       </p>
                       <p className="font-sans text-[14px] font-bold text-primary">
-                        +24% tuần này
+                        {dict.hero.performanceIncrease}
                       </p>
                     </div>
                   </div>
@@ -171,12 +174,10 @@ export default function Home() {
             {/* Section Header */}
             <div className="text-center max-w-3xl mx-auto mb-20">
               <h2 className="font-sans text-[32px] md:text-[36px] font-bold text-on-surface mb-6 tracking-tight">
-                Hệ thống quản lý tập trung toàn diện
+                {dict.landing.audience_title}
               </h2>
               <p className="font-sans text-[16px] md:text-[18px] text-on-surface-variant leading-relaxed">
-                SGCMP kết nối mượt mà ba chủ thể quan trọng trong hoạt động an
-                ninh chuyên nghiệp, tạo ra một hệ sinh thái vận hành minh bạch,
-                tức thời và hiệu quả.
+                {dict.landing.audience_desc}
               </p>
             </div>
 
@@ -188,12 +189,10 @@ export default function Home() {
                   <HousePlus size={35} />
                 </div>
                 <h3 className="font-sans text-[22px] font-bold text-on-surface mb-4">
-                  Công ty bảo vệ
+                  {dict.landing.company_card_title}
                 </h3>
                 <p className="font-sans text-[15px] text-on-surface-variant leading-relaxed">
-                  Quản lý hồ sơ nhân sự tập trung, tối ưu lịch phân ca thông
-                  minh, và giám sát chấm công, hiệu suất tổng thể trực quan từ
-                  một nền tảng duy nhất.
+                  {dict.landing.company_card_desc}
                 </p>
               </div>
 
@@ -203,12 +202,10 @@ export default function Home() {
                   <UsersRound size={35} />
                 </div>
                 <h3 className="font-sans text-[22px] font-bold text-on-surface mb-4">
-                  Khách hàng thuê dịch vụ
+                  {dict.landing.customer_card_title}
                 </h3>
                 <p className="font-sans text-[15px] text-on-surface-variant leading-relaxed">
-                  Theo dõi chất lượng dịch vụ theo thời gian thực, chủ động kiểm
-                  tra báo cáo trực tuyến, gửi yêu cầu khẩn cấp và nhận thông tin
-                  báo cáo sự cố tức thời.
+                  {dict.landing.customer_card_desc}
                 </p>
               </div>
 
@@ -219,11 +216,10 @@ export default function Home() {
                 </div>
 
                 <h3 className="font-sans text-[22px] font-bold text-on-surface mb-4">
-                  Nhân viên an ninh
+                  {dict.landing.guard_card_title}
                 </h3>
                 <p className="font-sans text-[15px] text-on-surface-variant leading-relaxed">
-                  Ứng dụng di động tiện lợi cho phép check-in định vị GPS, nhận
-                  ca trực linh hoạt, ghi nhật ký số hóa và gửi ảnh hiện trường.
+                  {dict.landing.guard_card_desc}
                 </p>
               </div>
             </div>
@@ -236,11 +232,10 @@ export default function Home() {
             {/* Section Header */}
             <div className="mb-16 text-left max-w-3xl">
               <h2 className="font-sans text-[32px] md:text-[36px] font-bold text-on-surface mb-4 tracking-tight">
-                Tính năng cốt lõi vượt trội
+                {dict.landing.features_title}
               </h2>
               <p className="font-sans text-[16px] md:text-[18px] text-on-surface-variant">
-                Được thiết kế tinh tế và đồng bộ để giải quyết triệt để các
-                thách thức thực tế trong quản lý và vận hành an ninh hiện đại.
+                {dict.landing.features_desc}
               </p>
             </div>
 
@@ -254,12 +249,10 @@ export default function Home() {
                     <FileSliders size={35} />
                   </div>
                   <h3 className="font-sans text-[24px] font-bold text-on-surface mb-4">
-                    Điều phối ca trực thông minh
+                    {dict.landing.feat1_title}
                   </h3>
                   <p className="font-sans text-[15px] md:text-[16px] text-on-surface-variant mb-8 max-w-xl leading-relaxed">
-                    Giao diện kéo thả trực quan giúp quản trị viên phân bổ ca
-                    trực nhanh chóng. Tự động cảnh báo khi phát hiện trùng lịch,
-                    thiếu nhân sự tại các chốt, giúp tối ưu nguồn nhân lực.
+                    {dict.landing.feat1_desc}
                   </p>
                 </div>
 
@@ -267,21 +260,21 @@ export default function Home() {
                 <div className="mt-auto bg-white rounded-xl border border-outline-variant/20 p-5 flex flex-col gap-3 shadow-xs z-10 transition-transform duration-300 group-hover:-translate-y-0.5">
                   <div className="flex gap-3 items-center">
                     <div className="text-[12px] font-semibold text-primary w-24 bg-primary/10 py-1 px-2 rounded-md text-center">
-                      Canh giữ kho
+                      {dict.landing.feat1_ui1}
                     </div>
                     <div className="h-6 flex-1 bg-surface-container rounded-md flex items-center px-3 text-[11px] text-outline">
-                      Ca sáng: Nguyễn Văn A (06:00 - 14:00)
+                      {dict.landing.feat1_ui2}
                     </div>
                   </div>
                   <div className="flex gap-3 items-center">
                     <div className="text-[12px] font-semibold text-secondary w-24 bg-secondary/10 py-1 px-2 rounded-md text-center">
-                      Tuần Tra Sảnh
+                      {dict.landing.feat1_ui3}
                     </div>
                     <div className="h-6 w-45 bg-secondary/15 rounded-md flex items-center px-3 text-[11px] text-secondary font-medium">
-                      Ca chiều: Trần Văn B
+                      {dict.landing.feat1_ui4}
                     </div>
                     <div className="h-6 flex-1 bg-surface-container rounded-md flex items-center px-3 text-[11px] text-outline">
-                      Chưa gán nhân sự ca đêm
+                      {dict.landing.feat1_ui5}
                     </div>
                   </div>
                 </div>
@@ -294,12 +287,10 @@ export default function Home() {
                     <MapPinCheck size={35} />
                   </div>
                   <h3 className="font-sans text-[20px] font-bold text-on-surface mb-3">
-                    Xác thực vị trí &amp; hình ảnh hiện trường
+                    {dict.landing.feat2_title}
                   </h3>
                   <p className="font-sans text-[15px] text-on-surface-variant leading-relaxed mb-6">
-                    Điểm danh chính xác với thông số định vị tọa độ kết hợp chụp
-                    ảnh xác nhận tại hiện trường, chống hoàn toàn hiện tượng
-                    gian lận ngày công.
+                    {dict.landing.feat2_desc}
                   </p>
                 </div>
 
@@ -308,7 +299,7 @@ export default function Home() {
                     <Verified />
                   </div>
                   <span className="text-[13px] font-semibold text-on-surface">
-                    GPS Đã Đồng Bộ Tọa Độ
+                    {dict.landing.feat2_ui}
                   </span>
                 </div>
               </div>
@@ -320,12 +311,10 @@ export default function Home() {
                     <TriangleAlert size={35} />
                   </div>
                   <h3 className="font-sans text-[20px] font-bold text-on-surface mb-3">
-                    Gửi phản ánh
+                    {dict.landing.feat3_title}
                   </h3>
                   <p className="font-sans text-[15px] text-on-surface-variant leading-relaxed mb-6">
-                    Gửi hình ảnh chụp thực trạng, đính kèm clip hiện trường và
-                    chú thích về người điều phối nếu khách hàng có vấn đề phát
-                    sinh.
+                    {dict.landing.feat3_desc}
                   </p>
                 </div>
 
@@ -347,12 +336,10 @@ export default function Home() {
                     <ChartColumn size={35} />
                   </div>
                   <h3 className="font-sans text-[20px] font-bold text-on-surface mb-3">
-                    Phân tích & Thống kê Hiệu suất
+                    {dict.landing.feat4_title}
                   </h3>
                   <p className="font-sans text-[15px] text-on-surface-variant leading-relaxed mb-6">
-                    Bảng điều khiển (dashboard) tự động hóa kết xuất biểu đồ chi
-                    tiết theo dự án, mục tiêu chốt giữ hoặc xếp hạng chất lượng
-                    hoàn thành của từng nhân sự.
+                    {dict.landing.feat4_desc}
                   </p>
                 </div>
 
@@ -374,30 +361,30 @@ export default function Home() {
             {/* Section Header */}
             <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="font-sans text-[32px] md:text-[36px] font-bold text-on-surface mb-4 tracking-tight">
-                Bảng giá linh hoạt theo quy mô
+                {dict.landing.pricing_title}
               </h2>
               <p className="font-sans text-[16px] md:text-[18px] text-on-surface-variant">
-                Lựa chọn gói giải pháp phù hợp nhất với nhu cầu sử dụng của bạn,
-                dễ dàng nâng cấp khi doanh nghiệp mở rộng quy mô.
+                {dict.landing.pricing_desc}
               </p>
             </div>
 
             {/* Pricing Cards Grid Layout */}
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto items-stretch pt-8">
-              {LANDING_PLANS.map((plan) => {
+              {landingPlans.map((plan) => {
                 return (
                   <div
                     key={plan.id}
                     className={`bg-surface-container-lowest border rounded-3xl p-8 md:p-10 flex flex-col justify-between text-left transition-all duration-300
-                      ${plan.isPopular
-                        ? "border-2 border-primary shadow-xl transform md:-translate-y-4 relative"
-                        : "border-outline-variant/40 hover:shadow-soft"
+                      ${
+                        plan.isPopular
+                          ? "border-2 border-primary shadow-xl transform md:-translate-y-4 relative"
+                          : "border-outline-variant/40 hover:shadow-soft"
                       }`}
                   >
                     {plan.isPopular && (
                       /* Popular Badge */
                       <div className="absolute -top-4 left-1/2 transform -translate-x-1/2 bg-linear-to-r from-primary to-secondary text-white px-6 py-1.5 rounded-full font-sans text-[11px] font-bold uppercase tracking-widest shadow-md">
-                        Phổ biến nhất
+                        {dict.landing.popular_badge}
                       </div>
                     )}
 
@@ -441,15 +428,16 @@ export default function Home() {
                       onClick={(e) => handlePlanClick(e, plan.href)}
                       disabled={loadingPlan !== null}
                       className={`w-full font-semibold py-3 px-6 rounded-xl transition-all duration-300 text-[14px] h-12 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed
-                        ${plan.isPopular
-                          ? "bg-primary hover:bg-primary-container text-on-primary shadow-md hover:shadow-lg hover:scale-[1.02]"
-                          : "border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low"
+                        ${
+                          plan.isPopular
+                            ? "bg-primary hover:bg-primary-container text-on-primary shadow-md hover:shadow-lg hover:scale-[1.02]"
+                            : "border border-outline-variant hover:border-primary text-on-surface hover:bg-surface-container-low"
                         }`}
                     >
                       {loadingPlan === plan.href ? (
                         <span className="flex items-center gap-2">
                           <Loader2 className="w-4 h-4 animate-spin" />
-                          Đang kiểm tra...
+                          {dict.landing.checking_plan}
                         </span>
                       ) : (
                         plan.actionText

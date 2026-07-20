@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Briefcase, Users, Calendar, Clock, FileText } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface BookingServiceSpecProps {
   serviceName: string;
@@ -32,6 +33,8 @@ export function BookingServiceSpec({
   day_per_week = [],
   specialInstructions,
 }: BookingServiceSpecProps) {
+  const { dict } = useTranslation();
+  
   // Format start and end date labels
   const durationText = React.useMemo(() => {
     try {
@@ -62,14 +65,14 @@ export function BookingServiceSpec({
 
       <h3 className="text-base font-bold text-on-surface mb-4 flex items-center gap-2 border-b border-outline-variant/30 pb-2 font-headline">
         <Briefcase className="w-5 h-5 text-secondary" />
-        <span>Yêu cầu dịch vụ</span>
+        <span>{dict.booking.detail.spec.service_requirements || "Yêu cầu dịch vụ"}</span>
       </h3>
 
       <div className="space-y-4">
         {/* Service Name */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Loại dịch vụ
+            {dict.booking.detail.spec.service_type || "Loại dịch vụ"}
           </span>
           <span className="text-sm font-semibold text-on-surface text-primary">
             {serviceName}
@@ -79,18 +82,18 @@ export function BookingServiceSpec({
         {/* Quantity of Guards */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Số lượng bảo vệ
+            {dict.booking.detail.spec.quantity_guards || "Số lượng bảo vệ"}
           </span>
           <span className="text-sm font-semibold text-on-surface font-mono flex items-center gap-1.5">
             <Users className="w-4 h-4 text-outline-variant" />
-            {guardsCount} nhân sự
+            {guardsCount} {dict.booking.detail.spec.personnel || "nhân sự"}
           </span>
         </div>
 
         {/* Duration */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            Thời hạn thực hiện
+            {dict.booking.detail.spec.implementation_duration || "Thời hạn thực hiện"}
           </span>
           <span className="text-sm font-semibold text-on-surface font-mono flex items-center gap-1.5">
             <Calendar className="w-4 h-4 text-outline-variant" />
@@ -101,21 +104,21 @@ export function BookingServiceSpec({
         {/* Ngày làm việc trong tuần */}
         <div className="flex flex-col pt-1">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
-            Ngày làm việc trong tuần
+            {dict.booking.detail.spec.working_days || "Ngày làm việc trong tuần"}
           </span>
           <div className="flex gap-1.5 bg-surface-container-low/40 p-1.5 border border-outline-variant/60 rounded-xl max-w-sm">
-            {DAYS_OF_WEEK.map((day) => {
-              const isSelected = day_per_week.includes(day.value);
+            {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((dayValue) => {
+              const isSelected = day_per_week.includes(dayValue);
               return (
                 <div
-                  key={day.value}
+                  key={dayValue}
                   className={`flex-1 text-center py-2 text-xs font-bold rounded-lg select-none transition-all ${
                     isSelected
                       ? "bg-secondary text-white shadow-xs"
                       : "bg-surface-container-low text-on-surface-variant/40 border border-outline-variant/10"
                   }`}
                 >
-                  {day.label}
+                  {dict.booking.form.days_short[dayValue as keyof typeof dict.booking.form.days_short]}
                 </div>
               );
             })}
@@ -126,7 +129,7 @@ export function BookingServiceSpec({
         {timeSlots && timeSlots.length > 0 && (
           <div className="flex flex-col pt-1">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
-              Khung giờ thực hiện
+              {dict.booking.detail.spec.time_slots || "Khung giờ thực hiện"}
             </span>
             <div className="flex flex-wrap gap-2">
               {timeSlots.map((slot, idx) => (
@@ -146,7 +149,7 @@ export function BookingServiceSpec({
         {instructionsList.length > 0 && (
           <div className="flex flex-col pt-2 border-t border-outline-variant/30">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
-              Yêu cầu đặc biệt / Ghi chú
+              {dict.booking.detail.spec.special_instructions || "Yêu cầu đặc biệt / Ghi chú"}
             </span>
             <div className="text-xs text-on-surface-variant bg-surface-container-low/50 border border-outline-variant/30 rounded-lg p-3 leading-relaxed flex gap-2">
               <FileText className="w-4 h-4 text-outline-variant mt-0.5 shrink-0" />

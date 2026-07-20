@@ -11,52 +11,52 @@ export interface LandingPlan {
   href: string;
 }
 
-export const LANDING_PLANS: LandingPlan[] = [
+export const getLandingPlans = (dict: any): LandingPlan[] => [
   {
     id: "co-ban",
-    name: "Cơ bản",
-    description: "Hoàn hảo cho các tổ chức nhỏ quản lý dưới 20 nhân sự.",
+    name: dict.landing.plans.co_ban.name,
+    description: dict.landing.plans.co_ban.desc,
     price: "250.000",
     priceVal: 250000,
-    period: "/tháng",
+    period: dict.landing.plans.co_ban.period,
     features: [
-      "Quản lý tối đa 20 bảo vệ.",
-      "Lên lịch trực ca cơ bản",
-      "Check-in/Check-out ca làm"
+      dict.landing.plans.co_ban.f1,
+      dict.landing.plans.co_ban.f2,
+      dict.landing.plans.co_ban.f3
     ],
-    actionText: "Chọn gói Cơ bản",
+    actionText: dict.landing.plans.co_ban.action,
     href: "/billing/payment/co-ban"
   },
   {
     id: "chuyen-nghiep",
-    name: "Chuyên nghiệp",
-    description: "Giải pháp vận hành an ninh toàn diện cho các công ty quy mô tầm trung.",
+    name: dict.landing.plans.chuyen_nghiep.name,
+    description: dict.landing.plans.chuyen_nghiep.desc,
     price: "500.000",
     priceVal: 500000,
-    period: "/tháng",
+    period: dict.landing.plans.chuyen_nghiep.period,
     features: [
-      "Tất cả tính năng trong gói Cơ bản",
-      "Quản lý không giới hạn mục tiêu",
-      "Báo cáo phân tích chuyên sâu tự động",
-      "Hệ thống trao đổi với Khách hàng"
+      dict.landing.plans.chuyen_nghiep.f1,
+      dict.landing.plans.chuyen_nghiep.f2,
+      dict.landing.plans.chuyen_nghiep.f3,
+      dict.landing.plans.chuyen_nghiep.f4
     ],
     isPopular: true,
-    actionText: "Bắt đầu dùng thử",
+    actionText: dict.landing.plans.chuyen_nghiep.action,
     href: "/billing/payment/chuyen-nghiep"
   },
   {
     id: "doanh-nghiep",
-    name: "Doanh nghiệp",
-    description: "Khả năng tùy chỉnh chuyên sâu và hạ tầng chuyên biệt cho quy mô lớn.",
-    price: "Tùy chỉnh",
+    name: dict.landing.plans.doanh_nghiep.name,
+    description: dict.landing.plans.doanh_nghiep.desc,
+    price: dict.landing.plans.doanh_nghiep.price || "Tùy chỉnh",
     priceVal: 1250000, // Custom monthly equivalent (1.250.000 * 12 = 15.000.000 VNĐ total)
-    period: "",
+    period: dict.landing.plans.doanh_nghiep.period,
     features: [
-      "Máy chủ đám mây độc lập, bảo mật cao",
-      "Tích hợp API kết nối hệ thống nội bộ ERP",
-      "Hỗ trợ kỹ thuật 24/7 trực tiếp chuyên biệt"
+      dict.landing.plans.doanh_nghiep.f1,
+      dict.landing.plans.doanh_nghiep.f2,
+      dict.landing.plans.doanh_nghiep.f3
     ],
-    actionText: "Liên hệ tư vấn",
+    actionText: dict.landing.plans.doanh_nghiep.action,
     href: "/billing/payment/doanh-nghiep"
   }
 ];

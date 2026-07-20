@@ -105,13 +105,15 @@ export const getBookingDetail = async (id: string): Promise<any | null> => {
       ),
       companies (
         company_id,
+        owner_id,
         company_name,
         email,
         phone,
         address
       ),
       contracts (
-        contract_id
+        contract_id,
+        status
       )
     `)
     .eq("booking_id", id)

@@ -6,6 +6,7 @@ import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
 import Link from "next/link";
 import { CustomerContract } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CustomerContractTableProps {
   contracts: CustomerContract[];
@@ -15,30 +16,30 @@ interface CustomerContractTableProps {
   onPageChange: (page: number) => void;
 }
 
-function getStatusBadge(status: ContractStatus) {
+function getStatusBadge(status: ContractStatus, dict: any) {
   switch (status) {
     case "pending_signatures":
       return (
         <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200">
-          Chờ chữ ký
+          {dict.contract.filters.status_pending_signatures}
         </span>
       );
     case "active":
       return (
         <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200">
-          Đang hoạt động
+          {dict.contract.filters.status_active}
         </span>
       );
     case "completed":
       return (
         <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-emerald-50 text-emerald-700 border-emerald-200">
-          Đã hoàn thành
+          {dict.contract.filters.status_completed}
         </span>
       );
     case "cancelled":
       return (
         <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-slate-100 text-slate-700 border-slate-300">
-          Đã hủy
+          {dict.contract.filters.status_cancelled}
         </span>
       );
     default:
@@ -53,6 +54,8 @@ export function CustomerContractTable({
   limit,
   onPageChange,
 }: CustomerContractTableProps) {
+  const { dict } = useTranslation();
+
   const totalPages = Math.ceil(totalCount / limit) || 1;
   const startIdx = totalCount === 0 ? 0 : (page - 1) * limit + 1;
   const endIdx = Math.min(page * limit, totalCount);
@@ -64,28 +67,28 @@ export function CustomerContractTable({
           <thead>
             <tr className="bg-[#C4E2F5] border-b border-outline-variant">
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap w-14 text-center">
-                STT
+                {dict.contract.table.stt}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Mã Hợp Đồng
+                {dict.contract.table.contract_code}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Dịch Vụ
+                {dict.contract.table.service}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Công Ty
+                {dict.contract.table.company}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Ngày Tạo
+                {dict.contract.table.created_date}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Thời Hạn
+                {dict.contract.table.duration}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Trạng Thái
+                {dict.contract.table.status}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap text-right w-32">
-                Hành Động
+                {dict.contract.table.actions}
               </th>
             </tr>
           </thead>
@@ -98,8 +101,8 @@ export function CustomerContractTable({
                       <FileText className="w-7 h-7 text-outline-variant" />
                     </div>
                     <div>
-                      <p className="font-semibold text-sm text-on-surface-variant">Chưa có hợp đồng nào</p>
-                      <p className="text-xs text-on-surface-variant/70 mt-1">Các hợp đồng bảo vệ của bạn sẽ xuất hiện ở đây</p>
+                      <p className="font-semibold text-sm text-on-surface-variant">{dict.contract.table.no_data_title}</p>
+                      <p className="text-xs text-on-surface-variant/70 mt-1">{dict.contract.table.no_data_desc}</p>
                     </div>
                   </div>
                 </td>
@@ -130,14 +133,14 @@ export function CustomerContractTable({
                     {contract.end_date ? new Date(contract.end_date).toLocaleDateString("vi-VN") : "—"}
                   </td>
                   <td className="px-4 py-1.5 whitespace-nowrap">
-                    {getStatusBadge(contract.status)}
+                    {getStatusBadge(contract.status, dict)}
                   </td>
                   <td className="px-4 py-1.5 whitespace-nowrap text-right">
                     <Link
                       href={`/my-contracts/${contract.contract_id}`}
                       className="text-xs font-semibold text-secondary hover:text-primary transition-colors"
                     >
-                      Xem chi tiết
+                      {dict.contract.table.view_details}
                     </Link>
                   </td>
                 </tr>
@@ -150,8 +153,8 @@ export function CustomerContractTable({
       {/* Pagination */}
       <div className="p-3 border-t border-outline-variant bg-surface-container-lowest flex items-center justify-between text-body-sm font-body-sm text-on-surface-variant">
         <div className="text-xs">
-          Hiển thị <span className="font-semibold text-on-surface">{startIdx}–{endIdx}</span> trong{" "}
-          <span className="font-semibold text-on-surface">{totalCount}</span> kết quả
+          {dict.contract.table.showing} <span className="font-semibold text-on-surface">{startIdx}–{endIdx}</span> {dict.contract.table.in}{" "}
+          <span className="font-semibold text-on-surface">{totalCount}</span> {dict.contract.table.results}
         </div>
         <div className="flex items-center gap-1">
           <button

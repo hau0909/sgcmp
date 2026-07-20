@@ -16,6 +16,9 @@ import { requestCheckSubscription } from "@/features/subscription/api/subscripti
 import { CompanyStatus } from "@/types/Enum";
 import { Service, CompanyServiceData } from "@/features/company/types";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/components/providers/LanguageProvider";
+import { requestGetCities, requestGetWards } from "@/features/address";
+import { City, Ward } from "@/features/address/types";
 import {
   Building2,
   Mail,
@@ -73,6 +76,7 @@ type UploadedCompanyImage = {
 };
 
 export default function MyCompanyDetail() {
+  const { dict } = useTranslation();
   const { company_id } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
@@ -110,6 +114,12 @@ export default function MyCompanyDetail() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
 
+  const [cities, setCities] = useState<City[]>([]);
+  const [wards, setWards] = useState<Ward[]>([]);
+  const [editCityId, setEditCityId] = useState<number | "">("");
+  const [editWardId, setEditWardId] = useState<number | "">("");
+  const [editStreet, setEditStreet] = useState("");
+
   const [logoUrl, setLogoUrl] = useState(
     "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300",
   );
@@ -140,6 +150,46 @@ export default function MyCompanyDetail() {
   const [newServiceDesc, setNewServiceDesc] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
 
+  useEffect(() => {
+    let active = true;
+    const fetchCities = async () => {
+      try {
+        const res = await requestGetCities();
+        if (active && res?.success && res.cities) {
+          setCities(res.cities);
+        }
+      } catch (err) {
+        console.error("Failed to load cities", err);
+      }
+    };
+    fetchCities();
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    if (editCityId === "") {
+      setWards([]);
+      return;
+    }
+    const fetchWards = async () => {
+      try {
+        const res = await requestGetWards(Number(editCityId));
+        if (active && res?.success && res.wards) {
+          setWards(res.wards);
+        }
+      } catch (err) {
+        console.error("Failed to load wards", err);
+      }
+    };
+    fetchWards();
+    return () => {
+      active = false;
+    };
+  }, [editCityId]);
+
   const baseEditControlClassName =
     "w-full text-sm border rounded-lg px-3 py-2 font-semibold text-on-surface bg-surface-container-lowest outline-hidden";
 
@@ -147,13 +197,13 @@ export default function MyCompanyDetail() {
     const allowedTypes = ["image/jpeg", "image/jpg", "image/png", "image/webp"];
 
     if (!allowedTypes.includes(file.type)) {
-      throw new Error("Vui lòng chọn file ảnh định dạng JPG, PNG hoặc WEBP.");
+      throw new Error(dict.company_detail.validation.image_type);
     }
 
     const maxSize = 5 * 1024 * 1024;
 
     if (file.size > maxSize) {
-      throw new Error("Ảnh không được vượt quá 5MB.");
+      throw new Error(dict.company_detail.validation.image_size);
     }
   };
 
@@ -265,27 +315,27 @@ export default function MyCompanyDetail() {
     const trimmedAddress = address.trim();
 
     if (!trimmedFullName) {
-      nextErrors.company_name = "Vui lòng nhập tên công ty.";
+      nextErrors.company_name = dict.company_detail.validation.name_required;
     }
 
     if (!trimmedDescription) {
-      nextErrors.description = "Vui lòng nhập giới thiệu doanh nghiệp.";
+      nextErrors.description = dict.company_detail.validation.desc_required;
     }
 
     if (!trimmedEmail) {
-      nextErrors.email = "Vui lòng nhập email.";
+      nextErrors.email = dict.company_detail.validation.email_required;
     } else if (!isValidEmail(trimmedEmail)) {
-      nextErrors.email = "Email không đúng định dạng.";
+      nextErrors.email = dict.company_detail.validation.email_invalid;
     }
 
     if (!trimmedPhone) {
-      nextErrors.phone = "Vui lòng nhập số điện thoại.";
+      nextErrors.phone = dict.company_detail.validation.phone_required;
     } else if (!isValidPhone(trimmedPhone)) {
-      nextErrors.phone = "Số điện thoại phải bắt đầu bằng 0 hoặc +84.";
+      nextErrors.phone = dict.company_detail.validation.phone_invalid;
     }
 
-    if (!trimmedAddress) {
-      nextErrors.address = "Vui lòng nhập địa chỉ.";
+    if (!editStreet.trim() || editCityId === "" || editWardId === "") {
+      nextErrors.address = dict.company_detail.validation.address_required;
     }
 
     setFieldErrors(nextErrors);
@@ -309,6 +359,33 @@ export default function MyCompanyDetail() {
       phone,
     });
 
+    const parts = address.split(",").map(p => p.trim());
+    if (parts.length >= 3) {
+      const parsedCity = parts[parts.length - 1];
+      const parsedWard = parts[parts.length - 2];
+      const parsedStreet = parts.slice(0, parts.length - 2).join(", ");
+
+      const foundCity = cities.find(c => c.city_name === parsedCity);
+      if (foundCity) {
+        setEditCityId(foundCity.city_id);
+        requestGetWards(foundCity.city_id).then(res => {
+          if (res?.success && res.wards) {
+            setWards(res.wards);
+            const foundWard = res.wards.find((w: Ward) => w.ward_name === parsedWard);
+            if (foundWard) setEditWardId(foundWard.ward_id);
+          }
+        });
+      } else {
+        setEditCityId("");
+        setEditWardId("");
+      }
+      setEditStreet(parsedStreet);
+    } else {
+      setEditStreet(address);
+      setEditCityId("");
+      setEditWardId("");
+    }
+
     setFieldErrors({});
     hideToastImmediately();
     setIsEditing(true);
@@ -329,7 +406,7 @@ export default function MyCompanyDetail() {
       setAllActivityImgs(imageUrls);
     } catch (err) {
       console.error("Lỗi khi lấy hình ảnh hoạt động:", err);
-      const errMsg = err instanceof Error ? err.message : "Không thể lấy danh sách hình ảnh hoạt động.";
+      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.activity_error;
       showToast(
         "error",
         errMsg,
@@ -376,14 +453,14 @@ export default function MyCompanyDetail() {
       const imageUrl = getUploadedImageUrl(uploadedImage);
 
       if (!imageUrl) {
-        throw new Error("Không nhận được đường dẫn logo sau khi tải lên.");
+        throw new Error(dict.company_detail.messages.logo_error);
       }
 
       setLogoUrl(imageUrl);
-      showToast("success", "Cập nhật logo công ty thành công.");
+      showToast("success", dict.company_detail.messages.logo_success);
     } catch (err) {
       console.error("Lỗi khi upload logo:", err);
-      const errMsg = err instanceof Error ? err.message : "Không thể cập nhật logo công ty.";
+      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.logo_error;
       showToast("error", errMsg);
     } finally {
       setUploadingLogo(false);
@@ -411,14 +488,14 @@ export default function MyCompanyDetail() {
       const imageUrl = getUploadedImageUrl(uploadedImage);
 
       if (!imageUrl) {
-        throw new Error("Không nhận được đường dẫn ảnh bìa sau khi tải lên.");
+        throw new Error(dict.company_detail.messages.banner_error);
       }
 
       setBannerUrl(imageUrl);
-      showToast("success", "Cập nhật ảnh bìa công ty thành công.");
+      showToast("success", dict.company_detail.messages.banner_success);
     } catch (err) {
       console.error("Lỗi khi upload banner:", err);
-      const errMsg = err instanceof Error ? err.message : "Không thể cập nhật ảnh bìa công ty.";
+      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.banner_error;
       showToast("error", errMsg);
     } finally {
       setUploadingBanner(false);
@@ -454,18 +531,18 @@ export default function MyCompanyDetail() {
         .filter(Boolean);
 
       if (imageUrls.length === 0) {
-        throw new Error("Không nhận được đường dẫn hình ảnh sau khi tải lên.");
+        throw new Error(dict.company_detail.messages.activity_error);
       }
 
       setCompanyImgs((prev) => [...imageUrls, ...prev]);
 
       showToast(
         "success",
-        `Tải lên ${imageUrls.length} hình ảnh hoạt động thành công.`,
+        dict.company_detail.messages.activity_success.replace("{0}", imageUrls.length.toString()),
       );
     } catch (err) {
       console.error("Lỗi khi upload hình ảnh hoạt động:", err);
-      const errMsg = err instanceof Error ? err.message : "Không thể tải hình ảnh hoạt động.";
+      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.activity_error;
       showToast("error", errMsg);
     } finally {
       setUploadingActivity(false);
@@ -517,9 +594,13 @@ export default function MyCompanyDetail() {
     const isValid = validateEditForm();
 
     if (!isValid) {
-      showToast("error", "Vui lòng kiểm tra lại các thông tin chưa hợp lệ.");
+      showToast("error", dict.company_detail.messages.invalid_info);
       return;
     }
+
+    const selectedCity = cities.find(c => c.city_id === Number(editCityId))?.city_name || "";
+    const selectedWard = wards.find(w => w.ward_id === Number(editWardId))?.ward_name || "";
+    const newAddressStr = [editStreet.trim(), selectedWard, selectedCity].filter(Boolean).join(", ");
 
     try {
       setSaving(true);
@@ -529,7 +610,7 @@ export default function MyCompanyDetail() {
         description: description.trim(),
         email: email.trim(),
         phone: phone.trim(),
-        address: address.trim(),
+        address: newAddressStr,
       });
 
       setCompanyName(fullName.trim());
@@ -537,7 +618,7 @@ export default function MyCompanyDetail() {
       setDescription(description.trim());
       setEmail(email.trim());
       setPhone(phone.trim());
-      setAddress(address.trim());
+      setAddress(newAddressStr);
       setBusinessLicense(businessLicense.trim());
       setCompanyLicense(companyLicense.trim());
 
@@ -545,10 +626,10 @@ export default function MyCompanyDetail() {
       setEditSnapshot(null);
       setFieldErrors({});
 
-      showToast("success", "Cập nhật thông tin công ty thành công.");
+      showToast("success", dict.company_detail.messages.update_success);
     } catch (err) {
       console.error("Lỗi khi cập nhật công ty:", err);
-      const errMsg = err instanceof Error ? err.message : "Không thể cập nhật thông tin công ty.";
+      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.update_error;
       showToast(
         "error",
         errMsg,
@@ -572,10 +653,10 @@ export default function MyCompanyDetail() {
       setStatus("pending_publish");
       setIsConfirmModalOpen(false);
       setPublishNote("");
-      showToast("success", "Gửi yêu cầu công khai thành công.");
+      showToast("success", dict.company_detail.messages.publish_success);
     } catch (err) {
       console.error("Lỗi khi gửi yêu cầu công khai:", err);
-      showToast("error", "Không thể gửi yêu cầu công khai. Vui lòng thử lại.");
+      showToast("error", dict.company_detail.messages.publish_error);
     } finally {
       setSubmittingPublish(false);
     }
@@ -589,7 +670,7 @@ export default function MyCompanyDetail() {
     const numericPrice = parseInt(newServicePrice.replace(/\D/g, ""), 10);
 
     if (isNaN(numericPrice) || numericPrice <= 0) {
-      alert("Vui lòng nhập giá dịch vụ hợp lệ.");
+      alert(dict.company_detail.messages.service_price_invalid);
       return;
     }
 
@@ -612,7 +693,7 @@ export default function MyCompanyDetail() {
       setIsAddServiceOpen(false);
     } catch (err) {
       console.error("Lỗi khi thêm dịch vụ:", err);
-      const errMsg = err instanceof Error ? err.message : "Không thể thêm dịch vụ. Vui lòng thử lại.";
+      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.service_add_error;
       alert(errMsg);
     }
   };
@@ -630,7 +711,7 @@ export default function MyCompanyDetail() {
       }
     } catch (err) {
       console.error("Lỗi khi xóa dịch vụ:", err);
-      const errMsg = err instanceof Error ? err.message : "Không thể xóa dịch vụ.";
+      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.service_delete_error;
       alert(errMsg);
     }
   };
@@ -712,7 +793,7 @@ export default function MyCompanyDetail() {
       <div className="p-6 space-y-6 max-w-[1400px] mx-auto pb-16 font-sans bg-slate-50 min-h-screen text-slate-800 flex flex-col justify-center items-center">
         <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600" />
         <p className="text-xs text-slate-500 font-semibold mt-2">
-          Đang tải thông tin công ty...
+          {dict.company_detail.loading}
         </p>
       </div>
     );
@@ -750,11 +831,10 @@ export default function MyCompanyDetail() {
         <div>
           <h1 className="text-xl md:text-2xl font-extrabold text-on-surface tracking-tight flex items-center gap-2">
             <Building2 className="w-6 h-6 text-primary" />
-            QUẢN LÝ DOANH NGHIỆP
+            {dict.company_detail.header.title}
           </h1>
           <p className="text-xs md:text-sm text-on-surface-variant font-medium mt-1">
-            Cấu hình thông tin thương hiệu, hồ sơ pháp lý và danh mục dịch vụ
-            cung cấp.
+            {dict.company_detail.header.desc}
           </p>
         </div>
 
@@ -767,7 +847,7 @@ export default function MyCompanyDetail() {
                 disabled={saving}
                 className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low active:bg-surface-container-high transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <X className="w-3.5 h-3.5 text-on-surface-variant" /> Hủy
+                <X className="w-3.5 h-3.5 text-on-surface-variant" /> {dict.company_detail.buttons.cancel}
               </button>
 
               <button
@@ -777,7 +857,7 @@ export default function MyCompanyDetail() {
                 className="px-4 py-2 bg-primary hover:bg-primary/95 text-on-primary transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Save className="w-3.5 h-3.5" />
-                {saving ? "Đang lưu..." : "Lưu thay đổi"}
+                {saving ? dict.company_detail.buttons.saving : dict.company_detail.buttons.save}
               </button>
             </>
           ) : (
@@ -786,8 +866,7 @@ export default function MyCompanyDetail() {
               onClick={handleStartEdit}
               className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low active:bg-surface-container-high transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
-              <Edit className="w-3.5 h-3.5 text-on-surface-variant" /> Chỉnh sửa
-              thông tin
+              <Edit className="w-3.5 h-3.5 text-on-surface-variant" /> {dict.company_detail.buttons.edit}
             </button>
           )}
         </div>
@@ -827,37 +906,37 @@ export default function MyCompanyDetail() {
             </div>
             <div className="space-y-2">
               <h3 className="text-sm font-bold">
-                Trạng thái hoạt động:{" "}
+                {dict.company_detail.status.title}{" "}
                 {status === "published"
-                  ? "Đã công khai"
+                  ? dict.company_detail.status.published
                   : status === "pending_publish"
-                    ? "Đang chờ duyệt công khai"
+                    ? dict.company_detail.status.pending_publish
                     : status === "active"
-                      ? "Hoạt động (Chưa công khai)"
+                      ? dict.company_detail.status.active
                       : status === "pending_register"
-                        ? "Đang chờ duyệt đăng ký"
+                        ? dict.company_detail.status.pending_register
                         : status === "rejected"
-                          ? "Bị từ chối"
-                          : "Nháp"}
+                          ? dict.company_detail.status.rejected
+                          : dict.company_detail.status.draft}
               </h3>
               <p className="text-xs opacity-90 leading-relaxed">
                 {status === "published"
-                  ? "Doanh nghiệp của bạn đã được công khai trên hệ thống và khách hàng có thể tìm thấy bạn."
+                  ? dict.company_detail.status.published_desc
                   : status === "pending_publish"
-                    ? "Yêu cầu công khai đang được Admin xét duyệt. Vui lòng chờ."
+                    ? dict.company_detail.status.pending_publish_desc
                     : status === "active"
-                      ? "Hồ sơ đăng ký tài khoản đã được phê duyệt. Để gửi yêu cầu công khai doanh nghiệp lên hệ thống, vui lòng hoàn thiện các thông tin bắt buộc dưới đây:"
+                      ? dict.company_detail.status.active_desc
                       : status === "pending_register"
-                        ? "Hồ sơ đăng ký tài khoản của bạn đang được xét duyệt bởi Admin."
+                        ? dict.company_detail.status.pending_register_desc
                         : status === "rejected"
-                          ? "Yêu cầu của bạn không được phê duyệt. Vui lòng liên hệ bộ phận hỗ trợ hoặc cập nhật lại hồ sơ doanh nghiệp."
-                          : "Hồ sơ đang ở dạng nháp."}
+                          ? dict.company_detail.status.rejected_desc
+                          : dict.company_detail.status.draft_desc}
               </p>
 
               {status === "active" && (
                 <div className="bg-blue-100/50 border border-blue-200/60 rounded-xl p-3 mt-2 space-y-2 text-xs font-semibold text-blue-900 max-w-xl">
                   <h4 className="font-bold text-[13px] text-blue-950">
-                    Checklist hoàn thiện hồ sơ để công khai:
+                    {dict.company_detail.status.checklist_title}
                   </h4>
                   <ul className="space-y-1.5">
                     <li className="flex items-center gap-2">
@@ -867,8 +946,7 @@ export default function MyCompanyDetail() {
                         {hasLogo ? "✓" : "○"}
                       </span>
                       <span>
-                        Ảnh đại diện (Logo){" "}
-                        {hasLogo ? "(Đã hoàn thành)" : "(Chưa có)"}
+                        {hasLogo ? dict.company_detail.status.logo_done : dict.company_detail.status.logo_pending}
                       </span>
                     </li>
                     <li className="flex items-center gap-2">
@@ -878,8 +956,7 @@ export default function MyCompanyDetail() {
                         {hasBanner ? "✓" : "○"}
                       </span>
                       <span>
-                        Ảnh bìa (Banner){" "}
-                        {hasBanner ? "(Đã hoàn thành)" : "(Chưa có)"}
+                        {hasBanner ? dict.company_detail.status.banner_done : dict.company_detail.status.banner_pending}
                       </span>
                     </li>
                     <li className="flex items-center gap-2">
@@ -889,10 +966,9 @@ export default function MyCompanyDetail() {
                         {hasOtherImages ? "✓" : "○"}
                       </span>
                       <span>
-                        Tải lên ít nhất 2 hình ảnh hoạt động{" "}
                         {hasOtherImages
-                          ? `(Đã hoàn thành: ${companyImgs.length} ảnh)`
-                          : `(Hiện tại: ${companyImgs.length}/2 ảnh)`}
+                          ? dict.company_detail.status.activities_done.replace("{0}", companyImgs.length.toString())
+                          : dict.company_detail.status.activities_pending.replace("{0}", companyImgs.length.toString())}
                       </span>
                     </li>
                     <li className="flex items-center gap-2">
@@ -902,10 +978,9 @@ export default function MyCompanyDetail() {
                         {hasServices ? "✓" : "○"}
                       </span>
                       <span>
-                        Cấu hình ít nhất 1 dịch vụ cung cấp{" "}
                         {hasServices
-                          ? `(Đã hoàn thành: ${companyServices.length} dịch vụ)`
-                          : "(Chưa có dịch vụ nào)"}
+                          ? dict.company_detail.status.services_done.replace("{0}", companyServices.length.toString())
+                          : dict.company_detail.status.services_pending}
                       </span>
                     </li>
                     <li className="flex items-center gap-2">
@@ -915,14 +990,13 @@ export default function MyCompanyDetail() {
                         {hasActiveSubscription ? "✓" : "○"}
                       </span>
                       <span>
-                        Đăng ký gói dịch vụ hoạt động{" "}
                         {hasActiveSubscription ? (
-                          "(Đã đăng ký)"
+                          dict.company_detail.status.sub_done
                         ) : (
                           <span>
-                            (Chưa có gói hoạt động -{" "}
+                            {dict.company_detail.status.sub_pending}
                             <Link href="/billing" className="text-blue-600 hover:underline font-bold">
-                              Đăng ký ngay
+                              {dict.company_detail.status.sub_link}
                             </Link>
                             )
                           </span>
@@ -944,7 +1018,7 @@ export default function MyCompanyDetail() {
                 : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
                 }`}
             >
-              <Upload className="w-3.5 h-3.5" /> Gửi yêu cầu công khai
+              <Upload className="w-3.5 h-3.5" /> {dict.company_detail.status.submit_publish}
             </button>
           )}
         </div>
@@ -954,7 +1028,7 @@ export default function MyCompanyDetail() {
         {/* Section 1: Branding Images (Ảnh đại diện & Ảnh bìa) */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
           <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-            Hình ảnh & Thương hiệu
+            {dict.company_detail.sections.branding}
           </h2>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -983,10 +1057,10 @@ export default function MyCompanyDetail() {
 
               <div className="text-center mt-3">
                 <span className="text-xs font-bold text-on-surface">
-                  Ảnh đại diện
+                  {dict.company_detail.sections.avatar}
                 </span>
                 <p className="text-[10px] text-on-surface-variant mt-0.5">
-                  JPG, PNG, WEBP. Tối đa 5MB
+                  {dict.company_detail.sections.avatar_desc}
                 </p>
               </div>
             </div>
@@ -1013,10 +1087,10 @@ export default function MyCompanyDetail() {
 
               <div className="mt-3">
                 <span className="text-xs font-bold text-on-surface">
-                  Ảnh bìa doanh nghiệp
+                  {dict.company_detail.sections.banner}
                 </span>
                 <p className="text-[10px] text-on-surface-variant mt-0.5">
-                  Hiển thị ở phần đầu trang chi tiết của khách hàng.
+                  {dict.company_detail.sections.banner_desc}
                 </p>
               </div>
             </div>
@@ -1027,7 +1101,7 @@ export default function MyCompanyDetail() {
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
             <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-              Giới thiệu doanh nghiệp
+              {dict.company_detail.sections.intro}
             </h2>
 
             {!isEditing && (
@@ -1035,7 +1109,7 @@ export default function MyCompanyDetail() {
                 type="button"
                 onClick={handleStartEdit}
                 className="text-on-surface-variant hover:text-primary border border-outline-variant rounded-lg p-1 hover:bg-surface-container-low transition-all cursor-pointer"
-                title="Chỉnh sửa mô tả"
+                title={dict.company_detail.tooltips.edit_desc}
               >
                 <Edit className="w-3.5 h-3.5" />
               </button>
@@ -1051,7 +1125,7 @@ export default function MyCompanyDetail() {
                   setDescription(e.target.value);
                   clearFieldError("description");
                 }}
-                placeholder="Nhập giới thiệu doanh nghiệp..."
+                placeholder={dict.company_detail.sections.intro_placeholder}
                 className={getEditControlClassName(
                   "description",
                   "rounded-xl px-3.5 py-3 resize-none leading-relaxed",
@@ -1062,7 +1136,7 @@ export default function MyCompanyDetail() {
             </div>
           ) : (
             <p className="text-sm text-on-surface leading-relaxed text-justify font-medium">
-              {description || "Chưa có giới thiệu doanh nghiệp."}
+              {description || dict.company_detail.sections.intro_empty}
             </p>
           )}
         </section>
@@ -1070,13 +1144,13 @@ export default function MyCompanyDetail() {
         {/* Section 3: Thông tin chi tiết */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
           <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-            Thông tin chi tiết
+            {dict.company_detail.sections.details}
           </h2>
 
           <div className="space-y-3.5">
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <Building2 className="w-4 h-4 text-outline" /> Tên công ty
+                <Building2 className="w-4 h-4 text-outline" /> {dict.company_detail.sections.company_name}
               </span>
 
               {isEditing ? (
@@ -1102,7 +1176,7 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <FileText className="w-4 h-4 text-outline" /> Mã số đăng ký
+                <FileText className="w-4 h-4 text-outline" /> {dict.company_detail.sections.reg_code}
               </span>
 
               {isEditing ? (
@@ -1111,7 +1185,7 @@ export default function MyCompanyDetail() {
                     value={businessLicense}
                     readOnly
                     disabled
-                    placeholder="Chưa có mã số đăng ký"
+                    placeholder={dict.company_detail.sections.reg_code_empty}
                     className={`${getEditControlClassName("business_license_no")} bg-surface-variant/50 cursor-not-allowed opacity-60`}
                   />
                 </div>
@@ -1124,7 +1198,7 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <Briefcase className="w-4 h-4 text-outline" /> Mã số giấy phép
+                <Briefcase className="w-4 h-4 text-outline" /> {dict.company_detail.sections.license_code}
               </span>
 
               {isEditing ? (
@@ -1133,7 +1207,7 @@ export default function MyCompanyDetail() {
                     value={companyLicense}
                     readOnly
                     disabled
-                    placeholder="Chưa có mã số giấy phép"
+                    placeholder={dict.company_detail.sections.license_code_empty}
                     className={`${getEditControlClassName("registration_code")} bg-surface-variant/50 cursor-not-allowed opacity-60`}
                   />
                 </div>
@@ -1146,7 +1220,7 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <Mail className="w-4 h-4 text-outline" /> Email
+                <Mail className="w-4 h-4 text-outline" /> {dict.company_detail.sections.email}
               </span>
 
               {isEditing ? (
@@ -1173,7 +1247,7 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <Phone className="w-4 h-4 text-outline" /> Số điện thoại
+                <Phone className="w-4 h-4 text-outline" /> {dict.company_detail.sections.phone}
               </span>
 
               {isEditing ? (
@@ -1199,25 +1273,65 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <MapPin className="w-4 h-4 text-outline" /> Địa chỉ
+                <MapPin className="w-4 h-4 text-outline" /> {dict.company_detail.sections.address}
               </span>
 
               {isEditing ? (
-                <div className="col-span-8 space-y-1">
-                  <textarea
-                    rows={3}
-                    value={address}
-                    onChange={(e) => {
-                      setAddress(e.target.value);
-                      clearFieldError("address");
-                    }}
-                    placeholder="Nhập địa chỉ"
-                    className={getEditControlClassName(
-                      "address",
-                      "resize-none",
-                    )}
-                  />
-
+                <div className="col-span-8 space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <select
+                        value={editCityId}
+                        onChange={(e) => {
+                          setEditCityId(e.target.value === "" ? "" : Number(e.target.value));
+                          setEditWardId("");
+                          clearFieldError("address");
+                        }}
+                        className={`${getEditControlClassName("address")} appearance-none`}
+                      >
+                        <option value="" disabled className="text-slate-400 font-medium">
+                          {dict.company_detail.modals.city_placeholder}
+                        </option>
+                        {cities.map((city) => (
+                          <option key={city.city_id} value={city.city_id}>
+                            {city.city_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <select
+                        value={editWardId}
+                        onChange={(e) => {
+                          setEditWardId(e.target.value === "" ? "" : Number(e.target.value));
+                          clearFieldError("address");
+                        }}
+                        disabled={editCityId === ""}
+                        className={`${getEditControlClassName("address")} appearance-none disabled:opacity-50`}
+                      >
+                        <option value="" disabled className="text-slate-400 font-medium">
+                          {dict.company_detail.modals.ward_placeholder}
+                        </option>
+                        {wards.map((ward) => (
+                          <option key={ward.ward_id} value={ward.ward_id}>
+                            {ward.ward_name}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+                  <div>
+                    <input
+                      type="text"
+                      value={editStreet}
+                      onChange={(e) => {
+                        setEditStreet(e.target.value);
+                        clearFieldError("address");
+                      }}
+                      placeholder={dict.company_detail.modals.street_placeholder}
+                      className={getEditControlClassName("address")}
+                    />
+                  </div>
                   {renderFieldError("address")}
                 </div>
               ) : (
@@ -1232,7 +1346,7 @@ export default function MyCompanyDetail() {
         {/* Section 4: Giấy phép hoạt động (Business License Card Redesign) */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
           <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-            Hồ sơ pháp lý & Giấy phép
+            {dict.company_detail.sections.license}
           </h2>
 
           {licenseImg ? (
@@ -1255,10 +1369,10 @@ export default function MyCompanyDetail() {
 
                 <div className="space-y-1">
                   <h4 className="text-sm font-bold text-on-surface">
-                    Giấy phép hoạt động kinh doanh
+                    {dict.company_detail.sections.business_license}
                   </h4>
                   <p className="text-xs text-on-surface-variant font-medium">
-                    Tài liệu Hình ảnh • Đã tải lên
+                    {dict.company_detail.sections.license_status}
                   </p>
                 </div>
               </div>
@@ -1269,7 +1383,7 @@ export default function MyCompanyDetail() {
                   type="button"
                   onClick={() => setActiveViewerImg(licenseImg)}
                   className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface-container-low transition-all shadow-3xs cursor-pointer"
-                  title="Xem giấy phép"
+                  title={dict.company_detail.tooltips.view_license}
                 >
                   <Eye className="w-4 h-4" />
                 </button>
@@ -1278,7 +1392,7 @@ export default function MyCompanyDetail() {
                   type="button"
                   onClick={() => handleDownloadLicenseFile(licenseImg)}
                   className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-primary rounded-lg hover:bg-surface-container-low transition-all shadow-3xs cursor-pointer"
-                  title="Tải xuống giấy phép"
+                  title={dict.company_detail.tooltips.download_license}
                 >
                   <Download className="w-4 h-4" />
                 </button>
@@ -1288,11 +1402,11 @@ export default function MyCompanyDetail() {
                   onClick={() =>
                     showToast(
                       "error",
-                      "Chức năng chỉnh sửa giấy phép trực tiếp yêu cầu quyền Admin.",
+                      dict.company_detail.sections.license_admin_edit,
                     )
                   }
                   className="p-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:text-error hover:border-error/35 rounded-lg hover:bg-error/5 transition-all shadow-3xs cursor-pointer"
-                  title="Xóa giấy phép"
+                  title={dict.company_detail.tooltips.delete_license}
                 >
                   <Trash className="w-4 h-4" />
                 </button>
@@ -1304,14 +1418,14 @@ export default function MyCompanyDetail() {
                   onClick={() =>
                     showToast(
                       "error",
-                      "Để cập nhật giấy phép kinh doanh, vui lòng cập nhật trong hồ sơ đăng ký hoặc liên hệ admin.",
+                      dict.company_detail.sections.license_admin_update,
                     )
                   }
                   className="px-3.5 py-1.5 bg-primary/10 hover:bg-primary/15 text-primary transition-all text-xs font-bold rounded-lg flex items-center gap-1 cursor-pointer"
-                  title="Thay đổi file giấy phép"
+                  title={dict.company_detail.tooltips.change_license}
                 >
                   <Upload className="w-3.5 h-3.5" />
-                  Thay đổi
+                  {dict.company_detail.tooltips.change_license}
                 </button>
               </div>
             </div>
@@ -1320,7 +1434,7 @@ export default function MyCompanyDetail() {
               onClick={() =>
                 showToast(
                   "error",
-                  "Để nộp giấy phép hoạt động doanh nghiệp, vui lòng liên hệ admin.",
+                  dict.company_detail.sections.license_admin_submit,
                 )
               }
               className="border-2 border-dashed border-outline-variant/60 hover:border-primary rounded-xl p-8 text-center cursor-pointer hover:bg-surface-container-low transition-all flex flex-col items-center justify-center group"
@@ -1329,10 +1443,10 @@ export default function MyCompanyDetail() {
                 <Upload className="w-5 h-5" />
               </div>
               <span className="text-sm font-bold text-on-surface">
-                Tải lên giấy phép hoạt động
+                {dict.company_detail.sections.license_upload}
               </span>
               <p className="text-xs text-on-surface-variant mt-1">
-                Hồ sơ giấy phép hoạt động cần được phê duyệt bởi ban quản trị.
+                {dict.company_detail.sections.license_upload_desc}
               </p>
             </div>
           )}
@@ -1342,7 +1456,7 @@ export default function MyCompanyDetail() {
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center border-b border-outline-variant/60 pb-2">
             <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-              Hình ảnh hoạt động
+              {dict.company_detail.sections.activities}
             </h2>
 
             <div className="flex items-center gap-3">
@@ -1351,7 +1465,7 @@ export default function MyCompanyDetail() {
                 onClick={handleOpenActivityGallery}
                 className="text-[11px] transition-all duration-300 font-bold text-on-surface-variant hover:text-primary hover:underline flex items-center gap-0.5 cursor-pointer"
               >
-                Xem thêm
+                {dict.company_detail.sections.view_more}
               </button>
             </div>
           </div>
@@ -1380,7 +1494,7 @@ export default function MyCompanyDetail() {
                     handleRemoveActivityImage(index);
                   }}
                   className="absolute top-1.5 right-1.5 rounded-full bg-surface-container-lowest/90 p-1 text-on-surface-variant opacity-0 shadow-sm transition-all hover:text-error group-hover:opacity-100 cursor-pointer"
-                  title="Xóa ảnh khỏi giao diện"
+                  title={dict.company_detail.tooltips.delete_image}
                 >
                   <X className="h-3 w-3" />
                 </button>
@@ -1407,7 +1521,7 @@ export default function MyCompanyDetail() {
 
           {companyImgs.length === 0 && (
             <p className="text-xs text-on-surface-variant font-medium text-center py-4">
-              Chưa có hình ảnh hoạt động.
+              {dict.company_detail.modals.gallery_empty}
             </p>
           )}
         </section>
@@ -1416,7 +1530,7 @@ export default function MyCompanyDetail() {
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center border-b border-outline-variant/60 pb-4">
             <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-              Dịch vụ cung cấp
+              {dict.company_detail.sections.services}
             </h2>
 
             <button
@@ -1424,7 +1538,7 @@ export default function MyCompanyDetail() {
               onClick={() => setIsAddServiceOpen(true)}
               className="px-3.5 py-1.5 border border-primary/20 bg-primary/10 hover:bg-primary/15 text-primary active:bg-primary/25 transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer font-sans"
             >
-              <Plus className="w-3.5 h-3.5" /> Thêm dịch vụ
+              <Plus className="w-3.5 h-3.5" /> {dict.company_detail.sections.add_service}
             </button>
           </div>
 
@@ -1489,7 +1603,7 @@ export default function MyCompanyDetail() {
                       colSpan={3}
                       className="py-8 text-center text-sm text-on-surface-variant font-medium"
                     >
-                      Chưa có dịch vụ nào được đăng ký
+                      {dict.company_detail.sections.no_services}
                     </td>
                   </tr>
                 )}
@@ -1517,7 +1631,7 @@ export default function MyCompanyDetail() {
                 className={`text-xs font-extrabold uppercase tracking-wide ${toast.type === "success" ? "text-green-700" : "text-red-600"
                   }`}
               >
-                {toast.type === "success" ? "Thành công" : "Thất bại"}
+                {toast.type === "success" ? dict.company_detail.toast.success : dict.company_detail.toast.failed}
               </p>
 
               <p className="mt-1 text-sm font-semibold text-slate-700 leading-relaxed">
@@ -1542,11 +1656,11 @@ export default function MyCompanyDetail() {
             <div className="flex items-center justify-between border-b border-slate-100 px-5 py-4">
               <div>
                 <h3 className="text-sm font-extrabold uppercase tracking-wide text-slate-800">
-                  Tất cả hình ảnh hoạt động
+                  {dict.company_detail.modals.gallery_title}
                 </h3>
 
                 <p className="mt-0.5 text-xs font-medium text-slate-400">
-                  {allActivityImgs.length} hình ảnh
+                  {dict.company_detail.modals.gallery_count.replace("{0}", allActivityImgs.length.toString())}
                 </p>
               </div>
 
@@ -1595,7 +1709,7 @@ export default function MyCompanyDetail() {
               ) : (
                 <div className="flex h-full items-center justify-center">
                   <p className="text-sm font-semibold text-slate-400">
-                    Chưa có hình ảnh hoạt động.
+                    {dict.company_detail.modals.gallery_empty}
                   </p>
                 </div>
               )}
@@ -1609,7 +1723,7 @@ export default function MyCompanyDetail() {
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl p-6 space-y-4 font-sans">
             <div className="flex justify-between items-center border-b border-slate-100 pb-3">
               <h3 className="text-sm font-bold text-slate-800 uppercase tracking-wider">
-                Thêm dịch vụ cung cấp
+                {dict.company_detail.modals.add_service_title}
               </h3>
 
               <button
@@ -1624,7 +1738,7 @@ export default function MyCompanyDetail() {
             <form onSubmit={handleAddService} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase">
-                  Tên dịch vụ *
+                  {dict.company_detail.modals.service_name}
                 </label>
 
                 <div className="relative">
@@ -1639,7 +1753,7 @@ export default function MyCompanyDetail() {
                       disabled
                       className="text-slate-400 font-medium"
                     >
-                      --- Chọn dịch vụ ---
+                      {dict.company_detail.modals.select_service}
                     </option>
 
                     {availableServices.map((s) => (
@@ -1661,7 +1775,7 @@ export default function MyCompanyDetail() {
                 {newServiceId && (
                   <p className="text-[11px] text-slate-500 italic mt-1 font-medium bg-slate-50 border border-slate-100 rounded-lg p-2.5 leading-normal">
                     <span className="font-bold not-italic text-slate-600">
-                      Ý nghĩa:{" "}
+                      {dict.company_detail.modals.service_meaning}
                     </span>
                     {
                       availableServices.find(
@@ -1674,21 +1788,21 @@ export default function MyCompanyDetail() {
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase">
-                  Mô tả dịch vụ
+                  {dict.company_detail.modals.service_desc_label}
                 </label>
 
                 <textarea
                   rows={3}
                   value={newServiceDesc}
                   onChange={(e) => setNewServiceDesc(e.target.value)}
-                  placeholder="Nhập mô tả chi tiết dịch vụ..."
+                  placeholder={dict.company_detail.modals.service_desc_placeholder}
                   className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium resize-none"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase">
-                  Giá dịch vụ *
+                  {dict.company_detail.modals.service_price_label}
                 </label>
 
                 <input
@@ -1696,7 +1810,7 @@ export default function MyCompanyDetail() {
                   required
                   value={newServicePrice}
                   onChange={(e) => setNewServicePrice(e.target.value)}
-                  placeholder="Ví dụ: 5.000.000đ"
+                  placeholder={dict.company_detail.modals.service_price_placeholder}
                   className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium"
                 />
               </div>
@@ -1707,14 +1821,14 @@ export default function MyCompanyDetail() {
                   onClick={() => setIsAddServiceOpen(false)}
                   className="px-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl transition-all cursor-pointer"
                 >
-                  Hủy bỏ
+                  {dict.company_detail.sections.cancel}
                 </button>
 
                 <button
                   type="submit"
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
                 >
-                  Thêm dịch vụ
+                  {dict.company_detail.modals.add_service_btn}
                 </button>
               </div>
             </form>
@@ -1751,7 +1865,7 @@ export default function MyCompanyDetail() {
             <div className="flex items-center justify-between pb-2 border-b border-outline-variant">
               <h3 className="text-base font-extrabold text-on-surface flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-primary" />
-                Xác nhận gửi yêu cầu công khai
+                {dict.company_detail.modals.publish_title}
               </h3>
               <button
                 type="button"
@@ -1764,20 +1878,18 @@ export default function MyCompanyDetail() {
 
             <div className="space-y-3">
               <p className="text-xs text-on-surface-variant font-medium leading-relaxed">
-                Khi gửi yêu cầu công khai, thông tin doanh nghiệp và các dịch vụ
-                của bạn sẽ được gửi tới Ban quản trị hệ thống để xét duyệt trước
-                khi hiển thị công khai trên trang Tìm kiếm.
+                {dict.company_detail.modals.publish_desc}
               </p>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-on-surface">
-                  Ghi chú gửi Admin (tùy chọn)
+                  {dict.company_detail.modals.note_label}
                 </label>
                 <textarea
                   rows={3}
                   value={publishNote}
                   onChange={(e) => setPublishNote(e.target.value)}
-                  placeholder="Nhập ghi chú hoặc lời nhắn gửi ban quản trị nếu có..."
+                  placeholder={dict.company_detail.modals.note_placeholder}
                   className="w-full text-sm border border-outline-variant rounded-xl px-3 py-2 font-medium text-on-surface bg-surface-container-lowest focus:border-primary focus:ring-1 focus:ring-primary/20 outline-hidden resize-none"
                 />
               </div>
@@ -1790,7 +1902,7 @@ export default function MyCompanyDetail() {
                 disabled={submittingPublish}
                 className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low transition-all text-xs font-bold rounded-xl cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                Hủy
+                {dict.company_detail.sections.cancel}
               </button>
               <button
                 type="button"
@@ -1798,7 +1910,7 @@ export default function MyCompanyDetail() {
                 disabled={submittingPublish}
                 className="px-4 py-2 bg-primary hover:bg-primary/95 text-on-primary font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {submittingPublish ? "Đang gửi..." : "Xác nhận gửi"}
+                {submittingPublish ? dict.company_detail.modals.sending : dict.company_detail.modals.confirm_send}
               </button>
             </div>
           </div>
