@@ -19,6 +19,9 @@ import {
   X,
   Globe,
   Landmark,
+  BadgeDollarSign,
+  Layers,
+  Package,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useTranslation } from "@/components/providers/LanguageProvider";
@@ -56,11 +59,40 @@ export default function AdminLayout({
     },
 
     {
+      name: "Lịch sử thanh toán",
+      href: "/payment-history",
+      icon: BadgeDollarSign,
+      active:
+        pathname === "/payment-history" ||
+        pathname.startsWith("/payment-history/"),
+    },
+    {
+      name: "Dịch vụ",
+      href: "/services",
+      icon: Layers,
+      active: pathname === "/services" || pathname.startsWith("/services/"),
+    },
+
+    {
       name: dict.layout_admin.bank_accounts,
       href: "/bank-accounts",
       icon: Landmark,
       active:
         pathname === "/bank-accounts" || pathname.startsWith("/bank-accounts/"),
+    },
+    {
+      name: "Quản lý tài khoản",
+      href: "/accounts",
+      icon: Users,
+      active: pathname === "/accounts" || pathname.startsWith("/accounts/"),
+    },
+    {
+      name: "Quản lý gói dịch vụ",
+      href: "/service-packages",
+      icon: Package,
+      active:
+        pathname === "/service-packages" ||
+        pathname.startsWith("/service-packages/"),
     },
   ];
 
@@ -188,7 +220,7 @@ export default function AdminLayout({
                 <Search className="text-[#434751] w-5 h-5 mr-2 shrink-0" />
                 <input
                   type="text"
-                  placeholder={dict.layout_admin.search_placeholder}
+                  placeholder="Tìm kiếm đăng ký, doanh nghiệp..."
                   className="bg-transparent border-none outline-none text-sm text-[#0b1c30] w-full placeholder-on-surface-variant"
                 />
               </div>

@@ -20,6 +20,9 @@ import {
   UserCircle,
   LogOut,
   ChevronDown,
+  ArrowRightLeft,
+  Search,
+  Bell,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
 import { useSubscriptionStore } from "@/store/subscription.store";
@@ -314,12 +317,37 @@ export default function CompanyLayout({
             </div>
 
             {/* Right Header Options */}
-            <div className="flex items-center gap-2 relative">
+            <div className="flex items-center gap-4 relative">
+              {isActive && (
+                <Link
+                  href="/schedules"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary text-on-secondary hover:bg-secondary/90 transition-colors mr-2 animate-fade-in"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  {dict.layout_company.switch_to_coordinator || "Chuyển sang điều phối"}
+                </Link>
+              )}
+              {/* Search Box */}
+              <div className="hidden sm:flex items-center bg-surface-container-low rounded-full px-3 py-1.5 border border-outline-variant focus-within:border-secondary transition-colors">
+                <Search className="w-4 h-4 text-on-surface-variant mr-2" />
+                <input
+                  type="text"
+                  placeholder={dict.common?.search || "Search..."}
+                  className="bg-transparent border-none outline-none text-sm text-on-surface w-32 focus:w-48 transition-all duration-300 placeholder-on-surface-variant"
+                />
+              </div>
+
+              {/* Notification */}
+              <button className="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low relative">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full" />
+              </button>
+
               {/* User Dropdown Trigger */}
               <button
                 type="button"
                 onClick={() => setUserDropdownOpen((prev) => !prev)}
-                className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-outline-variant hover:border-primary hover:bg-surface-container-low transition-all duration-200 cursor-pointer"
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-outline-variant hover:border-primary hover:bg-surface-container-low transition-all duration-200 cursor-pointer ml-2"
               >
                 {userProfile?.avatar_url ? (
                   <img

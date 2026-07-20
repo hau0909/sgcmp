@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense } from "react";
-import { ShieldAlert, ArrowLeft, LogOut } from "lucide-react";
+import { ShieldAlert, ArrowLeft, LogOut, Mail, Unlock } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
 import { useTranslation } from "@/components/providers/LanguageProvider";
@@ -15,6 +15,7 @@ function UnauthorizedContent() {
   const { dict } = useTranslation();
 
   const isInactive = reason === "inactive";
+  const isBanned = reason === "banned";
 
   const handleGoBack = () => {
     router.back();
@@ -41,31 +42,47 @@ function UnauthorizedContent() {
 
         {/* Title */}
         <h1 className="text-2xl font-bold tracking-tight text-slate-900 sm:text-3xl">
-          {isInactive ? dict.pages.unauthorized.inactive_title : dict.pages.unauthorized.access_denied_title}
+          {isBanned
+            ? (dict.pages.unauthorized.banned_title || "Tài khoản đã bị khóa")
+            : isInactive
+              ? dict.pages.unauthorized.inactive_title
+              : dict.pages.unauthorized.access_denied_title}
         </h1>
 
         {/* Description */}
         <p className="mt-4 text-sm leading-relaxed text-slate-600">
-          {isInactive
-            ? dict.pages.unauthorized.inactive_desc
-            : dict.pages.unauthorized.no_access_desc}
+          {isBanned
+            ? (dict.pages.unauthorized.banned_desc || "Tài khoản của bạn đã bị khóa bởi quản trị viên. Vui lòng liên hệ hỗ trợ để biết thêm chi tiết.")
+            : isInactive
+              ? dict.pages.unauthorized.inactive_desc
+              : dict.pages.unauthorized.no_access_desc}
         </p>
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">
-          <button
-            type="button"
-            onClick={handleGoBack}
-            className="flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            <span>{dict.pages.unauthorized.go_back}</span>
-          </button>
+          {isBanned ? (
+            <button
+              type="button"
+              className="whitespace-nowrap flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+            >
+              <Unlock className="h-4 w-4" />
+              <span>{dict.pages.unauthorized.unlock_account || "Gỡ khóa tài khoản"}</span>
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handleGoBack}
+              className="whitespace-nowrap flex items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 transition cursor-pointer"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              <span>{dict.pages.unauthorized.go_back}</span>
+            </button>
+          )}
 
           <button
             type="button"
             onClick={handleLogout}
-            className="flex items-center justify-center gap-2 rounded-lg bg-blue-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900 transition"
+            className="whitespace-nowrap flex items-center justify-center gap-2 rounded-lg bg-blue-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-blue-900 transition cursor-pointer"
           >
             <LogOut className="h-4 w-4" />
             <span>{dict.pages.unauthorized.logout_login}</span>

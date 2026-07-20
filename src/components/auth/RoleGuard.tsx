@@ -84,6 +84,11 @@ export default function RouteGuard({
           return;
         }
 
+        if (profile.status === "banned") {
+          router.replace("/unauthorized?reason=banned");
+          return;
+        }
+
         if (profile.status !== "active") {
           router.replace("/unauthorized?reason=inactive");
           return;
