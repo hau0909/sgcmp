@@ -1,6 +1,8 @@
 import { Booking, BookingWithCustomerProfile, BookingStatus } from "../types";
 import { getBookings, getBookingDetail, getBookingById, createBooking, updateBookingStatusAndPrice, getCustomerBookings, getActiveBookingsByAddressAndService } from "../repository/booking.repository";
 import { formatAddressService } from "@/features/address/service/address.service";
+import { validateBookingUpdateStatusData } from "../validator/booking.validator";
+import { checkTimeOverlap, checkDateOverlap } from "@/utils/calcTime";
 import { getProfileByUserIdService } from "@/features/profile/service/profile.service";
 
 
@@ -147,26 +149,7 @@ export const createBookingService = async (
 
   const activeBookings = await getActiveBookingsByAddressAndService(bookingData.address, bookingData.service_id);
 
-  const checkTimeOverlap = (slot1: string, slot2: string) => {
-    const [s1, e1] = slot1.split(" - ");
-    const [s2, e2] = slot2.split(" - ");
 
-    const timeToMins = (t: string) => {
-      const [h, m] = t.trim().split(":").map(Number);
-      return h * 60 + m;
-    };
-
-    const start1 = timeToMins(s1);
-    const end1 = timeToMins(e1);
-    const start2 = timeToMins(s2);
-    const end2 = timeToMins(e2);
-
-    return Math.max(start1, start2) < Math.min(end1, end2);
-  };
-
-  const checkDateOverlap = (start1: string, end1: string, start2: string, end2: string) => {
-    return new Date(start1) <= new Date(end2) && new Date(end1) >= new Date(start2);
-  };
 
   const overlappingBookings = [];
 
@@ -205,12 +188,7 @@ export const updateBookingStatusAndPriceService = async (
   bookingId: string,
   updates: { status: BookingStatus; quoted_price?: number }
 ): Promise<{ booking: Booking; contract_id?: string }> => {
-  if (updates.status !== "quoted" && updates.status !== "rejected" && updates.status !== "accepted" && updates.status !== "canceled") {
-    throw new Error("Trạng thái cập nhật không hợp lệ.");
-  }
-  if (updates.status === "quoted" && (updates.quoted_price === undefined || updates.quoted_price <= 0)) {
-    throw new Error("Giá báo phải lớn hơn 0 VND.");
-  }
+  validateBookingUpdateStatusData(updates.status, updates.quoted_price);
   return await updateBookingStatusAndPrice(bookingId, updates);
 };
 
