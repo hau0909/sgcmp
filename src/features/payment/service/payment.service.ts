@@ -17,8 +17,17 @@ import {
   deactivateBankAccount,
   countBankAccounts,
   deleteBankAccount,
+  getAllPaymentsAdmin,
+  getPaymentSummaryAdmin,
 } from "../repository/payment.repository";
-import { UpsertBankAccountPayload } from "../types";
+import {
+  UpsertBankAccountPayload,
+  GetAllPaymentsAdminOptions,
+  PaginatedPayments,
+  PaymentWithCompany,
+  PaymentSummaryAdminOptions,
+  PaymentSummaryAdminResult,
+} from "../types";
 import {
   createSubscription,
   activateSubscription,
@@ -164,22 +173,42 @@ export const handleSePayWebhookService = async (payload: any): Promise<boolean> 
     console.log("No transaction code found in content:", content);
     return false;
   }
-  
+
   const transactionCode = match[0];
   const payment = await getPaymentByTransactionCode(transactionCode);
-  
+
   if (!payment) {
     console.log("Payment not found for transaction code:", transactionCode);
     return false;
   }
-  
+
   if (payment.payment_status === "pending" && transferAmount >= payment.amount) {
     await updatePaymentStatusService(payment.payment_id, "completed");
     return true;
   }
-  
+
   console.log(`Webhook condition not met. Transfer: ${transferAmount}, Expected: ${payment.amount}, Status: ${payment.payment_status}`);
   return false;
+};
+
+// ─── Admin ───────────────────────────────────────────────────────────────────
+
+export const getAllPaymentsAdminService = async (): Promise<PaymentWithCompany[]> => {
+  return await getAllPaymentsAdmin();
+};
+
+export const getPaymentSummaryAdminService = async (
+  options: PaymentSummaryAdminOptions = {},
+): Promise<PaymentSummaryAdminResult> => {
+  return await getPaymentSummaryAdmin(options);
+};
+
+export {
+  type GetAllPaymentsAdminOptions,
+  type PaginatedPayments,
+  type PaymentWithCompany,
+  type PaymentSummaryAdminOptions,
+  type PaymentSummaryAdminResult,
 };
 
 // ─── Bank Account ────────────────────────────────────────────────────────────

@@ -1,6 +1,7 @@
 "use client";
 
 import React from "react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export interface CompanyServiceProp {
   name: string;
@@ -13,31 +14,32 @@ interface CompanyDetailServicesProps {
   services: CompanyServiceProp[];
 }
 
-const formatPrice = (price: string | number) => {
+const formatPrice = (price: string | number, fromLabel: string) => {
   if (typeof price === "number") {
-    return `Từ ${price.toLocaleString("vi-VN")}đ`;
+    return `${fromLabel} ${price.toLocaleString("vi-VN")}đ`;
   }
   return price;
 };
 
 export default function CompanyDetailServices({ services }: CompanyDetailServicesProps) {
+  const { dict } = useTranslation();
   return (
     <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs">
       <h2 className="text-headline-sm font-semibold text-on-surface mb-4 uppercase tracking-wider text-[12px] border-b border-outline-variant pb-2">
-        Dịch vụ chính
+        {dict.customer.company_detail.services_title}
       </h2>
       <div className="overflow-x-auto -mx-6 px-6">
         <table className="w-full border-collapse text-left min-w-[600px]">
           <thead>
             <tr className="border-b border-outline-variant bg-surface-container/30">
               <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider w-1/3">
-                Tên dịch vụ
+                {dict.customer.company_detail.col_service_name}
               </th>
               <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider w-[57%]">
-                Mô tả
+                {dict.customer.company_detail.col_desc}
               </th>
               <th className="px-4 py-3 text-[11px] font-bold text-on-surface-variant uppercase tracking-wider w-[10%]">
-                Giá dịch vụ
+                {dict.customer.company_detail.col_price}
               </th>
             </tr>
           </thead>
@@ -56,7 +58,7 @@ export default function CompanyDetailServices({ services }: CompanyDetailService
                   {service.description}
                 </td>
                 <td className="px-4 py-4 text-body-sm font-semibold text-primary align-top whitespace-nowrap">
-                  {formatPrice(service.price)}
+                  {formatPrice(service.price, dict.customer.company_detail.from_price)}
                 </td>
               </tr>
             ))}

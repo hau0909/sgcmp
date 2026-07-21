@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { ChevronLeft, ChevronRight, MoreVertical } from "lucide-react";
 import { Booking, BookingStatus } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface BookingTableProps {
   bookings: Booking[];
@@ -14,36 +15,36 @@ interface BookingTableProps {
   viewMode?: "company" | "customer";
 }
 
-function getStatusBadge(status: BookingStatus) {
+function getStatusBadge(status: BookingStatus, dict: any) {
   switch (status) {
     case "pending":
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200">
-          Mới
+          {dict.booking.filters.status_pending}
         </span>
       );
     case "quoted":
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-700 border-amber-200">
-          Đã báo giá
+          {dict.booking.filters.status_quoted}
         </span>
       );
     case "accepted":
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-emerald-50 text-emerald-700 border-emerald-200">
-          Đã duyệt
+          {dict.booking.filters.status_accepted}
         </span>
       );
     case "rejected":
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-red-50 text-red-700 border-red-200">
-          Từ chối
+          {dict.booking.filters.status_rejected}
         </span>
       );
     case "canceled":
       return (
         <span className="inline-flex items-center px-2 py-0.5 rounded border text-[10px] font-bold uppercase tracking-wider bg-slate-50 text-slate-700 border-slate-200">
-          Đã hủy
+          {dict.booking.filters.status_canceled}
         </span>
       );
     default:
@@ -60,6 +61,8 @@ export function BookingTable({
   onViewDetails,
   viewMode = "company",
 }: BookingTableProps) {
+  const { dict } = useTranslation();
+
   const totalPages = Math.ceil(totalCount / limit) || 1;
   const startIdx = totalCount === 0 ? 0 : (page - 1) * limit + 1;
   const endIdx = Math.min(page * limit, totalCount);
@@ -71,28 +74,28 @@ export function BookingTable({
           <thead>
             <tr className="bg-[#C4E2F5] border-b border-outline-variant">
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap w-16 text-center">
-                STT
+                {dict.booking.table.stt}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Mã Booking
+                {dict.booking.table.booking_code}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                {viewMode === "customer" ? "Doanh nghiệp" : "Khách hàng"}
+                {viewMode === "customer" ? dict.booking.table.company : dict.booking.table.customer}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Dịch vụ
+                {dict.booking.table.service}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Bảo vệ
+                {dict.booking.table.guards}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
-                Ngày Thực hiện
+                {dict.booking.table.execution_date}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap ">
-                Trạng thái
+                {dict.booking.table.status}
               </th>
               <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap text-right w-32">
-                Hành Động
+                {dict.booking.table.actions}
               </th>
             </tr>
           </thead>
@@ -103,7 +106,7 @@ export function BookingTable({
                   colSpan={8}
                   className="py-8 text-center text-on-surface-variant/80 font-medium bg-surface-bright"
                 >
-                  Không tìm thấy yêu cầu dịch vụ nào.
+                  {dict.booking.table.no_data}
                 </td>
               </tr>
             ) : (
@@ -129,27 +132,27 @@ export function BookingTable({
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap font-semibold text-on-surface">
                       {viewMode === "customer"
-                        ? (booking.company_name || "Doanh nghiệp bảo vệ")
-                        : (booking.customer_name || "Khách hàng doanh nghiệp")}
+                        ? (booking.company_name || dict.booking.table.default_company || "Doanh nghiệp bảo vệ")
+                        : (booking.customer_name || dict.booking.table.default_customer || "Khách hàng doanh nghiệp")}
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap font-medium text-on-surface-variant">
-                      {booking.service_name || "Dịch vụ chưa xác định"}
+                      {booking.service_name || dict.booking.table.default_service || "Dịch vụ chưa xác định"}
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap font-mono font-medium text-on-surface-variant">
-                      {booking.guards_per_slot} Nhân sự
+                      {booking.guards_per_slot} {dict.booking.table.personnel || "Nhân sự"}
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap font-mono text-on-surface-variant">
                       {displayDates}
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap text-start">
-                      {getStatusBadge(booking.status)}
+                      {getStatusBadge(booking.status, dict)}
                     </td>
                     <td className="px-4 py-1.5 whitespace-nowrap text-right">
                       <button
                         onClick={() => onViewDetails?.(booking.booking_id)}
                         className="text-xs font-semibold text-secondary hover:text-primary transition-colors cursor-pointer"
                       >
-                        Xem chi tiết
+                        {dict.booking.table.view_details}
                       </button>
                     </td>
                   </tr>
@@ -163,7 +166,7 @@ export function BookingTable({
       {/* Pagination Footer */}
       <div className="p-3 border-t border-outline-variant bg-surface-container-lowest flex items-center justify-between text-body-sm font-body-sm text-on-surface-variant">
         <div>
-          Hiển thị {startIdx}-{endIdx} trong {totalCount} kết quả
+          {dict.booking.table.showing} {startIdx}-{endIdx} / {totalCount} {dict.booking.table.results}
         </div>
         <div className="flex items-center gap-1">
           <button

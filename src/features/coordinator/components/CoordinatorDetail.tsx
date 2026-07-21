@@ -19,11 +19,18 @@ import {
   X,
   AlertCircle,
   Camera,
-  CheckCircle2
+  CheckCircle2,
 } from "lucide-react";
-import { requestGetCoordinatorDetail, requestUpdateCoordinator } from "../api/coordinator.api";
-import { requestGetCities, requestGetWards } from "@/features/address/api/address.api";
+import {
+  requestGetCoordinatorDetail,
+  requestUpdateCoordinator,
+} from "../api/coordinator.api";
+import {
+  requestGetCities,
+  requestGetWards,
+} from "@/features/address/api/address.api";
 import { UpdateCoordinatorPayload, City, Ward } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   validateCoordinatorFullName,
   validateCoordinatorPhone,
@@ -50,7 +57,9 @@ function SectionCard({
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] overflow-hidden">
       <div className="flex items-center gap-2 px-5 py-3 border-b border-outline-variant bg-surface-container-lowest">
-        <span className="text-primary w-4 h-4 flex items-center justify-center">{icon}</span>
+        <span className="text-primary w-4 h-4 flex items-center justify-center">
+          {icon}
+        </span>
         <h3 className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">
           {title}
         </h3>
@@ -71,59 +80,72 @@ function FieldError({ msg }: { msg?: string }) {
 }
 
 // Display/Edit widget for Field Values
-function FieldDisplay({ 
-  label, 
-  value, 
-  isEditing, 
+function FieldDisplay({
+  label,
+  value,
+  isEditing,
   onChange,
   type = "text",
   options,
   disabled = false,
-  error
-}: { 
-  label: string, 
-  value: string | React.ReactNode, 
-  isEditing?: boolean,
-  onChange?: (val: string) => void,
-  type?: "text" | "date" | "select",
-  options?: {label: string, value: string | number}[],
-  disabled?: boolean,
-  error?: string
+  error,
+}: {
+  label: string;
+  value: string | React.ReactNode;
+  isEditing?: boolean;
+  onChange?: (val: string) => void;
+  type?: "text" | "date" | "select";
+  options?: { label: string; value: string | number }[];
+  disabled?: boolean;
+  error?: string;
 }) {
+  const { dict } = useTranslation();
   return (
     <div className="flex flex-col gap-1.5">
-      <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">{label}</span>
+      <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+        {label}
+      </span>
       {isEditing ? (
         type === "select" ? (
-          <select 
-            value={value as string || ""} 
+          <select
+            value={(value as string) || ""}
             onChange={(e) => onChange?.(e.target.value)}
             disabled={disabled}
             className={`w-full px-3 py-2 min-h-[38px] bg-surface-container-low/30 border focus:outline-none focus:ring-1 rounded-lg text-sm font-medium text-on-surface outline-none disabled:opacity-50 transition-all ${
-              error 
-                ? "border-error focus:border-error focus:ring-error/30" 
+              error
+                ? "border-error focus:border-error focus:ring-error/30"
                 : "border-outline-variant/60 focus:border-primary focus:ring-primary"
             }`}
           >
-            <option value="">Chọn một tùy chọn</option>
-            {options?.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+            <option value="">
+              {dict.coordinator?.select_option || "Chọn một tùy chọn"}
+            </option>
+            {options?.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label}
+              </option>
+            ))}
           </select>
         ) : (
-          <input 
+          <input
             type={type}
-            value={value as string || ""}
+            value={(value as string) || ""}
             onChange={(e) => onChange?.(e.target.value)}
             disabled={disabled}
             className={`w-full px-3 py-2 min-h-[38px] bg-surface-container-low/30 border focus:outline-none focus:ring-1 rounded-lg text-sm font-medium text-on-surface disabled:opacity-50 transition-all ${
-              error 
-                ? "border-error focus:border-error focus:ring-error/30" 
+              error
+                ? "border-error focus:border-error focus:ring-error/30"
                 : "border-outline-variant/60 focus:border-primary focus:ring-primary"
             }`}
           />
         )
       ) : (
         <div className="w-full px-3 py-2 min-h-[38px] bg-surface-container-low/30 border border-outline-variant/50 rounded-lg text-sm font-medium text-on-surface flex items-center">
-          {value || <span className="text-on-surface-variant/50 italic">Đang cập nhật</span>}
+          {value || (
+            <span className="text-on-surface-variant/50 italic">
+              {dict?.coordinator?.field_updating || "Đang cập nhật"}
+            </span>
+          )}
         </div>
       )}
       <FieldError msg={error} />
@@ -131,9 +153,14 @@ function FieldDisplay({
   );
 }
 
-export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: string }) {
+export default function CoordinatorDetail({
+  coordinatorId,
+}: {
+  coordinatorId: string;
+}) {
   const router = useRouter();
   const supabase = createClient();
+  const { dict } = useTranslation();
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -144,7 +171,7 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
   // States for editing
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   // Extend payload internally with temp fields
   interface internalEditPayload extends Partial<UpdateCoordinatorPayload> {
     city_id?: string | number;
@@ -173,7 +200,7 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
   const handleImageChange = (
     e: React.ChangeEvent<HTMLInputElement>,
     setFile: React.Dispatch<React.SetStateAction<File | null>>,
-    setPreview: React.Dispatch<React.SetStateAction<string>>
+    setPreview: React.Dispatch<React.SetStateAction<string>>,
   ) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -182,12 +209,18 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
     }
   };
 
-  const uploadToStorage = async (file: File, bucket: string, path: string): Promise<string> => {
+  const uploadToStorage = async (
+    file: File,
+    bucket: string,
+    path: string,
+  ): Promise<string> => {
     const { data, error } = await supabase.storage
       .from(bucket)
       .upload(path, file, { cacheControl: "3600", upsert: true });
     if (error) throw new Error(`Upload lỗi: ${error.message}`);
-    const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(data.path);
+    const {
+      data: { publicUrl },
+    } = supabase.storage.from(bucket).getPublicUrl(data.path);
     return publicUrl;
   };
 
@@ -212,9 +245,9 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
 
   // Load wards when city changes during edit
   useEffect(() => {
-    if (!editForm.city_id || editForm.city_id === "") { 
-      setWards([]); 
-      return; 
+    if (!editForm.city_id || editForm.city_id === "") {
+      setWards([]);
+      return;
     }
     setWardsLoading(true);
     requestGetWards(Number(editForm.city_id))
@@ -223,9 +256,11 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
         setWards(loadedWards);
         // Match pending ward name if resolving after initial parse
         if (pendingWardName) {
-          const matchWard = loadedWards.find((w: Ward) => w.ward_name === pendingWardName);
+          const matchWard = loadedWards.find(
+            (w: Ward) => w.ward_name === pendingWardName,
+          );
           if (matchWard) {
-            setEditForm(prev => ({ ...prev, ward_id: matchWard.ward_id }));
+            setEditForm((prev) => ({ ...prev, ward_id: matchWard.ward_id }));
           }
           setPendingWardName("");
         }
@@ -236,26 +271,29 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
 
   const handleEditToggle = () => {
     if (!data) return;
-    
+
     // Parse address logic using ", " separator
     const rawAddress = data.profiles?.address || "";
     let initialStreet = rawAddress;
     let initialCityId: number | string = "";
     let initialWardId: number | string = "";
-    
+
     const parts = rawAddress.split(", ").map((s: string) => s.trim());
     if (parts.length >= 2 && cities.length > 0) {
       const pCity = parts[parts.length - 1];
-      const matchCity = cities.find(c => c.city_name === pCity);
+      const matchCity = cities.find((c) => c.city_name === pCity);
       if (matchCity) {
         initialCityId = matchCity.city_id;
         if (parts.length >= 3) {
           const pWard = parts[parts.length - 2];
           initialStreet = parts.slice(0, parts.length - 2).join(", ");
-          
+
           // If cities match, we might already have the wards loaded
-          if (String(editForm.city_id) === String(initialCityId) && wards.length > 0) {
-            const matchWard = wards.find(w => w.ward_name === pWard);
+          if (
+            String(editForm.city_id) === String(initialCityId) &&
+            wards.length > 0
+          ) {
+            const matchWard = wards.find((w) => w.ward_name === pWard);
             if (matchWard) initialWardId = matchWard.ward_id;
           } else {
             setPendingWardName(pWard);
@@ -271,7 +309,7 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
       phoneNumber: data.profiles?.phone_number || "",
       gender: data.profiles?.gender || "",
       dateOfBirth: data.profiles?.date_of_birth || "",
-      address: data.profiles?.address || "", 
+      address: data.profiles?.address || "",
       city_id: initialCityId,
       ward_id: initialWardId,
       street: initialStreet,
@@ -298,7 +336,7 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
   const handleSaveEdit = async () => {
     try {
       setErrors({});
-      
+
       // -- Bắt đầu Client Validation toàn bộ form --
       const newErrors: Record<string, string> = {};
 
@@ -314,10 +352,14 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
       const ageErr = validateCoordinatorAge(editForm.dateOfBirth || "");
       if (ageErr) newErrors.dateOfBirth = ageErr;
 
-      const cityErr = validateCoordinatorCity(editForm.city_id ? Number(editForm.city_id) : "");
+      const cityErr = validateCoordinatorCity(
+        editForm.city_id ? Number(editForm.city_id) : "",
+      );
       if (cityErr) newErrors.city_id = cityErr;
 
-      const wardErr = validateCoordinatorWard(editForm.ward_id ? Number(editForm.ward_id) : "");
+      const wardErr = validateCoordinatorWard(
+        editForm.ward_id ? Number(editForm.ward_id) : "",
+      );
       if (wardErr) newErrors.ward_id = wardErr;
 
       const streetErr = validateCoordinatorStreet(editForm.street || "");
@@ -326,7 +368,10 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
       const idErr = validateIdentityNumber(editForm.identityId || "");
       if (idErr) newErrors.identityId = idErr;
 
-      const dateErr = validateIdentityIssueDate(editForm.issueDate || "", editForm.dateOfBirth || "");
+      const dateErr = validateIdentityIssueDate(
+        editForm.issueDate || "",
+        editForm.dateOfBirth || "",
+      );
       if (dateErr) newErrors.issueDate = dateErr;
 
       const placeErr = validateIdentityIssuePlace(editForm.issuePlace || "");
@@ -336,13 +381,21 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
         setErrors(newErrors);
         return;
       }
-      
+
       setIsSaving(true);
-      
-      const cityObj = cities.find((c) => c.city_id === Number(editForm.city_id));
+
+      const cityObj = cities.find(
+        (c) => c.city_id === Number(editForm.city_id),
+      );
       const wardObj = wards.find((w) => w.ward_id === Number(editForm.ward_id));
-      const fullAddress = [editForm.street, wardObj?.ward_name, cityObj?.city_name].filter(Boolean).join(", ");
-      
+      const fullAddress = [
+        editForm.street,
+        wardObj?.ward_name,
+        cityObj?.city_name,
+      ]
+        .filter(Boolean)
+        .join(", ");
+
       const ext = (f: File) => f.name.split(".").pop()?.toLowerCase() || "jpg";
       const userId = data.profiles.user_id;
 
@@ -350,9 +403,24 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
       let fUrl = "";
       let bUrl = "";
 
-      if (avatarFile) aUrl = await uploadToStorage(avatarFile, "profiles", `${userId}/avatar.${ext(avatarFile)}`);
-      if (frontFile) fUrl = await uploadToStorage(frontFile, "profiles", `${userId}/identity/front.${ext(frontFile)}`);
-      if (backFile) bUrl = await uploadToStorage(backFile, "profiles", `${userId}/identity/back.${ext(backFile)}`);
+      if (avatarFile)
+        aUrl = await uploadToStorage(
+          avatarFile,
+          "profiles",
+          `${userId}/avatar.${ext(avatarFile)}`,
+        );
+      if (frontFile)
+        fUrl = await uploadToStorage(
+          frontFile,
+          "profiles",
+          `${userId}/identity/front.${ext(frontFile)}`,
+        );
+      if (backFile)
+        bUrl = await uploadToStorage(
+          backFile,
+          "profiles",
+          `${userId}/identity/back.${ext(backFile)}`,
+        );
 
       const finalPayload: UpdateCoordinatorPayload = {
         fullName: editForm.fullName || "",
@@ -400,8 +468,17 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
     return (
       <div className="flex-1 p-6 lg:p-8 max-w-[1440px] mx-auto w-full">
         <div className="p-4 bg-error/10 text-error rounded-xl border border-error/20 flex flex-col items-center justify-center py-12">
-          <p className="font-semibold text-lg">{error || "Không tìm thấy Điều phối viên"}</p>
-          <button onClick={() => router.back()} className="mt-4 px-4 py-2 bg-surface text-on-surface shadow-sm border border-outline-variant hover:bg-surface-container rounded-lg">Quay lại</button>
+          <p className="font-semibold text-lg">
+            {error ||
+              dict.coordinator?.detail_not_found ||
+              "Không tìm thấy Điều phối viên"}
+          </p>
+          <button
+            onClick={() => router.back()}
+            className="mt-4 px-4 py-2 bg-surface text-on-surface shadow-sm border border-outline-variant hover:bg-surface-container rounded-lg"
+          >
+            {dict.coordinator?.detail_go_back || "Quay lại"}
+          </button>
         </div>
       </div>
     );
@@ -412,14 +489,26 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
 
   const getStatusConfig = (status: string) => {
     switch (status?.toLowerCase()) {
-      case 'hoạt động':
-      case 'active':
-        return { text: 'Hoạt động', bg: 'bg-[#bbf7d0]', color: 'text-[#166534]' };
-      case 'tạm khóa':
-      case 'locked':
-        return { text: 'Tạm khóa', bg: 'bg-[#fef08a]', color: 'text-[#854d0e]' };
+      case "hoạt động":
+      case "active":
+        return {
+          text: dict.coordinator?.status_text_active || "Hoạt động",
+          bg: "bg-[#bbf7d0]",
+          color: "text-[#166534]",
+        };
+      case "tạm khóa":
+      case "locked":
+        return {
+          text: dict.coordinator?.status_text_locked || "Tạm khóa",
+          bg: "bg-[#fef08a]",
+          color: "text-[#854d0e]",
+        };
       default:
-        return { text: 'Vô hiệu hóa', bg: 'bg-[#fecaca]', color: 'text-[#991b1b]' };
+        return {
+          text: dict.coordinator?.status_text_disabled || "Vô hiệu hóa",
+          bg: "bg-[#fecaca]",
+          color: "text-[#991b1b]",
+        };
     }
   };
   const status = getStatusConfig(profile.status);
@@ -433,16 +522,17 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
           className="inline-flex items-center gap-1.5 text-body-sm font-body-sm text-on-surface-variant hover:text-primary transition-colors w-fit mb-1 cursor-pointer"
         >
           <ArrowLeft className="w-[15px] h-[15px]" />
-          Quay lại danh sách
+          {dict.coordinator?.detail_back || "Quay lại danh sách"}
         </button>
-        
+
         <div className="flex items-center justify-between mt-1">
           <div>
             <h2 className="text-2xl font-bold text-primary tracking-tight font-headline">
-              Chi tiết Điều phối viên
+              {dict.coordinator?.detail_title || "Chi tiết Điều phối viên"}
             </h2>
             <p className="text-sm text-on-surface-variant mt-0.5 font-body">
-              Xem toàn bộ thông tin hồ sơ của điều phối viên.
+              {dict.coordinator?.detail_desc ||
+                "Xem toàn bộ thông tin hồ sơ của điều phối viên."}
             </p>
           </div>
           <div className="flex gap-3">
@@ -454,7 +544,7 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
                   className="px-4 py-2 flex items-center gap-2 rounded-lg bg-surface-container text-on-surface font-semibold text-sm hover:bg-surface-container-low transition-colors disabled:opacity-50"
                 >
                   <X className="w-4 h-4" />
-                  Hủy
+                  {dict.coordinator?.detail_cancel || "Hủy"}
                 </button>
                 <button
                   onClick={handleSaveEdit}
@@ -466,7 +556,7 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  Lưu thay đổi
+                  {dict.coordinator?.detail_save || "Lưu thay đổi"}
                 </button>
               </>
             ) : (
@@ -476,7 +566,7 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
                 className="px-4 py-2 flex items-center gap-2 rounded-lg bg-primary/10 text-primary font-semibold text-sm hover:bg-primary/20 transition-colors"
               >
                 <Edit2 className="w-4 h-4" />
-                Chỉnh sửa hồ sơ
+                {dict.coordinator?.detail_edit || "Chỉnh sửa hồ sơ"}
               </button>
             )}
           </div>
@@ -491,25 +581,38 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
             <div className="w-10 h-10 border-4 border-primary/20 border-t-primary rounded-full animate-spin" />
           </div>
         )}
-        
+
         {/* Left Column: Profile Card */}
         <div className="lg:col-span-1 flex flex-col gap-6">
           <div className="border border-outline-variant rounded-2xl bg-surface-container-lowest p-6 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] flex flex-col relative">
-            
             {/* Avatar & Name */}
             <div className="flex flex-col items-center mt-2">
-              <div 
+              <div
                 className={`w-24 h-24 rounded-full border-[3px] border-surface-container flex items-center justify-center overflow-hidden bg-primary/10 text-primary text-4xl font-bold mb-4 shadow-sm ring-1 ring-outline-variant/30 ${isEditing ? "cursor-pointer hover:border-primary transition-colors" : ""}`}
                 onClick={() => isEditing && avatarInputRef.current?.click()}
               >
                 {avatarPreview || profile.avatar_url ? (
-                  <img src={avatarPreview || profile.avatar_url} alt="avatar" className="w-full h-full object-cover" />
+                  <img
+                    src={avatarPreview || profile.avatar_url}
+                    alt="avatar"
+                    className="w-full h-full object-cover"
+                  />
                 ) : (
-                  (isEditing ? editForm.fullName : profile.full_name)?.charAt(0).toUpperCase() || "?"
+                  (isEditing ? editForm.fullName : profile.full_name)
+                    ?.charAt(0)
+                    .toUpperCase() || "?"
                 )}
               </div>
-              <input type="file" accept="image/*" className="hidden" ref={avatarInputRef} onChange={(e) => handleImageChange(e, setAvatarFile, setAvatarPreview)} />
-              
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                ref={avatarInputRef}
+                onChange={(e) =>
+                  handleImageChange(e, setAvatarFile, setAvatarPreview)
+                }
+              />
+
               {isEditing ? (
                 <div className="w-full mb-1.5 flex flex-col items-center">
                   <input
@@ -520,7 +623,9 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
                       setErrors({ ...errors, fullName: "" });
                     }}
                     className={`w-full text-center text-xl font-bold text-on-surface bg-transparent border-b-2 outline-none px-2 py-1 transition-all ${
-                      errors.fullName ? "border-error focus:border-error" : "border-primary/50 focus:border-primary"
+                      errors.fullName
+                        ? "border-error focus:border-error"
+                        : "border-primary/50 focus:border-primary"
                     }`}
                     placeholder="Họ và tên"
                   />
@@ -531,10 +636,12 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
                   {profile.full_name}
                 </h2>
               )}
-              
+
               {/* Status Inline */}
               <div className="flex items-center justify-center gap-2 mb-6">
-                <span className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold tracking-wider ${status.bg} ${status.color}`}>
+                <span
+                  className={`px-2 py-0.5 rounded-md text-[10px] uppercase font-bold tracking-wider ${status.bg} ${status.color}`}
+                >
                   {status.text}
                 </span>
               </div>
@@ -550,35 +657,51 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
                   <Phone className="w-4 h-4 text-on-surface-variant" />
                 </div>
                 <div className="flex flex-col w-full flex-1">
-                  <span className="text-[10px] uppercase font-bold text-on-surface-variant">Số điện thoại</span>
+                  <span className="text-[10px] uppercase font-bold text-on-surface-variant">
+                    {dict.coordinator?.field_phone || "Số điện thoại"}
+                  </span>
                   {isEditing ? (
                     <div className="w-full flex flex-col gap-1">
                       <input
                         type="tel"
                         value={editForm.phoneNumber || ""}
                         onChange={(e) => {
-                          setEditForm({...editForm, phoneNumber: e.target.value});
-                          setErrors({...errors, phoneNumber: ""});
+                          setEditForm({
+                            ...editForm,
+                            phoneNumber: e.target.value,
+                          });
+                          setErrors({ ...errors, phoneNumber: "" });
                         }}
                         className={`text-sm font-semibold font-mono text-primary w-full bg-transparent border-b outline-none transition-all ${
-                          errors.phoneNumber ? "border-error focus:border-error" : "border-primary/50 focus:border-primary"
+                          errors.phoneNumber
+                            ? "border-error focus:border-error"
+                            : "border-primary/50 focus:border-primary"
                         }`}
                       />
                       <FieldError msg={errors.phoneNumber} />
                     </div>
                   ) : (
-                    <span className="text-sm font-semibold font-mono text-primary">{profile.phone_number || "---"}</span>
+                    <span className="text-sm font-semibold font-mono text-primary">
+                      {profile.phone_number || "---"}
+                    </span>
                   )}
                 </div>
               </div>
-              
+
               <div className="flex items-center gap-3 p-3 rounded-xl bg-surface-container-low/40 border border-outline-variant/40">
                 <div className="w-8 h-8 rounded-full bg-surface-bright flex items-center justify-center shrink-0 border border-outline-variant/20 shadow-sm">
                   <Mail className="w-4 h-4 text-on-surface-variant" />
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-[10px] uppercase font-bold text-on-surface-variant">Email</span>
-                  <span className="text-sm font-medium break-all text-on-surface-variant/70 italic cursor-not-allowed" title="Không thể thay đổi email">{profile.email || "---"}</span>
+                  <span className="text-[10px] uppercase font-bold text-on-surface-variant">
+                    {dict.coordinator?.field_email || "Email"}
+                  </span>
+                  <span
+                    className="text-sm font-medium break-all text-on-surface-variant/70 italic cursor-not-allowed"
+                    title="Không thể thay đổi email"
+                  >
+                    {profile.email || "---"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -587,38 +710,52 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
 
         {/* Right Column: Detailed Sections */}
         <div className="lg:col-span-2 space-y-6">
-          
           {/* Thông tin cá nhân */}
-          <SectionCard icon={<User />} title="Thông tin cá nhân">
+          <SectionCard
+            icon={<User />}
+            title={dict.coordinator?.section_personal || "Thông tin cá nhân"}
+          >
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <FieldDisplay 
-                label="Giới tính" 
+              <FieldDisplay
+                label={dict.coordinator?.field_gender || "Giới tính"}
                 isEditing={isEditing}
                 error={errors.gender}
-                value={isEditing ? editForm.gender : (
-                  profile.gender?.toLowerCase() === "male" || profile.gender?.toLowerCase() === "nam" ? "Nam" : 
-                  profile.gender?.toLowerCase() === "female" || profile.gender?.toLowerCase() === "nữ" ? "Nữ" : 
-                  profile.gender || "---"
-                )}
+                value={
+                  isEditing
+                    ? editForm.gender
+                    : profile.gender?.toLowerCase() === "male" ||
+                        profile.gender?.toLowerCase() === "nam"
+                      ? "Nam"
+                      : profile.gender?.toLowerCase() === "female" ||
+                          profile.gender?.toLowerCase() === "nữ"
+                        ? "Nữ"
+                        : profile.gender || "---"
+                }
                 onChange={(val) => {
-                  setEditForm({...editForm, gender: val});
-                  setErrors({...errors, gender: ""});
+                  setEditForm({ ...editForm, gender: val });
+                  setErrors({ ...errors, gender: "" });
                 }}
                 type="select"
                 options={[
-                  { label: "Nam", value: "Nam" },
-                  { label: "Nữ", value: "Nữ" }
+                  {
+                    label: dict.coordinator?.gender_male || "Nam",
+                    value: "Nam",
+                  },
+                  {
+                    label: dict.coordinator?.gender_female || "Nữ",
+                    value: "Nữ",
+                  },
                 ]}
               />
-              <FieldDisplay 
-                label="Ngày sinh" 
+              <FieldDisplay
+                label={dict.coordinator?.field_dob || "Ngày sinh"}
                 isEditing={isEditing}
                 error={errors.dateOfBirth}
                 type="date"
-                value={isEditing ? editForm.dateOfBirth : profile.date_of_birth} 
+                value={isEditing ? editForm.dateOfBirth : profile.date_of_birth}
                 onChange={(val) => {
-                  setEditForm({...editForm, dateOfBirth: val});
-                  setErrors({...errors, dateOfBirth: ""});
+                  setEditForm({ ...editForm, dateOfBirth: val });
+                  setErrors({ ...errors, dateOfBirth: "" });
                 }}
               />
 
@@ -626,48 +763,57 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
               <div className="sm:col-span-2 mt-2">
                 {isEditing ? (
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    <FieldDisplay 
-                      label="Tỉnh / Thành phố" 
+                    <FieldDisplay
+                      label={dict.coordinator?.field_city || "Tỉnh / Thành phố"}
                       isEditing={isEditing}
                       error={errors.city_id}
                       value={editForm.city_id || ""}
                       onChange={(val) => {
-                        setEditForm({...editForm, city_id: val, ward_id: ""});
-                        setErrors({...errors, city_id: ""});
+                        setEditForm({ ...editForm, city_id: val, ward_id: "" });
+                        setErrors({ ...errors, city_id: "" });
                       }}
                       type="select"
-                      options={cities.map(c => ({ label: c.city_name, value: c.city_id }))}
+                      options={cities.map((c) => ({
+                        label: c.city_name,
+                        value: c.city_id,
+                      }))}
                     />
-                    <FieldDisplay 
-                      label="Phường / Xã" 
+                    <FieldDisplay
+                      label={dict.coordinator?.field_ward || "Phường / Xã"}
                       isEditing={isEditing}
                       error={errors.ward_id}
                       value={editForm.ward_id || ""}
                       onChange={(val) => {
-                        setEditForm({...editForm, ward_id: val});
-                        setErrors({...errors, ward_id: ""});
+                        setEditForm({ ...editForm, ward_id: val });
+                        setErrors({ ...errors, ward_id: "" });
                       }}
                       type="select"
                       disabled={!editForm.city_id || wardsLoading}
-                      options={wards.map(w => ({ label: w.ward_name, value: w.ward_id }))}
+                      options={wards.map((w) => ({
+                        label: w.ward_name,
+                        value: w.ward_id,
+                      }))}
                     />
                     <div className="sm:col-span-2">
-                      <FieldDisplay 
-                        label="Địa chỉ chi tiết (số nhà, đường)" 
+                      <FieldDisplay
+                        label={
+                          dict.coordinator?.field_street ||
+                          "Địa chỉ chi tiết (số nhà, đường)"
+                        }
                         isEditing={isEditing}
                         error={errors.street}
-                        value={editForm.street || ""} 
+                        value={editForm.street || ""}
                         onChange={(val) => {
-                          setEditForm({...editForm, street: val});
-                          setErrors({...errors, street: ""});
+                          setEditForm({ ...editForm, street: val });
+                          setErrors({ ...errors, street: "" });
                         }}
                       />
                     </div>
                   </div>
                 ) : (
-                  <FieldDisplay 
-                    label="Địa chỉ liên hệ" 
-                    value={profile.address} 
+                  <FieldDisplay
+                    label={dict.coordinator?.field_address || "Địa chỉ liên hệ"}
+                    value={profile.address}
                   />
                 )}
               </div>
@@ -675,42 +821,59 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
           </SectionCard>
 
           {/* Thông tin định danh & Ảnh CCCD */}
-          <SectionCard icon={<CreditCard />} title="Thông tin định danh (CCCD/CMND)">
+          <SectionCard
+            icon={<CreditCard />}
+            title={
+              dict.coordinator?.section_identity ||
+              "Thông tin định danh (CCCD/CMND)"
+            }
+          >
             <div className="flex flex-col gap-6">
-              
               {/* Phần Text */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <div className="sm:col-span-1">
-                  <FieldDisplay 
-                    label="Số thẻ CCCD / CMND" 
+                  <FieldDisplay
+                    label={
+                      dict.coordinator?.field_id_number || "Số thẻ CCCD / CMND"
+                    }
                     isEditing={isEditing}
                     error={errors.identityId}
-                    value={isEditing ? editForm.identityId : (identity?.identity_id ? <span className="font-mono text-primary font-bold tracking-wider">{identity.identity_id}</span> : "")} 
+                    value={
+                      isEditing ? (
+                        editForm.identityId
+                      ) : identity?.identity_id ? (
+                        <span className="font-mono text-primary font-bold tracking-wider">
+                          {identity.identity_id}
+                        </span>
+                      ) : (
+                        ""
+                      )
+                    }
                     onChange={(val) => {
-                      setEditForm({...editForm, identityId: val});
-                      setErrors({...errors, identityId: ""});
+                      setEditForm({ ...editForm, identityId: val });
+                      setErrors({ ...errors, identityId: "" });
                     }}
                   />
                 </div>
-                <FieldDisplay 
-                  label="Ngày cấp" 
+                <FieldDisplay
+                  label={dict.coordinator?.field_issue_date || "Ngày cấp"}
                   type="date"
                   isEditing={isEditing}
                   error={errors.issueDate}
-                  value={isEditing ? editForm.issueDate : identity.issue_date} 
+                  value={isEditing ? editForm.issueDate : identity.issue_date}
                   onChange={(val) => {
-                    setEditForm({...editForm, issueDate: val});
-                    setErrors({...errors, issueDate: ""});
+                    setEditForm({ ...editForm, issueDate: val });
+                    setErrors({ ...errors, issueDate: "" });
                   }}
                 />
-                <FieldDisplay 
-                  label="Nơi cấp" 
+                <FieldDisplay
+                  label={dict.coordinator?.field_issue_place || "Nơi cấp"}
                   isEditing={isEditing}
                   error={errors.issuePlace}
-                  value={isEditing ? editForm.issuePlace : identity.issue_place} 
+                  value={isEditing ? editForm.issuePlace : identity.issue_place}
                   onChange={(val) => {
-                    setEditForm({...editForm, issuePlace: val});
-                    setErrors({...errors, issuePlace: ""});
+                    setEditForm({ ...editForm, issuePlace: val });
+                    setErrors({ ...errors, issuePlace: "" });
                   }}
                 />
               </div>
@@ -720,81 +883,108 @@ export default function CoordinatorDetail({ coordinatorId }: { coordinatorId: st
               {/* Phần Ảnh */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                 <div className="flex flex-col gap-1.5">
-                  <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Mặt trước CCCD</span>
+                  <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                    {dict.coordinator?.field_id_front || "Mặt trước CCCD"}
+                  </span>
                   <div className="w-full relative aspect-[1.6] rounded-xl border border-outline-variant overflow-hidden bg-surface-container-low flex items-center justify-center">
                     {frontPreview || identity.front_url ? (
-                      <div 
-                        className={`w-full h-full p-0.5 relative group ${isEditing ? 'cursor-pointer' : ''}`}
-                        onClick={() => isEditing && frontInputRef.current?.click()}
+                      <div
+                        className={`w-full h-full p-0.5 relative group ${isEditing ? "cursor-pointer" : ""}`}
+                        onClick={() =>
+                          isEditing && frontInputRef.current?.click()
+                        }
                       >
-                        <img 
-                          src={frontPreview || identity.front_url} 
-                          alt="CCCD Front" 
+                        <img
+                          src={frontPreview || identity.front_url}
+                          alt="CCCD Front"
                           className="w-full h-full object-cover rounded-lg"
                         />
                         {isEditing && (
-                           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer">
-                              <Camera className="w-8 h-8 text-white" />
-                           </div>
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer">
+                            <Camera className="w-8 h-8 text-white" />
+                          </div>
                         )}
                       </div>
+                    ) : isEditing ? (
+                      <div
+                        className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container transition-colors"
+                        onClick={() => frontInputRef.current?.click()}
+                      >
+                        <ImageIcon className="w-6 h-6 text-on-surface-variant/50 mb-1" />
+                        <span className="text-sm font-semibold text-primary">
+                          {dict.coordinator?.upload_front ||
+                            "Tải lên mặt trước"}
+                        </span>
+                      </div>
                     ) : (
-                      isEditing ? (
-                        <div 
-                          className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container transition-colors"
-                          onClick={() => frontInputRef.current?.click()}
-                        >
-                           <ImageIcon className="w-6 h-6 text-on-surface-variant/50 mb-1" />
-                           <span className="text-sm font-semibold text-primary">Tải lên mặt trước</span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-on-surface-variant/50 font-medium">Chưa cập nhật ảnh</span>
-                      )
+                      <span className="text-sm text-on-surface-variant/50 font-medium">
+                        {dict.coordinator?.no_image || "Chưa cập nhật ảnh"}
+                      </span>
                     )}
                   </div>
-                  <input type="file" accept="image/*" className="hidden" ref={frontInputRef} onChange={(e) => handleImageChange(e, setFrontFile, setFrontPreview)} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={frontInputRef}
+                    onChange={(e) =>
+                      handleImageChange(e, setFrontFile, setFrontPreview)
+                    }
+                  />
                 </div>
 
                 <div className="flex flex-col gap-1.5">
-                  <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">Mặt sau CCCD</span>
+                  <span className="block text-[11px] font-bold text-on-surface-variant uppercase tracking-wider">
+                    {dict.coordinator?.field_id_back || "Mặt sau CCCD"}
+                  </span>
                   <div className="w-full relative aspect-[1.6] rounded-xl border border-outline-variant overflow-hidden bg-surface-container-low flex items-center justify-center">
                     {backPreview || identity.back_url ? (
-                      <div 
-                        className={`w-full h-full p-0.5 relative group ${isEditing ? 'cursor-pointer' : ''}`}
-                        onClick={() => isEditing && backInputRef.current?.click()}
+                      <div
+                        className={`w-full h-full p-0.5 relative group ${isEditing ? "cursor-pointer" : ""}`}
+                        onClick={() =>
+                          isEditing && backInputRef.current?.click()
+                        }
                       >
-                        <img 
-                          src={backPreview || identity.back_url} 
-                          alt="CCCD Back" 
+                        <img
+                          src={backPreview || identity.back_url}
+                          alt="CCCD Back"
                           className="w-full h-full object-cover rounded-lg"
                         />
                         {isEditing && (
-                           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer">
-                              <Camera className="w-8 h-8 text-white" />
-                           </div>
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity rounded-lg cursor-pointer">
+                            <Camera className="w-8 h-8 text-white" />
+                          </div>
                         )}
                       </div>
+                    ) : isEditing ? (
+                      <div
+                        className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container transition-colors"
+                        onClick={() => backInputRef.current?.click()}
+                      >
+                        <ImageIcon className="w-6 h-6 text-on-surface-variant/50 mb-1" />
+                        <span className="text-sm font-semibold text-primary">
+                          {dict.coordinator?.upload_back || "Tải lên mặt sau"}
+                        </span>
+                      </div>
                     ) : (
-                      isEditing ? (
-                        <div 
-                          className="w-full h-full flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container transition-colors"
-                          onClick={() => backInputRef.current?.click()}
-                        >
-                           <ImageIcon className="w-6 h-6 text-on-surface-variant/50 mb-1" />
-                           <span className="text-sm font-semibold text-primary">Tải lên mặt sau</span>
-                        </div>
-                      ) : (
-                        <span className="text-sm text-on-surface-variant/50 font-medium">Chưa cập nhật ảnh</span>
-                      )
+                      <span className="text-sm text-on-surface-variant/50 font-medium">
+                        {dict.coordinator?.no_image || "Chưa cập nhật ảnh"}
+                      </span>
                     )}
                   </div>
-                  <input type="file" accept="image/*" className="hidden" ref={backInputRef} onChange={(e) => handleImageChange(e, setBackFile, setBackPreview)} />
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    ref={backInputRef}
+                    onChange={(e) =>
+                      handleImageChange(e, setBackFile, setBackPreview)
+                    }
+                  />
                 </div>
               </div>
-
             </div>
           </SectionCard>
-
         </div>
       </div>
 

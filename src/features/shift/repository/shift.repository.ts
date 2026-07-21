@@ -22,6 +22,7 @@ import type {
 import { Shifts } from "@/types/Shift";
 import { Shift_Assignment } from "@/types/ShiftAssignment";
 import { Shift_Img } from "@/types/ShiftImg";
+import { getStartOfWeekKey, addDaysToDateKey } from "@/utils/calcDate";
 
 const toStringArray = (value: unknown): string[] => {
   if (!Array.isArray(value)) {
@@ -440,6 +441,317 @@ export const getOverlappingGuardShifts = async ({
             shift_name: shiftName,
             start_time,
             end_time,
+          });
+        }
+      }
+    }
+  }
+
+  return results;
+};
+
+export const getGuardsShiftsOnDate = async ({
+  guardIds,
+  date,
+}: {
+  guardIds: string[];
+  date: string;
+}): Promise<{ guard_id: string; shift_id: string; start_time: string; end_time: string; duration_minutes: number }[]> => {
+  const supabase = await createClient();
+
+  if (guardIds.length === 0) return [];
+
+  // Find their guard_ids from guards table (since replacement_guard_ids stores guards.guard_id)
+  const { data: guardsData } = await supabase
+    .from("guards")
+    .select("guard_id, user_id")
+    .in("user_id", guardIds);
+
+  const guardIdMap = guardsData || [];
+  const dbGuardIds = guardIdMap.map((g) => g.guard_id);
+
+  // Range in UTC corresponding to local ICT timezone (UTC+7)
+  const startOfDay = new Date(`${date}T00:00:00+07:00`).toISOString();
+  const endOfDay = new Date(`${date}T23:59:59+07:00`).toISOString();
+
+  let query = supabase
+    .from("shift_assignments")
+    .select(
+      `
+      assignment_id,
+      guard_id,
+      status,
+      replacement_guard_ids,
+      shifts!inner (
+        shift_id,
+        shift_name,
+        start_time,
+        end_time
+      )
+    `,
+    )
+    .neq("status", "absent")
+    .gte("shifts.start_time", startOfDay)
+    .lte("shifts.start_time", endOfDay);
+
+  if (dbGuardIds.length > 0) {
+    query = query.or(
+      `guard_id.in.(${guardIds.join(",")}),replacement_guard_ids.ov.{${dbGuardIds.join(",")}}`,
+    );
+  } else {
+    query = query.in("guard_id", guardIds);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const overlappingData = (data ?? []) as any[];
+  const results: {
+    guard_id: string;
+    shift_id: string;
+    start_time: string;
+    end_time: string;
+    duration_minutes: number;
+  }[] = [];
+
+  for (const item of overlappingData) {
+    const shift = Array.isArray(item.shifts) ? item.shifts[0] : item.shifts;
+    if (!shift) continue;
+
+    const start = new Date(shift.start_time);
+    const end = new Date(shift.end_time);
+    const duration = (end.getTime() - start.getTime()) / (1000 * 60);
+
+    // 1. Original guard
+    if (guardIds.includes(item.guard_id)) {
+      results.push({
+        guard_id: item.guard_id,
+        shift_id: shift.shift_id,
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        duration_minutes: duration,
+      });
+    }
+
+    // 2. Replacement guards
+    if (item.replacement_guard_ids && item.replacement_guard_ids.length > 0) {
+      for (const repGuardId of item.replacement_guard_ids) {
+        const mappedGuard = guardIdMap.find((g) => g.guard_id === repGuardId);
+        if (mappedGuard && guardIds.includes(mappedGuard.user_id)) {
+          results.push({
+            guard_id: mappedGuard.user_id,
+            shift_id: shift.shift_id,
+            start_time: shift.start_time,
+            end_time: shift.end_time,
+            duration_minutes: duration,
+          });
+        }
+      }
+    }
+  }
+
+  return results;
+};
+
+export const getGuardsShiftsInWeek = async ({
+  guardIds,
+  date,
+}: {
+  guardIds: string[];
+  date: string;
+}): Promise<{ guard_id: string; shift_id: string; start_time: string; end_time: string; duration_minutes: number }[]> => {
+  const supabase = await createClient();
+
+  if (guardIds.length === 0) return [];
+
+  const startOfWeekKey = getStartOfWeekKey(date);
+  const endOfWeekKey = addDaysToDateKey(startOfWeekKey, 6);
+
+  const startOfWeek = new Date(`${startOfWeekKey}T00:00:00+07:00`).toISOString();
+  const endOfWeek = new Date(`${endOfWeekKey}T23:59:59+07:00`).toISOString();
+
+  // Find their guard_ids from guards table
+  const { data: guardsData } = await supabase
+    .from("guards")
+    .select("guard_id, user_id")
+    .in("user_id", guardIds);
+
+  const guardIdMap = guardsData || [];
+  const dbGuardIds = guardIdMap.map((g) => g.guard_id);
+
+  let query = supabase
+    .from("shift_assignments")
+    .select(
+      `
+      assignment_id,
+      guard_id,
+      status,
+      replacement_guard_ids,
+      shifts!inner (
+        shift_id,
+        shift_name,
+        start_time,
+        end_time
+      )
+    `,
+    )
+    .neq("status", "absent")
+    .gte("shifts.start_time", startOfWeek)
+    .lte("shifts.start_time", endOfWeek);
+
+  if (dbGuardIds.length > 0) {
+    query = query.or(
+      `guard_id.in.(${guardIds.join(",")}),replacement_guard_ids.ov.{${dbGuardIds.join(",")}}`,
+    );
+  } else {
+    query = query.in("guard_id", guardIds);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const overlappingData = (data ?? []) as any[];
+  const results: {
+    guard_id: string;
+    shift_id: string;
+    start_time: string;
+    end_time: string;
+    duration_minutes: number;
+  }[] = [];
+
+  for (const item of overlappingData) {
+    const shift = Array.isArray(item.shifts) ? item.shifts[0] : item.shifts;
+    if (!shift) continue;
+
+    const start = new Date(shift.start_time);
+    const end = new Date(shift.end_time);
+    const duration = (end.getTime() - start.getTime()) / (1000 * 60);
+
+    if (guardIds.includes(item.guard_id)) {
+      results.push({
+        guard_id: item.guard_id,
+        shift_id: shift.shift_id,
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        duration_minutes: duration,
+      });
+    }
+
+    if (item.replacement_guard_ids && item.replacement_guard_ids.length > 0) {
+      for (const repGuardId of item.replacement_guard_ids) {
+        const mappedGuard = guardIdMap.find((g) => g.guard_id === repGuardId);
+        if (mappedGuard && guardIds.includes(mappedGuard.user_id)) {
+          results.push({
+            guard_id: mappedGuard.user_id,
+            shift_id: shift.shift_id,
+            start_time: shift.start_time,
+            end_time: shift.end_time,
+            duration_minutes: duration,
+          });
+        }
+      }
+    }
+  }
+
+  return results;
+};
+
+export const getGuardsShiftsInRange = async ({
+  guardIds,
+  startTime,
+  endTime,
+}: {
+  guardIds: string[];
+  startTime: string;
+  endTime: string;
+}): Promise<{ guard_id: string; shift_id: string; start_time: string; end_time: string; duration_minutes: number }[]> => {
+  const supabase = await createClient();
+
+  if (guardIds.length === 0) return [];
+
+  // Find their guard_ids from guards table
+  const { data: guardsData } = await supabase
+    .from("guards")
+    .select("guard_id, user_id")
+    .in("user_id", guardIds);
+
+  const guardIdMap = guardsData || [];
+  const dbGuardIds = guardIdMap.map((g) => g.guard_id);
+
+  let query = supabase
+    .from("shift_assignments")
+    .select(
+      `
+      assignment_id,
+      guard_id,
+      status,
+      replacement_guard_ids,
+      shifts!inner (
+        shift_id,
+        shift_name,
+        start_time,
+        end_time
+      )
+    `,
+    )
+    .neq("status", "absent")
+    .gte("shifts.start_time", startTime)
+    .lte("shifts.start_time", endTime);
+
+  if (dbGuardIds.length > 0) {
+    query = query.or(
+      `guard_id.in.(${guardIds.join(",")}),replacement_guard_ids.ov.{${dbGuardIds.join(",")}}`,
+    );
+  } else {
+    query = query.in("guard_id", guardIds);
+  }
+
+  const { data, error } = await query;
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const overlappingData = (data ?? []) as any[];
+  const results: {
+    guard_id: string;
+    shift_id: string;
+    start_time: string;
+    end_time: string;
+    duration_minutes: number;
+  }[] = [];
+
+  for (const item of overlappingData) {
+    const shift = Array.isArray(item.shifts) ? item.shifts[0] : item.shifts;
+    if (!shift) continue;
+
+    const start = new Date(shift.start_time);
+    const end = new Date(shift.end_time);
+    const duration = (end.getTime() - start.getTime()) / (1000 * 60);
+
+    if (guardIds.includes(item.guard_id)) {
+      results.push({
+        guard_id: item.guard_id,
+        shift_id: shift.shift_id,
+        start_time: shift.start_time,
+        end_time: shift.end_time,
+        duration_minutes: duration,
+      });
+    }
+
+    if (item.replacement_guard_ids && item.replacement_guard_ids.length > 0) {
+      for (const repGuardId of item.replacement_guard_ids) {
+        const mappedGuard = guardIdMap.find((g) => g.guard_id === repGuardId);
+        if (mappedGuard && guardIds.includes(mappedGuard.user_id)) {
+          results.push({
+            guard_id: mappedGuard.user_id,
+            shift_id: shift.shift_id,
+            start_time: shift.start_time,
+            end_time: shift.end_time,
+            duration_minutes: duration,
           });
         }
       }

@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/store/auth.store";
 import { requestGetCompanyById } from "@/features/company/api/company.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   Shield,
   HelpCircle,
@@ -22,6 +23,8 @@ import {
   Copy,
   ShieldAlert,
   ClipboardCheck,
+  LayoutDashboard,
+  ArrowRightLeft,
 } from "lucide-react";
 
 export default function CoordinatorLayout({
@@ -30,8 +33,10 @@ export default function CoordinatorLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const { dict } = useTranslation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const companyId = useAuthStore((state) => state.company_id);
+  const role = useAuthStore((state) => state.role);
   const [companyInfo, setCompanyInfo] = useState<{
     name: string;
     ownerName?: string;
@@ -62,34 +67,34 @@ export default function CoordinatorLayout({
     };
   }, [companyId]);
 
-  // Sidebar Items in Vietnamese
+  // Sidebar Items
   const sidebarLinks = [
     {
-      name: "Ca trực",
+      name: dict.layout_coordinator.shift,
       href: "/schedules",
       icon: CalendarDays,
       active: pathname === "/schedules" || pathname.startsWith("/schedules/"),
     },
     {
-      name: "Đơn yêu cầu",
+      name: dict.layout_coordinator.bookings,
       href: "/bookings",
       icon: FileText,
       active: pathname === "/bookings" || pathname.startsWith("/bookings/"),
     },
     {
-      name: "Khảo sát yêu cầu",
+      name: dict.layout_coordinator.verifications,
       href: "/coor-verifications",
       icon: ClipboardCheck,
       active: pathname === "/coor-verifications" || pathname.startsWith("/coor-verifications/"),
     },
     {
-      name: "Bảo vệ",
+      name: dict.layout_coordinator.guards,
       href: "/guards",
       icon: ShieldUser,
       active: pathname === "/guards" || pathname.startsWith("/guards/"),
     },
     {
-      name: "Quản lý báo cáo",
+      name: dict.layout_coordinator.reports,
       href: "/coor-reports",
       icon: ShieldAlert,
       active: pathname === "/coor-reports" || pathname.startsWith("/coor-reports/"),
@@ -97,7 +102,7 @@ export default function CoordinatorLayout({
   ];
 
   return (
-    <RoleGuard allowedRoles={["coordinator"]}>
+    <RoleGuard allowedRoles={["coordinator", "company-admin"]}>
       <div className="min-h-screen bg-surface flex text-on-surface antialiased">
         {/* Backdrop for Mobile Sidebar */}
         {mobileSidebarOpen && (
@@ -124,7 +129,9 @@ export default function CoordinatorLayout({
                   SGCMP
                 </h2>
                 <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest mt-1">
-                  Điều phối viên
+                  {role === "company-admin" 
+                    ? (dict.layout_coordinator.director || "Giám đốc")
+                    : dict.layout_coordinator.role}
                 </p>
               </div>
             </div>
@@ -147,19 +154,17 @@ export default function CoordinatorLayout({
                   href={link.href}
                   onClick={() => setMobileSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg font-body text-sm font-semibold transition-all duration-150 group
-                  ${
-                    link.active
+                  ${link.active
                       ? "bg-secondary-container text-on-secondary-container"
                       : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-                  }`}
+                    }`}
                 >
                   <Icon
                     className={`w-5 h-5 transition-colors
-                    ${
-                      link.active
+                    ${link.active
                         ? "text-on-secondary-container"
                         : "text-on-surface-variant group-hover:text-primary"
-                    }`}
+                      }`}
                   />
                   <span>{link.name}</span>
                 </Link>
@@ -184,11 +189,11 @@ export default function CoordinatorLayout({
               </button>
               <div className="md:flex flex-col items-start gap-0.5 hidden">
                 <h1 className="text-sm font-bold text-on-surface tracking-tight leading-tight truncate max-w-[280px]" title={companyInfo?.name || ""}>
-                  {companyInfo ? companyInfo.name : "Đang tải..."}
+                  {companyInfo ? companyInfo.name : dict.common.loading}
                 </h1>
                 {companyInfo?.ownerName && (
                   <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest">
-                    Giám đốc: {companyInfo.ownerName}
+                    {dict.layout_coordinator.director}: {companyInfo.ownerName}
                   </p>
                 )}
               </div>
@@ -196,6 +201,15 @@ export default function CoordinatorLayout({
 
             {/* Right Header Options */}
             <div className="flex items-center gap-4">
+              {role === "company-admin" && (
+                <Link
+                  href="/dashboard"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors mr-2"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5" />
+                  Qua quản lý
+                </Link>
+              )}
               {/* User Profile */}
               <div className="w-8 h-8 rounded-full border border-outline-variant overflow-hidden cursor-pointer hover:border-primary transition-colors ml-2 shrink-0">
                 <img
@@ -209,7 +223,7 @@ export default function CoordinatorLayout({
 
           {/* Page Content Viewport */}
           <main className="flex-1 overflow-y-auto bg-surface-bright">
-            <Suspense fallback={<div className="p-6 text-center text-sm text-on-surface-variant">Đang tải...</div>}>
+            <Suspense fallback={<div className="p-6 text-center text-sm text-on-surface-variant">{dict.common.loading}</div>}>
               {children}
             </Suspense>
           </main>

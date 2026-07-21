@@ -3,6 +3,7 @@
 import React from "react";
 import { User, Phone, Mail, CreditCard, Calendar, MapPin } from "lucide-react";
 import UploadZone from "./UploadZone";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface StepPersonalProps {
   formData: {
@@ -42,12 +43,14 @@ export default function StepPersonal({
     clearError(field);
   };
 
+  const { dict } = useTranslation();
+
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="border-b border-outline-variant/30 pb-4">
-        <h3 className="text-lg font-bold text-on-surface">1. Thông tin cá nhân</h3>
+        <h3 className="text-lg font-bold text-on-surface">{dict.pages.registration.step_personal_title}</h3>
         <p className="text-xs text-on-surface-variant">
-          Vui lòng cập nhật đầy đủ thông tin cá nhân của người đại diện pháp luật.
+          {dict.pages.registration.step_personal_desc}
         </p>
       </div>
 
@@ -56,13 +59,13 @@ export default function StepPersonal({
         {/* Full Name */}
         <div className="space-y-1">
           <label className="block text-sm font-semibold text-on-surface">
-            Họ và tên <span className="text-error">*</span>
+            {dict.pages.registration.full_name} <span className="text-error">*</span>
           </label>
           <div className="relative flex items-center">
             <User className="absolute left-3 w-5 h-5 text-on-surface-variant/70" />
             <input
               type="text"
-              placeholder="Nhập họ và tên"
+              placeholder={dict.pages.registration.full_name_placeholder}
               value={formData.fullName}
               onChange={(e) => handleFieldChange("fullName", e.target.value)}
               className={inputClass(!!errors.fullName)}
@@ -76,13 +79,13 @@ export default function StepPersonal({
         {/* Phone Number */}
         <div className="space-y-1">
           <label className="block text-sm font-semibold text-on-surface">
-            Số điện thoại <span className="text-error">*</span>
+            {dict.pages.registration.phone} <span className="text-error">*</span>
           </label>
           <div className="relative flex items-center">
             <Phone className="absolute left-3 w-5 h-5 text-on-surface-variant/70" />
             <input
               type="tel"
-              placeholder="Nhập số điện thoại"
+              placeholder={dict.pages.registration.phone_placeholder}
               value={formData.phoneNumber}
               onChange={(e) => handleFieldChange("phoneNumber", e.target.value)}
               className={inputClass(!!errors.phoneNumber)}
@@ -96,7 +99,7 @@ export default function StepPersonal({
         {/* Email */}
         <div className="space-y-1">
           <label className="block text-sm font-semibold text-on-surface">
-            Địa chỉ Email (Hệ thống)
+            {dict.pages.registration.email_system}
           </label>
           <div className="relative flex items-center">
             <Mail className="absolute left-3 w-5 h-5 text-on-surface-variant/50" />
@@ -107,13 +110,13 @@ export default function StepPersonal({
               className="h-11 w-full rounded-lg border border-outline-variant bg-surface-container-low px-10 text-sm text-on-surface-variant outline-none"
             />
           </div>
-          <p className="text-[10px] text-on-surface-variant font-medium mt-1">Email dùng để đăng nhập, không thể chỉnh sửa.</p>
+          <p className="text-[10px] text-on-surface-variant font-medium mt-1">{dict.pages.registration.email_system_hint}</p>
         </div>
 
         {/* Avatar Upload */}
         <div className="space-y-1">
           <label className="block text-sm font-semibold text-on-surface">
-            Ảnh đại diện (Avatar)
+            {dict.pages.registration.avatar}
           </label>
           <div className="flex items-center gap-4">
             <div className="w-12 h-12 rounded-full overflow-hidden border border-outline-variant flex items-center justify-center bg-surface-container shrink-0">
@@ -150,7 +153,7 @@ export default function StepPersonal({
               htmlFor="avatar-input"
               className="px-4 py-2 border border-outline-variant rounded-lg text-xs font-semibold hover:bg-surface-container-low cursor-pointer transition-colors"
             >
-              Chọn ảnh
+              {dict.pages.registration.select_image}
             </label>
             {(formData.avatarFile || formData.avatarUrl) && (
               <button
@@ -160,7 +163,7 @@ export default function StepPersonal({
                 }}
                 className="text-xs text-error font-semibold hover:underline"
               >
-                Xóa
+                {dict.pages.registration.delete}
               </button>
             )}
           </div>
@@ -168,9 +171,9 @@ export default function StepPersonal({
       </div>
 
       <div className="border-b border-outline-variant/30 pb-4 pt-2">
-        <h3 className="text-lg font-bold text-on-surface">2. Định danh cá nhân (CCCD / CMND)</h3>
+        <h3 className="text-lg font-bold text-on-surface">{dict.pages.registration.step_identity_title}</h3>
         <p className="text-xs text-on-surface-variant">
-          Nhập thông tin thẻ căn cước công dân và đính kèm ảnh chụp đầy đủ hai mặt.
+          {dict.pages.registration.step_identity_desc}
         </p>
       </div>
 
@@ -179,13 +182,13 @@ export default function StepPersonal({
         {/* CCCD Number */}
         <div className="space-y-1">
           <label className="block text-sm font-semibold text-on-surface">
-            Số CMND / CCCD <span className="text-error">*</span>
+            {dict.pages.registration.identity_no} <span className="text-error">*</span>
           </label>
           <div className="relative flex items-center">
             <CreditCard className="absolute left-3 w-5 h-5 text-on-surface-variant/70" />
             <input
               type="text"
-              placeholder="9 hoặc 12 số"
+              placeholder={dict.pages.registration.identity_no_placeholder}
               value={formData.identityId}
               onChange={(e) => handleFieldChange("identityId", e.target.value)}
               className={inputClass(!!errors.identityId)}
@@ -199,7 +202,7 @@ export default function StepPersonal({
         {/* Issue Date */}
         <div className="space-y-1">
           <label className="block text-sm font-semibold text-on-surface">
-            Ngày cấp <span className="text-error">*</span>
+            {dict.pages.registration.issue_date} <span className="text-error">*</span>
           </label>
           <div className="relative flex items-center">
             <Calendar className="absolute left-3 w-5 h-5 text-on-surface-variant/70" />
@@ -218,13 +221,13 @@ export default function StepPersonal({
         {/* Issue Place */}
         <div className="space-y-1">
           <label className="block text-sm font-semibold text-on-surface">
-            Nơi cấp <span className="text-error">*</span>
+            {dict.pages.registration.issue_place} <span className="text-error">*</span>
           </label>
           <div className="relative flex items-center">
             <MapPin className="absolute left-3 w-5 h-5 text-on-surface-variant/70" />
             <input
               type="text"
-              placeholder="Nơi cấp trên thẻ"
+              placeholder={dict.pages.registration.issue_place_placeholder}
               value={formData.issuePlace}
               onChange={(e) => handleFieldChange("issuePlace", e.target.value)}
               className={inputClass(!!errors.issuePlace)}
@@ -240,9 +243,9 @@ export default function StepPersonal({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
         <div className="space-y-1">
           <UploadZone
-            label="Mặt trước CCCD *"
+            label={dict.pages.registration.front_id}
             accept="image/*"
-            placeholder="Kéo thả ảnh mặt trước vào đây hoặc nhấp chọn"
+            placeholder={dict.pages.registration.front_id_placeholder}
             defaultValue={formData.frontFile || formData.frontUrl}
             onChange={(file) => handleFieldChange("frontFile", file)}
           />
@@ -253,9 +256,9 @@ export default function StepPersonal({
 
         <div className="space-y-1">
           <UploadZone
-            label="Mặt sau CCCD *"
+            label={dict.pages.registration.back_id}
             accept="image/*"
-            placeholder="Kéo thả ảnh mặt sau vào đây hoặc nhấp chọn"
+            placeholder={dict.pages.registration.back_id_placeholder}
             defaultValue={formData.backFile || formData.backUrl}
             onChange={(file) => handleFieldChange("backFile", file)}
           />

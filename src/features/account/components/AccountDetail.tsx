@@ -13,9 +13,12 @@ import {
   Shield,
   Activity,
   Clock,
-  Settings
+  Settings,
+  Ban,
+  AlertTriangle,
+  X,
 } from "lucide-react";
-import { requestGetAccountDetail } from "../api/account.api";
+import { requestGetAccountDetail, requestBanAccount } from "../api/account.api";
 import type { Profile } from "@/types/Profile";
 import type { UserRole, GeneralStatus } from "@/types/Enum";
 
@@ -100,6 +103,14 @@ const getStatusBadge = (status: GeneralStatus) => {
       dot: "bg-[#22c55e]",
     };
   }
+  if (status === "banned") {
+    return {
+      label: "Banned",
+      bg: "bg-[#fef2f2] border border-[#fca5a5]",
+      text: "text-[#991b1b]",
+      dot: "bg-[#ef4444]",
+    };
+  }
   return {
     label: "Unactive",
     bg: "bg-[#fee2e2]",
@@ -113,6 +124,37 @@ export default function AccountDetail({ userId }: { userId: string }) {
   const [account, setAccount] = React.useState<Profile | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
+  const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
+  const [isBanning, setIsBanning] = React.useState(false);
+  const [toastMessage, setToastMessage] = React.useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  React.useEffect(() => {
+    if (toastMessage) {
+      const timer = setTimeout(() => {
+        setToastMessage(null);
+      }, 4000);
+      return () => clearTimeout(timer);
+    }
+  }, [toastMessage]);
+
+  const handleConfirmBan = async () => {
+    try {
+      setIsBanning(true);
+      const res = await requestBanAccount(userId);
+      if (res.success) {
+        setToastMessage({ text: res.message || "Khóa tài khoản thành công.", type: "success" });
+        setIsConfirmOpen(false);
+        setAccount(prev => prev ? { ...prev, status: "banned" as GeneralStatus } : null);
+      } else {
+        setToastMessage({ text: res.error || "Không thể khóa tài khoản.", type: "error" });
+      }
+    } catch (err: any) {
+      console.error("Error banning account:", err);
+      setToastMessage({ text: err.message || "Có lỗi xảy ra khi khóa tài khoản.", type: "error" });
+    } finally {
+      setIsBanning(false);
+    }
+  };
 
   React.useEffect(() => {
     const fetchAccount = async () => {
@@ -183,6 +225,17 @@ export default function AccountDetail({ userId }: { userId: string }) {
             Thông tin chi tiết của người dùng trong hệ thống.
           </p>
         </div>
+
+        {account.status !== "banned" && (
+          <button
+            type="button"
+            onClick={() => setIsConfirmOpen(true)}
+            className="ml-auto flex items-center justify-center gap-2 rounded-lg border-2 bg-blue-800 px-4 py-2 font-medium text-white transition-all duration-300 hover:bg-blue-900 cursor-pointer animate-in fade-in duration-300"
+          >
+            <Ban className="shrink-0" size={20} />
+            <span>Khóa tài khoản</span>
+          </button>
+        )}
       </div>
 
       {/* Main Content */}
@@ -201,11 +254,11 @@ export default function AccountDetail({ userId }: { userId: string }) {
                 <UserCircle className="w-16 h-16 text-on-surface-variant/50" />
               )}
             </div>
-            
+
             <h3 className="text-xl font-bold text-on-surface mb-1">
               {account.full_name || "Chưa cập nhật"}
             </h3>
-            
+
             <div className="flex flex-col gap-2 mt-3 items-center">
               <span
                 className={`inline-flex items-center gap-1.5 ${roleBadge.bg} ${roleBadge.text} text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider`}
@@ -215,7 +268,7 @@ export default function AccountDetail({ userId }: { userId: string }) {
                 />
                 {getRoleLabel(account.role)}
               </span>
-              
+
               <span
                 className={`inline-flex items-center gap-1.5 ${statusBadge.bg} ${statusBadge.text} text-xs font-bold px-3 py-1 rounded-full uppercase tracking-wider`}
               >
@@ -284,10 +337,60 @@ export default function AccountDetail({ userId }: { userId: string }) {
               </div>
             </div>
           </div>
-
-
         </div>
       </div>
+
+      {/* Ban Confirmation Modal */}
+      {isConfirmOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+          <div className="bg-surface-container-lowest rounded-2xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200">
+            <div className="p-6">
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-error/10 text-error mx-auto mb-4">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <h3 className="text-lg font-bold text-center text-on-surface mb-2">Khóa tài khoản</h3>
+              <p className="text-sm text-center text-on-surface-variant/80">
+                Bạn có chắc chắn muốn khóa tài khoản này không? Người dùng sẽ không thể đăng nhập vào hệ thống.
+              </p>
+            </div>
+            <div className="flex items-center gap-3 p-4 bg-surface-container-low/50 border-t border-outline-variant/30">
+              <button
+                type="button"
+                onClick={() => setIsConfirmOpen(false)}
+                disabled={isBanning}
+                className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50"
+              >
+                Hủy
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmBan}
+                disabled={isBanning}
+                className="flex-1 py-2.5 px-4 rounded-xl font-bold bg-error hover:bg-error/90 text-white transition-all active:scale-95 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+              >
+                {isBanning ? (
+                  <>
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    <span>Đang xử lý...</span>
+                  </>
+                ) : (
+                  <span>Đồng ý</span>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className={`fixed bottom-5 right-5 px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-[999] animate-in fade-in slide-in-from-bottom-5 ${toastMessage.type === "success" ? "bg-emerald-950 text-emerald-200 border border-emerald-800" : "bg-red-950 text-red-200 border border-red-800"}`}>
+          <span className="text-sm font-medium">{toastMessage.text}</span>
+          <button onClick={() => setToastMessage(null)} className="text-white/60 hover:text-white ml-2 cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
     </div>
   );
 }

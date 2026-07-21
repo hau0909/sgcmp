@@ -10,6 +10,8 @@ import { createClient } from "@/lib/supabase/client";
 import { requestGetUserProfile } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/store/auth.store";
 import CompanySearchBar from "@/features/company/components/CompanySearchBar";
+import { useTranslation } from "@/components/providers/LanguageProvider";
+import LanguageSwitcher from "@/components/ui/LanguageSwitcher";
 
 interface NavLink {
   label: string;
@@ -35,16 +37,18 @@ type UserProfile = {
   company_id?: string | null;
 };
 
-const navLinks: NavLink[] = [
-  { label: "Giới thiệu", href: "/" },
-  { label: "Thuê bảo vệ", href: "/companies" },
-];
-
 const getProfileUserId = (profile: UserProfile | null) => {
   return profile?.user_id ?? profile?.id ?? null;
 };
 
 export default function Header() {
+  const { dict } = useTranslation();
+  
+  const navLinks: NavLink[] = [
+    { label: dict.nav.about, href: "/" },
+    { label: dict.nav.hireGuard, href: "/companies" },
+  ];
+
   const pathname = usePathname() || "/";
   const router = useRouter();
 
@@ -242,13 +246,6 @@ export default function Header() {
                     <UserCircle className="h-6 w-6" />
                   )}
                 </button>
-                <Link
-                  className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.03] text-[13px] h-9 flex items-center justify-center"
-                  href="/register-company"
-                >
-                  Bắt đầu ngay
-                </Link>
-
                 {userDropdownOpen && (
                   <div className="absolute right-0 top-12 w-44 overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-lg z-50">
                     <Link
@@ -256,7 +253,7 @@ export default function Header() {
                       onClick={closeMenus}
                       className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
                     >
-                      Xem hồ sơ
+                      {dict.common.profile}
                     </Link>
 
                     {profile?.role === "customer" && (
@@ -265,7 +262,7 @@ export default function Header() {
                         onClick={closeMenus}
                         className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors font-semibold"
                       >
-                        Quản lý yêu cầu
+                        {dict.common.myRequests}
                       </Link>
                     )}
 
@@ -274,7 +271,7 @@ export default function Header() {
                       onClick={closeMenus}
                       className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
                     >
-                      Quản lý hợp đồng
+                      {dict.common.myContracts}
                     </Link>
 
                     <Link
@@ -282,7 +279,7 @@ export default function Header() {
                       onClick={closeMenus}
                       className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
                     >
-                      Báo cáo
+                      {dict.common.myReports}
                     </Link>
 
                     <button
@@ -290,7 +287,7 @@ export default function Header() {
                       onClick={handleLogout}
                       className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
                     >
-                      Đăng xuất
+                      {dict.common.logout}
                     </button>
                   </div>
                 )}
@@ -301,14 +298,14 @@ export default function Header() {
                   className="text-[14px] text-primary font-semibold hover:text-primary/80 transition-colors duration-200 px-3 py-1.5 rounded-lg hover:bg-primary/5"
                   href="/login"
                 >
-                  Đăng nhập
+                  {dict.common.login}
                 </Link>
 
                 <Link
                   className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-6 py-2 rounded-full transition-all duration-300 shadow-sm hover:shadow-md hover:scale-[1.03] text-[13px] h-9 flex items-center justify-center"
                   href="/register-company"
                 >
-                  Bắt đầu ngay
+                  {dict.common.getStarted}
                 </Link>
               </>
             )}
@@ -385,6 +382,7 @@ export default function Header() {
         </nav>
 
         <div className="p-6 border-t border-outline-variant/30 flex flex-col gap-3">
+          <LanguageSwitcher variant="inline" />
           {shouldShowCheckingAuth ? (
             <div className="h-11 w-full animate-pulse rounded-xl bg-slate-200" />
           ) : isAuthenticated ? (
@@ -394,7 +392,7 @@ export default function Header() {
                 href="/profile"
                 onClick={closeMenus}
               >
-                Xem hồ sơ
+                {dict.common.profile}
               </Link>
 
 
@@ -404,7 +402,7 @@ export default function Header() {
                   href="/my-requests"
                   onClick={closeMenus}
                 >
-                  Quản lý yêu cầu
+                  {dict.common.myRequests}
                 </Link>
               )}
 
@@ -413,7 +411,7 @@ export default function Header() {
                 href="/my-contracts"
                 onClick={closeMenus}
               >
-                Xem hợp đồng
+                {dict.common.myContracts}
               </Link>
 
               <Link
@@ -421,7 +419,7 @@ export default function Header() {
                 href="/my-reports"
                 onClick={closeMenus}
               >
-                Báo cáo
+                {dict.common.myReports}
               </Link>
 
               <button
@@ -429,7 +427,7 @@ export default function Header() {
                 className="text-[15px] text-red-600 font-semibold text-center py-3 rounded-xl hover:bg-red-50 transition-colors"
                 onClick={handleLogout}
               >
-                Đăng xuất
+                {dict.common.logout}
               </button>
             </>
           ) : (
@@ -439,7 +437,7 @@ export default function Header() {
                 href="/login"
                 onClick={closeMenus}
               >
-                Đăng nhập
+                {dict.common.login}
               </Link>
 
               <Link
@@ -447,7 +445,7 @@ export default function Header() {
                 href="/register-company"
                 onClick={closeMenus}
               >
-                Bắt đầu ngay
+                {dict.common.getStarted}
               </Link>
             </>
           )}

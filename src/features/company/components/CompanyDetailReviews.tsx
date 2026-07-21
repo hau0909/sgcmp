@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Star, MessageSquareQuote } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface Review {
   id: string;
@@ -32,10 +33,11 @@ const mockReviews: Review[] = [
 ];
 
 export default function CompanyDetailReviews() {
+  const { dict } = useTranslation();
   return (
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 shadow-xs">
       <h3 className="text-[12px] font-semibold text-on-surface uppercase tracking-wider mb-4 flex items-center gap-2">
-        <MessageSquareQuote className="w-4.5 h-4.5 text-primary" /> Đánh giá từ đối tác
+        <MessageSquareQuote className="w-4.5 h-4.5 text-primary" /> {dict.customer.company_detail.reviews_title}
       </h3>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

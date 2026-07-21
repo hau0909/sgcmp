@@ -14,11 +14,12 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MarketplaceCompany } from "../types";
 import { requestGetCompanies, requestGetCompanyFilters } from "../api/company.api";
 import CompanySearchBar from "./CompanySearchBar";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 // ─── Price Display Helper ─────────────────────────────────────────────────────
-function PriceDisplay({ company, className = "" }: { company: MarketplaceCompany; className?: string }) {
+function PriceDisplay({ company, contactLabel, className = "" }: { company: MarketplaceCompany; contactLabel: string; className?: string }) {
   if (company.pricePerHour === 0) {
-    return <span className={`text-on-surface-variant font-semibold ${className}`}>Liên hệ</span>;
+    return <span className={`text-on-surface-variant font-semibold ${className}`}>{contactLabel}</span>;
   }
   if (company.serviceCount && company.serviceCount > 1 && company.maxPrice && company.maxPrice > company.pricePerHour) {
     return (
@@ -39,6 +40,7 @@ function PriceDisplay({ company, className = "" }: { company: MarketplaceCompany
 // ─── Explore Card (compact) ───────────────────────────────────────────────────
 function ExploreCompanyCard({ company }: { company: MarketplaceCompany }) {
   const isNew = company.rating === null;
+  const { dict } = useTranslation();
   return (
     <Link
       href={`/companies/${company.id}`}
@@ -63,7 +65,7 @@ function ExploreCompanyCard({ company }: { company: MarketplaceCompany }) {
         {/* Rating pill */}
         <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-black/60 backdrop-blur-sm text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full z-10 shadow-sm">
           <Star className="w-2.5 h-2.5 fill-amber-400" />
-          <span>{isNew ? "Mới" : company.rating?.toFixed(1)}</span>
+          <span>{isNew ? dict.customer.search.new : company.rating?.toFixed(1)}</span>
         </div>
       </div>
 
@@ -93,11 +95,11 @@ function ExploreCompanyCard({ company }: { company: MarketplaceCompany }) {
         {/* Price + Details button */}
         <div className="mt-auto pt-2 border-t border-outline-variant/30 flex items-end justify-between gap-1">
           <div>
-            <p className="text-[8px] font-bold text-outline uppercase tracking-wider mb-0.5">Giá dịch vụ</p>
-            <PriceDisplay company={company} className="text-[11px] font-extrabold text-primary" />
+            <p className="text-[8px] font-bold text-outline uppercase tracking-wider mb-0.5">{dict.customer.search.price_label}</p>
+            <PriceDisplay company={company} contactLabel={dict.customer.search.contact} className="text-[11px] font-extrabold text-primary" />
           </div>
           <span className="shrink-0 h-6 px-2.5 bg-primary/8 text-primary text-[10px] font-bold rounded-lg group-hover:bg-primary group-hover:text-white transition-all duration-150 flex items-center justify-center whitespace-nowrap">
-            Xem chi tiết
+            {dict.customer.search.view_detail}
           </span>
         </div>
       </div>
@@ -126,6 +128,7 @@ const ITEMS_PER_PAGE = 20; // 5 rows × 4 cols
 export default function SearchCompanies() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { dict } = useTranslation();
 
   const location = searchParams.get("location") || "";
   const selectedService = searchParams.get("service") || "";
@@ -134,7 +137,7 @@ export default function SearchCompanies() {
   const maxPriceParam = searchParams.get("maxPrice");
   const maxPrice = maxPriceParam ? parseInt(maxPriceParam, 10) : undefined;
 
-  const [sortBy, setSortBy] = useState("Đề xuất");
+  const [sortBy, setSortBy] = useState<"all" | "highest" | "lowest">("all");
   const [currentPage, setCurrentPage] = useState(1);
   const [sortDropdownOpen, setSortDropdownOpen] = useState(false);
   const sortRef = useRef<HTMLDivElement>(null);
@@ -168,14 +171,14 @@ export default function SearchCompanies() {
           tags.length > 0 ||
           minPrice !== undefined ||
           maxPrice !== undefined ||
-          (sortBy !== "Đề xuất" && sortBy !== "verified" && sortBy !== "recent");
+          sortBy !== "all";
 
         const res = hasFilters
           ? await requestGetCompanyFilters({
               search: "",
               location,
               tags,
-              sortBy: sortBy === "verified" || sortBy === "recent" ? "Đề xuất" : sortBy,
+              sortBy: sortBy === "all" ? "Đề xuất" : sortBy === "highest" ? "Đánh giá cao nhất" : "Đánh giá thấp nhất",
               minPrice,
               maxPrice,
               page: currentPage,
@@ -200,7 +203,7 @@ export default function SearchCompanies() {
 
   const handleClearAll = () => {
     router.push("/companies");
-    setSortBy("Đề xuất");
+    setSortBy("all");
     setCurrentPage(1);
   };
 
@@ -245,11 +248,11 @@ export default function SearchCompanies() {
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5">
             <div>
-              <h2 className="text-lg font-bold text-on-surface">Khám phá dịch vụ</h2>
+              <h2 className="text-lg font-bold text-on-surface">{dict.customer.search.explore_title}</h2>
               {!isLoadingExplore && totalCount > 0 && (
                 <p className="text-xs text-on-surface-variant mt-0.5 font-medium">
-                  Đang hiển thị {startIndex + 1}–{endIndex} trong{" "}
-                  <span className="text-primary font-bold">{totalCount}</span> nhà cung cấp
+                  {dict.customer.search.showing} {startIndex + 1}–{endIndex} {dict.customer.search.of}{" "}
+                  <span className="text-primary font-bold">{totalCount}</span> {dict.customer.search.providers}
                 </p>
               )}
             </div>
@@ -261,20 +264,19 @@ export default function SearchCompanies() {
                 className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold border bg-white text-on-surface border-outline-variant hover:border-primary/40 hover:text-primary transition-all shadow-sm cursor-pointer"
               >
                 <span>
-                  {sortBy === "Đề xuất" ? "Đề xuất: Tất cả"
-                    : sortBy === "Đánh giá cao nhất" ? "Đề xuất: Cao nhất"
-                    : sortBy === "Đánh giá thấp nhất" ? "Đề xuất: Thấp nhất"
-                    : "Đề xuất: Tất cả"}
+                  {sortBy === "all" ? dict.customer.search.suggest_all
+                    : sortBy === "highest" ? dict.customer.search.suggest_highest
+                    : dict.customer.search.suggest_lowest}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-outline" />
               </button>
               {sortDropdownOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white border border-outline-variant/40 rounded-xl shadow-xl z-50 overflow-hidden py-1">
-                  {[
-                    { label: "Tất cả", value: "Đề xuất" },
-                    { label: "Đánh giá cao nhất", value: "Đánh giá cao nhất" },
-                    { label: "Đánh giá thấp nhất", value: "Đánh giá thấp nhất" },
-                  ].map((opt) => (
+                  {([
+                    { label: dict.customer.search.sort_all, value: "all" as const },
+                    { label: dict.customer.search.sort_highest, value: "highest" as const },
+                    { label: dict.customer.search.sort_lowest, value: "lowest" as const },
+                  ] as { label: string; value: "all" | "highest" | "lowest" }[]).map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => { setSortBy(opt.value); setCurrentPage(1); setSortDropdownOpen(false); }}
@@ -305,16 +307,16 @@ export default function SearchCompanies() {
             <div className="flex flex-col items-center justify-center py-20 gap-4 border border-dashed border-outline-variant rounded-2xl bg-surface-container-lowest">
               <Search className="w-10 h-10 text-outline-variant" />
               <div className="text-center">
-                <p className="text-sm font-bold text-on-surface">Không tìm thấy công ty phù hợp</p>
+                <p className="text-sm font-bold text-on-surface">{dict.customer.search.no_results_title}</p>
                 <p className="text-xs text-on-surface-variant mt-1 max-w-sm">
-                  Hãy thử giảm bớt tiêu chí lọc hoặc thay đổi từ khóa tìm kiếm.
+                  {dict.customer.search.no_results_desc}
                 </p>
               </div>
               <button
                 onClick={handleClearAll}
                 className="h-9 px-5 bg-primary text-on-primary text-xs font-bold rounded-lg hover:bg-primary/90 transition-all"
               >
-                Xóa bộ lọc
+                {dict.customer.search.clear_filters}
               </button>
             </div>
           )}

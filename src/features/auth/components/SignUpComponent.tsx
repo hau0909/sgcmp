@@ -7,6 +7,7 @@ import { isDisposableEmail } from "../validator/auth.validator";
 import { useRouter } from "next/navigation";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Footer from "@/components/layout/Footer";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type FormErrors = {
   fullName?: string;
@@ -30,6 +31,7 @@ export default function SignUp() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
+  const { dict } = useTranslation();
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -39,35 +41,35 @@ export default function SignUp() {
     const normalizedPhoneNumber = phoneNumber.replace(/\s/g, "");
 
     if (!trimmedFullName) {
-      newErrors.fullName = "Vui lòng nhập họ và tên";
+      newErrors.fullName = dict.pages.auth.register.errors.name_required;
     } else if (trimmedFullName.length < 2) {
-      newErrors.fullName = "Họ và tên phải có ít nhất 2 ký tự";
+      newErrors.fullName = dict.pages.auth.register.errors.name_short;
     }
 
     if (!trimmedEmail) {
-      newErrors.email = "Vui lòng nhập email";
+      newErrors.email = dict.pages.auth.register.errors.email_required;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      newErrors.email = "Email không hợp lệ";
+      newErrors.email = dict.pages.auth.register.errors.email_invalid;
     } else if (isDisposableEmail(trimmedEmail)) {
-      newErrors.email = "Không cho phép sử dụng email tạm thời";
+      newErrors.email = dict.pages.auth.register.errors.email_disposable;
     }
 
     if (!normalizedPhoneNumber) {
-      newErrors.phone = "Vui lòng nhập số điện thoại";
+      newErrors.phone = dict.pages.auth.register.errors.phone_required;
     } else if (!/^(0|\+84)[0-9]{9,10}$/.test(normalizedPhoneNumber)) {
-      newErrors.phone = "Số điện thoại không hợp lệ";
+      newErrors.phone = dict.pages.auth.register.errors.phone_invalid;
     }
 
     if (!password) {
-      newErrors.password = "Vui lòng nhập mật khẩu";
+      newErrors.password = dict.pages.auth.register.errors.password_required;
     } else if (password.length < 8) {
-      newErrors.password = "Mật khẩu phải có ít nhất 8 ký tự";
+      newErrors.password = dict.pages.auth.register.errors.password_short;
     }
 
     if (!confirmPassword) {
-      newErrors.confirmPassword = "Vui lòng xác nhận mật khẩu";
+      newErrors.confirmPassword = dict.pages.auth.register.errors.confirm_required;
     } else if (confirmPassword !== password) {
-      newErrors.confirmPassword = "Mật khẩu xác nhận không khớp";
+      newErrors.confirmPassword = dict.pages.auth.register.errors.confirm_mismatch;
     }
 
     setErrors(newErrors);
@@ -100,38 +102,26 @@ export default function SignUp() {
         phoneNumber: normalizedPhoneNumber,
       });
 
-      if (!result.success) {
-        const msg = result.message || "Đăng ký thất bại. Vui lòng thử lại.";
-        if (msg.toLowerCase().includes("email")) {
-          setErrors({
-            email: msg,
-          });
-        } else if (
-          msg.toLowerCase().includes("số điện thoại") ||
-          msg.toLowerCase().includes("sđt") ||
-          msg.toLowerCase().includes("phone")
-        ) {
-          setErrors({
-            phone: msg,
-          });
+      if (result.success) {
+        setSuccessMessage(dict.pages.auth.register.success);
+        setFullName("");
+        setEmail("");
+        setPhoneNumber("");
+        setPassword("");
+        setConfirmPassword("");
+      } else {
+        const errorMsg = (result.message || "").toLowerCase();
+        if (errorMsg.includes("phone number")) {
+          setErrors({ phone: dict.pages.auth.register.errors.phone_exists });
+        } else if (errorMsg.includes("email")) {
+          setErrors({ email: dict.pages.auth.register.errors.email_exists });
         } else {
-          setErrors({
-            general: msg,
-          });
+          setErrors({ general: result.message || dict.pages.auth.register.errors.register_failed });
         }
-        return;
       }
-
-      setSuccessMessage(result.message);
-
-      setFullName("");
-      setEmail("");
-      setPhoneNumber("");
-      setPassword("");
-      setConfirmPassword("");
     } catch (error: any) {
       setErrors({
-        general: error?.message || "Đăng ký thất bại. Vui lòng thử lại.",
+        general: error?.message || dict.pages.auth.register.errors.register_failed,
       });
     } finally {
       setLoading(false);
@@ -147,7 +137,6 @@ export default function SignUp() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between relative">
-      {/* Back button container (absolute on the far top-left) */}
       <div className="absolute left-6 top-6">
         <button
           type="button"
@@ -161,21 +150,21 @@ export default function SignUp() {
           className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-800 transition-all duration-200 group bg-white border border-slate-300 rounded px-3 py-1.5 shadow-xs"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          <span>Quay lại</span>
+          <span>{dict.pages.auth.register.back}</span>
         </button>
       </div>
 
       <div className="flex-1 flex items-start justify-center pt-24 pb-10">
         <div className="w-full max-w-[500px] rounded-md border border-slate-300 bg-white px-12 py-12 shadow-sm">
         <div className="text-center">
-          <h1 className="text-4xl font-bold text-blue-800">SGCMP</h1>
-
-          <h2 className="mt-5 text-3xl font-bold text-slate-950">
-            Tạo tài khoản mới
-          </h2>
-
-          <p className="mt-3 text-lg text-slate-700">
-            Điền thông tin của bạn để truy cập hệ thống
+          <h1 className="text-3xl font-bold text-primary tracking-wider mb-2">
+            {dict.pages.auth.register.title}
+          </h1>
+          <p className="text-xl font-semibold text-on-surface mb-1">
+            {dict.pages.auth.register.subtitle}
+          </p>
+          <p className="text-sm text-on-surface-variant max-w-[280px] mx-auto leading-relaxed">
+            {dict.pages.auth.register.desc}
           </p>
         </div>
 
@@ -192,13 +181,13 @@ export default function SignUp() {
             </p>
           )}
 
-          <div>
-            <label className="mb-2 block text-base font-semibold text-slate-950">
-              Họ và tên
+          <div className="space-y-1">
+            <label className="block text-sm font-semibold text-on-surface">
+              {dict.pages.auth.register.full_name}
             </label>
             <input
               type="text"
-              placeholder="Nhập họ và tên"
+              placeholder={dict.pages.auth.register.full_name_placeholder}
               value={fullName}
               disabled={loading}
               onChange={(e) => {
@@ -215,13 +204,13 @@ export default function SignUp() {
             )}
           </div>
 
-          <div>
-            <label className="mb-2 block text-base font-semibold text-slate-950">
-              Địa chỉ Email
+          <div className="space-y-1">
+            <label className="block text-sm font-semibold text-on-surface">
+              {dict.pages.auth.register.email}
             </label>
             <input
               type="email"
-              placeholder="name@company.com"
+              placeholder={dict.pages.auth.register.email_placeholder}
               value={email}
               disabled={loading}
               onChange={(e) => {
@@ -238,13 +227,13 @@ export default function SignUp() {
             )}
           </div>
 
-          <div>
-            <label className="mb-2 block text-base font-semibold text-slate-950">
-              Số điện thoại
+          <div className="space-y-1">
+            <label className="block text-sm font-semibold text-on-surface">
+              {dict.pages.auth.register.phone}
             </label>
             <input
               type="tel"
-              placeholder="+84 000 000 000"
+              placeholder={dict.pages.auth.register.phone_placeholder}
               value={phoneNumber}
               disabled={loading}
               onChange={(e) => {
@@ -261,14 +250,14 @@ export default function SignUp() {
             )}
           </div>
 
-          <div>
-            <label className="mb-2 block text-base font-semibold text-slate-950">
-              Mật khẩu
+          <div className="space-y-1">
+            <label className="block text-sm font-semibold text-on-surface">
+              {dict.pages.auth.register.password}
             </label>
             <div className="relative">
               <input
                 type={showPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder={dict.pages.auth.register.password_placeholder}
                 value={password}
                 disabled={loading}
                 onChange={(e) => {
@@ -297,14 +286,14 @@ export default function SignUp() {
             )}
           </div>
 
-          <div>
-            <label className="mb-2 block text-base font-semibold text-slate-950">
-              Xác nhận mật khẩu
+          <div className="space-y-1">
+            <label className="block text-sm font-semibold text-on-surface">
+              {dict.pages.auth.register.confirm_password}
             </label>
             <div className="relative">
               <input
                 type={showConfirmPassword ? "text" : "password"}
-                placeholder="••••••••"
+                placeholder={dict.pages.auth.register.confirm_password_placeholder}
                 value={confirmPassword}
                 disabled={loading}
                 onChange={(e) => {
@@ -339,24 +328,24 @@ export default function SignUp() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-8 h-12 w-full rounded bg-blue-800 text-base font-semibold text-white transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
+            className="w-full py-2.5 px-4 rounded-lg bg-blue-800 hover:bg-blue-900 text-white font-semibold text-sm transition-all duration-200 shadow hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           >
-            {loading ? "Đang đăng ký..." : "Đăng ký"}
+            {loading ? (
+              <>
+                <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                <span>{dict.pages.auth.register.loading}</span>
+              </>
+            ) : (
+              <span>{dict.pages.auth.register.submit_btn}</span>
+            )}
           </button>
 
-          <div className="pt-4">
-            <div className="border-t border-slate-300" />
-          </div>
-
-          <div className="text-center text-base text-slate-700">
-            Đã có tài khoản?{" "}
-            <Link
-              href="/login"
-              className="font-semibold text-blue-800 hover:underline"
-            >
-              Đăng nhập
-            </Link>
-          </div>
+          <Link
+            href="/login"
+            className="block w-full text-center py-2.5 px-4 rounded-lg border border-slate-300 hover:bg-slate-100 text-slate-800 font-semibold text-sm transition-colors duration-200"
+          >
+            {dict.pages.auth.register.login_btn}
+          </Link>
         </form>
       </div>
      </div>

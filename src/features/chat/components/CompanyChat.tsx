@@ -13,6 +13,7 @@ import { Conversation } from '@/types/Conversation';
 import { Message } from '@/types/Message';
 import { ConversationWithDetails } from '@/features/chat/types';
 import { supabase } from '@/lib/supabase';
+import { useTranslation } from '@/components/providers/LanguageProvider';
 
 interface CompanyChatProps {
   companyId: string;
@@ -20,6 +21,8 @@ interface CompanyChatProps {
 }
 
 export function CompanyChat({ companyId, userId }: CompanyChatProps) {
+  const { dict, locale } = useTranslation();
+  const dateLocale = locale === 'en' ? 'en-US' : 'vi-VN';
   const [conversations, setConversations] = useState<ConversationWithDetails[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
@@ -216,7 +219,7 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
 
   const formatTime = (dateStr: string) => {
     if (!dateStr) return '';
-    return new Date(dateStr).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+    return new Date(dateStr).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' });
   };
 
   return (
@@ -224,12 +227,12 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
       {/* Sidebar */}
       <div className="w-80 border-r border-outline-variant flex flex-col bg-surface-container-low">
         <div className="p-5 border-b border-outline-variant shrink-0">
-          <h2 className="text-xl font-bold mb-4 font-headline tracking-tight text-primary">Tin nhắn</h2>
+          <h2 className="text-xl font-bold mb-4 font-headline tracking-tight text-primary">{dict.chat?.title || "Tin nhắn"}</h2>
           <div className="relative group">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-on-surface-variant group-focus-within:text-primary transition-colors" />
             <input
               type="text"
-              placeholder="Tìm theo tên khách hàng..."
+              placeholder={dict.chat?.search_customer || "Tìm theo tên khách hàng..."}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-9 pr-4 py-2.5 bg-surface border border-outline-variant rounded-xl text-sm focus:ring-4 focus:ring-primary/10 focus:border-primary outline-none transition-all shadow-sm placeholder:text-on-surface-variant text-on-surface"
@@ -239,11 +242,11 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
 
         <div className="flex-1 overflow-y-auto">
           {isLoadingConversations ? (
-            <div className="p-6 text-center text-on-surface-variant text-sm">Đang tải...</div>
+            <div className="p-6 text-center text-on-surface-variant text-sm">{dict.chat?.loading || "Đang tải..."}</div>
           ) : filteredConversations.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-8 text-on-surface-variant text-sm mt-10">
               <MessageSquare className="w-10 h-10 mb-3 opacity-20" />
-              <p>Chưa có hội thoại nào.</p>
+              <p>{dict.chat?.no_conversations || "Chưa có hội thoại nào."}</p>
             </div>
           ) : (
             filteredConversations.map((conv) => {
@@ -269,14 +272,14 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between">
                         <div className={`font-semibold truncate text-sm ${isActive ? 'text-primary' : 'text-on-surface'}`}>
-                          {conv.customer_name || `Hội thoại #${conv.conversation_id.slice(0, 8)}`}
+                          {conv.customer_name || `${dict.chat?.default_conversation || "Hội thoại"} #${conv.conversation_id.slice(0, 8)}`}
                         </div>
                         <span className={`text-[11px] font-medium shrink-0 mt-0.5 ${isActive ? 'text-primary/70' : 'text-on-surface-variant'}`}>
                           {formatTime(conv.updated_at)}
                         </span>
                       </div>
                       <p className={`text-xs mt-1 leading-relaxed line-clamp-1 ${isActive ? 'text-on-surface' : 'text-on-surface-variant'}`}>
-                        {conv.latest_message || `Tạo lúc ${new Date(conv.created_at).toLocaleDateString('vi-VN')}`}
+                        {conv.latest_message || `${dict.chat?.created_at || "Tạo lúc"} ${new Date(conv.created_at).toLocaleDateString(dateLocale)}`}
                       </p>
                     </div>
                   </div>
@@ -294,8 +297,8 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
             <div className="w-16 h-16 bg-surface-container-highest/20 rounded-full flex items-center justify-center mb-4">
               <MessageSquare className="w-8 h-8 opacity-40" />
             </div>
-            <p className="text-base font-medium text-on-surface mb-1">Tin nhắn của công ty</p>
-            <p className="text-on-surface-variant text-sm">Chọn một hội thoại ở danh sách bên trái để bắt đầu</p>
+            <p className="text-base font-medium text-on-surface mb-1">{dict.chat?.company_messages || "Tin nhắn của công ty"}</p>
+            <p className="text-on-surface-variant text-sm">{dict.chat?.select_conversation || "Chọn một hội thoại ở danh sách bên trái để bắt đầu"}</p>
           </div>
         ) : (
           <>
@@ -313,7 +316,7 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
                 </div>
                 <div>
                   <h3 className="font-bold text-on-surface leading-tight tracking-tight">
-                    {conversations.find(c => c.conversation_id === activeConversationId)?.customer_name || `Hội thoại #${activeConversationId.slice(0, 8)}`}
+                    {conversations.find(c => c.conversation_id === activeConversationId)?.customer_name || `${dict.chat?.default_conversation || "Hội thoại"} #${activeConversationId.slice(0, 8)}`}
                   </h3>
                 </div>
               </div>
@@ -322,14 +325,14 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
             {/* Chat Messages */}
             <div className="flex-1 p-6 overflow-y-auto space-y-6">
               {isLoadingMessages ? (
-                <div className="text-center text-on-surface-variant text-sm py-8">Đang tải tin nhắn...</div>
+                <div className="text-center text-on-surface-variant text-sm py-8">{dict.chat?.loading_messages || "Đang tải tin nhắn..."}</div>
               ) : messages.length === 0 ? (
-                <div className="text-center text-on-surface-variant text-sm py-8">Chưa có tin nhắn nào.</div>
+                <div className="text-center text-on-surface-variant text-sm py-8">{dict.chat?.no_messages || "Chưa có tin nhắn nào."}</div>
               ) : (
                 messages.map((msg, index) => {
                   const isMyMessage = msg.sender_id === userId;
-                  const msgDate = new Date(msg.created_at).toLocaleDateString('vi-VN');
-                  const prevMsgDate = index > 0 ? new Date(messages[index - 1].created_at).toLocaleDateString('vi-VN') : null;
+                  const msgDate = new Date(msg.created_at).toLocaleDateString(dateLocale);
+                  const prevMsgDate = index > 0 ? new Date(messages[index - 1].created_at).toLocaleDateString(dateLocale) : null;
                   const showDateSeparator = msgDate !== prevMsgDate;
 
                   return (
@@ -337,7 +340,7 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
                       {showDateSeparator && (
                         <div className="flex justify-center my-4">
                           <span className="bg-surface-container-high text-on-surface-variant text-[11px] px-3 py-1 rounded-full font-medium shadow-sm">
-                            {msgDate === new Date().toLocaleDateString('vi-VN') ? 'Hôm nay' : msgDate}
+                            {msgDate === new Date().toLocaleDateString(dateLocale) ? (dict.chat?.today || 'Hôm nay') : msgDate}
                           </span>
                         </div>
                       )}
@@ -383,7 +386,7 @@ export function CompanyChat({ companyId, userId }: CompanyChatProps) {
                 <textarea
                   id="chat-input"
                   rows={1}
-                  placeholder="Nhập tin nhắn của bạn..."
+                  placeholder={dict.chat?.placeholder || "Nhập tin nhắn của bạn..."}
                   value={newMessage}
                   onChange={(e) => {
                     setNewMessage(e.target.value);

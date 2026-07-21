@@ -14,9 +14,11 @@ import {
   requestCreateReport,
   requestGetCustomerContractsForReport,
 } from "../api/report.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export function CustomerReportContainer() {
   const customerId = useAuthStore((state) => state.user_id) || "";
+  const { dict } = useTranslation();
 
   // UI state
   const [activeTab, setActiveTab] = useState<"list" | "create">("list");
@@ -124,12 +126,12 @@ export function CustomerReportContainer() {
         description: payload.description,
         image_url: finalImageUrl,
       });
-      showToast("Gửi báo cáo khiếu nại thành công! Đội ngũ hỗ trợ sẽ nhanh chóng xử lý phản hồi này.");
+      showToast(dict.report.container.success);
       setActiveTab("list");
       fetchReports();
     } catch (err) {
       console.error("Lỗi khi gửi báo cáo:", err);
-      const errMsg = err instanceof Error ? err.message : "Gửi báo cáo khiếu nại thất bại. Vui lòng thử lại.";
+      const errMsg = err instanceof Error ? err.message : dict.report.container.error;
       showToast(errMsg);
     } finally {
       setIsSubmitting(false);
@@ -158,10 +160,10 @@ export function CustomerReportContainer() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-primary tracking-tight font-headline">
-              Báo cáo & Phản ánh sự cố
+              {dict.report.container.title}
             </h1>
             <p className="text-sm text-on-surface-variant mt-0.5 font-body">
-              Báo cáo các sự việc phát sinh tại mục tiêu hoặc phản ánh chất lượng dịch vụ của nhân viên trực.
+              {dict.report.container.desc}
             </p>
           </div>
         </div>
@@ -175,7 +177,7 @@ export function CustomerReportContainer() {
                 : "text-on-surface-variant hover:text-primary"
               }`}
           >
-            Lịch sử báo cáo
+            {dict.report.container.tab_history}
           </button>
           <button
             onClick={() => setActiveTab("create")}
@@ -184,7 +186,7 @@ export function CustomerReportContainer() {
                 : "text-on-surface-variant hover:text-primary"
               }`}
           >
-            <Plus className="w-3.5 h-3.5" /> Tạo báo cáo mới
+            <Plus className="w-3.5 h-3.5" /> {dict.report.container.tab_create}
           </button>
         </div>
       </div>
@@ -204,7 +206,7 @@ export function CustomerReportContainer() {
           {isLoadingReports ? (
             <div className="flex flex-col items-center justify-center p-16 bg-white border border-outline-variant/30 rounded-xl">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-              <p className="text-xs text-on-surface-variant mt-3 font-medium">Đang tải danh sách báo cáo...</p>
+              <p className="text-xs text-on-surface-variant mt-3 font-medium">{dict.report.container.loading}</p>
             </div>
           ) : (
             <CustomerReportTable

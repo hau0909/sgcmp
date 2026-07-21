@@ -2,8 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { MapPin, Star, StarHalf } from "lucide-react";
+import { MapPin, Star } from "lucide-react";
 import { MarketplaceCompany } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CompanyCardProps {
   company: MarketplaceCompany;
@@ -11,6 +12,7 @@ interface CompanyCardProps {
 
 export default function CompanyCard({ company }: CompanyCardProps) {
   const isNew = company.rating === null;
+  const { dict } = useTranslation();
 
   return (
     <Link
@@ -28,7 +30,7 @@ export default function CompanyCard({ company }: CompanyCardProps) {
         <div className="flex items-center gap-0.5 flex-shrink-0 mt-0.5">
           {isNew ? (
             <span className="text-[10px] font-semibold text-outline bg-surface-container px-1.5 py-0.5 rounded">
-              Mới
+              {dict.customer.company_card.new}
             </span>
           ) : (
             <div className="flex items-center gap-0.5 text-amber-500">
@@ -65,10 +67,10 @@ export default function CompanyCard({ company }: CompanyCardProps) {
       {/* Footer / Price & Details button */}
       <div className="flex justify-between items-center mt-auto pt-2.5 border-t border-outline-variant/40">
         <div>
-          <p className="text-[9px] font-bold text-outline uppercase tracking-wider">Giá dịch vụ</p>
+          <p className="text-[9px] font-bold text-outline uppercase tracking-wider">{dict.customer.company_card.price_label}</p>
           <p className="text-xs font-extrabold text-primary mt-0.5">
             {company.pricePerHour === 0 ? (
-              <span className="text-on-surface-variant font-semibold">Liên hệ</span>
+              <span className="text-on-surface-variant font-semibold">{dict.customer.company_card.contact}</span>
             ) : company.serviceCount && company.serviceCount > 1 && company.maxPrice && company.maxPrice > company.pricePerHour ? (
               <>
                 {company.pricePerHour.toLocaleString("vi-VN")} -{" "}
@@ -84,7 +86,7 @@ export default function CompanyCard({ company }: CompanyCardProps) {
           </p>
         </div>
         <span className="h-7 px-3 bg-primary/8 text-primary text-[11px] font-bold rounded-lg group-hover:bg-primary group-hover:text-white transition-all duration-150 flex items-center justify-center">
-          Xem hồ sơ
+          {dict.customer.company_card.view_profile}
         </span>
       </div>
     </Link>

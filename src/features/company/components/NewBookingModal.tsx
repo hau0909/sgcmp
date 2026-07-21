@@ -21,6 +21,17 @@ import { CompanyServiceData } from "../types";
 import { requestCreateBooking } from "@/features/booking/api/booking.api";
 import { requestGetCities, requestGetWards } from "@/features/address/api/address.api";
 import { City, Ward } from "@/features/address/types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
+
+const DAYS_OF_WEEK = [
+  { value: "Monday", label: "T2" },
+  { value: "Tuesday", label: "T3" },
+  { value: "Wednesday", label: "T4" },
+  { value: "Thursday", label: "T5" },
+  { value: "Friday", label: "T6" },
+  { value: "Saturday", label: "T7" },
+  { value: "Sunday", label: "CN" },
+];
 
 interface NewBookingModalProps {
   isOpen: boolean;
@@ -30,7 +41,6 @@ interface NewBookingModalProps {
   services: CompanyServiceData[];
 }
 
-const DAYS_OF_WEEK = [{ value: "Monday", label: "T2" }, { value: "Tuesday", label: "T3" }, { value: "Wednesday", label: "T4" }, { value: "Thursday", label: "T5" }, { value: "Friday", label: "T6" }, { value: "Saturday", label: "T7" }, { value: "Sunday", label: "CN" },];
 export default function NewBookingModal({
   isOpen,
   onClose,
@@ -38,6 +48,7 @@ export default function NewBookingModal({
   companyName,
   services,
 }: NewBookingModalProps) {
+  const { dict } = useTranslation();
   const [serviceId, setServiceId] = useState("");
   const [address, setAddress] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -170,7 +181,7 @@ export default function NewBookingModal({
 
   const handleAddTimeSlot = () => {
     if (!startTime || !endTime) {
-      setTimeSlotError("Vui lòng chọn đầy đủ giờ bắt đầu và giờ kết thúc");
+      setTimeSlotError(dict.booking.form.errors.start_end_time);
       return;
     }
     const start24 = formatTo24h(startTime);
@@ -185,7 +196,7 @@ export default function NewBookingModal({
     const newEndMins = timeToMins(end24);
 
     if (newStartMins >= newEndMins) {
-      setTimeSlotError("Giờ bắt đầu phải trước giờ kết thúc");
+      setTimeSlotError(dict.booking.form.errors.start_before_end);
       return;
     }
 
@@ -197,7 +208,7 @@ export default function NewBookingModal({
     });
 
     if (hasOverlap) {
-      setTimeSlotError("Khung giờ này bị trùng lặp với các khung giờ đã thêm trước đó");
+      setTimeSlotError(dict.booking.form.errors.overlap);
       return;
     }
 
@@ -317,15 +328,14 @@ export default function NewBookingModal({
         onClose();
       }, 3000);
     } catch (err: any) {
+      console.error(err);
       setIsSubmitting(false);
-      if (err?.data?.errorType === "OVERLAP") {
-        setOverlappingBookings(err.data.overlaps || []);
+      if (err.response?.status === 409 && err.response?.data?.overlapBookings) {
+        setOverlappingBookings(err.response.data.overlapBookings);
         setShowOverlapWarning(true);
-        return;
+      } else {
+        setToastMessage(err?.message || dict.booking.form.errors.submit_failed);
       }
-      setToastMessage(
-        err?.message || "Đã xảy ra lỗi khi gửi yêu cầu đặt lịch. Vui lòng thử lại."
-      );
     }
   };
 
@@ -373,10 +383,10 @@ export default function NewBookingModal({
           <div className="px-6 py-4.5 border-b border-outline-variant flex justify-between items-center bg-surface-container-low/30 shrink-0">
             <div>
               <h2 className="text-[20px] font-bold text-on-surface tracking-tight">
-                Yêu cầu đặt dịch vụ mới
+                {dict.booking.form.title}
               </h2>
               <p className="text-xs text-on-surface-variant mt-0.5 font-medium">
-                Đối tác:{" "}
+                {dict.booking.form.partner}{" "}
                 <span className="text-primary font-semibold">
                   {companyName}
                 </span>
@@ -399,17 +409,14 @@ export default function NewBookingModal({
                 <CheckCircle className="w-12 h-12" />
               </div>
               <h3 className="text-xl font-bold text-on-surface mt-2">
-                Gửi Yêu Cầu Thành Công!
+                {dict.booking.form.success_title}
               </h3>
               <p className="text-sm text-on-surface-variant max-w-sm">
-                Yêu cầu đặt lịch của bạn đã được ghi nhận. Hệ thống đã chuyển
-                thông tin tới{" "}
-                <strong className="text-on-surface">{companyName}</strong> để xử
-                lý báo giá.
+                {dict.booking.form.success_desc}
               </p>
               <div className="mt-4 text-xs text-primary font-semibold flex items-center gap-1.5 bg-primary/5 px-3 py-1.5 rounded-full">
                 <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
-                Cửa sổ này sẽ tự động đóng lại sau giây lát...
+                {dict.booking.form.auto_close}
               </div>
             </div>
           ) : (
@@ -424,7 +431,7 @@ export default function NewBookingModal({
                   <div className="flex items-center gap-2 border-b border-outline-variant/60 pb-2">
                     <div className="w-1 h-4 bg-primary rounded-full" />
                     <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">
-                      1. Thông tin dịch vụ & Địa điểm
+                      {dict.booking.form.section1_title}
                     </h3>
                   </div>
 
@@ -432,11 +439,10 @@ export default function NewBookingModal({
                     {/* Service Selection */}
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <Briefcase className="w-3.5 h-3.5 text-primary" /> Loại
-                        dịch vụ <span className="text-error">*</span>
+                        <Briefcase className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.service_type} <span className="text-error">*</span>
                       </label>
                       <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-0.5">
-                        Chọn gói dịch vụ bảo vệ phù hợp với nhu cầu.
+                        {dict.booking.form.service_type_desc}
                       </p>
                       <div className="relative">
                         <select
@@ -452,15 +458,15 @@ export default function NewBookingModal({
                             }`}
                         >
                           <option value="" disabled>
-                            Chọn dịch vụ cần thiết...
+                            {dict.booking.form.service_placeholder}
                           </option>
                           {services.map((service, idx) => (
                             <option
                               key={idx}
                               value={service.serviceId || service.name}
                             >
-                              {service.name} - (Từ{" "}
-                              {service.price.toLocaleString("vi-VN")}đ/giờ)
+                              {service.name} - ({dict.booking.form.price_from}{" "}
+                              {service.price.toLocaleString(dict.booking.form.price_from === "Từ" ? "vi-VN" : "en-US")}{dict.booking.form.price_per_hour})
                             </option>
                           ))}
                         </select>
@@ -479,7 +485,7 @@ export default function NewBookingModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <MapPin className="w-3.5 h-3.5 text-primary" /> Tỉnh / Thành phố <span className="text-error">*</span>
+                        <MapPin className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.city} <span className="text-error">*</span>
                       </label>
                       <div className="relative">
                         <select
@@ -494,7 +500,7 @@ export default function NewBookingModal({
                             : "border-outline-variant"
                             }`}
                         >
-                          <option value="" disabled>Chọn Tỉnh/Thành phố...</option>
+                          <option value="" disabled>{dict.booking.form.city_placeholder}</option>
                           {cities.map((c) => (
                             <option key={c.city_id} value={c.city_id.toString()}>
                               {c.city_name}
@@ -512,7 +518,7 @@ export default function NewBookingModal({
 
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <MapPin className="w-3.5 h-3.5 text-primary" /> Quận / Huyện / Phường / Xã <span className="text-error">*</span>
+                        <MapPin className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.ward} <span className="text-error">*</span>
                       </label>
                       <div className="relative">
                         <select
@@ -528,7 +534,7 @@ export default function NewBookingModal({
                             : "border-outline-variant"
                             }`}
                         >
-                          <option value="" disabled>Chọn Quận/Huyện/Phường/Xã...</option>
+                          <option value="" disabled>{dict.booking.form.ward_placeholder}</option>
                           {wards.map((w) => (
                             <option key={w.ward_id} value={w.ward_id.toString()}>
                               {w.ward_name}
@@ -548,7 +554,7 @@ export default function NewBookingModal({
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <MapPin className="w-3.5 h-3.5 text-primary" /> Địa chỉ cụ thể <span className="text-error">*</span>
+                        <MapPin className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.specific_address} <span className="text-error">*</span>
                       </label>
                       <input
                         type="text"
@@ -558,7 +564,7 @@ export default function NewBookingModal({
                           if (errors.specificAddress)
                             setErrors((prev) => ({ ...prev, specificAddress: "" }));
                         }}
-                        placeholder="Số nhà, tên đường..."
+                        placeholder={dict.booking.form.specific_address_placeholder}
                         className={`w-full bg-surface-bright border rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all ${errors.specificAddress
                           ? "border-error ring-1 ring-error"
                           : "border-outline-variant"
@@ -580,7 +586,7 @@ export default function NewBookingModal({
                   <div className="flex items-center gap-2 border-b border-outline-variant/60 pb-2">
                     <div className="w-1 h-4 bg-primary rounded-full" />
                     <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">
-                      2. Kế hoạch & Lịch trình làm việc
+                      {dict.booking.form.section2_title}
                     </h3>
                   </div>
 
@@ -589,11 +595,10 @@ export default function NewBookingModal({
                     {/* Start Date */}
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <Calendar className="w-3.5 h-3.5 text-primary" /> Ngày
-                        bắt đầu <span className="text-error">*</span>
+                        <Calendar className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.start_date} <span className="text-error">*</span>
                       </label>
                       <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-0.5">
-                        Ngày bắt đầu triển khai.
+                        {dict.booking.form.start_date_desc}
                       </p>
                       <input
                         type="date"
@@ -619,11 +624,10 @@ export default function NewBookingModal({
                     {/* End Date */}
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <Calendar className="w-3.5 h-3.5 text-primary" /> Ngày
-                        kết thúc <span className="text-error">*</span>
+                        <Calendar className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.end_date} <span className="text-error">*</span>
                       </label>
                       <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-0.5">
-                        Ngày hết hạn hợp đồng.
+                        {dict.booking.form.end_date_desc}
                       </p>
                       <input
                         type="date"
@@ -649,11 +653,10 @@ export default function NewBookingModal({
                     {/* Guards Count Counter */}
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <Users className="w-3.5 h-3.5 text-primary" /> Số bảo
-                        vệ/khung giờ <span className="text-error">*</span>
+                        <Users className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.guards_per_slot} <span className="text-error">*</span>
                       </label>
                       <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-0.5">
-                        Số nhân sự cho mỗi khung giờ thực hiện.
+                        {dict.booking.form.guards_per_slot_desc}
                       </p>
                       <div className="flex items-center w-full border border-outline-variant bg-surface-bright rounded-xl p-1 justify-between shadow-2xs h-[38px]">
                         <button
@@ -667,7 +670,7 @@ export default function NewBookingModal({
                           <Minus className="w-3.5 h-3.5" />
                         </button>
                         <span className="text-xs font-bold text-on-surface flex-1 text-center">
-                          {guardsPerSlot} bảo vệ
+                          {guardsPerSlot} {dict.booking.form.guards_count}
                         </span>
                         <button
                           type="button"
@@ -689,26 +692,25 @@ export default function NewBookingModal({
                   {/* Days of the week selection - Full Width */}
                   <div className="flex flex-col gap-1 mt-1">
                     <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                      <Calendar className="w-3.5 h-3.5 text-primary" /> Ngày làm
-                      việc trong tuần <span className="text-error">*</span>
+                      <Calendar className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.days_of_week} <span className="text-error">*</span>
                     </label>
                     <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-1.5">
-                      Chọn các ngày trong tuần cần bố trí nhân sự làm việc.
+                      {dict.booking.form.days_of_week_desc}
                     </p>
                     <div className="flex justify-between gap-1.5 bg-surface-container-low/40 p-1.5 border border-outline-variant/60 rounded-xl">
-                      {DAYS_OF_WEEK.map((day) => {
-                        const isSelected = selectedDays.includes(day.value);
+                      {["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"].map((dayValue) => {
+                        const isSelected = selectedDays.includes(dayValue);
                         return (
                           <button
-                            key={day.value}
+                            key={dayValue}
                             type="button"
-                            onClick={() => toggleDay(day.value)}
+                            onClick={() => toggleDay(dayValue)}
                             className={`flex-1 text-center py-2 text-xs font-bold rounded-lg transition-all cursor-pointer ${isSelected
                               ? "bg-primary text-on-primary shadow-xs animate-fade-in"
                               : "hover:bg-surface-container-high text-on-surface-variant"
                               }`}
                           >
-                            {day.label}
+                            {dict.booking.form.days_short[dayValue as keyof typeof dict.booking.form.days_short]}
                           </button>
                         );
                       })}
@@ -724,12 +726,10 @@ export default function NewBookingModal({
                   {/* Implementation Time slots - Full Width */}
                   <div className="flex flex-col gap-1 mt-1">
                     <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                      <Clock className="w-3.5 h-3.5 text-primary" /> Khung giờ
-                      thực hiện <span className="text-error">*</span>
+                      <Clock className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.time_slots} <span className="text-error">*</span>
                     </label>
                     <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-1.5">
-                      Nhập khung giờ thực hiện trong ngày (ví dụ: từ 08:00 đến
-                      17:00, hoặc từ 17:00 đến 08:00).
+                      {dict.booking.form.time_slots_desc}
                     </p>
 
                     <div className="flex flex-col gap-3">
@@ -737,7 +737,7 @@ export default function NewBookingModal({
                         <div className="flex-1 grid grid-cols-2 gap-3 items-center">
                           <div className="flex flex-col gap-1">
                             <span className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
-                              Từ:
+                              {dict.booking.form.from}
                             </span>
                             <div className="flex items-center gap-1.5 border border-outline-variant rounded-xl px-3 py-1.5 bg-surface-bright focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all h-[38px]">
                               <Clock className="w-4 h-4 text-on-surface-variant/50 shrink-0" />
@@ -754,7 +754,7 @@ export default function NewBookingModal({
                           </div>
                           <div className="flex flex-col gap-1">
                             <span className="text-[9px] text-on-surface-variant font-bold uppercase tracking-wider">
-                              Đến:
+                              {dict.booking.form.to}
                             </span>
                             <div className="flex items-center gap-1.5 border border-outline-variant rounded-xl px-3 py-1.5 bg-surface-bright focus-within:ring-2 focus-within:ring-primary focus-within:border-transparent transition-all h-[38px]">
                               <Clock className="w-4 h-4 text-on-surface-variant/50 shrink-0" />
@@ -776,7 +776,7 @@ export default function NewBookingModal({
                           className="h-[38px] px-5 bg-primary text-on-primary hover:bg-primary/95 text-xs font-bold rounded-xl shadow-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer shrink-0 active:scale-98"
                         >
                           <Plus className="w-3.5 h-3.5" />
-                          Thêm khung giờ
+                          {dict.booking.form.add_time_slot}
                         </button>
                       </div>
 
@@ -791,8 +791,7 @@ export default function NewBookingModal({
                       <div className="flex flex-col gap-1.5 max-h-[140px] overflow-y-auto pr-1 mt-1">
                         {timeSlots.length === 0 ? (
                           <div className="text-center py-4 border border-dashed border-outline-variant/50 rounded-xl text-xs text-on-surface-variant/50 font-medium bg-surface-container-low/20">
-                            Chưa có khung giờ nào được thêm. Vui lòng chọn giờ
-                            và bấm "Thêm khung giờ".
+                            {dict.booking.form.no_time_slots}
                           </div>
                         ) : (
                           <div className="flex flex-wrap gap-2">
@@ -830,23 +829,21 @@ export default function NewBookingModal({
                   <div className="flex items-center gap-2 border-b border-outline-variant/60 pb-2">
                     <div className="w-1 h-4 bg-primary rounded-full" />
                     <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">
-                      3. Yêu cầu nghiệp vụ chi tiết
+                      {dict.booking.form.section3_title}
                     </h3>
                   </div>
 
                   <div className="flex flex-col gap-1">
                     <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                      <FileText className="w-3.5 h-3.5 text-primary" /> Mô tả
-                      yêu cầu cụ thể
+                      <FileText className="w-3.5 h-3.5 text-primary" /> {dict.booking.form.description}
                     </label>
                     <p className="text-[10px] text-on-surface-variant/70 leading-normal mb-1.5">
-                      Ghi rõ các yêu cầu đặc thù để đối tác chuẩn bị phương án
-                      bảo vệ tối ưu.
+                      {dict.booking.form.description_desc}
                     </p>
                     <textarea
                       value={description}
                       onChange={(e) => setDescription(e.target.value)}
-                      placeholder="Ví dụ: Kỹ năng võ thuật, độ tuổi giới hạn, trang bị nghiệp vụ đi kèm, yêu cầu đồng phục, hoặc các lưu ý đặc thù về công việc..."
+                      placeholder={dict.booking.form.description_placeholder}
                       rows={3.5}
                       className="w-full bg-surface-bright border border-outline-variant rounded-xl p-3 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all resize-none"
                     />
@@ -862,7 +859,7 @@ export default function NewBookingModal({
                   onClick={onClose}
                   className="px-4 py-2 border border-outline-variant text-on-surface hover:bg-surface-container-low rounded-xl text-xs font-bold transition-all disabled:opacity-40 cursor-pointer"
                 >
-                  Hủy bỏ
+                  {dict.booking.form.cancel}
                 </button>
                 <button
                   type="submit"
@@ -890,10 +887,10 @@ export default function NewBookingModal({
                           d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                         />
                       </svg>
-                      Đang gửi yêu cầu...
+                      {dict.booking.form.submitting}
                     </>
                   ) : (
-                    "Gửi yêu cầu"
+                    dict.booking.form.submit
                   )}
                 </button>
               </div>
@@ -909,30 +906,26 @@ export default function NewBookingModal({
                     <AlertCircle className="w-5 h-5" />
                   </div>
                   <div>
-                    <h3 className="text-base font-bold text-on-surface">Cảnh báo trùng lặp yêu cầu</h3>
+                    <h3 className="text-base font-bold text-on-surface">{dict.booking.form.warning_title}</h3>
                     <p className="text-sm text-on-surface-variant mt-1">
-                      Hệ thống phát hiện địa chỉ này đã có lịch đặt dịch vụ trùng ngày và khung giờ.
+                      {dict.booking.form.warning_desc}
                     </p>
                   </div>
                 </div>
 
                 <div className="bg-surface-container-low rounded-xl p-3 max-h-[150px] overflow-y-auto">
-                  <p className="text-xs font-semibold text-on-surface mb-2">Các lịch trùng lặp:</p>
+                  <p className="text-xs font-semibold text-on-surface mb-2">{dict.booking.form.overlapping_schedules}</p>
                   <div className="flex flex-col gap-2">
                     {overlappingBookings.map((b, idx) => {
                       const srvName = Array.isArray(b.services) ? b.services[0]?.name : b.services?.name;
-                      const dayMap: Record<string, string> = {
-                        "Monday": "Thứ 2", "Tuesday": "Thứ 3", "Wednesday": "Thứ 4",
-                        "Thursday": "Thứ 5", "Friday": "Thứ 6", "Saturday": "Thứ 7", "Sunday": "Chủ nhật"
-                      };
-                      const vnDays = b.day_per_week?.map((d: string) => dayMap[d] || d).join(", ");
+                      const vnDays = b.day_per_week?.map((d: string) => dict.booking.form.days[d as keyof typeof dict.booking.form.days] || d).join(", ");
                       
                       return (
                         <div key={idx} className="text-xs text-on-surface-variant bg-surface-bright p-2 rounded-lg border border-outline-variant/50">
                           <span className="font-semibold">{b.start_date} - {b.end_date}</span>
-                          {srvName && <div className="mt-1 font-medium text-primary">Dịch vụ: {srvName}</div>}
-                          <div className="mt-1">Khung giờ: {b.time_slots?.join(", ")}</div>
-                          <div className="mt-1">Thứ: {vnDays}</div>
+                          {srvName && <div className="mt-1 font-medium text-primary">{dict.booking.form.service} {srvName}</div>}
+                          <div className="mt-1">{dict.booking.form.time_slot_label} {b.time_slots?.join(", ")}</div>
+                          <div className="mt-1">{dict.booking.form.day_label} {vnDays}</div>
                         </div>
                       );
                     })}
@@ -940,7 +933,7 @@ export default function NewBookingModal({
                 </div>
 
                 <p className="text-sm font-medium text-on-surface mt-2 text-center">
-                  Bạn có xác nhận yêu cầu này là một yêu cầu khác không?
+                  {dict.booking.form.confirm_question}
                 </p>
 
                 <div className="flex justify-end gap-3 mt-2">
@@ -949,14 +942,14 @@ export default function NewBookingModal({
                     onClick={() => setShowOverlapWarning(false)}
                     className="px-4 py-2 border border-outline-variant text-on-surface hover:bg-surface-container-low rounded-xl text-xs font-bold transition-all cursor-pointer"
                   >
-                    Hủy, sửa lại yêu cầu
+                    {dict.booking.form.cancel_edit}
                   </button>
                   <button
                     type="button"
                     onClick={(e) => handleSubmit(e, true)}
                     className="px-4 py-2 bg-error text-white hover:bg-error/90 font-bold rounded-xl shadow-xs text-xs flex items-center justify-center transition-all cursor-pointer"
                   >
-                    Xác nhận tạo mới
+                    {dict.booking.form.confirm_create}
                   </button>
                 </div>
               </div>

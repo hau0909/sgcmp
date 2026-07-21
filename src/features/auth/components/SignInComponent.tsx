@@ -8,6 +8,7 @@ import { getRedirectPathByRole } from "../utils/redirectByRole";
 import { useAuthStore } from "@/store/auth.store";
 import { Eye, EyeOff, ArrowLeft } from "lucide-react";
 import Footer from "@/components/layout/Footer";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type FormErrors = {
   email?: string;
@@ -15,18 +16,19 @@ type FormErrors = {
   general?: string;
 };
 
-const getErrorMessage = (error: unknown) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const getErrorMessage = (error: unknown, dict: any) => {
   if (typeof error === "string") {
     if (error === "Invalid login credentials") {
-      return "Email hoặc mật khẩu không đúng";
+      return dict.pages.auth.login.errors.invalid_credentials;
     }
 
     if (error.includes("Invalid login credentials")) {
-      return "Email hoặc mật khẩu không đúng";
+      return dict.pages.auth.login.errors.invalid_credentials;
     }
 
     if (error.includes("Email not confirmed") || error.includes("Email chưa được xác thực")) {
-      return "Email chưa được xác thực. Vui lòng kiểm tra email";
+      return dict.pages.auth.login.errors.email_not_confirmed;
     }
 
     return error;
@@ -41,15 +43,15 @@ const getErrorMessage = (error: unknown) => {
     const message = (error as { message: string }).message;
 
     if (message === "Invalid login credentials") {
-      return "Email hoặc mật khẩu không đúng";
+      return dict.pages.auth.login.errors.invalid_credentials;
     }
 
     if (message.includes("Invalid login credentials")) {
-      return "Email hoặc mật khẩu không đúng";
+      return dict.pages.auth.login.errors.invalid_credentials;
     }
 
     if (message.includes("Email not confirmed") || message.includes("Email chưa được xác thực")) {
-      return "Email chưa được xác thực. Vui lòng kiểm tra email";
+      return dict.pages.auth.login.errors.email_not_confirmed;
     }
 
     return message;
@@ -64,7 +66,7 @@ const getErrorMessage = (error: unknown) => {
     return (error as { error: string }).error;
   }
 
-  return "Đăng nhập thất bại. Vui lòng thử lại.";
+  return dict.pages.auth.login.errors.login_failed;
 };
 
 export default function SignInComponent() {
@@ -78,19 +80,20 @@ export default function SignInComponent() {
   const [errors, setErrors] = useState<FormErrors>({});
   const [successMessage, setSuccessMessage] = useState("");
   const setAuth = useAuthStore((state) => state.setAuth);
+  const { dict } = useTranslation();
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      newErrors.email = "Vui lòng nhập email";
+      newErrors.email = dict.pages.auth.login.errors.email_required;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
-      newErrors.email = "Email không hợp lệ";
+      newErrors.email = dict.pages.auth.login.errors.email_invalid;
     }
 
     if (!password) {
-      newErrors.password = "Vui lòng nhập mật khẩu";
+      newErrors.password = dict.pages.auth.login.errors.password_required;
     }
 
     setErrors(newErrors);
@@ -119,7 +122,7 @@ export default function SignInComponent() {
 
       if (!result?.success) {
         setErrors({
-          general: getErrorMessage(result?.message),
+          general: getErrorMessage(result?.message, dict),
         });
         return;
       }
@@ -137,7 +140,7 @@ export default function SignInComponent() {
         company_id: result.data.company_id,
       });
 
-      setSuccessMessage("Đăng nhập thành công. Đang chuyển hướng...");
+      setSuccessMessage(dict.pages.auth.login.success_redirect);
 
       const redirectPath = getRedirectPathByRole(result.data.role);
 
@@ -145,7 +148,7 @@ export default function SignInComponent() {
       // router.refresh();
     } catch (error: unknown) {
       setErrors({
-        general: getErrorMessage(error),
+        general: getErrorMessage(error, dict),
       });
     } finally {
       setLoading(false);
@@ -182,9 +185,11 @@ export default function SignInComponent() {
       <div className="flex-1 flex items-start justify-center pt-24 pb-6">
         <div className="w-full max-w-[430px] rounded-md border border-slate-300 bg-white px-7 py-8 shadow-sm">
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-blue-800">SGCMP</h1>
-            <p className="mt-3 text-sm text-slate-700">
-              Điền thông tin của bạn để truy cập hệ thống
+            <h1 className="text-3xl font-bold text-primary tracking-wider mb-2">
+              {dict.pages.auth.login.title}
+            </h1>
+            <p className="text-on-surface-variant text-sm max-w-[280px] mx-auto leading-relaxed">
+              {dict.pages.auth.login.subtitle}
             </p>
           </div>
 
@@ -201,14 +206,17 @@ export default function SignInComponent() {
               </p>
             )}
 
-            <div>
-              <label className="mb-2 block text-sm font-semibold text-slate-900">
-                Địa chỉ Email
+            <div className="space-y-1">
+              <label
+                htmlFor="email"
+                className="block text-sm font-semibold text-on-surface"
+              >
+                {dict.pages.auth.login.email}
               </label>
-
               <input
+                id="email"
                 type="email"
-                placeholder="name@company.com"
+                placeholder={dict.pages.auth.login.email_placeholder}
                 value={email}
                 disabled={loading}
                 onChange={(e) => {
@@ -231,23 +239,26 @@ export default function SignInComponent() {
             </div>
 
             <div>
-              <div className="mb-2 flex items-center justify-between">
-                <label className="block text-sm font-semibold text-slate-900">
-                  Mật khẩu
+              <div className="flex items-center justify-between">
+                <label
+                  htmlFor="password"
+                  className="block text-sm font-semibold text-on-surface"
+                >
+                  {dict.pages.auth.login.password}
                 </label>
-
                 <Link
                   href="/forgot-password"
-                  className="text-xs font-semibold text-blue-800 hover:underline"
+                  className="text-xs font-semibold text-primary hover:text-primary/80 transition-colors"
                 >
-                  Quên mật khẩu?
+                  {dict.pages.auth.login.forgot_password}
                 </Link>
               </div>
 
               <div className="relative">
                 <input
+                  id="password"
                   type={showPassword ? "text" : "password"}
-                  placeholder="••••••••"
+                  placeholder={dict.pages.auth.login.password_placeholder}
                   value={password}
                   disabled={loading}
                   onChange={(e) => {
@@ -284,16 +295,23 @@ export default function SignInComponent() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 h-10 w-full rounded bg-blue-800 text-sm font-semibold text-white transition hover:bg-blue-900 disabled:cursor-not-allowed disabled:opacity-60"
+              className="w-full py-2.5 px-4 rounded-lg bg-primary hover:bg-primary/90 text-on-primary font-semibold text-sm transition-all duration-200 shadow hover:shadow-md disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+              {loading ? (
+                <>
+                  <div className="w-4 h-4 rounded-full border-2 border-on-primary/30 border-t-on-primary animate-spin" />
+                  <span>{dict.pages.auth.login.loading}</span>
+                </>
+              ) : (
+                <span>{dict.pages.auth.login.submit_btn}</span>
+              )}
             </button>
 
             <Link
               href="/register"
-              className="flex h-10 w-full items-center justify-center rounded border border-blue-800 bg-white text-sm font-semibold text-blue-800 transition hover:bg-blue-50"
+              className="block w-full text-center py-2.5 px-4 rounded-lg border border-outline-variant hover:bg-surface-container-low text-on-surface font-semibold text-sm transition-colors duration-200"
             >
-              Đăng ký
+              {dict.pages.auth.login.register_btn}
             </Link>
           </form>
         </div>

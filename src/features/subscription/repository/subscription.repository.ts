@@ -4,7 +4,10 @@ import { Subscription } from "@/types/Subscription";
 import { CurrentPlanWithSubscription, CompanySubscriptionCheckResult } from "../types";
 
 export const getAllPlans = async (): Promise<Plan[]> => {
-  const { data, error } = await supabase.from("plans").select("*");
+  const { data, error } = await supabase
+    .from("plans")
+    .select("*")
+    .eq("is_active", true);
 
   if (error) throw error;
 
@@ -161,4 +164,61 @@ export const checkCompanySubscription = async (
     subscription: (activeSub || data[0]) as Subscription,
   };
 };
+
+export const createPlan = async (
+  planData: Omit<Plan, "plan_id" | "created_at" | "updated_at">,
+): Promise<Plan> => {
+  // Fetch the maximum plan_id currently in the plans table
+  const { data: maxPlans, error: maxError } = await supabase
+    .from("plans")
+    .select("plan_id")
+    .order("plan_id", { ascending: false })
+    .limit(1);
+
+  if (maxError) throw maxError;
+  const nextPlanId = maxPlans && maxPlans.length > 0 ? maxPlans[0].plan_id + 1 : 1;
+
+  const { data, error } = await supabase
+    .from("plans")
+    .insert({
+      ...planData,
+      plan_id: nextPlanId,
+    })
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data as Plan;
+};
+
+export const updatePlan = async (
+  planId: number,
+  planData: Partial<Omit<Plan, "plan_id" | "created_at" | "updated_at">>,
+): Promise<Plan> => {
+  const { data, error } = await supabase
+    .from("plans")
+    .update({
+      ...planData,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("plan_id", planId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data as Plan;
+};
+
+export const deletePlan = async (planId: number): Promise<void> => {
+  const { error } = await supabase
+    .from("plans")
+    .update({
+      is_active: false,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("plan_id", planId);
+
+  if (error) throw error;
+};
+
 

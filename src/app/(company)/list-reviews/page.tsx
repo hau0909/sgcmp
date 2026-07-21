@@ -4,7 +4,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   ChevronLeft,
   ChevronRight,
-  Download,
   Search,
   Star,
 } from "lucide-react";
@@ -18,6 +17,7 @@ import {
   RatingDistributionItem,
 } from "@/features/review/types";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 const PAGE_SIZE = 10;
 
@@ -102,6 +102,8 @@ const ReviewTableSkeleton = () => {
 
 export default function ServiceReviewPage() {
   const companyId = useAuthStore((state) => state.company_id);
+  const { dict, locale } = useTranslation();
+  const numberLocale = locale === "en" ? "en-US" : "vi-VN";
 
   const [reviewData, setReviewData] =
     useState<GetAllReviewByCompanyIdResult | null>(null);
@@ -123,7 +125,7 @@ export default function ServiceReviewPage() {
   useEffect(() => {
     const fetchReviewSummary = async () => {
       if (!companyId) {
-        setErrorMessage("Không tìm thấy công ty để lấy dữ liệu đánh giá.");
+        setErrorMessage("error_no_company");
         return;
       }
 
@@ -146,12 +148,7 @@ export default function ServiceReviewPage() {
           DEFAULT_RATING_DISTRIBUTION,
         );
       } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Không thể lấy tổng quan đánh giá.";
-
-        setErrorMessage(message);
+        setErrorMessage("error_summary");
       } finally {
         setIsSummaryLoading(false);
       }
@@ -163,7 +160,7 @@ export default function ServiceReviewPage() {
   useEffect(() => {
     const fetchReviews = async () => {
       if (!companyId) {
-        setErrorMessage("Không tìm thấy công ty để lấy danh sách đánh giá.");
+        setErrorMessage("error_no_company_list");
         return;
       }
 
@@ -178,12 +175,7 @@ export default function ServiceReviewPage() {
 
         setReviewData(response.data);
       } catch (error) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : "Không thể lấy danh sách đánh giá.";
-
-        setErrorMessage(message);
+        setErrorMessage("error_list");
       } finally {
         setIsReviewLoading(false);
       }
@@ -250,23 +242,21 @@ export default function ServiceReviewPage() {
         <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-900">
-              Danh sách đánh giá dịch vụ
+              {dict.reviews?.page_title || "Danh sách đánh giá dịch vụ"}
             </h1>
             <p className="mt-1 text-sm text-slate-500">
-              Theo dõi và quản lý phản hồi từ khách hàng về chất lượng dịch vụ
-              bảo vệ.
+              {dict.reviews?.page_desc || "Theo dõi và quản lý phản hồi từ khách hàng về chất lượng dịch vụ bảo vệ."}
             </p>
           </div>
-
-          <button className="inline-flex h-11 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-5 text-sm font-semibold text-slate-600 shadow-sm transition hover:bg-slate-100">
-            <Download className="h-4 w-4" />
-            XUẤT BÁO CÁO
-          </button>
         </div>
 
         {errorMessage && (
           <div className="rounded-xl border border-red-200 bg-red-50 px-5 py-4 text-sm font-semibold text-red-700">
-            {errorMessage}
+            {errorMessage === "error_no_company" && (dict.reviews?.error_no_company || "Không tìm thấy công ty để lấy dữ liệu đánh giá.")}
+            {errorMessage === "error_summary" && (dict.reviews?.error_summary || "Không thể lấy tổng quan đánh giá.")}
+            {errorMessage === "error_no_company_list" && (dict.reviews?.error_no_company_list || "Không tìm thấy công ty để lấy danh sách đánh giá.")}
+            {errorMessage === "error_list" && (dict.reviews?.error_list || "Không thể lấy danh sách đánh giá.")}
+            {!["error_no_company", "error_summary", "error_no_company_list", "error_list"].includes(errorMessage) && errorMessage}
           </div>
         )}
 
@@ -274,7 +264,7 @@ export default function ServiceReviewPage() {
           <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <div className="flex h-full flex-col items-center justify-center text-center">
               <p className="text-sm font-bold uppercase tracking-wide text-slate-600">
-                Điểm đánh giá trung bình
+                {dict.reviews?.avg_rating_title || "Điểm đánh giá trung bình"}
               </p>
 
               <div className="mt-4 text-6xl font-bold text-blue-800">
@@ -293,18 +283,14 @@ export default function ServiceReviewPage() {
               </div>
 
               <p className="mt-4 text-sm text-slate-600">
-                Dựa trên{" "}
-                <span className="font-bold text-slate-900">
-                  {totalReviews.toLocaleString("en-US")}
-                </span>{" "}
-                đánh giá tổng cộng
+                {(dict.reviews?.avg_rating_based || "Dựa trên {0} đánh giá tổng cộng").replace("{0}", totalReviews.toLocaleString(numberLocale))}
               </p>
             </div>
           </div>
 
           <div className="rounded-xl border border-slate-200 bg-white p-8 shadow-sm">
             <h2 className="text-sm font-bold uppercase tracking-wide text-slate-600">
-              Phân bố đánh giá
+              {dict.reviews?.distribution_title || "Phân bố đánh giá"}
             </h2>
 
             <div className="mt-6 space-y-5">
@@ -342,7 +328,7 @@ export default function ServiceReviewPage() {
                 <input
                   value={searchValue}
                   onChange={(event) => setSearchValue(event.target.value)}
-                  placeholder="Tìm kiếm đánh giá..."
+                  placeholder={dict.reviews?.search_placeholder || "Tìm kiếm đánh giá..."}
                   className="h-11 w-full rounded-lg border border-slate-300 bg-white pl-11 pr-4 text-sm font-medium text-slate-700 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:ring-2 focus:ring-blue-100"
                 />
               </div>
@@ -352,12 +338,12 @@ export default function ServiceReviewPage() {
                 onChange={(event) => setRatingFilter(event.target.value)}
                 className="h-11 rounded-lg border border-slate-300 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition focus:border-blue-700 focus:ring-2 focus:ring-blue-100"
               >
-                <option value="all">Tất cả số sao</option>
-                <option value="5">5 sao</option>
-                <option value="4">4 sao</option>
-                <option value="3">3 sao</option>
-                <option value="2">2 sao</option>
-                <option value="1">1 sao</option>
+                <option value="all">{dict.reviews?.filter_all_stars || "Tất cả số sao"}</option>
+                {[5, 4, 3, 2, 1].map((s) => (
+                  <option key={s} value={String(s)}>
+                    {(dict.reviews?.filter_stars || "{0} sao").replace("{0}", String(s))}
+                  </option>
+                ))}
               </select>
             </div>
 
@@ -366,7 +352,7 @@ export default function ServiceReviewPage() {
                 <span className="font-semibold text-slate-900">
                   {fromItem}-{toItem}
                 </span>{" "}
-                of {totalItems.toLocaleString("en-US")}
+                {dict.reviews?.of_total || "trong"} {totalItems.toLocaleString(numberLocale)}
               </span>
 
               <button
@@ -388,7 +374,9 @@ export default function ServiceReviewPage() {
               </button>
 
               <span className="text-xs font-semibold text-slate-500">
-                Trang {currentPage}/{totalPages || 1}
+                {(dict.reviews?.page_info || "Trang {0}/{1}")
+                  .replace("{0}", String(currentPage))
+                  .replace("{1}", String(totalPages || 1))}
               </span>
             </div>
           </div>
@@ -398,16 +386,16 @@ export default function ServiceReviewPage() {
               <thead>
                 <tr className="bg-blue-100">
                   <th className="px-5 py-4 text-left text-sm font-bold uppercase tracking-wider text-slate-900">
-                    Khách hàng
+                    {dict.reviews?.col_customer || "Khách hàng"}
                   </th>
                   <th className="px-5 py-4 text-left text-sm font-bold uppercase tracking-wider text-slate-900">
-                    Đánh giá
+                    {dict.reviews?.col_rating || "Đánh giá"}
                   </th>
                   <th className="px-5 py-4 text-left text-sm font-bold uppercase tracking-wider text-slate-900">
-                    Nội dung
+                    {dict.reviews?.col_content || "Nội dung"}
                   </th>
                   <th className="px-5 py-4 text-center text-sm font-bold uppercase tracking-wider text-slate-900">
-                    Thao tác
+                    {dict.reviews?.col_action || "Thao tác"}
                   </th>
                 </tr>
               </thead>
@@ -418,9 +406,9 @@ export default function ServiceReviewPage() {
                 ) : (
                   filteredReviews.map((review) => {
                     const customerName =
-                      review.customer?.full_name ?? "Khách hàng";
+                      review.customer?.full_name ?? (dict.reviews?.customer_fallback || "Khách hàng");
                     const customerEmail =
-                      review.customer?.email ?? "Chưa có email";
+                      review.customer?.email ?? (dict.reviews?.email_fallback || "Chưa có email");
                     const avatarUrl = review.customer?.avatar_url;
                     const avatarFallback = customerName.charAt(0).toUpperCase();
 
@@ -465,13 +453,13 @@ export default function ServiceReviewPage() {
 
                         <td className="px-5 py-5">
                           <p className="max-w-[520px] truncate text-sm text-slate-600">
-                            {review.comment ?? "Không có nội dung đánh giá."}
+                            {review.comment ?? (dict.reviews?.no_comment || "Không có nội dung đánh giá.")}
                           </p>
                         </td>
 
                         <td className="px-5 py-5 text-center">
                           <button className="text-sm font-bold uppercase text-blue-600 transition hover:text-blue-800">
-                            Xem chi tiết
+                            {dict.reviews?.view_detail || "Xem chi tiết"}
                           </button>
                         </td>
                       </tr>
@@ -485,7 +473,7 @@ export default function ServiceReviewPage() {
                       colSpan={4}
                       className="px-5 py-12 text-center text-sm font-medium text-slate-500"
                     >
-                      Không có phản hồi từ khách hàng.
+                      {dict.reviews?.no_feedback || "Không có phản hồi từ khách hàng."}
                     </td>
                   </tr>
                 )}
@@ -496,7 +484,7 @@ export default function ServiceReviewPage() {
                       colSpan={4}
                       className="px-5 py-12 text-center text-sm font-medium text-slate-500"
                     >
-                      Không tìm thấy đánh giá phù hợp.
+                      {dict.reviews?.no_match || "Không tìm thấy đánh giá phù hợp."}
                     </td>
                   </tr>
                 )}

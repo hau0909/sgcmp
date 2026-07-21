@@ -1,11 +1,13 @@
 import { formatPrice } from "@/utils/formatPrice";
 import { CurrentPlanWithSubscription } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function CurrentPlanCard({
   currentPlan,
 }: {
   currentPlan: CurrentPlanWithSubscription | null;
 }) {
+  const { dict } = useTranslation();
   const isActive = !!currentPlan;
 
   return (
@@ -17,30 +19,30 @@ export default function CurrentPlanCard({
         <div>
           <div className="flex items-center gap-2 mb-1">
             <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider">
-              Gói Hiện Tại
+              {dict.billing?.current_plan_title || "Gói Hiện Tại"}
             </h3>
             {isActive ? (
               <span className="bg-emerald-50 text-emerald-700 border border-emerald-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 animate-pulse"></span>
-                Đang hoạt động
+                {dict.billing?.active || "Đang hoạt động"}
               </span>
             ) : (
               <span className="bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 uppercase tracking-wider">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-600"></span>
-                Chưa kích hoạt
+                {dict.billing?.inactive || "Chưa kích hoạt"}
               </span>
             )}
           </div>
           <h4 className="text-3xl font-bold text-primary mt-2 tracking-tight">
-            {isActive ? currentPlan.plan.plan_name : "Chưa có gói dịch vụ"}
+            {isActive ? currentPlan.plan.plan_name : (dict.billing?.no_plan || "Chưa có gói dịch vụ")}
           </h4>
         </div>
         <div className="text-right">
           <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">
-            Chu kỳ thanh toán
+            {dict.billing?.billing_cycle || "Chu kỳ thanh toán"}
           </p>
           <p className="text-sm font-semibold text-on-surface mt-1">
-            {isActive ? "Hàng tháng" : "N/A"}
+            {isActive ? (dict.billing?.monthly || "Hàng tháng") : "N/A"}
           </p>
         </div>
       </div>
@@ -48,17 +50,17 @@ export default function CurrentPlanCard({
       <div className="relative z-10 mt-6 pt-4 border-t border-outline-variant/60 flex justify-between items-end">
         <div>
           <p className="text-xs text-on-surface-variant font-medium">
-            {isActive ? "Ngày hết hạn tiếp theo" : "Thời hạn gói"}
+            {isActive ? (dict.billing?.next_expiry || "Ngày hết hạn tiếp theo") : (dict.billing?.plan_duration || "Thời hạn gói")}
           </p>
           <p className="text-sm font-bold text-on-surface font-mono mt-1">
-            {isActive ? currentPlan.subscription.end_date : "Chưa đăng ký"}
+            {isActive ? currentPlan.subscription.end_date : (dict.billing?.not_subscribed || "Chưa đăng ký")}
           </p>
         </div>
         <div className="text-right">
           <p className="text-2xl font-bold text-on-surface">
             {isActive ? formatPrice(currentPlan.plan.price) : "0"}{" "}
             <span className="text-xs font-medium text-on-surface-variant">
-              VNĐ/tháng
+              {dict.billing?.per_month || "VNĐ/tháng"}
             </span>
           </p>
         </div>

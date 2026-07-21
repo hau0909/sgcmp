@@ -6,6 +6,7 @@ import { ArrowLeft, Clock, CheckCircle2, PenLine, Star, FileText } from "lucide-
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { exportContractDocx } from "../utils/exportDocx";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type ContractStatus = "pending_signatures" | "active" | "completed" | "cancelled";
 
@@ -24,31 +25,15 @@ interface CustomerContractDetailHeaderProps {
   contract?: any;
 }
 
-const STATUS_MAP: Record<ContractStatus, { label: string; className: string }> = {
-  pending_signatures: {
-    label: "Chờ xác nhận",
-    className: "bg-amber-50 text-amber-700 border-amber-300",
-  },
-  active: {
-    label: "Đang hoạt động",
-    className: "bg-blue-50 text-blue-700 border-blue-300",
-  },
-  completed: {
-    label: "Đã hoàn thành",
-    className: "bg-emerald-50 text-emerald-700 border-emerald-300",
-  },
-  cancelled: {
-    label: "Đã hủy",
-    className: "bg-slate-100 text-slate-600 border-slate-300",
-  },
-};
 
 const SignatureChip = ({
   label,
   agreed,
+  dict,
 }: {
   label: string;
   agreed: boolean;
+  dict: any;
 }) => (
   <div
     className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs transition-colors duration-200 ${
@@ -66,12 +51,12 @@ const SignatureChip = ({
       {agreed ? (
         <>
           <CheckCircle2 className="w-3.5 h-3.5" />
-          Đã ký
+          {dict.contract.detail.signed}
         </>
       ) : (
         <>
           <Clock className="w-3.5 h-3.5" />
-          Chờ ký
+          {dict.contract.detail.pending_sign}
         </>
       )}
     </span>
@@ -92,8 +77,29 @@ export function CustomerContractDetailHeader({
   onCompleteContract,
   contract,
 }: CustomerContractDetailHeaderProps) {
+  const { dict } = useTranslation();
+
+  const STATUS_MAP: Record<ContractStatus, { label: string; className: string }> = {
+    pending_signatures: {
+      label: dict.contract.filters.status_pending_signatures,
+      className: "bg-amber-50 text-amber-700 border-amber-300",
+    },
+    active: {
+      label: dict.contract.filters.status_active,
+      className: "bg-blue-50 text-blue-700 border-blue-300",
+    },
+    completed: {
+      label: dict.contract.filters.status_completed,
+      className: "bg-emerald-50 text-emerald-700 border-emerald-300",
+    },
+    cancelled: {
+      label: dict.contract.filters.status_cancelled,
+      className: "bg-slate-100 text-slate-600 border-slate-300",
+    },
+  };
+
   const statusInfo = STATUS_MAP[status] ?? {
-    label: "Không xác định",
+    label: "Unknown",
     className: "bg-muted text-muted-foreground",
   };
 
@@ -106,18 +112,18 @@ export function CustomerContractDetailHeader({
           className="flex items-center gap-1.5 text-secondary hover:text-primary transition-colors text-sm font-semibold w-fit"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>Quay lại</span>
+          <span>{dict.contract.detail.back_btn}</span>
         </Link>
         <h2 className="text-xl md:text-2xl font-bold text-on-background flex flex-wrap items-center gap-2 font-headline">
-          Chi tiết Hợp đồng{" "}
+          {dict.contract.detail.title}{" "}
           <span className="font-mono text-primary">#{contractCode}</span>
         </h2>
       </div>
 
       {/* Right: chips + cta */}
       <div className="flex flex-wrap items-center gap-3">
-        <SignatureChip label="Bạn" agreed={customerAgreed} />
-        <SignatureChip label="Công ty" agreed={companyAgreed} />
+        <SignatureChip label={dict.contract.detail.you} agreed={customerAgreed} dict={dict} />
+        <SignatureChip label={dict.contract.detail.company} agreed={companyAgreed} dict={dict} />
 
         {/* Tải file Word */}
         {contract && (
@@ -127,7 +133,7 @@ export function CustomerContractDetailHeader({
             className="font-bold border-primary text-primary hover:bg-primary/5 px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
           >
             <FileText className="w-4 h-4" />
-            <span>Tải file Word</span>
+            <span>{dict.contract.detail.download_docx}</span>
           </Button>
         )}
 
@@ -153,7 +159,7 @@ export function CustomerContractDetailHeader({
               }`}
             >
               <PenLine className="w-4 h-4" />
-              Ký xác nhận
+              {dict.contract.detail.sign_btn}
             </Button>
             {(!contractFileUrl || !hasGuards) && (
               <div className="absolute top-full mt-2 right-0 pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity duration-200 bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded shadow-lg whitespace-nowrap z-50">
@@ -179,7 +185,7 @@ export function CustomerContractDetailHeader({
             }`}
           >
             <Star className={`w-4 h-4 ${hasReviewed ? '' : 'fill-on-primary'}`} />
-            {hasReviewed ? "Xem đánh giá" : "Đánh giá"}
+            {hasReviewed ? "Xem đánh giá" : dict.contract.detail.review_btn}
           </Button>
         )}
 
@@ -190,7 +196,7 @@ export function CustomerContractDetailHeader({
             className="cursor-pointer font-bold shadow-md px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 active:scale-95 bg-emerald-600 hover:bg-emerald-700 text-white border border-emerald-600 hover:border-emerald-700"
           >
             <CheckCircle2 className="w-4 h-4" />
-            Hoàn thành hợp đồng
+            {dict.contract.detail.complete_btn}
           </Button>
         )}
       </div>

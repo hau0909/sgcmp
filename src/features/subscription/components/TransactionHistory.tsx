@@ -1,5 +1,6 @@
 import { Payment } from "@/types/Payment";
 import { Plan } from "@/types/Plan";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface TransactionHistoryProps {
   payments: Payment[];
@@ -10,6 +11,9 @@ export default function TransactionHistory({
   payments,
   plans,
 }: TransactionHistoryProps) {
+  const { dict, locale } = useTranslation();
+  const dateLocale = locale === "en" ? "en-US" : "vi-VN";
+
   const getPlanName = (planId: number) => {
     const plan = plans.find((p) => p.plan_id === planId);
     return plan ? plan.plan_name : `Gói dịch vụ #${planId}`;
@@ -19,7 +23,7 @@ export default function TransactionHistory({
     <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-sm">
       <div className="p-4 border-b border-outline-variant bg-surface-container-low/40 flex justify-between">
         <h3 className="text-sm font-bold text-primary uppercase tracking-wider">
-          Lịch sử giao dịch
+          {dict.billing?.tx_history || "Lịch sử giao dịch"}
         </h3>
       </div>
       <div className="overflow-x-auto">
@@ -27,22 +31,22 @@ export default function TransactionHistory({
           <thead>
             <tr className="bg-surface-container-low/20 border-b border-outline-variant">
               <th className="py-3 px-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider w-36">
-                Mã Thanh Toán
+                {dict.billing?.col_payment_id || "Mã Thanh Toán"}
               </th>
               <th className="py-3 px-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider w-40">
-                Mã Giao Dịch
+                {dict.billing?.col_tx_code || "Mã Giao Dịch"}
               </th>
               <th className="py-3 px-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider w-32">
-                Ngày
+                {dict.billing?.col_date || "Ngày"}
               </th>
               <th className="py-3 px-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider">
-                Gói Dịch Vụ
+                {dict.billing?.col_plan || "Gói Dịch Vụ"}
               </th>
               <th className="py-3 px-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider text-right w-44">
-                Số Tiền (VNĐ)
+                {dict.billing?.col_amount || "Số Tiền (VNĐ)"}
               </th>
               <th className="py-3 px-4 text-xs font-bold text-on-surface-variant uppercase tracking-wider w-36 text-center">
-                Trạng Thái
+                {dict.billing?.col_status || "Trạng Thái"}
               </th>
             </tr>
           </thead>
@@ -53,7 +57,7 @@ export default function TransactionHistory({
                   colSpan={6}
                   className="py-8 text-center text-on-surface-variant font-medium text-xs"
                 >
-                  Không có giao dịch nào
+                  {dict.billing?.no_transactions || "Không có giao dịch nào"}
                 </td>
               </tr>
             ) : (
@@ -61,23 +65,23 @@ export default function TransactionHistory({
                 const planName = getPlanName(payment.plan_id);
                 const formattedDate = new Date(
                   payment.paid_at || payment.created_at,
-                ).toLocaleDateString("vi-VN");
-                const formattedAmount = new Intl.NumberFormat("vi-VN").format(
+                ).toLocaleDateString(dateLocale);
+                const formattedAmount = new Intl.NumberFormat(dateLocale).format(
                   payment.amount,
                 );
 
-                let statusLabel = "Chờ xử lý";
+                let statusLabel = dict.billing?.status_pending || "Chờ xử lý";
                 let statusClass = "bg-amber-50 text-amber-700 border-amber-200";
 
                 if (payment.payment_status === "completed") {
-                  statusLabel = "Thành công";
+                  statusLabel = dict.billing?.status_completed || "Thành công";
                   statusClass =
                     "bg-emerald-50 text-emerald-700 border-emerald-200";
                 } else if (payment.payment_status === "failed") {
-                  statusLabel = "Thất bại";
+                  statusLabel = dict.billing?.status_failed || "Thất bại";
                   statusClass = "bg-rose-50 text-rose-700 border-rose-200";
                 } else if (payment.payment_status === "refunded") {
-                  statusLabel = "Đã hoàn tiền";
+                  statusLabel = dict.billing?.status_refunded || "Đã hoàn tiền";
                   statusClass = "bg-blue-50 text-blue-700 border-blue-200";
                 }
 

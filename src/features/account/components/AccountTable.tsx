@@ -99,6 +99,14 @@ const getStatusBadge = (status: GeneralStatus) => {
       dot: "bg-[#22c55e]",
     };
   }
+  if (status === "banned") {
+    return {
+      label: "Banned",
+      bg: "bg-[#fef2f2] border border-[#fca5a5]",
+      text: "text-[#991b1b]",
+      dot: "bg-[#ef4444]",
+    };
+  }
   return {
     label: "Unactive",
     bg: "bg-[#fee2e2]",
@@ -240,8 +248,146 @@ export default function AccountTable() {
           </p>
         </div>
 
-
+        {/* Search */}
+        <div className="flex items-center bg-surface-container-lowest rounded-xl px-4 py-2.5 border border-outline-variant focus-within:border-primary transition-colors w-full md:w-80 shadow-sm">
+          <Search className="text-on-surface-variant w-4 h-4 mr-2 shrink-0" />
+          <input
+            type="text"
+            placeholder="Tìm theo tên, email, SĐT..."
+            value={searchQuery}
+            onChange={(e) => {
+              setSearchQuery(e.target.value);
+              setCurrentPage(1);
+            }}
+            className="bg-transparent border-none outline-none text-sm text-on-surface w-full placeholder-on-surface-variant"
+          />
+        </div>
       </div>
+
+      {/* Role Filter Buttons */}
+      <div className="flex flex-wrap gap-2.5 items-center justify-center bg-surface-container-lowest p-3 rounded-xl border border-outline-variant shadow-sm">
+        {/* Tất cả */}
+        <button
+          onClick={() => {
+            setActiveRoleFilter("all");
+            setCurrentPage(1);
+          }}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all cursor-pointer shadow-sm hover:shadow-md ${activeRoleFilter === "all"
+              ? "bg-[#eff4ff] text-primary border-primary"
+              : "bg-white border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+            }`}
+        >
+          <Users
+            className={`w-4.5 h-4.5 shrink-0 ${activeRoleFilter === "all"
+                ? "text-primary"
+                : "text-on-surface-variant"
+              }`}
+          />
+          <span>Tất cả</span>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "all"
+                ? "bg-primary text-white"
+                : "bg-surface-container-high text-on-surface"
+              }`}
+          >
+            {accounts.length}
+          </span>
+        </button>
+
+        {/* Khách hàng */}
+        <button
+          onClick={() => {
+            setActiveRoleFilter("customer");
+            setCurrentPage(1);
+          }}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all cursor-pointer shadow-sm hover:shadow-md ${activeRoleFilter === "customer"
+              ? "bg-[#dbeafe] text-[#1e40af] border-[#3b82f6]"
+              : "bg-white border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+            }`}
+        >
+          <UserCircle className="w-4.5 h-4.5 shrink-0 text-[#1e40af]" />
+          <span>Khách hàng</span>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "customer"
+                ? "bg-[#1e40af] text-white"
+                : "bg-surface-container-high text-on-surface"
+              }`}
+          >
+            {roleStats.customer}
+          </span>
+        </button>
+
+        {/* Quản lý DN */}
+        <button
+          onClick={() => {
+            setActiveRoleFilter("company-admin");
+            setCurrentPage(1);
+          }}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all cursor-pointer shadow-sm hover:shadow-md ${activeRoleFilter === "company-admin"
+              ? "bg-[#fef3c7] text-[#b45309] border-[#f59e0b]"
+              : "bg-white border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+            }`}
+        >
+          <Building2 className="w-4.5 h-4.5 shrink-0 text-[#b45309]" />
+          <span>Quản lý DN</span>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "company-admin"
+                ? "bg-[#b45309] text-white"
+                : "bg-surface-container-high text-on-surface"
+              }`}
+          >
+            {roleStats["company-admin"]}
+          </span>
+        </button>
+
+        {/* Bảo vệ */}
+        <button
+          onClick={() => {
+            setActiveRoleFilter("guard");
+            setCurrentPage(1);
+          }}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all cursor-pointer shadow-sm hover:shadow-md ${activeRoleFilter === "guard"
+              ? "bg-[#d1fae5] text-[#065f46] border-[#10b981]"
+              : "bg-white border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+            }`}
+        >
+          <Shield className="w-4.5 h-4.5 shrink-0 text-[#065f46]" />
+          <span>Bảo vệ</span>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "guard"
+                ? "bg-[#065f46] text-white"
+                : "bg-surface-container-high text-on-surface"
+              }`}
+          >
+            {roleStats.guard}
+          </span>
+        </button>
+
+        {/* Điều phối */}
+        <button
+          onClick={() => {
+            setActiveRoleFilter("coordinator");
+            setCurrentPage(1);
+          }}
+          className={`flex items-center gap-2.5 px-4 py-2 rounded-lg border text-sm font-semibold transition-all cursor-pointer shadow-sm hover:shadow-md ${activeRoleFilter === "coordinator"
+              ? "bg-[#fce7f3] text-[#9d174d] border-[#ec4899]"
+              : "bg-white border-outline-variant text-on-surface-variant hover:bg-surface-container-low"
+            }`}
+        >
+          <Crosshair className="w-4.5 h-4.5 shrink-0 text-[#9d174d]" />
+          <span>Điều phối</span>
+          <span
+            className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "coordinator"
+                ? "bg-[#9d174d] text-white"
+                : "bg-surface-container-high text-on-surface"
+              }`}
+          >
+            {roleStats.coordinator}
+          </span>
+        </button>
+      </div>
+
+
 
 
 
@@ -409,11 +555,10 @@ export default function AccountTable() {
                 <button
                   key={num}
                   onClick={() => setCurrentPage(num)}
-                  className={`w-8 h-8 flex items-center justify-center rounded border text-sm font-medium transition-colors cursor-pointer ${
-                    currentPage === num
+                  className={`w-8 h-8 flex items-center justify-center rounded border text-sm font-medium transition-colors cursor-pointer ${currentPage === num
                       ? "border-primary bg-primary text-white"
                       : "border-outline-variant bg-white text-on-surface-variant hover:bg-surface-container-high"
-                  }`}
+                    }`}
                 >
                   {num}
                 </button>

@@ -2,10 +2,10 @@
 
 import React, { useState } from "react";
 import { Star, StarHalf } from "lucide-react";
-
 import { useAuthStore } from "@/store/auth.store";
 import { requestGetReviewsByCompany, requestGetAverageRatingByCompanyId, requestGetRatingDistributionByCompanyId } from "../api/review.api";
 import { RatingDistributionItem } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 interface CompanyReview {
@@ -23,22 +23,22 @@ interface CompanyDetailReviewsProps {
 }
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
-function getTimeAgo(dateStr: string) {
+function getTimeAgo(dateStr: string, d: any) {
   const date = new Date(dateStr);
   const now = new Date();
   const diffTime = Math.abs(now.getTime() - date.getTime());
   const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
   
-  if (diffDays === 0) return "Hôm nay";
-  if (diffDays === 1) return "Hôm qua";
-  if (diffDays < 7) return `${diffDays} ngày trước`;
+  if (diffDays === 0) return d.customer.reviews.today;
+  if (diffDays === 1) return d.customer.reviews.yesterday;
+  if (diffDays < 7) return `${diffDays} ${d.customer.reviews.days_ago}`;
   
-  if (diffDays <= 14) return "1 tuần trước";
-  if (diffDays <= 21) return "2 tuần trước";
-  if (diffDays <= 30) return "3 tuần trước";
-  if (diffDays <= 60) return "1 tháng trước";
-  if (diffDays <= 365) return `${Math.floor(diffDays / 30)} tháng trước`;
-  return `${Math.floor(diffDays / 365)} năm trước`;
+  if (diffDays <= 14) return `1 ${d.customer.reviews.week_ago}`;
+  if (diffDays <= 21) return `2 ${d.customer.reviews.weeks_ago}`;
+  if (diffDays <= 30) return `3 ${d.customer.reviews.weeks_ago}`;
+  if (diffDays <= 60) return `1 ${d.customer.reviews.month_ago}`;
+  if (diffDays <= 365) return `${Math.floor(diffDays / 30)} ${d.customer.reviews.month_ago}`;
+  return `${Math.floor(diffDays / 365)} ${d.customer.reviews.year_ago}`;
 }
 
 function getInitials(name: string) {
@@ -53,6 +53,7 @@ function getInitials(name: string) {
 export default function CompanyDetailReviews({
   companyId,
 }: CompanyDetailReviewsProps) {
+  const { dict } = useTranslation();
   const [showAll, setShowAll] = useState(false);
   const [reviews, setReviews] = useState<CompanyReview[]>([]);
   const [avgRatingNumber, setAvgRatingNumber] = useState<number>(0);
@@ -135,7 +136,7 @@ export default function CompanyDetailReviews({
   if (isLoading) {
      return (
        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs w-full text-center py-12">
-         <p className="text-on-surface-variant animate-pulse font-medium">Đang tải đánh giá...</p>
+         <p className="text-on-surface-variant animate-pulse font-medium">{dict.customer.reviews.loading}</p>
        </div>
      );
   }
@@ -152,10 +153,10 @@ export default function CompanyDetailReviews({
     return (
       <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs w-full">
         <h2 className="text-headline-sm font-semibold text-on-surface mb-4 uppercase tracking-wider text-[12px] border-b border-outline-variant pb-2 text-left">
-          Đánh giá từ khách hàng
+          {dict.customer.reviews.title}
         </h2>
         <div className="py-12 flex flex-col items-center justify-center text-center">
-          <p className="text-on-surface-variant font-medium">Chưa có đánh giá nào cho công ty này.</p>
+          <p className="text-on-surface-variant font-medium">{dict.customer.reviews.no_reviews}</p>
         </div>
       </section>
     );
@@ -171,7 +172,7 @@ export default function CompanyDetailReviews({
     <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs w-full">
       {/* ─── Section Header ────────────────────────────────────────── */}
       <h2 className="text-headline-sm font-semibold text-on-surface mb-4 uppercase tracking-wider text-[12px] border-b border-outline-variant pb-2">
-        Đánh giá từ khách hàng
+        {dict.customer.reviews.title}
       </h2>
 
       {/* ─── Rating Summary Box ──────────────────────────────────── */}
@@ -210,7 +211,7 @@ export default function CompanyDetailReviews({
             })}
           </div>
           <p className="text-[13px] text-on-surface-variant font-medium">
-            {totalReviews} bài đánh giá
+            {totalReviews} {dict.customer.reviews.reviews_count}
           </p>
         </div>
 
@@ -242,7 +243,7 @@ export default function CompanyDetailReviews({
       {/* ─── Review Cards Grid ───────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 lg:gap-x-12 gap-y-8">
         {displayedReviews.map((review) => (
-          <ReviewCard key={review.id} review={review} />
+          <ReviewCard key={review.id} review={review} dict={dict} />
         ))}
       </div>
 
@@ -254,14 +255,14 @@ export default function CompanyDetailReviews({
               onClick={() => setShowAll(true)}
               className="px-6 py-3 border border-outline-variant text-on-surface rounded-xl font-semibold text-[15px] hover:bg-surface-container hover:border-outline transition-colors cursor-pointer"
             >
-              Hiển thị tất cả {reviews.length} đánh giá
+              {dict.customer.reviews.show_all} {reviews.length} {dict.customer.reviews.reviews_count}
             </button>
           ) : (
             <button
               onClick={() => setShowAll(false)}
               className="px-6 py-3 border border-outline-variant text-on-surface rounded-xl font-semibold text-[15px] hover:bg-surface-container hover:border-outline transition-colors cursor-pointer"
             >
-              Thu gọn danh sách
+              {dict.customer.reviews.collapse}
             </button>
           )}
         </div>
@@ -271,7 +272,7 @@ export default function CompanyDetailReviews({
 }
 
 // ─── Review Card Sub-component ───────────────────────────────────────────────
-function ReviewCard({ review }: { review: CompanyReview }) {
+function ReviewCard({ review, dict }: { review: CompanyReview; dict: any }) {
   const [expanded, setExpanded] = useState(false);
   const { user_id } = useAuthStore();
 
@@ -302,7 +303,7 @@ function ReviewCard({ review }: { review: CompanyReview }) {
             {displayName}
             {isCurrentUser && (
               <span className="text-[11px] font-bold px-2 py-0.5 bg-primary text-on-primary rounded-full uppercase tracking-wider">
-                Bạn
+                {dict.customer.reviews.you_badge}
               </span>
             )}
           </h4>
@@ -321,7 +322,7 @@ function ReviewCard({ review }: { review: CompanyReview }) {
         </div>
         <span className="text-[13px] font-semibold text-on-surface ml-1">·</span>
         <span className="text-[13px] font-medium text-on-surface">
-          {getTimeAgo(review.createdAt)}
+          {getTimeAgo(review.createdAt, dict)}
         </span>
       </div>
 
@@ -336,7 +337,7 @@ function ReviewCard({ review }: { review: CompanyReview }) {
           onClick={() => setExpanded(true)}
           className="underline font-semibold text-[15px] text-on-surface mt-2 text-left w-fit hover:text-on-surface-variant transition-colors"
         >
-          Hiển thị thêm
+          {dict.customer.reviews.show_more}
         </button>
       )}
       {isLong && expanded && (
@@ -344,7 +345,7 @@ function ReviewCard({ review }: { review: CompanyReview }) {
           onClick={() => setExpanded(false)}
           className="underline font-semibold text-[15px] text-on-surface mt-2 text-left w-fit hover:text-on-surface-variant transition-colors"
         >
-          Thu gọn
+          {dict.customer.reviews.show_less}
         </button>
       )}
     </div>

@@ -5,9 +5,11 @@ import Footer from "@/components/layout/Footer";
 import RegisterCompanyStepper from "@/features/registration/components/RegisterCompanyStepper";
 import { useRouter } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function RegisterCompanyPage() {
   const router = useRouter();
+  const { dict } = useTranslation();
 
   return (
     <>
@@ -29,17 +31,17 @@ export default function RegisterCompanyPage() {
                 className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-on-surface-variant hover:text-primary transition-all duration-200 group bg-surface-container-low border border-outline-variant/60 rounded-xl px-4 py-2 shadow-xs"
               >
                 <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-                <span>Quay lại</span>
+                <span>{dict.pages.register_company.back}</span>
               </button>
             </div>
 
             {/* Title & subtitle */}
             <div className="text-center max-w-lg mx-auto">
               <h1 className="text-3xl font-bold text-on-surface tracking-tight font-headline">
-                Đăng Ký Doanh Nghiệp Bảo Vệ
+                {dict.pages.register_company.title}
               </h1>
               <p className="text-sm text-on-surface-variant mt-2 leading-relaxed">
-                Trở thành đối tác cung cấp dịch vụ bảo vệ trên nền tảng SGCMP để tiếp cận hàng ngàn khách hàng.
+                {dict.pages.register_company.desc}
               </p>
             </div>
           </div>
@@ -58,7 +60,7 @@ export default function RegisterCompanyPage() {
               className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-on-surface-variant hover:text-primary transition-all duration-200 group bg-surface-container-low border border-outline-variant/60 rounded-xl px-4 py-2 shadow-xs"
             >
               <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-              <span>Quay lại</span>
+              <span>{dict.pages.register_company.back}</span>
             </button>
           </div>
 

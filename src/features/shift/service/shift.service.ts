@@ -21,6 +21,9 @@ import {
   getContractGuardsPerSlot,
   getContractShiftRule,
   getOverlappingGuardShifts,
+  getGuardsShiftsOnDate,
+  getGuardsShiftsInWeek,
+  getGuardsShiftsInRange,
   getAllShiftsByDateRange,
   getGuardShiftsByRange,
   getShiftAssignmentByShiftAndGuard,
@@ -89,6 +92,48 @@ export const getOverlappingGuardShiftsService = async ({
 }) => {
   return getOverlappingGuardShifts({
     guardId,
+    startTime,
+    endTime,
+  });
+};
+
+export const getGuardsShiftsOnDateService = async ({
+  guardIds,
+  date,
+}: {
+  guardIds: string[];
+  date: string;
+}) => {
+  return getGuardsShiftsOnDate({
+    guardIds,
+    date,
+  });
+};
+
+export const getGuardsShiftsInWeekService = async ({
+  guardIds,
+  date,
+}: {
+  guardIds: string[];
+  date: string;
+}) => {
+  return getGuardsShiftsInWeek({
+    guardIds,
+    date,
+  });
+};
+
+export const getGuardsShiftsInRangeService = async ({
+  guardIds,
+  startTime,
+  endTime,
+}: {
+  guardIds: string[];
+  startTime: string;
+  endTime: string;
+}) => {
+  return getGuardsShiftsInRange({
+    guardIds,
     startTime,
     endTime,
   });

@@ -3,12 +3,15 @@ import { handleGetVerificationsByCompany } from "@/features/verification/control
 import { VerificationStatus } from "@/features/verification/types";
 
 export async function GET(request: NextRequest) {
+  // Move searchParams outside of try/catch so Next.js can properly catch its NEXT_PRERENDER_INTERRUPTED error
+  // to bail out of static generation dynamically.
+  const searchParams = request.nextUrl.searchParams;
+  const companyId = searchParams.get("companyId");
+  const page = parseInt(searchParams.get("page") || "1", 10);
+  const limit = parseInt(searchParams.get("limit") || "10", 10);
+  const status = searchParams.get("status") as VerificationStatus | null;
+
   try {
-    const { searchParams } = new URL(request.url);
-    const companyId = searchParams.get("companyId");
-    const page = parseInt(searchParams.get("page") || "1", 10);
-    const limit = parseInt(searchParams.get("limit") || "10", 10);
-    const status = searchParams.get("status") as VerificationStatus | null;
 
     if (!companyId) {
       return NextResponse.json(
