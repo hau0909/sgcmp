@@ -1034,7 +1034,18 @@
       "error_modal_title": "Notification",
       "modal_close": "Close",
       "update_success": "Profile updated successfully!",
-      "not_found": "Profile information not found."
+      "not_found": "Profile information not found.",
+      "change_password": "Change Password",
+      "change_password_title": "Change Account Password",
+      "current_password": "Current Password",
+      "current_password_placeholder": "Enter current password",
+      "current_password_required": "Please enter your current password.",
+      "new_password": "New Password",
+      "new_password_placeholder": "Enter new password (min. 8 characters)",
+      "confirm_new_password": "Confirm New Password",
+      "confirm_new_password_placeholder": "Re-enter new password",
+      "change_password_success": "Password changed successfully! You will be logged out to log in again.",
+      "ok": "OK"
     },
     "registration": {
       "step1_label": "Account Setup",
