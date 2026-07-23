@@ -1,6 +1,7 @@
 import React from "react";
 import { Search } from "lucide-react";
 import { REPORT_TYPE_LABELS } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CoorReportFiltersProps {
   searchQuery: string;
@@ -19,6 +20,8 @@ export function CoorReportFilters({
   filterStatus,
   setFilterStatus,
 }: CoorReportFiltersProps) {
+  const { dict } = useTranslation();
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-4 gap-4 bg-surface-container-lowest border border-outline-variant/50 p-4 rounded-xl shadow-xs">
       {/* Search */}
@@ -26,7 +29,7 @@ export function CoorReportFilters({
         <Search className="w-4 h-4 text-on-surface-variant mr-2" />
         <input
           type="text"
-          placeholder="Tìm khách hàng, số điện thoại, mã báo cáo, mã hợp đồng..."
+          placeholder={dict.report?.filters?.search_placeholder || "Tìm khách hàng, số điện thoại, mã báo cáo, mã hợp đồng..."}
           className="bg-transparent border-none outline-none text-sm text-on-surface w-full placeholder-on-surface-variant"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
@@ -39,7 +42,7 @@ export function CoorReportFilters({
         onChange={(e) => setFilterType(e.target.value)}
         className="bg-white rounded-lg border border-outline-variant/60 focus:border-primary outline-none text-sm text-on-surface px-3 py-1.5 cursor-pointer"
       >
-        <option value="ALL">Tất cả khiếu nại</option>
+        <option value="ALL">{dict.report?.filters?.type_all || "Tất cả khiếu nại"}</option>
         {Object.entries(REPORT_TYPE_LABELS).map(([key, label]) => (
           <option key={key} value={key}>
             {label}
@@ -53,11 +56,11 @@ export function CoorReportFilters({
         onChange={(e) => setFilterStatus(e.target.value)}
         className="bg-white rounded-lg border border-outline-variant/60 focus:border-primary outline-none text-sm text-on-surface px-3 py-1.5 cursor-pointer"
       >
-        <option value="ALL">Tất cả trạng thái</option>
-        <option value="PENDING">Chờ tiếp nhận</option>
-        <option value="IN_PROGRESS">Đang xử lý</option>
-        <option value="RESOLVED">Đã giải quyết</option>
-        <option value="CLOSED">Đã đóng</option>
+        <option value="ALL">{dict.report?.filters?.status_all || "Tất cả trạng thái"}</option>
+        <option value="PENDING">{dict.report?.filters?.status_pending || "Chờ tiếp nhận"}</option>
+        <option value="IN_PROGRESS">{dict.report?.filters?.status_in_progress || "Đang xử lý"}</option>
+        <option value="RESOLVED">{dict.report?.filters?.status_resolved || "Đã giải quyết"}</option>
+        <option value="CLOSED">{dict.report?.filters?.status_closed || "Đã đóng"}</option>
       </select>
     </div>
   );

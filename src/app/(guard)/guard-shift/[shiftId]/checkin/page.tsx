@@ -20,6 +20,7 @@ import {
 } from "@/features/shift/api/shift.api";
 import type { GuardShiftDetailItem } from "@/features/shift/type";
 import { createClient } from "@/lib/supabase/client";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 const CHECKIN_BEFORE_MINUTES = 5;
 const CHECKIN_AFTER_MINUTES = 5;
@@ -71,41 +72,18 @@ const formatCheckinTime = (date: Date) => {
   });
 };
 
-const getStatusLabel = (status: GuardShiftDetailItem["status"], checkInTime?: string | null) => {
-  if (status === "assigned") {
-    return "Chờ điểm danh";
-  }
-
-  if (status === "completed") {
-    return "Đã điểm danh đúng giờ";
-  }
-
-  if (status === "late") {
-    return checkInTime ? "Đã điểm danh trễ" : "Đi trễ - vẫn có thể điểm danh";
-  }
-
-  return "Vắng mặt";
-};
-
 const getStatusStyle = (status: GuardShiftDetailItem["status"], checkInTime?: string | null) => {
-  if (status === "assigned") {
-    return "bg-[#0754a6] text-white";
-  }
-
-  if (status === "completed") {
-    return "bg-emerald-600 text-white";
-  }
-
-  if (status === "late") {
-    return checkInTime ? "bg-amber-600 text-white" : "bg-amber-500 text-white";
-  }
-
-  return "bg-red-600 text-white";
+  if (status === "assigned") return "bg-blue-100 text-blue-700";
+  if (status === "completed") return "bg-emerald-100 text-emerald-700";
+  if (status === "late") return checkInTime ? "bg-orange-100 text-orange-700" : "bg-amber-100 text-amber-700";
+  return "bg-red-100 text-red-700";
 };
 
 export default function GuardShiftCheckinPage() {
   const router = useRouter();
   const params = useParams();
+  const { dict } = useTranslation();
+  const t = dict.layout_guard.guard_checkin;
 
   const shiftId = Array.isArray(params.shiftId)
     ? params.shiftId[0]
@@ -166,12 +144,12 @@ export default function GuardShiftCheckinPage() {
     } catch (err) {
       const msg =
         err instanceof DOMException && err.name === "NotAllowedError"
-          ? "Quyền truy cập camera bị từ chối. Vui lòng cấp quyền trong cài đặt trình duyệt."
-          : "Không thể mở camera. Vui lòng kiểm tra thiết bị.";
+          ? t.camera_denied
+          : t.camera_error;
       setCameraError(msg);
       setCameraActive(false);
     }
-  }, [facingMode]);
+  }, [facingMode, t.camera_denied, t.camera_error]);
 
   // Restart camera when facingMode changes (only if camera is already active)
   useEffect(() => {
@@ -245,11 +223,11 @@ export default function GuardShiftCheckinPage() {
 
   const shiftDuration = useMemo(() => {
     if (!shift) {
-      return "Đang tải...";
+      return t.loading;
     }
 
     return getDurationFromTimeRange(shift.time);
-  }, [shift]);
+  }, [shift, t.loading]);
 
   const checkinState = useMemo(() => {
     if (!shift) {
@@ -271,8 +249,8 @@ export default function GuardShiftCheckinPage() {
     const isLate = currentTime > lateCheckinLimit && currentTime < absentLimit;
 
     // Can check-in if the status is assigned or (status is late and they have not checked in yet)
-    const isPendingCheckin = 
-      shift.status === "assigned" || 
+    const isPendingCheckin =
+      shift.status === "assigned" ||
       (shift.status === "late" && shift.check_in_time === null);
 
     const canCheckinByTime =
@@ -297,75 +275,65 @@ export default function GuardShiftCheckinPage() {
     Boolean(checkinImageFile) &&
     !checkingIn;
 
+  const getStatusLabel = (status: GuardShiftDetailItem["status"], checkInTime?: string | null) => {
+    if (status === "assigned") return t.status_waiting;
+    if (status === "completed") return t.status_done_on_time;
+    if (status === "late") return checkInTime ? t.status_done_late : t.status_late_pending;
+    return t.status_absent;
+  };
+
   const checkinMessage = useMemo(() => {
     if (!shift || !checkinState) {
-      return "Không tìm thấy thông tin ca trực.";
+      return t.msg_no_shift;
     }
 
     if (shift.status === "completed") {
-      return "Đã điểm danh đúng giờ.";
+      return t.msg_done_on_time;
     }
 
     if (shift.status === "late" && shift.check_in_time !== null) {
-      return "Đã điểm danh trễ.";
+      return t.msg_done_late;
     }
 
     if (shift.status === "absent" || checkinState.isExpired) {
-      return "Đã quá thời gian điểm danh. Bạn được ghi nhận vắng mặt.";
+      return t.msg_absent;
     }
 
     if (checkinState.isBeforeWindow) {
-      return `Có thể điểm danh từ ${formatCheckinTime(
-        checkinState.startCheckinLimit,
-      )}.`;
+      return `${t.msg_can_from} ${formatCheckinTime(checkinState.startCheckinLimit)}.`;
     }
 
     if (shift.status === "late" && shift.check_in_time === null) {
       if (!checkinImageFile) {
-        return "Bạn đang đi trễ. Vui lòng chụp ảnh check-in để hoàn tất điểm danh.";
+        return t.msg_late_no_photo;
       }
-      return "Ảnh check-in trễ đã sẵn sàng. Bạn có thể xác nhận ca làm việc.";
+      return t.msg_late_photo_ready;
     }
 
     if (!checkinImageFile) {
-      return "Vui lòng chụp ảnh check-in để hoàn tất điểm danh.";
+      return t.msg_no_photo;
     }
 
-    return "Ảnh check-in đã sẵn sàng. Bạn có thể xác nhận ca làm việc.";
-  }, [shift, checkinState, checkinImageFile]);
+    return t.msg_photo_ready;
+  }, [shift, checkinState, checkinImageFile, t]);
 
   const checkinButtonLabel = useMemo(() => {
-    if (checkingIn) {
-      return "Đang điểm danh...";
-    }
-
-    if (shift?.status === "completed") {
-      return "Đã điểm danh";
-    }
-
-    if (shift?.status === "late" && shift?.check_in_time !== null) {
-      return "Đã điểm danh trễ";
-    }
-
-    if (shift?.status === "absent" || checkinState?.isExpired) {
-      return "Đã vắng mặt";
-    }
-
-    return "Điểm danh";
-  }, [checkingIn, shift?.status, shift?.check_in_time, checkinState?.isExpired]);
+    if (checkingIn) return t.btn_checking_in;
+    if (shift?.status === "completed") return t.btn_done;
+    if (shift?.status === "late" && shift?.check_in_time !== null) return t.btn_done_late;
+    if (shift?.status === "absent" || checkinState?.isExpired) return t.btn_absent;
+    return t.btn_checkin;
+  }, [checkingIn, shift?.status, shift?.check_in_time, checkinState?.isExpired, t]);
 
   const fetchShiftDetail = useCallback(async () => {
     if (!shiftId) {
-      setError("Không tìm thấy mã ca trực.");
+      setError(t.no_shift_id);
       setLoading(false);
       return;
     }
 
     try {
-      const response = await requestGetGuardShiftDetail({
-        shiftId,
-      });
-
+      const response = await requestGetGuardShiftDetail({ shiftId });
       const shiftDetail = response.data.shift;
 
       setShift({
@@ -375,16 +343,14 @@ export default function GuardShiftCheckinPage() {
       setError("");
     } catch (error) {
       const message =
-        error instanceof Error
-          ? error.message
-          : "Không thể lấy thông tin ca trực.";
+        error instanceof Error ? error.message : t.fetch_error;
 
       setError(message);
       setShift(null);
     } finally {
       setLoading(false);
     }
-  }, [shiftId]);
+  }, [shiftId, t.no_shift_id, t.fetch_error]);
 
   // Initial fetch
   useEffect(() => {
@@ -466,17 +432,27 @@ export default function GuardShiftCheckinPage() {
         };
       });
 
+      const status = response.data.assignment.status;
+      let popupMessage = response.message;
+      if (status === "completed") {
+        popupMessage = t.checkin_success;
+      } else if (status === "late") {
+        popupMessage = t.checkin_late_success || response.message;
+      } else if (status === "absent") {
+        popupMessage = t.checkin_expired_absent || response.message;
+      }
+
       setCheckinPopup({
-        type: "success",
-        message: response.message,
+        type: status === "absent" ? "error" : "success",
+        message: popupMessage,
       });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Điểm danh ca trực thất bại.";
+        error instanceof Error ? error.message : t.checkin_failed;
 
       setCheckinPopup({
         type: "error",
-        message,
+        message: message || t.checkin_failed,
       });
     } finally {
       setCheckingIn(false);
@@ -505,12 +481,12 @@ export default function GuardShiftCheckinPage() {
           className="mb-4 flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-extrabold text-slate-700 shadow-sm transition-all active:scale-[0.98]"
         >
           <ArrowLeft className="h-4 w-4" />
-          Quay lại
+          {t.back}
         </button>
 
         <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-center">
           <p className="text-sm font-bold text-red-600">
-            {error || "Không tìm thấy ca trực."}
+            {error || t.not_found}
           </p>
         </div>
       </div>
@@ -543,13 +519,13 @@ export default function GuardShiftCheckinPage() {
               type="button"
               onClick={() => stopCamera()}
               className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition active:scale-95"
-              title="Đóng camera"
+              title={t.close_camera_title}
             >
               <X className="h-5 w-5" />
             </button>
 
             <span className="rounded-full bg-black/40 px-3 py-1 text-xs font-bold text-white backdrop-blur-sm">
-              Chụp ảnh điểm danh
+              {t.camera_overlay_label}
             </span>
 
             {/* Flip camera */}
@@ -561,7 +537,7 @@ export default function GuardShiftCheckinPage() {
                 )
               }
               className="flex h-11 w-11 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-sm transition active:scale-95"
-              title="Đổi camera"
+              title={t.flip_camera_title}
             >
               <RefreshCw className="h-5 w-5" />
             </button>
@@ -573,7 +549,7 @@ export default function GuardShiftCheckinPage() {
               type="button"
               onClick={handleCapturePhoto}
               className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-white/20 backdrop-blur-sm transition active:scale-90"
-              title="Chụp ảnh"
+              title={t.capture_title}
             >
               <div className="h-14 w-14 rounded-full bg-white" />
             </button>
@@ -589,14 +565,14 @@ export default function GuardShiftCheckinPage() {
             className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-extrabold text-slate-700 shadow-sm transition-all active:scale-[0.98]"
           >
             <ArrowLeft className="h-4 w-4" />
-            Quay lại
+            {t.back}
           </button>
         </div>
 
         <section className="rounded-2xl border border-slate-300 bg-white p-4">
           <div className="mb-3 flex items-start justify-between gap-3">
             <h1 className="text-[18px] font-extrabold text-slate-800">
-              Ca trực sắp tới
+              {t.upcoming_shift}
             </h1>
 
             <span
@@ -613,7 +589,7 @@ export default function GuardShiftCheckinPage() {
             <div>
               <div className="mb-1 flex items-center gap-1.5 text-slate-500">
                 <MapPin className="h-4 w-4" />
-                <span className="text-xs font-bold">Vị trí</span>
+                <span className="text-xs font-bold">{t.location_label}</span>
               </div>
 
               <p className="text-[15px] font-extrabold text-slate-800">
@@ -624,7 +600,7 @@ export default function GuardShiftCheckinPage() {
             <div>
               <div className="mb-1 flex items-center gap-1.5 text-slate-500">
                 <Clock3 className="h-4 w-4" />
-                <span className="text-xs font-bold">Thời lượng</span>
+                <span className="text-xs font-bold">{t.duration_label}</span>
               </div>
 
               <p className="text-[15px] font-extrabold text-slate-800">
@@ -634,7 +610,7 @@ export default function GuardShiftCheckinPage() {
           </div>
 
           <div className="mt-3 rounded-xl bg-slate-50 p-3">
-            <p className="text-xs font-bold text-slate-500">Địa chỉ</p>
+            <p className="text-xs font-bold text-slate-500">{t.address_label}</p>
             <p className="mt-1 text-sm font-bold text-slate-800">
               {shift.address}
             </p>
@@ -647,16 +623,15 @@ export default function GuardShiftCheckinPage() {
             <div className="flex items-center gap-2">
               <Camera className="h-5 w-5 text-[#0754a6]" />
               <h2 className="text-sm font-extrabold text-slate-800">
-                Ảnh chụp điểm danh
+                {t.photo_section_title}
               </h2>
             </div>
             {checkinImagePreview && (
               <span className="text-[11px] font-bold text-emerald-600 flex items-center gap-1">
                 <CheckCircle2 className="h-4 w-4" />
-                Đã chụp ảnh
+                {t.photo_taken}
               </span>
             )}
-
           </div>
 
           <div className="p-4 space-y-3">
@@ -668,14 +643,12 @@ export default function GuardShiftCheckinPage() {
               </div>
             )}
 
-
-
             {/* Captured photo preview */}
             {checkinImagePreview && !cameraActive && (
               <div className="relative overflow-hidden rounded-xl aspect-video w-full">
                 <img
                   src={checkinImagePreview}
-                  alt="Ảnh Check-in"
+                  alt={t.checkin_img_alt}
                   className="h-full w-full object-cover"
                 />
                 <div className="absolute bottom-2 right-2 flex gap-2">
@@ -686,7 +659,7 @@ export default function GuardShiftCheckinPage() {
                     className="flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-sm transition hover:bg-black/80 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     <RefreshCw className="h-3.5 w-3.5" />
-                    Chụp lại
+                    {t.retake}
                   </button>
                   <button
                     type="button"
@@ -717,10 +690,10 @@ export default function GuardShiftCheckinPage() {
                 </div>
                 <div className="text-center">
                   <span className="block text-sm font-bold text-slate-700">
-                    Mở camera để chụp ảnh
+                    {t.open_camera_label}
                   </span>
                   <span className="mt-0.5 block text-xs text-slate-500">
-                    Nhấn để truy cập camera
+                    {t.open_camera_hint}
                   </span>
                 </div>
               </button>
@@ -768,8 +741,8 @@ export default function GuardShiftCheckinPage() {
                 }`}
             >
               {checkinPopup.type === "success"
-                ? "Điểm danh thành công"
-                : "Điểm danh thất bại"}
+                ? t.popup_success_title
+                : t.popup_error_title}
             </h3>
 
             <p className="mt-2 text-sm font-bold text-slate-600">
@@ -781,7 +754,7 @@ export default function GuardShiftCheckinPage() {
               onClick={() => setCheckinPopup(null)}
               className="mt-5 w-full rounded-xl bg-[#0754a6] px-4 py-3 text-sm font-black text-white transition-all active:scale-[0.98]"
             >
-              Đóng
+              {t.popup_close}
             </button>
           </div>
         </div>

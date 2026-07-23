@@ -16,6 +16,7 @@ import {
 import { requestGetGuardShiftDetail } from "@/features/shift/api/shift.api";
 import { useAuthStore } from "@/store/auth.store";
 import type { GuardShiftDetailItem } from "@/features/shift/type";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 import { formatDate } from "@/utils/dateTime";
 
@@ -50,79 +51,19 @@ const formatDateTitle = (date: Date) => {
   });
 };
 
-const getStatusLabel = (
-  status: GuardShiftDetailItem["status"],
-  checkInTime: string | null | undefined,
-  startTime: string
-) => {
-  if (status === "completed") {
-    return "ĐANG TRỰC";
-  }
-
-  if (status === "late") {
-    return checkInTime ? "ĐIỂM DANH TRỄ" : "ĐÃ TRỄ";
-  }
-
-  if (status === "absent") {
-    return "VẮNG MẶT";
-  }
-
-  // status === "assigned"
-  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
-  if (isStarted) {
-    return "CHƯA ĐIỂM DANH";
-  }
-  return "PHÂN CÔNG";
-};
-
-const getGuardStatusLabel = (
-  status: GuardShiftDetailItem["status"],
-  checkInTime: string | null | undefined,
-  startTime: string
-) => {
-  if (status === "completed") {
-    return "Đang trực";
-  }
-
-  if (status === "late") {
-    return checkInTime ? "Điểm danh trễ" : "Đã trễ";
-  }
-
-  if (status === "absent") {
-    return "Vắng mặt";
-  }
-
-  // status === "assigned"
-  const isStarted = new Date().getTime() >= new Date(startTime).getTime();
-  if (isStarted) {
-    return "Chưa điểm danh";
-  }
-  return "Phân công";
-};
-
 const getStatusStyle = (
   status: GuardShiftDetailItem["status"],
   checkInTime: string | null | undefined,
   startTime: string
 ) => {
-  if (status === "completed") {
-    return "bg-emerald-600 text-white";
-  }
-
+  if (status === "completed") return "bg-emerald-100 text-emerald-700";
   if (status === "late") {
-    return checkInTime ? "bg-orange-600 text-white" : "bg-amber-600 text-white";
+    return checkInTime ? "bg-orange-100 text-orange-700" : "bg-amber-100 text-amber-700";
   }
-
-  if (status === "absent") {
-    return "bg-red-600 text-white";
-  }
-
-  // status === "assigned"
+  if (status === "absent") return "bg-red-100 text-red-700";
   const isStarted = new Date().getTime() >= new Date(startTime).getTime();
-  if (isStarted) {
-    return "bg-yellow-600 text-white";
-  }
-  return "bg-[#0754a6] text-white";
+  if (isStarted) return "bg-yellow-100 text-yellow-700";
+  return "bg-blue-100 text-blue-700";
 };
 
 const getGuardStatusStyle = (
@@ -130,25 +71,15 @@ const getGuardStatusStyle = (
   checkInTime: string | null | undefined,
   startTime: string
 ) => {
-  if (status === "completed") {
-    return "bg-emerald-50 text-emerald-700 border border-emerald-200";
-  }
-
+  if (status === "completed") return "bg-emerald-50 text-emerald-700 border border-emerald-200";
   if (status === "late") {
     return checkInTime
       ? "bg-orange-50 text-orange-700 border border-orange-200"
       : "bg-amber-50 text-amber-700 border-amber-200";
   }
-
-  if (status === "absent") {
-    return "bg-red-50 text-red-700 border border-red-200";
-  }
-
-  // status === "assigned"
+  if (status === "absent") return "bg-red-50 text-red-700 border border-red-200";
   const isStarted = new Date().getTime() >= new Date(startTime).getTime();
-  if (isStarted) {
-    return "bg-yellow-50 text-yellow-700 border border-yellow-200";
-  }
+  if (isStarted) return "bg-yellow-50 text-yellow-700 border border-yellow-200";
   return "bg-blue-50 text-blue-700 border border-blue-200";
 };
 
@@ -157,6 +88,8 @@ export default function GuardShiftDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const userId = useAuthStore((state) => state.user_id);
+  const { dict } = useTranslation();
+  const t = dict.layout_guard.guard_shift_detail;
 
   const shiftId = Array.isArray(params.shiftId)
     ? params.shiftId[0]
@@ -181,18 +114,41 @@ export default function GuardShiftDetailPage() {
 
   const isReplacement = (currentGuardInfo as any)?.is_replacement ?? false;
 
-  const handleOpenCheckinPage = () => {
-    if (!shift) {
-      return;
-    }
+  const getStatusLabel = (
+    status: GuardShiftDetailItem["status"],
+    checkInTime: string | null | undefined,
+    startTime: string
+  ) => {
+    if (status === "completed") return t.status_on_duty;
+    if (status === "late") return checkInTime ? t.status_late_checked : t.status_late;
+    if (status === "absent") return t.status_absent;
+    const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+    if (isStarted) return t.status_not_checked;
+    return t.status_assigned;
+  };
 
+  const getGuardStatusLabel = (
+    status: GuardShiftDetailItem["status"],
+    checkInTime: string | null | undefined,
+    startTime: string
+  ) => {
+    if (status === "completed") return t.guard_status_on_duty;
+    if (status === "late") return checkInTime ? t.guard_status_late_checked : t.guard_status_late;
+    if (status === "absent") return t.guard_status_absent;
+    const isStarted = new Date().getTime() >= new Date(startTime).getTime();
+    if (isStarted) return t.guard_status_not_checked;
+    return t.guard_status_assigned;
+  };
+
+  const handleOpenCheckinPage = () => {
+    if (!shift) return;
     router.push(`/guard-shift/${shift.id}/checkin?date=${selectedDateKey}`);
   };
 
   useEffect(() => {
     const fetchShiftDetail = async () => {
       if (!shiftId) {
-        setError("Không tìm thấy mã ca trực.");
+        setError(t.no_shift_id);
         return;
       }
 
@@ -200,10 +156,7 @@ export default function GuardShiftDetailPage() {
         setLoading(true);
         setError("");
 
-        const response = await requestGetGuardShiftDetail({
-          shiftId,
-        });
-
+        const response = await requestGetGuardShiftDetail({ shiftId });
         const shiftDetail = response.data.shift;
 
         setShift({
@@ -212,9 +165,7 @@ export default function GuardShiftDetailPage() {
         });
       } catch (error) {
         const message =
-          error instanceof Error
-            ? error.message
-            : "Không thể lấy chi tiết ca trực.";
+          error instanceof Error ? error.message : t.fetch_error;
 
         setError(message);
         setShift(null);
@@ -224,7 +175,7 @@ export default function GuardShiftDetailPage() {
     };
 
     fetchShiftDetail();
-  }, [shiftId]);
+  }, [shiftId, t.no_shift_id, t.fetch_error]);
 
   if (loading) {
     return (
@@ -245,12 +196,12 @@ export default function GuardShiftDetailPage() {
           className="flex items-center gap-2 rounded-full bg-white px-4 py-2 text-sm font-black text-slate-700 shadow-sm"
         >
           <ArrowLeft className="h-4 w-4" />
-          Quay lại
+          {t.back}
         </button>
 
         <div className="rounded-2xl border border-red-100 bg-red-50 p-5 text-center">
           <p className="text-sm font-bold text-red-600">
-            {error || "Không tìm thấy ca trực."}
+            {error || t.not_found}
           </p>
         </div>
       </div>
@@ -274,7 +225,7 @@ export default function GuardShiftDetailPage() {
           <ShieldCheck className="h-6 w-6 shrink-0 text-[#0754a6]" />
 
           <h1 className="truncate text-base font-black text-[#0754a6]">
-            Chi tiết ca trực
+            {t.page_title}
           </h1>
         </div>
 
@@ -289,18 +240,18 @@ export default function GuardShiftDetailPage() {
             </h2>
 
             <p className="mt-1 text-xs font-bold text-slate-500">
-              Thông tin chi tiết ca trực trong ngày
+              {t.shift_detail_info}
             </p>
           </div>
 
           <span
             className={`rounded-full px-3 py-1.5 text-[10px] font-black ${
               isReplacement
-                ? "bg-purple-600 text-white"
+                ? "bg-purple-100 text-purple-700"
                 : getStatusStyle(shift.status, shift.check_in_time, shift.start_time)
             }`}
           >
-            {isReplacement ? "CA THAY THẾ" : getStatusLabel(shift.status, shift.check_in_time, shift.start_time)}
+            {isReplacement ? t.replacement : getStatusLabel(shift.status, shift.check_in_time, shift.start_time)}
           </span>
         </div>
 
@@ -308,7 +259,7 @@ export default function GuardShiftDetailPage() {
           <div>
             <div className="mb-1 flex items-center gap-1 text-xs font-bold text-slate-500">
               <MapPin className="h-3.5 w-3.5" />
-              <span>Vị trí</span>
+              <span>{t.location_label}</span>
             </div>
 
             <p className="text-sm font-black text-slate-900">
@@ -319,7 +270,7 @@ export default function GuardShiftDetailPage() {
           <div>
             <div className="mb-1 flex items-center gap-1 text-xs font-bold text-slate-500">
               <Clock3 className="h-3.5 w-3.5" />
-              <span>Thời lượng</span>
+              <span>{t.duration_label}</span>
             </div>
 
             <p className="text-sm font-black text-slate-900">{shift.time}</p>
@@ -331,7 +282,7 @@ export default function GuardShiftDetailPage() {
             <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
 
             <div>
-              <p className="text-xs font-bold text-slate-500">Địa chỉ</p>
+              <p className="text-xs font-bold text-slate-500">{t.address_label}</p>
 
               <p className="mt-1 text-sm font-bold text-slate-800">
                 {shift.address}
@@ -343,7 +294,7 @@ export default function GuardShiftDetailPage() {
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
         <h3 className="mb-4 text-base font-black text-slate-900">
-          Thông tin ca trực
+          {t.shift_info_section}
         </h3>
 
         <div className="space-y-4">
@@ -353,7 +304,7 @@ export default function GuardShiftDetailPage() {
             </div>
 
             <div>
-              <p className="text-xs font-bold text-slate-500">Ngày trực</p>
+              <p className="text-xs font-bold text-slate-500">{t.date_label}</p>
 
               <p className="mt-1 text-sm font-black capitalize text-slate-900">
                 {formatDateTitle(selectedDate)}
@@ -367,7 +318,7 @@ export default function GuardShiftDetailPage() {
             </div>
 
             <div>
-              <p className="text-xs font-bold text-slate-500">Khung giờ</p>
+              <p className="text-xs font-bold text-slate-500">{t.time_label}</p>
 
               <p className="mt-1 text-sm font-black text-slate-900">
                 {shift.time}
@@ -381,7 +332,7 @@ export default function GuardShiftDetailPage() {
             </div>
 
             <div>
-              <p className="text-xs font-bold text-slate-500">Khu vực trực</p>
+              <p className="text-xs font-bold text-slate-500">{t.area_label}</p>
 
               <p className="mt-1 text-sm font-black text-slate-900">
                 {shift.location}
@@ -396,11 +347,11 @@ export default function GuardShiftDetailPage() {
 
             <div>
               <p className="text-xs font-bold text-slate-500">
-                Người phân công
+                {t.assigned_by_label}
               </p>
 
               <p className="mt-1 text-sm font-black text-slate-900">
-                {shift.assigned_by?.full_name || "Điều phối viên SGCMP"}
+                {shift.assigned_by?.full_name || t.assigned_by_default}
               </p>
             </div>
           </div>
@@ -411,20 +362,20 @@ export default function GuardShiftDetailPage() {
             </div>
 
             <div className="w-full">
-              <p className="text-xs font-bold text-slate-500">Ảnh điểm danh</p>
+              <p className="text-xs font-bold text-slate-500">{t.checkin_image_label}</p>
 
               {shift.checkin_image ? (
                 <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-xl border border-slate-200">
                   <img
                     src={shift.checkin_image.image_url}
-                    alt="Ảnh Check-in ca trực"
+                    alt={t.checkin_image_alt}
                     className="h-full w-full object-cover"
                   />
                 </div>
               ) : (
                 <div className="mt-2 flex aspect-video w-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-400">
                   <Camera className="h-8 w-8 text-slate-300" />
-                  <span className="mt-2 text-xs font-bold text-slate-500">Chưa có ảnh điểm danh</span>
+                  <span className="mt-2 text-xs font-bold text-slate-500">{t.no_checkin_image}</span>
                 </div>
               )}
             </div>
@@ -434,26 +385,37 @@ export default function GuardShiftDetailPage() {
         <div className="mt-5 border-t border-slate-100 pt-4">
           <div className="mb-3 flex items-center justify-between">
             <h4 className="text-sm font-black text-slate-900">
-              Danh sách bảo vệ trực
+              {t.guard_list_title}
             </h4>
 
             <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[10px] font-black text-[#0754a6]">
-              {guards.length} bảo vệ
+              {guards.length} {t.guard_count_suffix}
             </span>
           </div>
 
           <div className="space-y-2">
             {guards.length > 0 ? (
               guards.map((guard) => {
-                const guardName = guard.full_name || "Chưa có tên";
+                const guardName = guard.full_name || t.no_name;
+                const isRep = guard.is_replacement;
 
                 return (
                   <div
                     key={guard.guard_id}
-                    className="flex items-center justify-between gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3"
+                    className={`flex items-center justify-between gap-3 rounded-xl border transition-all ${
+                      isRep
+                        ? "ml-5 border-l-4 border-l-purple-500 border-purple-200/80 bg-purple-50/40 p-2.5 shadow-xs"
+                        : "border-slate-100 bg-slate-50 p-3"
+                    }`}
                   >
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#0754a6] text-sm font-black text-white">
+                      <div
+                        className={`flex shrink-0 items-center justify-center overflow-hidden rounded-full font-black text-white ${
+                          isRep
+                            ? "h-8 w-8 bg-purple-600 text-xs"
+                            : "h-10 w-10 bg-[#0754a6] text-sm"
+                        }`}
+                      >
                         {guard.avatar_url ? (
                           <img
                             src={guard.avatar_url}
@@ -466,32 +428,51 @@ export default function GuardShiftDetailPage() {
                       </div>
 
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-black text-slate-900">
+                        <p
+                          className={`truncate font-black ${
+                            isRep
+                              ? "text-xs text-purple-950"
+                              : "text-sm text-slate-900"
+                          }`}
+                        >
                           {guardName}
                         </p>
 
                         <p className="mt-0.5 truncate text-xs font-bold text-slate-500">
-                          {guard.phone_number || "Chưa có SĐT"}
+                          {guard.phone_number || t.no_phone}
                         </p>
                       </div>
                     </div>
 
                     <div className="flex flex-col items-end gap-1 shrink-0">
-                      {guard.is_replacement ? (
+                      {isRep ? (
                         <span className="rounded bg-purple-50 px-2 py-0.5 text-[9px] font-black text-purple-700 border border-purple-200">
-                          Thay thế cho {guard.replaced_guard_name}
+                          {t.replacement_for} {guard.replaced_guard_name || ""}
                         </span>
                       ) : (
-                        guard.replacement_guard_ids && guard.replacement_guard_ids.length > 0 && (
-                          <span className="rounded bg-amber-50 px-2 py-0.5 text-[9px] font-black text-amber-700 border border-amber-200">
-                            Đã điều phối thay thế
+                        <>
+                          {guard.replacement_guard_ids &&
+                            guard.replacement_guard_ids.length > 0 && (
+                              <span className="rounded bg-amber-50 px-2 py-0.5 text-[9px] font-black text-amber-700 border border-amber-200">
+                                {t.has_replacement}
+                              </span>
+                            )}
+
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getGuardStatusStyle(
+                              guard.status,
+                              guard.check_in_time,
+                              shift.start_time
+                            )}`}
+                          >
+                            {getGuardStatusLabel(
+                              guard.status,
+                              guard.check_in_time,
+                              shift.start_time
+                            )}
                           </span>
-                        )
+                        </>
                       )}
-                      
-                      <span className={`rounded-full px-2 py-0.5 text-[9px] font-black ${getGuardStatusStyle(guard.status, guard.check_in_time, shift.start_time)}`}>
-                        {getGuardStatusLabel(guard.status, guard.check_in_time, shift.start_time)}
-                      </span>
                     </div>
                   </div>
                 );
@@ -499,7 +480,7 @@ export default function GuardShiftDetailPage() {
             ) : (
               <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 p-4 text-center">
                 <p className="text-xs font-bold text-slate-500">
-                  Chưa có danh sách bảo vệ trong ca này.
+                  {t.no_guards}
                 </p>
               </div>
             )}
@@ -514,7 +495,7 @@ export default function GuardShiftDetailPage() {
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-[#0754a6] px-4 py-4 text-sm font-black uppercase text-white shadow-lg shadow-blue-900/20 transition-all active:scale-[0.98]"
             >
               <UserCheck className="h-5 w-5" />
-              Xác nhận ca làm việc
+              {t.confirm_shift_btn}
             </button>
           </div>
         )}

@@ -6,6 +6,7 @@ import { MapPin, Clock3, CalendarDays, Building2 } from "lucide-react";
 import { type ShiftItem } from "@/features/shift/components/ShiftCardGuard";
 import { requestGetGuardShiftsByDay } from "@/features/shift/api/shift.api";
 import type { GuardShiftItem } from "@/features/shift/type";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 import { formatDate } from "@/utils/dateTime";
 
@@ -40,44 +41,12 @@ const formatDateTitle = (date: Date) => {
   });
 };
 
-const getStatusLabel = (status: ShiftItem["status"], isReplacement?: boolean) => {
-  if (isReplacement) {
-    return "CA THAY THẾ";
-  }
-
-  if (status === "assigned") {
-    return "PHÂN CÔNG";
-  }
-
-  if (status === "completed") {
-    return "ĐANG TRỰC";
-  }
-
-  if (status === "late") {
-    return "ĐI TRỄ";
-  }
-
-  return "VẮNG MẶT";
-};
-
 const getStatusStyle = (status: ShiftItem["status"], isReplacement?: boolean) => {
-  if (isReplacement) {
-    return "bg-purple-100 text-purple-700";
-  }
-
-  if (status === "assigned") {
-    return "bg-[#0754a6] text-white";
-  }
-
-  if (status === "completed") {
-    return "bg-green-600 text-white";
-  }
-
-  if (status === "late") {
-    return "bg-amber-100 text-amber-700";
-  }
-
-  return "bg-red-600 text-white";
+  if (isReplacement) return "bg-purple-100 text-purple-700";
+  if (status === "assigned") return "bg-blue-100 text-blue-700";
+  if (status === "completed") return "bg-emerald-100 text-emerald-700";
+  if (status === "late") return "bg-amber-100 text-amber-700";
+  return "bg-red-100 text-red-700";
 };
 
 const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
@@ -127,6 +96,9 @@ const ShiftDetailSkeleton = () => {
 export default function GuardShiftPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const { dict } = useTranslation();
+  const t = dict.layout_guard.guard_shift;
+  const card = dict.layout_guard.shift_card;
 
   const selectedDate = useMemo(() => {
     return parseDateKey(searchParams.get("date"));
@@ -155,7 +127,7 @@ export default function GuardShiftPage() {
         const message =
           error instanceof Error
             ? error.message
-            : "Không thể lấy ca trực trong ngày.";
+            : t.fetch_error;
 
         setError(message);
         setShifts([]);
@@ -165,7 +137,15 @@ export default function GuardShiftPage() {
     };
 
     fetchGuardShiftsByDay();
-  }, [selectedDateKey]);
+  }, [selectedDateKey, t.fetch_error]);
+
+  const getStatusLabel = (status: ShiftItem["status"], isReplacement?: boolean) => {
+    if (isReplacement) return card.status_replacement;
+    if (status === "assigned") return card.status_assigned;
+    if (status === "completed") return card.status_completed;
+    if (status === "late") return card.status_late;
+    return card.status_absent;
+  };
 
   const handleOpenShiftDetail = (shiftId: string) => {
     router.push(`/guard-shift/${shiftId}?date=${selectedDateKey}`);
@@ -175,7 +155,7 @@ export default function GuardShiftPage() {
     <div className="space-y-4">
       <section>
         <h1 className="text-2xl font-extrabold text-slate-950">
-          Ca trực trong ngày
+          {t.title}
         </h1>
 
         <div className="mt-2 flex items-center gap-2 text-sm font-bold capitalize text-slate-600">
@@ -211,7 +191,7 @@ export default function GuardShiftPage() {
                     </h2>
 
                     <p className="mt-1 text-xs font-bold text-slate-500">
-                      Thông tin ca trực được phân công
+                      {t.shift_info}
                     </p>
                   </div>
 
@@ -249,7 +229,7 @@ export default function GuardShiftPage() {
             <CalendarDays className="mx-auto mb-3 h-10 w-10 text-slate-300" />
 
             <p className="text-sm font-bold text-slate-500">
-              Không có ca trực trong ngày này.
+              {t.empty}
             </p>
           </div>
         ) : null}
@@ -257,3 +237,4 @@ export default function GuardShiftPage() {
     </div>
   );
 }
+

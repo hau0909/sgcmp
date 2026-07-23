@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
 import { getUserTimeZone, getUserLocale, formatDate, formatTime as formatTimeHelper } from "@/utils/dateTime";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   AlertTriangle,
   CalendarX,
@@ -57,6 +58,7 @@ function GuardSubTooltip({
   shift: ShiftWithAssignments;
   position: TooltipPosition;
 }) {
+  const { dict } = useTranslation();
   return createPortal(
     <div
       className="pointer-events-none fixed z-[10000] w-[300px] rounded-md border border-slate-200 bg-white p-4 text-left shadow-2xl"
@@ -68,43 +70,43 @@ function GuardSubTooltip({
       <div className="space-y-3">
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Tên ca trực
+            {dict?.shift_week?.shift_name || "Tên ca trực"}
           </p>
           <p className="mt-1 text-sm font-bold text-slate-800">
-            {shift.shift_name || "Chưa cập nhật"}
+            {shift.shift_name || (dict?.shift_week?.unupdated || "Chưa cập nhật")}
           </p>
         </div>
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Địa điểm
+            {dict?.shift_week?.location || "Địa điểm"}
           </p>
           <p className="mt-1 text-sm font-medium text-slate-700">
-            {shift.contract_address || "Chưa cập nhật"}
+            {shift.contract_address || (dict?.shift_week?.unupdated || "Chưa cập nhật")}
           </p>
           {shift.location && (
             <p className="mt-0.5 text-xs text-slate-500">
-              Vị trí: {shift.location}
+              {dict?.shift_week?.position || "Vị trí"}: {shift.location}
             </p>
           )}
         </div>
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Ảnh điểm danh
+            {dict?.shift_week?.checkin_image || "Ảnh điểm danh"}
           </p>
           {assignment.checkin_image ? (
             <div className="mt-2 relative aspect-video w-full overflow-hidden rounded border border-slate-200">
               <img
                 src={assignment.checkin_image.image_url}
-                alt="Ảnh điểm danh"
+                alt={dict?.shift_week?.checkin_image || "Ảnh điểm danh"}
                 className="h-full w-full object-cover"
               />
             </div>
           ) : (
             <div className="mt-2 flex aspect-video w-full flex-col items-center justify-center rounded border border-dashed border-slate-200 bg-slate-50 text-slate-400">
               <Camera size={24} className="text-slate-300" />
-              <span className="mt-1.5 text-xs text-slate-500 font-medium">Chưa có ảnh điểm danh</span>
+              <span className="mt-1.5 text-xs text-slate-500 font-medium">{dict?.shift_week?.no_checkin_image || "Chưa có ảnh điểm danh"}</span>
             </div>
           )}
         </div>
@@ -121,6 +123,7 @@ function GuardRow({
   assignment: ShiftAssignment;
   shift: ShiftWithAssignments;
 }) {
+  const { dict } = useTranslation();
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [showSubTooltip, setShowSubTooltip] = useState(false);
   const [subTooltipPosition, setSubTooltipPosition] = useState<TooltipPosition | null>(null);
@@ -154,7 +157,7 @@ function GuardRow({
           <UserRound size={15} className="shrink-0 text-slate-500" />
 
           <p className="truncate text-sm font-medium text-slate-800">
-            {assignment.guard_name || "Chưa cập nhật"}
+            {assignment.guard_name || (dict?.shift_week?.unupdated || "Chưa cập nhật")}
           </p>
         </div>
 
@@ -163,7 +166,7 @@ function GuardRow({
             assignment.status,
           )}`}
         >
-          {getStatusLabel(assignment.status)}
+          {getStatusLabel(assignment.status, dict)}
         </span>
       </div>
 
@@ -200,6 +203,7 @@ function ReplacementGuardRow({
   assignment: ShiftAssignment;
   shift: ShiftWithAssignments;
 }) {
+  const { dict } = useTranslation();
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [showSubTooltip, setShowSubTooltip] = useState(false);
   const [subTooltipPosition, setSubTooltipPosition] = useState<TooltipPosition | null>(null);
@@ -236,7 +240,7 @@ function ReplacementGuardRow({
           </p>
         </div>
         <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[9px] font-bold text-purple-700">
-          Thay thế
+          {dict?.shift_week?.replacement || "Thay thế"}
         </span>
       </div>
 
@@ -260,20 +264,20 @@ const getWeekDayLabels = (locale: string) => {
   });
 };
 
-const getStatusLabel = (status: ShiftAssignmentStatus) => {
+const getStatusLabel = (status: ShiftAssignmentStatus, dict?: any) => {
   if (status === "assigned") {
-    return "Đã phân công";
+    return dict?.coor_schedules?.assigned || "Đã phân công";
   }
 
   if (status === "completed") {
-    return "Đang trực";
+    return dict?.coor_schedules?.on_duty || "Đang trực";
   }
 
   if (status === "late") {
-    return "Đi trễ";
+    return dict?.coor_schedules?.late || "Đi trễ";
   }
 
-  return "Vắng mặt";
+  return dict?.coor_schedules?.absent || "Vắng mặt";
 };
 
 const getStatusStyle = (status: ShiftAssignmentStatus) => {
@@ -336,8 +340,8 @@ const getStartOfWeekKey = (dateKey: string) => {
   return formatUtcDateKey(date);
 };
 
-const buildWeekDays = (weekStartDate?: string): WeekDay[] => {
-  const userLocale = getUserLocale();
+const buildWeekDays = (weekStartDate?: string, locale?: string): WeekDay[] => {
+  const userLocale = locale || getUserLocale();
   const weekDayLabels = getWeekDayLabels(userLocale);
   const todayKey = getLocalDateKey(new Date());
 
@@ -373,12 +377,12 @@ const getDateTimeValue = (date: string) => {
   return new Date(date).getTime();
 };
 
-const getShiftContractAddress = (shift: ShiftWithAssignments) => {
-  return shift.contract_address || "Chưa cập nhật địa điểm hợp đồng";
+const getShiftContractAddress = (shift: ShiftWithAssignments, dict?: any) => {
+  return shift.contract_address || (dict?.shift_schedule_table?.unupdated_location || "Chưa cập nhật địa điểm hợp đồng");
 };
 
-const getMainGuardName = (assignment: ShiftAssignment | undefined) => {
-  return assignment?.guard_name || "Chưa cập nhật";
+const getMainGuardName = (assignment: ShiftAssignment | undefined, dict?: any) => {
+  return assignment?.guard_name || (dict?.shift_week?.unupdated || "Chưa cập nhật");
 };
 
 const getTooltipPosition = (element: HTMLButtonElement): TooltipPosition => {
@@ -413,6 +417,7 @@ function WeekShiftTooltip({
   onMouseEnter,
   onMouseLeave,
 }: WeekShiftTooltipProps) {
+  const { dict } = useTranslation();
   const firstAssignment = shift.assignments[0];
   return createPortal(
     <div
@@ -427,7 +432,7 @@ function WeekShiftTooltip({
       <div className="space-y-3">
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Trạng thái
+            {dict?.shift_week?.status || "Trạng thái"}
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span
@@ -439,7 +444,7 @@ function WeekShiftTooltip({
             </span>
             {hasReplacement && (
               <span className="rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
-                Thay thế
+                {dict?.shift_week?.replacement || "Thay thế"}
               </span>
             )}
           </div>
@@ -447,7 +452,7 @@ function WeekShiftTooltip({
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Thời gian ca trực
+            {dict?.shift_week?.shift_time || "Thời gian ca trực"}
           </p>
 
           <div className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-800">
@@ -460,7 +465,7 @@ function WeekShiftTooltip({
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Bảo vệ trực ({shift.assignments.length}/{shift.required_guards})
+            {(dict?.shift_week?.assigned_guards || "Bảo vệ trực ({0}/{1})").replace("{0}", String(shift.assignments.length)).replace("{1}", String(shift.required_guards))}
           </p>
 
           <div className="mt-2 space-y-1.5">
@@ -485,34 +490,34 @@ function WeekShiftTooltip({
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Tên ca trực
+            {dict?.shift_week?.shift_name || "Tên ca trực"}
           </p>
 
           <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
             <SquarePen size={15} className="mt-0.5 shrink-0" />
-            <span>{shift.shift_name || "Chưa cập nhật"}</span>
+            <span>{shift.shift_name || (dict?.shift_week?.unupdated || "Chưa cập nhật")}</span>
           </div>
         </div>
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Địa điểm hợp đồng
+            {dict?.shift_schedule_table?.contract_location_subtitle || "Địa điểm hợp đồng"}
           </p>
 
           <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
             <MapPin size={15} className="mt-0.5 shrink-0" />
-            <span>{getShiftContractAddress(shift)}</span>
+            <span>{getShiftContractAddress(shift, dict)}</span>
           </div>
         </div>
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Vị trí trực cụ thể
+            {dict?.shift_week?.specific_location || "Vị trí trực cụ thể"}
           </p>
 
           <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
             <MapPin size={15} className="mt-0.5 shrink-0" />
-            <span>{shift.location || "Chưa cập nhật vị trí trực"}</span>
+            <span>{shift.location || (dict?.shift_week?.unupdated_position || "Chưa cập nhật vị trí trực")}</span>
           </div>
         </div>
       </div>
@@ -527,7 +532,9 @@ export function ShiftWeekScheduleTable({
   weekStartDate,
 }: ShiftWeekScheduleTableProps) {
   const [selectedShift, setSelectedShift] = useState<ShiftWithAssignments | null>(null);
-  const weekDays = buildWeekDays(weekStartDate);
+  const { dict, locale: appLocale } = useTranslation();
+  const bcp47Locale = appLocale === "en" ? "en-US" : "vi-VN";
+  const weekDays = buildWeekDays(weekStartDate, bcp47Locale);
   const scrollRef = useRef<HTMLDivElement | null>(null);
   const dragStateRef = useRef({
     isDragging: false,
@@ -542,7 +549,7 @@ export function ShiftWeekScheduleTable({
         return true;
       }
 
-      return getShiftContractAddress(shift) === selectedLocation;
+      return getShiftContractAddress(shift, dict) === selectedLocation;
     })
     .sort(
       (a, b) => getDateTimeValue(a.start_time) - getDateTimeValue(b.start_time),
@@ -594,7 +601,7 @@ export function ShiftWeekScheduleTable({
       <div className="rounded-sm border border-slate-300 bg-white p-10 text-center text-slate-400">
         <CalendarX className="mx-auto" size={34} />
         <p className="mt-3 text-sm font-semibold">
-          Không có ca trực trong tuần này
+          {dict?.shift_week?.no_shifts_this_week || "Không có ca trực trong tuần này"}
         </p>
       </div>
     );
@@ -683,6 +690,7 @@ export function ShiftWeekScheduleTable({
 }
 
 function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
+  const { dict } = useTranslation();
   const cardRef = useRef<HTMLButtonElement | null>(null);
   const [tooltipPosition, setTooltipPosition] =
     useState<TooltipPosition | null>(null);
@@ -697,7 +705,9 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
         className="w-full rounded-md border border-dashed border-orange-400 bg-orange-50 px-3 py-2 text-left text-orange-700"
       >
         <div className="flex items-start justify-between gap-2">
-          <p className="whitespace-nowrap text-xs font-bold">CHƯA PHÂN CÔNG</p>
+          <p className="whitespace-nowrap text-xs font-bold">
+            {dict.coor_schedules?.no_guard_assigned || "CHƯA PHÂN CÔNG"}
+          </p>
           <AlertTriangle size={14} />
         </div>
 
@@ -723,7 +733,7 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
       (assign.replacement_guard_ids && assign.replacement_guard_ids.length > 0) ||
       (assign.replacement_guards && assign.replacement_guards.length > 0)
   );
-  const statusLabel = getStatusLabel(firstAssignment.status);
+  const statusLabel = getStatusLabel(firstAssignment.status, dict);
 
   const [showTooltip, setShowTooltip] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -779,7 +789,7 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
           </span>
           {hasReplacement && (
             <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
-              Thay thế
+              {dict?.shift_week?.replacement || "Thay thế"}
             </span>
           )}
         </div>
@@ -788,7 +798,7 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
           <UserRound size={14} className="shrink-0" />
 
           <p className="whitespace-nowrap text-sm font-bold leading-5 text-blue-900">
-            {getMainGuardName(firstAssignment)}
+            {getMainGuardName(firstAssignment, dict)}
             {extraGuardCount > 0 ? (
               <span className="ml-1 font-bold text-blue-700">
                 +{extraGuardCount}

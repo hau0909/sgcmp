@@ -178,7 +178,7 @@ export default function SignInComponent() {
           className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-800 transition-all duration-200 group bg-white border border-slate-300 rounded px-3 py-1.5 shadow-xs"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          <span>Quay lại</span>
+          <span>{dict.pages.auth.login.back_to_home || "Quay lại"}</span>
         </button>
       </div>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Download,
   Users,
@@ -216,6 +216,130 @@ const getActivityConfig = (subType: string) => {
   }
 };
 
+const getEmployeeStatusLabel = (status: string, dict: any) => {
+  const statusKeyMap: Record<string, string> = {
+    "Đang trực": dict?.company_dashboard?.employee_status?.on_duty || "Đang trực",
+    "Vắng mặt": dict?.company_dashboard?.employee_status?.absent || "Vắng mặt",
+    "Đi trễ": dict?.company_dashboard?.employee_status?.late || "Đi trễ",
+    "Thay ca": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
+    "Điểm danh trễ": dict?.company_dashboard?.employee_status?.late_checkin || "Điểm danh trễ",
+    "Phân công": dict?.company_dashboard?.employee_status?.assigned || "Phân công",
+    "Chưa điểm danh": dict?.company_dashboard?.employee_status?.not_checked_in || "Chưa điểm danh",
+  };
+  return statusKeyMap[status] || status;
+};
+
+const formatActivity = (act: RecentActivityItem, locale: string) => {
+  if (locale !== "en") return act;
+
+  let boldText = act.boldText || "";
+  let normalText = act.normalText || "";
+  let timeLabel = act.timeLabel || "";
+  let metaLabel = act.metaLabel || "";
+
+  // 1. boldText translations
+  if (boldText === "Khách hàng") boldText = "Customer";
+  else if (boldText === "Điều phối viên") boldText = "Coordinator";
+  else if (boldText === "Công ty") boldText = "Company";
+  else if (boldText === "Báo cáo sự cố") boldText = "Incident Report";
+  else if (boldText === "Hợp đồng") boldText = "Contract";
+  else if (boldText === "Hợp đồng mới") boldText = "New Contract";
+  else if (boldText === "Bảo vệ mới") boldText = "New Guard";
+  else if (boldText.startsWith("Báo cáo bảo vệ ")) {
+    const rawType = boldText.replace("Báo cáo bảo vệ ", "").toLowerCase();
+    let typeEn = rawType;
+    if (rawType.includes("đi muộn") || rawType.includes("đi trễ")) typeEn = "late arrival";
+    else if (rawType.includes("vắng mặt")) typeEn = "absence";
+    else if (rawType.includes("thái độ")) typeEn = "poor attitude";
+    else if (rawType.includes("ngủ gật")) typeEn = "sleeping on duty";
+    else if (rawType.includes("khác")) typeEn = "other incident";
+    boldText = `Incident report for guard (${typeEn})`;
+  } else if (boldText.startsWith("Hợp đồng HD-")) {
+    boldText = boldText.replace("Hợp đồng HD-", "Contract HD-");
+  } else if (boldText.startsWith("Điều phối viên ")) {
+    boldText = boldText.replace("Điều phối viên ", "Coordinator ");
+  }
+
+  // 2. normalText translations
+  if (normalText.includes("đã điểm danh ca trực đúng giờ")) {
+    normalText = " checked in on time for the shift.";
+  } else if (normalText.includes("đã điểm danh trễ")) {
+    const match = normalText.match(/\d+/);
+    const mins = match ? match[0] : "";
+    normalText = ` checked in late by ${mins} minutes.`;
+  } else if (normalText.includes("chưa điểm danh và đã trễ ca trực")) {
+    normalText = " has not checked in and is late for the shift.";
+  } else if (normalText.includes("bị đánh dấu vắng mặt")) {
+    normalText = " was marked absent.";
+  } else if (normalText.includes("đã điều động")) {
+    const match = normalText.match(/đã điều động (.+) thay cho (.+)\./);
+    if (match) {
+      normalText = ` dispatched ${match[1]} to replace ${match[2]}.`;
+    } else {
+      normalText = " dispatched a replacement guard.";
+    }
+  } else if (normalText.includes("đã gửi báo cáo bảo vệ")) {
+    const match = normalText.match(/đã gửi báo cáo bảo vệ (.+)\./);
+    const reportTypeStr = match ? match[1] : "";
+    let translatedType = reportTypeStr;
+    if (reportTypeStr.includes("đi muộn") || reportTypeStr.includes("đi trễ")) translatedType = "late arrival";
+    else if (reportTypeStr.includes("vắng mặt")) translatedType = "absence";
+    else if (reportTypeStr.includes("thái độ")) translatedType = "poor attitude";
+    else if (reportTypeStr.includes("ngủ gật")) translatedType = "sleeping on duty";
+    else translatedType = "incident";
+    normalText = ` submitted an incident report regarding guard ${translatedType}.`;
+  } else if (normalText.includes("đã được chuyển sang đang xử lý")) {
+    normalText = " has been moved to in-progress.";
+  } else if (normalText.includes("đã được giải quyết")) {
+    normalText = " has been resolved.";
+  } else if (normalText.includes("đã được đóng")) {
+    normalText = " has been closed.";
+  } else if (normalText.includes("đã chuyển sang hoạt động")) {
+    normalText = " has been activated.";
+  } else if (normalText.includes("đã chính thức có hiệu lực")) {
+    normalText = " has officially taken effect.";
+  } else if (normalText.includes("sẽ hết hạn sau")) {
+    const match = normalText.match(/\d+/);
+    const days = match ? match[0] : "";
+    normalText = ` will expire in ${days} days.`;
+  } else if (normalText.includes("nhận được một yêu cầu dịch vụ mới")) {
+    normalText = " received a new service request.";
+  } else if (normalText.includes("đã được kích hoạt tài khoản")) {
+    normalText = " account has been activated.";
+  } else if (normalText.includes("đang xử lý báo cáo sự cố")) {
+    normalText = " is processing the incident report.";
+  } else if (normalText.includes("đang chờ được duyệt")) {
+    normalText = " is pending approval.";
+  } else if (normalText.includes("vừa gia nhập hệ thống")) {
+    const match = normalText.match(/(.+) vừa gia nhập hệ thống\./);
+    const name = match ? match[1].trim() : "";
+    normalText = ` ${name} joined the system.`;
+  }
+
+  // 3. timeLabel translations
+  timeLabel = timeLabel
+    .replace("Hôm nay", "Today")
+    .replace("Hôm qua", "Yesterday");
+
+  // 4. metaLabel translations
+  metaLabel = metaLabel
+    .replace(/^Hệ thống$/, "System")
+    .replace(/^Cảnh báo$/, "Warning")
+    .replace(/^Yêu cầu mới$/, "New Request")
+    .replace(/Hợp đồng /g, "Contract ")
+    .replace(/Ca sáng/g, "Morning Shift")
+    .replace(/Ca chiều/g, "Afternoon Shift")
+    .replace(/Ca đêm/g, "Night Shift");
+
+  return {
+    ...act,
+    boldText,
+    normalText,
+    timeLabel,
+    metaLabel,
+  };
+};
+
 export default function CompanyDashboardPage() {
   const { dict, locale } = useTranslation();
 
@@ -268,6 +392,13 @@ export default function CompanyDashboardPage() {
   // Dữ liệu biểu đồ radar trạng thái ca trực hôm nay
   const [shiftStatusData, setShiftStatusData] = useState<ShiftStatusResultItem[]>([]);
   const [shiftStatusDataLoading, setShiftStatusDataLoading] = useState(false);
+
+  const formattedShiftStatusData = useMemo(() => {
+    return shiftStatusData.map((item) => ({
+      ...item,
+      statusLabel: getEmployeeStatusLabel(item.status, dict),
+    }));
+  }, [shiftStatusData, dict]);
 
   // Dữ liệu bảng trạng thái bảo vệ hôm nay
   const [todayGuards, setTodayGuards] = useState<TodayGuardListItem[]>([]);
@@ -783,7 +914,7 @@ export default function CompanyDashboardPage() {
                     >
                       <RadarChart
                         accessibilityLayer
-                        data={shiftStatusData}
+                        data={formattedShiftStatusData}
                         outerRadius="68%"
                       >
                         <ChartTooltip
@@ -794,7 +925,7 @@ export default function CompanyDashboardPage() {
                         <PolarGrid />
 
                         <PolarAngleAxis
-                          dataKey="status"
+                          dataKey="statusLabel"
                           tickLine={false}
                           tick={{ fontSize: 11 }}
                         />
@@ -845,7 +976,7 @@ export default function CompanyDashboardPage() {
                               />
 
                               <span className="text-sm font-medium text-on-surface-variant">
-                                {dict.company_dashboard.employee_status[status as keyof typeof dict.company_dashboard.employee_status] || item.status}
+                                {getEmployeeStatusLabel(item.status, dict)}
                               </span>
                             </div>
 
@@ -1136,7 +1267,7 @@ export default function CompanyDashboardPage() {
                               className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${statusConfig.animate ? "animate-pulse" : ""
                                 }`}
                             />
-                            {dict.company_dashboard.employee_status[emp.status as keyof typeof dict.company_dashboard.employee_status] || emp.status}
+                            {getEmployeeStatusLabel(emp.status, dict)}
                           </span>
                         </td>
                       </tr>
@@ -1191,7 +1322,8 @@ export default function CompanyDashboardPage() {
                 </div>
               ))
             ) : displayedActivities.length > 0 ? (
-              displayedActivities.map((act) => {
+              displayedActivities.map((rawAct) => {
+                const act = formatActivity(rawAct, locale);
                 const config = getActivityConfig(act.subType);
 
                 return (
@@ -1365,7 +1497,7 @@ export default function CompanyDashboardPage() {
                                 className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${statusConfig.animate ? "animate-pulse" : ""
                                   }`}
                               />
-                              {dict.company_dashboard.employee_status[emp.status as keyof typeof dict.company_dashboard.employee_status] || emp.status}
+                              {getEmployeeStatusLabel(emp.status, dict)}
                             </span>
                           </td>
                         </tr>
@@ -1450,7 +1582,8 @@ export default function CompanyDashboardPage() {
 
               <div className="flex flex-col gap-6 relative">
                 {filteredActivities.length > 0 ? (
-                  filteredActivities.map((act) => {
+                  filteredActivities.map((rawAct) => {
+                    const act = formatActivity(rawAct, locale);
                     const config = getActivityConfig(act.subType);
 
                     return (

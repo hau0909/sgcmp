@@ -5,12 +5,14 @@ import { Report } from "../types";
 import { CoorReportFilters } from "./CoorReportFilters";
 import { CoorReportTable } from "./CoorReportTable";
 import { CoorReportDetailModal } from "./CoorReportDetailModal";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   requestGetCompanyReports,
   requestUpdateReportStatus,
 } from "../api/report.api";
 
 export function CoorReportContainer() {
+  const { dict } = useTranslation();
   const companyId = useAuthStore((state) => state.company_id) || "";
 
   // UI state
@@ -61,7 +63,7 @@ export function CoorReportContainer() {
   const handleUpdateStatus = async (id: string, newStatus: string) => {
     try {
       const updated = await requestUpdateReportStatus(id, newStatus);
-      showToast("Cập nhật trạng thái báo cáo khiếu nại thành công.");
+      showToast(dict.report?.toast?.update_success ?? "Report status updated successfully.");
       
       // Update local state for reports
       setReports((prev) =>
@@ -74,7 +76,7 @@ export function CoorReportContainer() {
       }
     } catch (err) {
       console.error("Lỗi khi cập nhật trạng thái báo cáo:", err);
-      showToast("Cập nhật trạng thái báo cáo thất bại.");
+      showToast(dict.report?.toast?.update_failed ?? "Failed to update report status.");
     }
   };
 
@@ -99,10 +101,10 @@ export function CoorReportContainer() {
           </div>
           <div>
             <h1 className="text-2xl font-bold text-primary tracking-tight font-headline">
-              Quản lý báo cáo & Phản ánh
+              {dict.report?.container?.title}
             </h1>
             <p className="text-sm text-on-surface-variant mt-0.5 font-body">
-              Xem và giải quyết các báo cáo phản ánh chất lượng dịch vụ hoặc các sự cố phát sinh từ phía khách hàng.
+              {dict.report?.container?.desc}
             </p>
           </div>
         </div>
@@ -122,7 +124,7 @@ export function CoorReportContainer() {
         {isLoadingReports ? (
           <div className="flex flex-col items-center justify-center p-16 bg-white border border-outline-variant/30 rounded-xl">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-            <p className="text-xs text-on-surface-variant mt-3 font-medium">Đang tải danh sách báo cáo...</p>
+            <p className="text-xs text-on-surface-variant mt-3 font-medium">{dict.report?.container?.loading}</p>
           </div>
         ) : (
           <CoorReportTable
