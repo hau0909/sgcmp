@@ -150,7 +150,7 @@ export default function GuardListScreen() {
 
   const workStatusOptions = [
     { value: "", label: dict.coor_guards?.filter_today_schedule || "Lịch hôm nay (Tất cả)" },
-    { value: "on_duty", label: dict.coor_guards?.status_on_duty || "Đang trực" },
+    { value: "on_duty", label: dict.coor_guards?.status_on_duty || "Hoàn thành" },
     { value: "assigned", label: dict.coor_guards?.status_assigned || "Phân công" },
     { value: "available", label: dict.coor_guards?.status_available || "Đang rảnh" },
     { value: "absent", label: dict.coor_guards?.status_absent || "Vắng mặt" },

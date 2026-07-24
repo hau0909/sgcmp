@@ -12,8 +12,12 @@ export async function requestGetAccountDetail(userId: string) {
   });
 }
 
-export async function requestBanAccount(userId: string) {
+export async function requestBanAccount(userId: string, reason: string) {
   return await fetcher(`/api/admin/accounts/${userId}/banned`, {
     method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ reason }),
   });
 }

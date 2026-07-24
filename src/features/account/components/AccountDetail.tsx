@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { requestGetAccountDetail, requestBanAccount } from "../api/account.api";
 import type { Profile } from "@/types/Profile";
+import type { ReasonBan } from "@/types/ReasonBan";
 import type { UserRole, GeneralStatus } from "@/types/Enum";
 
 const formatDate = (dateStr: string | null) => {
@@ -122,10 +123,13 @@ const getStatusBadge = (status: GeneralStatus) => {
 export default function AccountDetail({ userId }: { userId: string }) {
   const router = useRouter();
   const [account, setAccount] = React.useState<Profile | null>(null);
+  const [banReason, setBanReason] = React.useState<ReasonBan | null>(null);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
   const [isConfirmOpen, setIsConfirmOpen] = React.useState(false);
   const [isBanning, setIsBanning] = React.useState(false);
+  const [reasonInput, setReasonInput] = React.useState("");
+  const [reasonError, setReasonError] = React.useState<string | null>(null);
   const [toastMessage, setToastMessage] = React.useState<{ text: string; type: "success" | "error" } | null>(null);
 
   React.useEffect(() => {
@@ -138,13 +142,25 @@ export default function AccountDetail({ userId }: { userId: string }) {
   }, [toastMessage]);
 
   const handleConfirmBan = async () => {
+    if (!reasonInput.trim()) {
+      setReasonError("Vui lòng nhập lý do khóa tài khoản.");
+      return;
+    }
     try {
       setIsBanning(true);
-      const res = await requestBanAccount(userId);
+      const res = await requestBanAccount(userId, reasonInput.trim());
       if (res.success) {
         setToastMessage({ text: res.message || "Khóa tài khoản thành công.", type: "success" });
         setIsConfirmOpen(false);
         setAccount(prev => prev ? { ...prev, status: "banned" as GeneralStatus } : null);
+        setBanReason({
+          reason_ban_id: "",
+          user_id: userId,
+          reason: reasonInput.trim(),
+          banned_by: "",
+        });
+        setReasonInput("");
+        setReasonError(null);
       } else {
         setToastMessage({ text: res.error || "Không thể khóa tài khoản.", type: "error" });
       }
@@ -162,6 +178,9 @@ export default function AccountDetail({ userId }: { userId: string }) {
         setLoading(true);
         const res = await requestGetAccountDetail(userId);
         setAccount(res.account);
+        if (res.banReason) {
+          setBanReason(res.banReason);
+        }
       } catch (err: any) {
         console.error("Error fetching account detail:", err);
         setError(err.message || "Không thể tải thông tin tài khoản");
@@ -229,7 +248,11 @@ export default function AccountDetail({ userId }: { userId: string }) {
         {account.status !== "banned" && (
           <button
             type="button"
-            onClick={() => setIsConfirmOpen(true)}
+            onClick={() => {
+              setReasonInput("");
+              setReasonError(null);
+              setIsConfirmOpen(true);
+            }}
             className="ml-auto flex items-center justify-center gap-2 rounded-lg border-2 bg-blue-800 px-4 py-2 font-medium text-white transition-all duration-300 hover:bg-blue-900 cursor-pointer animate-in fade-in duration-300"
           >
             <Ban className="shrink-0" size={20} />
@@ -237,6 +260,25 @@ export default function AccountDetail({ userId }: { userId: string }) {
           </button>
         )}
       </div>
+
+      {/* Banned Alert Banner */}
+      {account.status === "banned" && (
+        <div className="bg-red-50 border border-red-200 rounded-2xl p-5 text-red-900 flex items-start gap-4 shadow-sm">
+          <div className="p-2.5 bg-red-100 rounded-xl text-red-600 shrink-0 mt-0.5">
+            <AlertTriangle className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="font-bold text-base text-red-800">Tài khoản này đã bị khóa</h4>
+            {banReason?.reason ? (
+              <p className="text-sm text-red-700">
+                <span className="font-semibold">Lý do khóa:</span> {banReason.reason}
+              </p>
+            ) : (
+              <p className="text-sm text-red-700">Không có thông tin chi tiết về lý do khóa.</p>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -349,14 +391,40 @@ export default function AccountDetail({ userId }: { userId: string }) {
                 <AlertTriangle className="w-6 h-6" />
               </div>
               <h3 className="text-lg font-bold text-center text-on-surface mb-2">Khóa tài khoản</h3>
-              <p className="text-sm text-center text-on-surface-variant/80">
+              <p className="text-sm text-center text-on-surface-variant/80 mb-4">
                 Bạn có chắc chắn muốn khóa tài khoản này không? Người dùng sẽ không thể đăng nhập vào hệ thống.
               </p>
+
+              <div className="text-left space-y-1.5">
+                <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
+                  Lý do khóa tài khoản <span className="text-error">*</span>
+                </label>
+                <textarea
+                  rows={3}
+                  value={reasonInput}
+                  onChange={(e) => {
+                    setReasonInput(e.target.value);
+                    if (reasonError) setReasonError(null);
+                  }}
+                  placeholder="Nhập lý do khóa tài khoản (ví dụ: Vi phạm điều khoản, gian lận...)"
+                  className={`w-full p-3 text-sm rounded-xl border ${
+                    reasonError ? "border-error focus:ring-error" : "border-outline-variant focus:border-primary"
+                  } bg-surface focus:outline-none focus:ring-1 text-on-surface resize-none`}
+                />
+                {reasonError && (
+                  <p className="text-xs text-error font-medium">{reasonError}</p>
+                )}
+              </div>
             </div>
+
             <div className="flex items-center gap-3 p-4 bg-surface-container-low/50 border-t border-outline-variant/30">
               <button
                 type="button"
-                onClick={() => setIsConfirmOpen(false)}
+                onClick={() => {
+                  setIsConfirmOpen(false);
+                  setReasonInput("");
+                  setReasonError(null);
+                }}
                 disabled={isBanning}
                 className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50"
               >

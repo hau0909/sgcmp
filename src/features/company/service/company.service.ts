@@ -332,6 +332,8 @@ export const getCompanyByIdServiceInCustomer = async (
     activityImgs,
     companyLicenseNo: dbCompany.business_license_no,
     ownerId: dbCompany.owner_id,
+    allowed_late_minutes: dbCompany.allowed_late_minutes ?? 5,
+    allowed_absent_minutes: dbCompany.allowed_absent_minutes ?? 35,
   };
 };
 export const getCompanyByIdService = async (

@@ -240,9 +240,12 @@ export default function GuardShiftCheckinPage() {
       return null;
     }
 
+    const lateMinutes = shift.allowed_late_minutes ?? shift.company?.allowed_late_minutes ?? 5;
+    const absentMinutes = shift.allowed_absent_minutes ?? shift.company?.allowed_absent_minutes ?? 35;
+
     const startCheckinLimit = startTime;
-    const lateCheckinLimit = new Date(startTime.getTime() + 5 * 60 * 1000);
-    const absentLimit = new Date(startTime.getTime() + 35 * 60 * 1000);
+    const lateCheckinLimit = new Date(startTime.getTime() + lateMinutes * 60 * 1000);
+    const absentLimit = new Date(startTime.getTime() + absentMinutes * 60 * 1000);
 
     const isBeforeWindow = currentTime < startCheckinLimit;
     const isExpired = currentTime >= absentLimit;
@@ -679,11 +682,10 @@ export default function GuardShiftCheckinPage() {
                 type="button"
                 disabled={!canUseCamera}
                 onClick={handleOpenCamera}
-                className={`flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition ${
-                  canUseCamera
+                className={`flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed transition ${canUseCamera
                     ? "cursor-pointer border-blue-700 bg-blue-50/10 hover:border-blue-800 hover:bg-blue-50/20"
                     : "cursor-not-allowed border-slate-300 bg-slate-50 opacity-60"
-                }`}
+                  }`}
               >
                 <div className="flex h-12 w-12 items-center justify-center rounded-full bg-blue-100 text-blue-700">
                   <Camera className="h-6 w-6" />

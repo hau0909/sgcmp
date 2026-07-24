@@ -90,7 +90,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
 
   const getStatusLabel = (assign: ShiftAssignment) => {
     if (assign.status === "assigned") return dict?.coor_schedules?.assigned || "Đã phân công";
-    if (assign.status === "completed") return dict?.coor_schedules?.on_duty || "Đang trực";
+    if (assign.status === "completed") return dict?.coor_schedules?.completed || dict?.coor_schedules?.on_duty || "Hoàn thành";
     if (assign.status === "late") {
       return assign.check_in_time
         ? (dict?.shift_detail_modal?.checked_in_late || "Đã điểm danh trễ")
@@ -313,27 +313,27 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
         <div className="p-5 overflow-y-auto flex-1 space-y-5">
           {/* Shift info */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-start gap-2.5 min-w-0">
               <Clock size={16} className="text-blue-600 mt-0.5 shrink-0" />
-              <div>
+              <div className="min-w-0">
                 <p className="text-[10px] font-bold text-slate-400 uppercase">{dict?.shift_week?.shift_time || "Thời gian"}</p>
                 <p className="text-xs font-semibold text-slate-800">
                   {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-start gap-2.5 min-w-0">
               <MapPin size={16} className="text-blue-600 mt-0.5 shrink-0" />
-              <div>
+              <div className="min-w-0 flex-1">
                 <p className="text-[10px] font-bold text-slate-400 uppercase">{dict?.shift_week?.location || "Địa điểm"}</p>
                 <p
-                  className="text-xs font-semibold text-slate-800 truncate"
+                  className="text-xs font-semibold text-slate-800 break-words whitespace-normal leading-relaxed"
                   title={shift.contract_address}
                 >
                   {shift.contract_address || (dict?.shift_week?.unupdated || "Chưa có địa chỉ")}
                 </p>
                 {shift.location && (
-                  <p className="text-[10px] text-slate-500 font-medium">
+                  <p className="text-[10px] text-slate-500 font-medium break-words whitespace-normal leading-normal mt-0.5">
                     {dict?.shift_week?.position || "Khu vực"}: {shift.location}
                   </p>
                 )}

@@ -534,6 +534,8 @@ export type GuardShiftDetailItem = {
   start_time: string;
   end_time: string;
   required_guards: number;
+  allowed_late_minutes?: number | null;
+  allowed_absent_minutes?: number | null;
   assigned_by: {
     user_id: string;
     full_name: string;
@@ -543,6 +545,8 @@ export type GuardShiftDetailItem = {
     company_id: string;
     company_name: string;
     address: string | null;
+    allowed_late_minutes?: number | null;
+    allowed_absent_minutes?: number | null;
   } | null;
   service: {
     service_id: string;

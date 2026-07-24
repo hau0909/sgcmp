@@ -85,6 +85,7 @@ import {
 } from "@/components/ui/chart";
 
 type EmployeeStatus =
+  | "Hoàn thành"
   | "Đang trực"
   | "Vắng mặt"
   | "Đi trễ"
@@ -218,7 +219,7 @@ const getActivityConfig = (subType: string) => {
 
 const getEmployeeStatusLabel = (status: string, dict: any) => {
   const statusKeyMap: Record<string, string> = {
-    "Đang trực": dict?.company_dashboard?.employee_status?.on_duty || "Đang trực",
+    "Đang trực": dict?.company_dashboard?.employee_status?.on_duty || "Hoàn thành",
     "Vắng mặt": dict?.company_dashboard?.employee_status?.absent || "Vắng mặt",
     "Đi trễ": dict?.company_dashboard?.employee_status?.late || "Đi trễ",
     "Thay ca": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
@@ -529,6 +530,11 @@ export default function CompanyDashboardPage() {
       animate?: boolean;
     }
   > = {
+    "Hoàn thành": {
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      dotClass: "bg-emerald-600",
+    },
+
     "Đang trực": {
       badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
       dotClass: "bg-emerald-600",

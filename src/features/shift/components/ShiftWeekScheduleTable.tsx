@@ -270,7 +270,7 @@ const getStatusLabel = (status: ShiftAssignmentStatus, dict?: any) => {
   }
 
   if (status === "completed") {
-    return dict?.coor_schedules?.on_duty || "Đang trực";
+    return dict?.coor_schedules?.completed || dict?.coor_schedules?.on_duty || "Hoàn thành";
   }
 
   if (status === "late") {
@@ -504,9 +504,9 @@ function WeekShiftTooltip({
             {dict?.shift_schedule_table?.contract_location_subtitle || "Địa điểm hợp đồng"}
           </p>
 
-          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
+          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800 min-w-0">
             <MapPin size={15} className="mt-0.5 shrink-0" />
-            <span>{getShiftContractAddress(shift, dict)}</span>
+            <span className="break-words whitespace-normal min-w-0 flex-1">{getShiftContractAddress(shift, dict)}</span>
           </div>
         </div>
 
@@ -515,9 +515,9 @@ function WeekShiftTooltip({
             {dict?.shift_week?.specific_location || "Vị trí trực cụ thể"}
           </p>
 
-          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
+          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800 min-w-0">
             <MapPin size={15} className="mt-0.5 shrink-0" />
-            <span>{shift.location || (dict?.shift_week?.unupdated_position || "Chưa cập nhật vị trí trực")}</span>
+            <span className="break-words whitespace-normal min-w-0 flex-1">{shift.location || (dict?.shift_week?.unupdated_position || "Chưa cập nhật vị trí trực")}</span>
           </div>
         </div>
       </div>
