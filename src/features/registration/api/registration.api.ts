@@ -12,6 +12,12 @@ export async function requestGetRegistrationDetail(id: string) {
   });
 }
 
+export async function requestGetMyRegistration() {
+  return await fetcher("/api/my-registrations", {
+    method: "GET",
+  });
+}
+
 export async function requestUpdateRegistrationStatus(
   id: string,
   status: "approved" | "rejected",

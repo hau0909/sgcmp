@@ -92,8 +92,10 @@ export default function AuthRedirect() {
             router.replace(redirectPath);
           }
         }
-      } catch (error) {
-        console.error("AUTH REDIRECT ERROR:", error);
+      } catch (error: any) {
+        if (error?.message !== "Người dùng chưa đăng nhập") {
+          console.error("AUTH REDIRECT ERROR:", error);
+        }
       }
     };
 
