@@ -16,10 +16,10 @@ import {
   ClipboardCheck,
   CalendarDays,
   ShieldCheck,
-  UserRound,
   LogOut,
   Bell,
   UserCircle,
+  ChevronDown,
 } from "lucide-react";
 
 type UserRole =
@@ -55,6 +55,8 @@ export default function GuardLayout({
   const { dict } = useTranslation();
 
   const [menuOpen, setMenuOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [sidebarUserDropdownOpen, setSidebarUserDropdownOpen] = useState(false);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [checkingAuth, setCheckingAuth] = useState(true);
 
@@ -86,18 +88,10 @@ export default function GuardLayout({
     },
   ];
 
-  const menuLinks = [
-    ...bottomLinks,
-    {
-      name: dict.layout_guard.profile,
-      href: "/profile",
-      icon: UserRound,
-      active: pathname === "/profile" || pathname.startsWith("/profile/"),
-    },
-  ];
-
   const closeMenus = () => {
     setMenuOpen(false);
+    setUserDropdownOpen(false);
+    setSidebarUserDropdownOpen(false);
   };
 
   useEffect(() => {
@@ -199,39 +193,78 @@ export default function GuardLayout({
             </div>
 
             {/* User info trong drawer */}
-            <div className="border-b border-slate-200 px-4 py-4">
-              <div className="flex items-center gap-3">
-                <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-slate-500">
-                  {profile?.avatar_url ? (
-                    <Image
-                      src={profile.avatar_url}
-                      width={44}
-                      height={44}
-                      alt={profile.full_name ?? "Avatar bảo vệ"}
-                      className="h-11 w-11 rounded-full object-cover"
-                    />
-                  ) : (
-                    <UserCircle className="h-8 w-8" />
-                  )}
+            <div className="border-b border-slate-200">
+              <button
+                type="button"
+                onClick={() => setSidebarUserDropdownOpen((prev) => !prev)}
+                className="flex w-full items-center justify-between gap-3 px-4 py-4 text-left hover:bg-slate-50 transition-colors"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-full border border-slate-200 bg-slate-100 text-slate-500 shrink-0">
+                    {profile?.avatar_url ? (
+                      <Image
+                        src={profile.avatar_url}
+                        width={44}
+                        height={44}
+                        alt={profile.full_name ?? "Avatar bảo vệ"}
+                        className="h-11 w-11 rounded-full object-cover"
+                      />
+                    ) : (
+                      <UserCircle className="h-8 w-8" />
+                    )}
+                  </div>
+
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-extrabold text-slate-800">
+                      {profile?.full_name ?? dict.layout_guard.default_name}
+                    </p>
+
+                    <p className="truncate text-xs font-medium text-slate-500">
+                      {profile?.email ??
+                        (checkingAuth
+                          ? dict.layout_guard.checking_account
+                          : dict.layout_guard.no_email)}
+                    </p>
+                  </div>
                 </div>
+                <ChevronDown
+                  className={`w-4 h-4 text-slate-500 transition-transform duration-300 shrink-0 ${
+                    sidebarUserDropdownOpen ? "rotate-180" : ""
+                  }`}
+                />
+              </button>
 
-                <div className="min-w-0">
-                  <p className="truncate text-sm font-extrabold text-slate-800">
-                    {profile?.full_name ?? dict.layout_guard.default_name}
-                  </p>
-
-                  <p className="truncate text-xs font-medium text-slate-500">
-                    {profile?.email ??
-                      (checkingAuth
-                        ? dict.layout_guard.checking_account
-                        : dict.layout_guard.no_email)}
-                  </p>
+              <div
+                className={`grid transition-all duration-300 ease-in-out ${
+                  sidebarUserDropdownOpen
+                    ? "grid-rows-[1fr] opacity-100 border-t border-slate-200"
+                    : "grid-rows-[0fr] opacity-0 border-t border-transparent"
+                }`}
+              >
+                <div className="overflow-hidden bg-slate-50/60">
+                  <Link
+                    href="/profile"
+                    onClick={() => closeMenus()}
+                    className="flex items-center gap-2.5 px-6 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                  >
+                    <UserCircle className="w-4 h-4" />
+                    <span>{dict.common.profile}</span>
+                  </Link>
+                  <div className="border-t border-slate-200/60" />
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="w-full flex items-center gap-2.5 px-6 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>{dict.common.logout}</span>
+                  </button>
                 </div>
               </div>
             </div>
 
             <nav className="flex flex-col gap-2 p-4">
-              {menuLinks.map((link) => {
+              {bottomLinks.map((link) => {
                 const Icon = link.icon;
 
                 return (
@@ -251,17 +284,6 @@ export default function GuardLayout({
                 );
               })}
             </nav>
-
-            <div className="absolute bottom-0 left-0 right-0 border-t border-slate-200 p-4">
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-red-600 transition-all hover:bg-red-50"
-              >
-                <LogOut className="h-5 w-5" />
-                <span>{dict.layout_guard.logout}</span>
-              </button>
-            </div>
           </aside>
 
           {/* Top Header */}
@@ -282,13 +304,61 @@ export default function GuardLayout({
               <span className="truncate">{dict.layout_guard.portal_title}</span>
             </Link>
 
-            <button
-              type="button"
-              className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100"
-            >
-              <Bell className="h-5 w-5" />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-            </button>
+            <div className="flex items-center gap-2 relative">
+              <button
+                type="button"
+                className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100"
+              >
+                <Bell className="h-5 w-5" />
+                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setUserDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-2 px-2 py-1 rounded-full border border-slate-200 hover:border-slate-300 hover:bg-slate-50 transition-all duration-200 cursor-pointer"
+              >
+                {profile?.avatar_url ? (
+                  <img
+                    src={profile.avatar_url}
+                    alt="avatar"
+                    className="w-7 h-7 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <UserCircle className="w-7 h-7 text-slate-600 shrink-0" />
+                )}
+                <ChevronDown className={`w-3.5 h-3.5 text-slate-500 transition-transform duration-200 ${userDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {userDropdownOpen && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setUserDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 top-11 z-50 w-48 rounded-xl border border-outline-variant/40 bg-surface-container-lowest shadow-xl overflow-hidden">
+                    <Link
+                      href="/profile"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                    >
+                      <UserCircle className="w-4 h-4" />
+                      <span>{dict.common.profile}</span>
+                    </Link>
+                    <div className="border-t border-outline-variant/30" />
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>{dict.common.logout}</span>
+                    </button>
+                  </div>
+                </>
+              )}
+            </div>
           </header>
 
           {/* Content */}

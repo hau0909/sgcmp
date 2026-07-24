@@ -24,7 +24,10 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ account: result }, { status: 200 });
+    return NextResponse.json(
+      { account: result.account, banReason: result.banReason },
+      { status: 200 }
+    );
   } catch (error) {
     console.error("[GET /api/admin/accounts/:userId] Error:", error);
     return NextResponse.json(

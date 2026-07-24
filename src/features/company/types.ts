@@ -91,6 +91,8 @@ export interface CompanyDetailData {
   companyLicenseNo?: string;
   ownerName?: string;
   ownerId?: string;
+  allowed_late_minutes?: number | null;
+  allowed_absent_minutes?: number | null;
 }
 
 export type UpdateCompanyProfileInput = {
@@ -101,6 +103,8 @@ export type UpdateCompanyProfileInput = {
   address: string;
   business_license_no?: string;
   registration_code?: string;
+  allowed_late_minutes?: number | null;
+  allowed_absent_minutes?: number | null;
 };
 
 export type UpdateCompanyProfileControllerParams = {

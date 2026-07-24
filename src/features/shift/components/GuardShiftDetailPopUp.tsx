@@ -21,19 +21,19 @@ const guardOnDutyList = [
     id: "BV001",
     name: "Nguyễn Văn A",
     phone: "0944408532",
-    status: "Đang trực",
+    status: "Hoàn thành",
   },
   {
     id: "BV002",
     name: "Thanh Lam",
     phone: "0368543865",
-    status: "Đang trực",
+    status: "Hoàn thành",
   },
   {
     id: "BV003",
     name: "Trần Minh Khang",
     phone: "0909123456",
-    status: "Đang trực",
+    status: "Hoàn thành",
   },
 ];
 

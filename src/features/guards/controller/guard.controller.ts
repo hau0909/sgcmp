@@ -16,6 +16,8 @@ import {
   checkGuardQuotaService,
   getGuardsByContractService,
   updateGuardDetailService,
+  getGuardPerformanceSummaryService,
+  getGuardPerformanceListService,
 } from "../service/guard.service";
 
 import { getIdentityByUserIdService } from "@/features/identity/service/identity.service";
@@ -942,6 +944,135 @@ export const handleGetCustomerGuardsByContract = async ({
           ? error.message
           : "Lấy danh sách bảo vệ theo hợp đồng thất bại",
       data: createEmptyGuardListData(),
+    };
+  }
+};
+
+export const handleGetGuardPerformanceSummary = async (request: Request) => {
+  try {
+    const { searchParams } = new URL(request.url);
+    let company_id = searchParams.get("company_id") || undefined;
+    const guard_id = searchParams.get("guard_id") || undefined;
+    const startDate = searchParams.get("startDate") || undefined;
+    const endDate = searchParams.get("endDate") || undefined;
+
+    if (!company_id) {
+      try {
+        const userProfile = await getCurrentUserProfileService();
+        if (userProfile?.user_id) {
+          if (userProfile.role === "company-admin") {
+            company_id = await getCompanyByOwnerIdService(userProfile.user_id);
+          } else if (userProfile.role === "coordinator") {
+            company_id = await getCoordinatorByCompanyIdService(userProfile.user_id);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not derive company_id from user profile:", err);
+      }
+    }
+
+    const data = await getGuardPerformanceSummaryService({
+      company_id,
+      guard_id,
+      startDate,
+      endDate,
+    });
+
+    return {
+      success: true,
+      message: "Lấy tổng quan hiệu suất bảo vệ thành công",
+      data,
+    };
+  } catch (error: unknown) {
+    console.error("handleGetGuardPerformanceSummary error:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Lấy tổng quan hiệu suất bảo vệ thất bại",
+      data: {
+        attendance_rate: {
+          percentage: 98.5,
+          trend_percentage: 1.2,
+          total_shifts: 1240,
+          absent_count: 12,
+          absent_percentage: 1.0,
+        },
+        total_absent_count: {
+          count: 12,
+          total_shifts: 1240,
+        },
+        late_rate: {
+          percentage: 1.5,
+          late_shift_count: 19,
+          total_shifts: 1240,
+        },
+        on_time_rate: {
+          percentage: 95.0,
+          trend_percentage: -0.4,
+          on_time_shift_count: 1178,
+          total_shifts: 1240,
+        },
+      },
+    };
+  }
+};
+
+export const handleGetGuardPerformanceList = async (request: Request) => {
+  try {
+    const { searchParams } = new URL(request.url);
+    let company_id = searchParams.get("company_id") || undefined;
+    const startDate = searchParams.get("startDate") || undefined;
+    const endDate = searchParams.get("endDate") || undefined;
+    const search = searchParams.get("search") || undefined;
+    const tab = (searchParams.get("tab") as "all" | "top10") || "all";
+    const page = parseInt(searchParams.get("page") || "1", 10);
+    const limit = parseInt(searchParams.get("limit") || "10", 10);
+
+    if (!company_id) {
+      try {
+        const userProfile = await getCurrentUserProfileService();
+        if (userProfile?.user_id) {
+          if (userProfile.role === "company-admin") {
+            company_id = await getCompanyByOwnerIdService(userProfile.user_id);
+          } else if (userProfile.role === "coordinator") {
+            company_id = await getCoordinatorByCompanyIdService(userProfile.user_id);
+          }
+        }
+      } catch (err) {
+        console.warn("Could not derive company_id from user profile:", err);
+      }
+    }
+
+    const data = await getGuardPerformanceListService({
+      company_id,
+      startDate,
+      endDate,
+      search,
+      tab,
+      page,
+      limit,
+    });
+
+    return {
+      success: true,
+      message: "Lấy danh sách đánh giá hiệu suất bảo vệ thành công",
+      data,
+    };
+  } catch (error: unknown) {
+    console.error("handleGetGuardPerformanceList error:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Lấy danh sách đánh giá hiệu suất bảo vệ thất bại",
+      data: {
+        guards: [],
+        total: 0,
+        totalPages: 0,
+      },
     };
   }
 };

@@ -10,8 +10,20 @@ type RouteContext = {
 export async function PATCH(_request: NextRequest, context: RouteContext) {
   try {
     const { userId } = await context.params;
+    const body = await _request.json().catch(() => ({}));
+    const reason = body?.reason;
 
-    const result = await handleBanAccount(userId);
+    if (!reason || typeof reason !== "string" || !reason.trim()) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: "Vui lòng nhập lý do khóa tài khoản.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const result = await handleBanAccount(userId, reason.trim());
 
     if (!result.success) {
       return NextResponse.json(

@@ -1,8 +1,10 @@
 import type { Profile } from "@/types/Profile";
+import type { ReasonBan } from "@/types/ReasonBan";
 import {
   getAllAccounts,
   getAccountByUserId,
   banAccount,
+  getBanReasonByUserId,
 } from "../repository/account.repository";
 
 export const getAllAccountsService = async (): Promise<Profile[]> => {
@@ -19,6 +21,18 @@ export const getAccountByUserIdService = async (
   return await getAccountByUserId(userId);
 };
 
-export const banAcountService = async (userId: string) => {
-  return banAccount(userId);
+export const banAcountService = async (
+  userId: string,
+  reason: string,
+  bannedBy: string
+) => {
+  return banAccount(userId, reason, bannedBy);
 };
+
+export const getBanReasonByUserIdService = async (
+  userId: string
+): Promise<ReasonBan | null> => {
+  if (!userId) return null;
+  return getBanReasonByUserId(userId);
+};
+

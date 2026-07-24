@@ -88,6 +88,18 @@ export const handleUpdateCompanyProfile = async ({
     email: input.email.trim(),
     phone: input.phone.trim(),
     address: input.address.trim(),
+    allowed_late_minutes:
+      typeof input.allowed_late_minutes === "number"
+        ? input.allowed_late_minutes
+        : input.allowed_late_minutes !== undefined && input.allowed_late_minutes !== null
+        ? Number(input.allowed_late_minutes)
+        : undefined,
+    allowed_absent_minutes:
+      typeof input.allowed_absent_minutes === "number"
+        ? input.allowed_absent_minutes
+        : input.allowed_absent_minutes !== undefined && input.allowed_absent_minutes !== null
+        ? Number(input.allowed_absent_minutes)
+        : undefined,
   };
 
   const data = await updateCompanyProfileService({

@@ -2,17 +2,18 @@
 
 import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/store/auth.store";
 import { requestGetCompanyById } from "@/features/company/api/company.api";
+import { requestGetUserProfile, requestLogout } from "@/features/auth/api/auth.api";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   Shield,
   HelpCircle,
   Menu,
   X,
-  Search,
+  Gauge,
   Bell,
   BookOpen,
   ShieldUser,
@@ -25,6 +26,9 @@ import {
   ClipboardCheck,
   LayoutDashboard,
   ArrowRightLeft,
+  UserCircle,
+  LogOut,
+  ChevronDown,
 } from "lucide-react";
 
 export default function CoordinatorLayout({
@@ -33,14 +37,42 @@ export default function CoordinatorLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const router = useRouter();
   const { dict } = useTranslation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string | null; avatar_url: string | null } | null>(null);
+
   const companyId = useAuthStore((state) => state.company_id);
   const role = useAuthStore((state) => state.role);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
   const [companyInfo, setCompanyInfo] = useState<{
     name: string;
     ownerName?: string;
   } | null>(null);
+
+  useEffect(() => {
+    requestGetUserProfile().then((res) => {
+      if (res?.success && res.data) {
+        setUserProfile({
+          full_name: res.data.full_name ?? null,
+          email: res.data.email ?? null,
+          avatar_url: res.data.avatar_url ?? null,
+        });
+      }
+    });
+  }, []);
+
+  const handleLogout = async () => {
+    try {
+      await requestLogout();
+    } finally {
+      clearAuth();
+      setUserDropdownOpen(false);
+      router.replace("/");
+      router.refresh();
+    }
+  };
 
   useEffect(() => {
     if (!companyId) return;
@@ -69,6 +101,12 @@ export default function CoordinatorLayout({
 
   // Sidebar Items
   const sidebarLinks = [
+    {
+      name: dict.layout_coordinator.guard_performance || "Hiệu suất bảo vệ",
+      href: "/guard-performance",
+      icon: Gauge,
+      active: pathname === "/guard-performance" || pathname.startsWith("/guard-performance"),
+    },
     {
       name: dict.layout_coordinator.shift,
       href: "/schedules",
@@ -129,7 +167,7 @@ export default function CoordinatorLayout({
                   SGCMP
                 </h2>
                 <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest mt-1">
-                  {role === "company-admin" 
+                  {role === "company-admin"
                     ? (dict.layout_coordinator.director || "Giám đốc")
                     : dict.layout_coordinator.role}
                 </p>
@@ -200,24 +238,71 @@ export default function CoordinatorLayout({
             </div>
 
             {/* Right Header Options */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 relative">
               {role === "company-admin" && (
                 <Link
                   href="/dashboard"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-primary text-on-primary hover:bg-primary/90 transition-colors mr-2"
                 >
                   <ArrowRightLeft className="w-3.5 h-3.5" />
-                  Qua quản lý
+                  {dict.layout_coordinator.switch_to_management || "Qua quản lý"}
                 </Link>
               )}
-              {/* User Profile */}
-              <div className="w-8 h-8 rounded-full border border-outline-variant overflow-hidden cursor-pointer hover:border-primary transition-colors ml-2 shrink-0">
-                <img
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjo-MaotgtkxEpWMDFWOtGri8gm_6BSwVWBTPwXlL2oUWbMVdNxJxLCUICByacbJYaEg7ZKBznnjsf6oTyuGkS28SVUzRal2V8lamuqvXntNx_2mayWNspwmI-f_kZzbZJIR2Z8Qo88FyJ7Nc7WhvSV-1_1pIwp7oT_5yTAefl0C1E8S8O63Cx8PG2kg-HpcROKD93n9ANk8Lb2qOAUg-IuHP3M2U4yqHhLqtJwIrFYKsTuGcOZ9k3dc_Cr4CZhUHMn01WxyRXwBRg"
-                  alt="User Profile"
-                  className="w-full h-full object-cover"
-                />
-              </div>
+              {/* User Dropdown Trigger */}
+              <button
+                type="button"
+                onClick={() => setUserDropdownOpen((prev) => !prev)}
+                className="flex items-center gap-2.5 px-3 py-1.5 rounded-full border border-outline-variant hover:border-primary hover:bg-surface-container-low transition-all duration-200 cursor-pointer ml-2"
+              >
+                {userProfile?.avatar_url ? (
+                  <img
+                    src={userProfile.avatar_url}
+                    alt="avatar"
+                    className="w-7 h-7 rounded-full object-cover shrink-0"
+                  />
+                ) : (
+                  <UserCircle className="w-7 h-7 text-on-surface-variant shrink-0" />
+                )}
+                <div className="hidden sm:flex flex-col items-start leading-tight max-w-[140px]">
+                  <span className="text-xs font-semibold text-on-surface truncate w-full">
+                    {userProfile?.full_name || dict.common.loading}
+                  </span>
+                  <span className="text-[10px] text-on-surface-variant truncate w-full">
+                    {userProfile?.email || ""}
+                  </span>
+                </div>
+                <ChevronDown className={`w-3.5 h-3.5 text-on-surface-variant transition-transform duration-200 ${userDropdownOpen ? "rotate-180" : ""}`} />
+              </button>
+
+              {/* Dropdown Menu */}
+              {userDropdownOpen && (
+                <>
+                  {/* Backdrop */}
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setUserDropdownOpen(false)}
+                  />
+                  <div className="absolute right-0 top-11 z-50 w-48 rounded-xl border border-outline-variant/40 bg-surface-container-lowest shadow-xl overflow-hidden">
+                    <Link
+                      href="/profile"
+                      onClick={() => setUserDropdownOpen(false)}
+                      className="flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                    >
+                      <UserCircle className="w-4 h-4" />
+                      <span>{dict.common.profile}</span>
+                    </Link>
+                    <div className="border-t border-outline-variant/30" />
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    >
+                      <LogOut className="w-4 h-4" />
+                      <span>{dict.common.logout}</span>
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </header>
 

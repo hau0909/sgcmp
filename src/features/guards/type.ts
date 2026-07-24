@@ -263,3 +263,82 @@ export type UpdateGuardAccountInput = {
   front_url?: string | null;
   back_url?: string | null;
 };
+
+export type GuardPerformanceSummaryData = {
+  attendance_rate: {
+    percentage: number;
+    trend_percentage: number;
+    total_shifts: number;       // distinct shift count
+    total_assignments: number;  // total guard-shift assignment count
+    absent_count: number;
+    absent_percentage: number;
+  };
+  total_absent_count: {
+    count: number;
+    total_shifts: number;
+  };
+  late_rate: {
+    percentage: number;
+    late_shift_count: number;
+    total_shifts: number;
+  };
+  on_time_rate: {
+    percentage: number;
+    trend_percentage: number;
+    on_time_shift_count: number;
+    total_shifts: number;
+  };
+  late_check_in_rate: {
+    percentage: number;
+    count: number;
+  };
+  replacement_rate: {
+    percentage: number;
+    count: number;
+  };
+};
+
+export type GetGuardPerformanceSummaryParams = {
+  company_id?: string;
+  guard_id?: string;
+  startDate?: string;
+  endDate?: string;
+};
+
+export type GetGuardPerformanceSummaryResponse = {
+  success: boolean;
+  message: string;
+  data: GuardPerformanceSummaryData;
+};
+
+export type GuardPerformanceListItem = {
+  id: string;
+  name: string;
+  guardId: string;
+  avatar: string | null;
+  location: string;
+  role: string;
+  performanceScore: number;
+  rating: number;
+  category: "XUẤT SẮC" | "TIÊU CHUẨN" | "CẦN CẢI THIỆN" | "CHƯA PHÂN CÔNG";
+};
+
+export type GetGuardPerformanceListParams = {
+  company_id?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  tab?: "all" | "top10";
+  page?: number;
+  limit?: number;
+};
+
+export type GetGuardPerformanceListResponse = {
+  success: boolean;
+  message: string;
+  data: {
+    guards: GuardPerformanceListItem[];
+    total: number;
+    totalPages: number;
+  };
+};

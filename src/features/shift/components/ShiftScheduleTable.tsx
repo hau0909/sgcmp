@@ -1,3 +1,4 @@
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import type { ShiftWithAssignments, TimeSlot } from "../type";
 import { getShiftCellKey, getSlotIdByShift } from "../utils/shift.utils";
 import { formatTime as formatTimeHelper } from "@/utils/dateTime";
@@ -17,6 +18,7 @@ type ShiftSegment = {
   startIndex: number;
   span: number;
   shift: ShiftWithAssignments;
+  shiftIds: string[];
 };
 
 const LOCATION_COLUMN_WIDTH = 220;
@@ -26,8 +28,8 @@ const getDateTimeValue = (date: string) => {
   return new Date(date).getTime();
 };
 
-const getShiftContractAddress = (shift: ShiftWithAssignments) => {
-  return shift.contract_address || "Chưa cập nhật địa điểm";
+const getShiftContractAddress = (shift: ShiftWithAssignments, dict?: any) => {
+  return shift.contract_address || (dict?.shift_schedule_table?.unupdated_location || "Chưa cập nhật địa điểm");
 };
 
 const formatVietnamTime = (date: string) => {
@@ -107,6 +109,7 @@ const isContinuousShift = (
 
 const createMergedShift = (
   shifts: ShiftWithAssignments[],
+  dict?: any,
 ): ShiftWithAssignments => {
   const firstShift = shifts[0];
   const lastShift = shifts[shifts.length - 1];
@@ -123,7 +126,7 @@ const createMergedShift = (
           ...assignment,
           note:
             shifts.length > 1
-              ? `${shifts.length} ca liên tục`
+              ? `${shifts.length} ${dict?.shift_schedule_table?.continuous_shifts || "ca liên tục"}`
               : assignment.note,
         });
       }
@@ -144,6 +147,7 @@ const createMergedShift = (
 const createSegment = (
   groupedShifts: ShiftWithAssignments[],
   timeSlots: TimeSlot[],
+  dict?: any,
 ): ShiftSegment | null => {
   const firstShift = groupedShifts[0];
 
@@ -155,10 +159,11 @@ const createSegment = (
   }
 
   return {
-    id: groupedShifts.map((shift) => shift.shift_id).join("-"),
+    id: groupedShifts.map((shift) => shift.shift_id).join("::"),
     startIndex,
     span: groupedShifts.length,
-    shift: createMergedShift(groupedShifts),
+    shift: createMergedShift(groupedShifts, dict),
+    shiftIds: groupedShifts.map((shift) => shift.shift_id),
   };
 };
 
@@ -166,9 +171,10 @@ const buildShiftSegments = (
   contractAddress: string,
   shifts: ShiftWithAssignments[],
   timeSlots: TimeSlot[],
+  dict?: any,
 ): ShiftSegment[] => {
   const locationShifts = shifts
-    .filter((shift) => getShiftContractAddress(shift) === contractAddress)
+    .filter((shift) => getShiftContractAddress(shift, dict) === contractAddress)
     .filter((shift) => shift.assignments.length >= shift.required_guards)
     .sort(
       (a, b) => getDateTimeValue(a.start_time) - getDateTimeValue(b.start_time),
@@ -190,7 +196,7 @@ const buildShiftSegments = (
       return;
     }
 
-    const segment = createSegment(currentGroup, timeSlots);
+    const segment = createSegment(currentGroup, timeSlots, dict);
 
     if (segment) {
       segments.push(segment);
@@ -200,7 +206,7 @@ const buildShiftSegments = (
   });
 
   if (currentGroup.length > 0) {
-    const segment = createSegment(currentGroup, timeSlots);
+    const segment = createSegment(currentGroup, timeSlots, dict);
 
     if (segment) {
       segments.push(segment);
@@ -217,6 +223,7 @@ export function ShiftScheduleTable({
   selectedLocation = "all",
   weekStartDate,
 }: ShiftScheduleTableProps) {
+  const { dict } = useTranslation();
   const uniqueShiftMap = new Map<string, ShiftWithAssignments>();
   shifts.forEach((shift) => {
     if (!uniqueShiftMap.has(shift.shift_id)) {
@@ -251,7 +258,7 @@ export function ShiftScheduleTable({
       : locations.filter((location) => location === selectedLocation);
 
   const visibleShifts = uniqueShifts.filter((shift) =>
-    displayLocations.includes(getShiftContractAddress(shift)),
+    displayLocations.includes(getShiftContractAddress(shift, dict)),
   );
 
   const displayTimeSlots = getDisplayTimeSlots(visibleShifts);
@@ -260,7 +267,7 @@ export function ShiftScheduleTable({
     return (
       <div className="rounded-sm border border-slate-300 bg-white p-10 text-center">
         <p className="text-sm font-medium text-slate-500">
-          Không có ca trực trong ngày này.
+          {dict.report?.table?.no_data_title || "Không có ca trực trong ngày này."}
         </p>
       </div>
     );
@@ -275,17 +282,9 @@ export function ShiftScheduleTable({
   };
 
   const emptyShiftMap = new Map<string, ShiftWithAssignments>();
-
   visibleShifts.forEach((shift) => {
-    const isEmpty = shift.assignments.length < shift.required_guards;
-
-    if (!isEmpty) {
-      return;
-    }
-
-    const contractAddress = getShiftContractAddress(shift);
     const slotId = getSlotIdByShift(shift);
-    const key = getShiftCellKey(contractAddress, slotId);
+    const key = getShiftCellKey(getShiftContractAddress(shift, dict), slotId);
 
     emptyShiftMap.set(key, shift);
   });
@@ -300,7 +299,7 @@ export function ShiftScheduleTable({
           }}
         >
           <div className="sticky left-0 z-30 border-r border-slate-300 bg-blue-100 p-4 font-bold text-slate-900">
-            ĐỊA ĐIỂM / VỊ TRÍ
+            {dict.shift_schedule_table?.location_header || dict.company_verifications?.table_address || "ĐỊA ĐIỂM / VỊ TRÍ"}
           </div>
 
           {displayTimeSlots.map((slot) => (
@@ -318,13 +317,19 @@ export function ShiftScheduleTable({
             contractAddress,
             visibleShifts,
             displayTimeSlots,
+            dict,
           );
+
+          const segmentShiftIds = new Set<string>();
+          segments.forEach((seg) => {
+            seg.shiftIds.forEach((id) => segmentShiftIds.add(id));
+          });
 
           const locationEmptyShifts: { key: string; slotIndex: number; shift: ShiftWithAssignments }[] = [];
           displayTimeSlots.forEach((slot, index) => {
             const key = getShiftCellKey(contractAddress, slot.id);
             const emptyShift = emptyShiftMap.get(key);
-            if (emptyShift) {
+            if (emptyShift && !segmentShiftIds.has(emptyShift.shift_id)) {
               locationEmptyShifts.push({
                 key,
                 slotIndex: index,
@@ -403,7 +408,7 @@ export function ShiftScheduleTable({
                 <p className="font-semibold text-slate-900">
                   {contractAddress}
                 </p>
-                <p className="mt-1 text-sm text-slate-500">Địa điểm hợp đồng</p>
+                <p className="mt-1 text-sm text-slate-500">{dict.shift_schedule_table?.contract_location_subtitle || "Địa điểm hợp đồng"}</p>
               </div>
 
               {displayTimeSlots.map((slot, index) => {

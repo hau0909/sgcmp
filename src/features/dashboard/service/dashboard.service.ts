@@ -323,7 +323,7 @@ export const getShiftStatusTodayService = async (companyId: string) => {
   }
 
   return [
-    { status: "Đang trực", count: onDuty },
+    { status: "Hoàn thành", count: onDuty },
     { status: "Vắng mặt", count: absent },
     { status: "Đi trễ", count: late },
     { status: "Thay ca", count: replacement },
@@ -384,7 +384,7 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
       // Determine original guard status label
       let origLabel = "Phân công";
       if (origStatus === "completed") {
-        origLabel = "Đang trực";
+        origLabel = "Hoàn thành";
       } else if (origStatus === "late") {
         origLabel = origCheckIn ? "Điểm danh trễ" : "Đi trễ";
       } else if (origStatus === "absent") {

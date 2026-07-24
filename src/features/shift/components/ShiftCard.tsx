@@ -11,6 +11,7 @@ import {
   SquarePen,
   Camera,
 } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import type {
   ShiftAssignment,
   ShiftAssignmentStatus,
@@ -46,6 +47,8 @@ function GuardSubTooltip({
   shift: ShiftWithAssignments;
   position: TooltipPosition;
 }) {
+  const { dict } = useTranslation();
+
   return createPortal(
     <div
       className="pointer-events-none fixed z-[10000] w-[300px] rounded-md border border-slate-200 bg-white p-4 text-left shadow-2xl"
@@ -57,7 +60,7 @@ function GuardSubTooltip({
       <div className="space-y-3">
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Tên ca trực
+            {dict.coor_schedules?.shift_name || "Tên ca trực"}
           </p>
           <p className="mt-1 text-sm font-bold text-slate-800">
             {shift.shift_name || "Chưa cập nhật"}
@@ -66,21 +69,21 @@ function GuardSubTooltip({
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Địa điểm
+            {dict.company_verifications?.table_address || "Địa điểm"}
           </p>
           <p className="mt-1 text-sm font-medium text-slate-700">
             {shift.contract_address || "Chưa cập nhật"}
           </p>
           {shift.location && (
             <p className="mt-0.5 text-xs text-slate-500">
-              Vị trí: {shift.location}
+              {dict.coor_schedules?.location || "Vị trí"}: {shift.location}
             </p>
           )}
         </div>
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Ảnh điểm danh
+            {dict.coor_schedules?.checkin_status || "Ảnh điểm danh"}
           </p>
           {assignment.checkin_image ? (
             <div className="mt-2 relative aspect-video w-full overflow-hidden rounded border border-slate-200">
@@ -131,6 +134,7 @@ function GuardRow({
     setShowSubTooltip(false);
   };
 
+  const { dict } = useTranslation();
   return (
     <>
       <div
@@ -143,7 +147,7 @@ function GuardRow({
           <UserRound size={15} className="shrink-0 text-slate-500" />
 
           <p className="truncate text-sm font-medium text-slate-800">
-            {assignment.guard_name || "Chưa cập nhật"}
+            {assignment.guard_name || (dict?.shift_week?.unupdated || "Chưa cập nhật")}
           </p>
         </div>
 
@@ -152,7 +156,7 @@ function GuardRow({
             assignment.status,
           )}`}
         >
-          {getStatusLabel(assignment.status)}
+          {getStatusLabel(assignment.status, dict)}
         </span>
       </div>
 
@@ -183,6 +187,7 @@ function ReplacementGuardRow({
   assignment: ShiftAssignment;
   shift: ShiftWithAssignments;
 }) {
+  const { dict } = useTranslation();
   const rowRef = useRef<HTMLDivElement | null>(null);
   const [showSubTooltip, setShowSubTooltip] = useState(false);
   const [subTooltipPosition, setSubTooltipPosition] = useState<TooltipPosition | null>(null);
@@ -219,7 +224,7 @@ function ReplacementGuardRow({
           </p>
         </div>
         <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[9px] font-bold text-purple-700">
-          Thay thế
+          {dict?.shift_week?.replacement || "Thay thế"}
         </span>
       </div>
 
@@ -234,20 +239,20 @@ function ReplacementGuardRow({
   );
 }
 
-const getStatusLabel = (status: ShiftAssignmentStatus) => {
+const getStatusLabel = (status: ShiftAssignmentStatus, dict?: any) => {
   if (status === "assigned") {
-    return "Đã phân công";
+    return dict?.coor_schedules?.assigned || "Đã phân công";
   }
 
   if (status === "completed") {
-    return "Đang trực";
+    return dict?.coor_schedules?.completed || dict?.coor_schedules?.on_duty || "Hoàn thành";
   }
 
   if (status === "late") {
-    return "Đi trễ";
+    return dict?.coor_schedules?.late || "Đi trễ";
   }
 
-  return "Vắng mặt";
+  return dict?.coor_schedules?.absent || "Vắng mặt";
 };
 
 const getStatusStyle = (status: ShiftAssignmentStatus) => {
@@ -270,12 +275,12 @@ const formatTime = (date: string) => {
   return formatTimeHelper(date);
 };
 
-const getContractAddress = (shift: ShiftWithAssignments) => {
-  return shift.contract_address || "Chưa cập nhật địa điểm hợp đồng";
+const getContractAddress = (shift: ShiftWithAssignments, dict?: any) => {
+  return shift.contract_address || (dict?.shift_schedule_table?.unupdated_location || "Chưa cập nhật địa điểm hợp đồng");
 };
 
-const getMainGuardName = (assignment: ShiftAssignment | undefined) => {
-  return assignment?.guard_name || "Chưa cập nhật";
+const getMainGuardName = (assignment: ShiftAssignment | undefined, dict?: any) => {
+  return assignment?.guard_name || (dict?.shift_week?.unupdated || "Chưa cập nhật");
 };
 
 const getTooltipPosition = (element: HTMLDivElement): TooltipPosition => {
@@ -303,12 +308,13 @@ const getTooltipPosition = (element: HTMLDivElement): TooltipPosition => {
 };
 
 function ShiftTooltip({ shift, statusLabel, hasReplacement, position, onMouseEnter, onMouseLeave }: ShiftTooltipProps) {
+  const { dict } = useTranslation();
   const firstAssignment = shift.assignments[0];
   return createPortal(
     <div
       onMouseEnter={onMouseEnter}
       onMouseLeave={onMouseLeave}
-      className="pointer-events-auto fixed z-[9999] w-[340px] rounded-md border border-slate-200 bg-white p-4 text-left shadow-2xl"
+      className="pointer-events-auto fixed z-[9999] w-[340px] overflow-y-auto rounded-md border border-slate-200 bg-white p-4 text-left shadow-2xl"
       style={{
         top: position.top,
         left: position.left,
@@ -317,7 +323,7 @@ function ShiftTooltip({ shift, statusLabel, hasReplacement, position, onMouseEnt
       <div className="space-y-3">
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Trạng thái
+            {dict?.shift_week?.status || "Trạng thái"}
           </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
             <span
@@ -329,7 +335,7 @@ function ShiftTooltip({ shift, statusLabel, hasReplacement, position, onMouseEnt
             </span>
             {hasReplacement && (
               <span className="rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
-                Thay thế
+                {dict?.shift_week?.replacement || "Thay thế"}
               </span>
             )}
           </div>
@@ -337,7 +343,7 @@ function ShiftTooltip({ shift, statusLabel, hasReplacement, position, onMouseEnt
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Thời gian ca trực
+            {dict?.shift_week?.shift_time || "Thời gian ca trực"}
           </p>
           <div className="mt-1 flex items-center gap-2 text-sm font-medium text-slate-800">
             <Clock size={15} />
@@ -349,7 +355,7 @@ function ShiftTooltip({ shift, statusLabel, hasReplacement, position, onMouseEnt
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Bảo vệ trực ({shift.assignments.length}/{shift.required_guards})
+            {(dict?.shift_week?.assigned_guards || "Bảo vệ trực ({0}/{1})").replace("{0}", String(shift.assignments.length)).replace("{1}", String(shift.required_guards))}
           </p>
 
           <div className="mt-2 space-y-1.5">
@@ -374,31 +380,31 @@ function ShiftTooltip({ shift, statusLabel, hasReplacement, position, onMouseEnt
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Tên ca trực
+            {dict?.shift_week?.shift_name || "Tên ca trực"}
           </p>
           <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
             <SquarePen size={15} className="mt-0.5 shrink-0" />
-            <span>{shift.shift_name || "Chưa cập nhật"} </span>
+            <span>{shift.shift_name || (dict?.shift_week?.unupdated || "Chưa cập nhật")} </span>
           </div>
         </div>
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Địa điểm hợp đồng
+            {dict?.shift_schedule_table?.contract_location_subtitle || "Địa điểm hợp đồng"}
           </p>
-          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
+          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800 min-w-0">
             <MapPin size={15} className="mt-0.5 shrink-0" />
-            <span>{getContractAddress(shift)}</span>
+            <span className="break-words whitespace-normal min-w-0 flex-1">{getContractAddress(shift, dict)}</span>
           </div>
         </div>
 
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
-            Vị trí trực cụ thể
+            {dict?.shift_week?.specific_location || "Vị trí trực cụ thể"}
           </p>
-          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800">
+          <div className="mt-1 flex items-start gap-2 text-sm text-slate-800 min-w-0">
             <MapPin size={15} className="mt-0.5 shrink-0" />
-            <span>{shift.location || "Chưa cập nhật vị trí trực"}</span>
+            <span className="break-words whitespace-normal min-w-0 flex-1">{shift.location || (dict?.shift_week?.unupdated_position || "Chưa cập nhật vị trí trực")}</span>
           </div>
         </div>
       </div>
@@ -408,6 +414,7 @@ function ShiftTooltip({ shift, statusLabel, hasReplacement, position, onMouseEnt
 }
 
 export function ShiftCard({ shift }: ShiftCardProps) {
+  const { dict } = useTranslation();
   const cardRef = useRef<HTMLDivElement | null>(null);
   const [tooltipPosition, setTooltipPosition] =
     useState<TooltipPosition | null>(null);
@@ -423,7 +430,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
         type="button"
         className="flex h-full min-h-[58px] w-full items-center justify-center rounded-md border border-dashed border-red-400 bg-red-50 text-sm font-medium text-red-500 hover:bg-red-100"
       >
-        Trống lịch
+        {dict?.coor_schedules?.unassigned || "Trống lịch"}
       </button>
     );
   }
@@ -435,7 +442,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
       (assign.replacement_guard_ids && assign.replacement_guard_ids.length > 0) ||
       (assign.replacement_guards && assign.replacement_guards.length > 0)
   );
-  const statusLabel = getStatusLabel(firstAssignment.status);
+  const statusLabel = getStatusLabel(firstAssignment.status, dict);
 
   const handleMouseEnter = () => {
     if (hoverTimeoutRef.current) {
@@ -493,7 +500,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
             </span>
             {hasReplacement && (
               <span className="w-fit rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[11px] font-medium text-purple-700">
-                Thay thế
+                {dict?.shift_week?.replacement || "Thay thế"}
               </span>
             )}
           </div>
@@ -515,7 +522,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
             <UserRound size={17} />
 
             <p className="line-clamp-1 font-semibold text-slate-900">
-              {getMainGuardName(firstAssignment)}
+              {getMainGuardName(firstAssignment, dict)}
               {extraGuardCount > 0 ? (
                 <span className="ml-1 font-bold text-blue-700">
                   +{extraGuardCount}
