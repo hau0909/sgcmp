@@ -24,17 +24,25 @@ import {
   UsersRound,
   Verified,
   Loader2,
+  LogOut,
+  Building2,
+  X,
 } from "lucide-react";
 
 export default function Home() {
   const router = useRouter();
   const userId = useAuthStore((state) => state.user_id);
+  const role = useAuthStore((state) => state.role);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+  
   const supabase = createClient();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const [showCustomerPopup, setShowCustomerPopup] = useState(false);
+  const [showRegisteredPopup, setShowRegisteredPopup] = useState(false);
   const { dict } = useTranslation();
   const landingPlans = getLandingPlans(dict);
 
-  const handlePlanClick = async (e: React.MouseEvent, href: string) => {
+  const handleStartClick = async (e: React.MouseEvent, targetHref: string) => {
     e.preventDefault();
 
     if (!userId) {
@@ -43,7 +51,7 @@ export default function Home() {
     }
 
     try {
-      setLoadingPlan(href);
+      setLoadingPlan(targetHref);
       const { data: compData, error } = await supabase
         .from("companies")
         .select("status")
@@ -54,10 +62,22 @@ export default function Home() {
         console.error("Check company status error:", error);
       }
 
-      if (compData?.status === "active") {
-        router.push(href);
+      if (compData) {
+        if (compData.status === "active" || compData.status === "published") {
+          if (targetHref === "/register-company") {
+            router.push("/dashboard");
+          } else {
+            router.push(targetHref);
+          }
+        } else {
+          setShowRegisteredPopup(true);
+        }
       } else {
-        router.push("/register-company");
+        if (role === "customer") {
+          setShowCustomerPopup(true);
+        } else {
+          router.push("/register-company");
+        }
       }
     } catch (err) {
       console.error("Error checking company status:", err);
@@ -101,6 +121,7 @@ export default function Home() {
                   <a
                     className="bg-primary hover:bg-primary-container text-on-primary font-semibold px-8 py-4 rounded-xl flex items-center justify-center gap-2 transition-all duration-300 shadow-md hover:shadow-lg hover:scale-[1.02] text-[15px] h-12"
                     href="/register-company"
+                    onClick={(e) => handleStartClick(e, "/register-company")}
                   >
                     {dict.hero.startFree}
                     <ArrowRight />
@@ -425,7 +446,7 @@ export default function Home() {
                     </div>
 
                     <button
-                      onClick={(e) => handlePlanClick(e, plan.href)}
+                      onClick={(e) => handleStartClick(e, plan.href)}
                       disabled={loadingPlan !== null}
                       className={`w-full font-semibold py-3 px-6 rounded-xl transition-all duration-300 text-[14px] h-12 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed
                         ${
@@ -452,6 +473,113 @@ export default function Home() {
       </main>
 
       <Footer />
+
+      {/* Customer Popup */}
+      {showCustomerPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-surface rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <Building2 size={20} />
+                </div>
+                <h3 className="text-[18px] font-bold text-on-surface">{dict.landing.popup_customer.title}</h3>
+              </div>
+              <button 
+                onClick={() => setShowCustomerPopup(false)}
+                className="text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6">
+              <p className="text-on-surface-variant text-[15px] leading-relaxed">
+                {dict.landing.popup_customer.desc}
+              </p>
+              <p className="mt-3 text-[14px] text-on-surface-variant">
+                {dict.landing.popup_customer.hint}
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-surface-container-lowest flex justify-end gap-3 border-t border-outline-variant/30">
+              <button
+                onClick={() => setShowCustomerPopup(false)}
+                className="px-5 py-2.5 rounded-xl text-on-surface hover:bg-surface-container transition-all font-semibold text-[14px]"
+              >
+                {dict.landing.popup_customer.cancel}
+              </button>
+              <button
+                onClick={() => {
+                  setShowCustomerPopup(false);
+                  clearAuth();
+                  router.push("/register-company");
+                }}
+                className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white transition-all shadow-sm font-semibold flex items-center gap-2 text-[14px]"
+              >
+                <LogOut size={18} />
+                {dict.landing.popup_customer.logout}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Already Registered Popup */}
+      {showRegisteredPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 animate-in fade-in duration-200">
+          <div className="bg-surface rounded-2xl max-w-md w-full shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-outline-variant/30 flex justify-between items-center bg-surface-container-lowest">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                  <Building2 size={20} />
+                </div>
+                <h3 className="text-[18px] font-bold text-on-surface">{dict.landing.popup_registered.title}</h3>
+              </div>
+              <button 
+                onClick={() => setShowRegisteredPopup(false)}
+                className="text-on-surface-variant hover:bg-surface-container p-2 rounded-full transition-colors"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            
+            {/* Body */}
+            <div className="p-6">
+              <p className="text-on-surface-variant text-[15px] leading-relaxed">
+                {dict.landing.popup_registered.desc}
+              </p>
+              <p className="mt-3 text-[14px] text-on-surface-variant">
+                {dict.landing.popup_registered.hint}
+              </p>
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 bg-surface-container-lowest flex justify-end gap-3 border-t border-outline-variant/30">
+              <button
+                onClick={() => setShowRegisteredPopup(false)}
+                className="px-5 py-2.5 rounded-xl text-on-surface hover:bg-surface-container transition-all font-semibold text-[14px]"
+              >
+                {dict.landing.popup_registered.close}
+              </button>
+              <button
+                onClick={() => {
+                  setShowRegisteredPopup(false);
+                  router.push("/my-registration");
+                }}
+                className="px-5 py-2.5 rounded-xl bg-primary hover:bg-primary/90 text-white transition-all shadow-sm font-semibold flex items-center gap-2 text-[14px]"
+              >
+                {dict.landing.popup_registered.view}
+                <ArrowRight size={18} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

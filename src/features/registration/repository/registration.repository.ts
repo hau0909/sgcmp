@@ -157,6 +157,94 @@ export const updateRegistrationStatus = async (id: string, status: "approved" | 
   }
 };
 
+export const getRegistrationByOwnerId = async (userId: string): Promise<RegistrationDetail | null> => {
+  // Tìm company của user này
+  const { data: companyData, error: companyError } = await supabase
+    .from("companies")
+    .select("company_id")
+    .eq("owner_id", userId)
+    .maybeSingle();
+
+  if (companyError) {
+    throw companyError;
+  }
+
+  if (!companyData) {
+    return null;
+  }
+
+  // Tìm registration theo company_id
+  const { data: regData, error: regError } = await supabase
+    .from("registrations")
+    .select("*, companies(*)")
+    .eq("company_id", companyData.company_id)
+    .order("created_at", { ascending: false })
+    .maybeSingle();
+
+  if (regError) {
+    throw regError;
+  }
+
+  if (!regData) {
+    return null;
+  }
+
+  const registration = regData as any;
+  const company = registration.companies;
+
+  let profiles = null;
+  let identities = null;
+  let companyImgs: any[] = [];
+
+  if (company && company.owner_id) {
+    const { data: profileData, error: profileError } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("user_id", company.owner_id)
+      .maybeSingle();
+
+    if (profileError) {
+      throw profileError;
+    }
+    profiles = profileData;
+
+    const { data: identityData, error: identityError } = await supabase
+      .from("identities")
+      .select("*")
+      .eq("user_id", company.owner_id)
+      .maybeSingle();
+
+    if (identityError && identityError.code !== "PGRST116") {
+      throw identityError;
+    }
+    identities = identityData;
+  }
+
+  if (company && company.company_id) {
+    const { data: imgsData, error: imgsError } = await supabase
+      .from("company_imgs")
+      .select("*")
+      .eq("company_id", company.company_id);
+
+    if (imgsError) {
+      throw imgsError;
+    }
+    companyImgs = imgsData || [];
+  }
+
+  return {
+    ...registration,
+    companies: company
+      ? {
+          ...company,
+          profiles,
+          identities,
+          companyImgs,
+        }
+      : null,
+  } as RegistrationDetail;
+};
+
 export const createRegistrationFlow = async (payload: {
   userId: string;
   profile: {

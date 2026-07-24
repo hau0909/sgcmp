@@ -4,7 +4,9 @@ import {
   getRegistrationDetail,
   updateRegistrationStatus,
   createRegistrationFlow,
+  getRegistrationByOwnerId,
 } from "../repository/registration.repository";
+
 
 export const getRegistrationsService = async (): Promise<RegistrationWithCompany[]> => {
   const result = await getRegistrations();
@@ -54,4 +56,9 @@ export const createRegistrationFlowService = async (payload: {
   }[];
 }): Promise<string> => {
   return await createRegistrationFlow(payload);
+};
+
+export const getRegistrationByOwnerIdService = async (userId: string): Promise<RegistrationDetail | null> => {
+  const result = await getRegistrationByOwnerId(userId);
+  return result;
 };
