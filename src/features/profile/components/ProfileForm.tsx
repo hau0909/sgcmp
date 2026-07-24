@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   UserCircle,
   Camera,
@@ -11,12 +12,17 @@ import {
   AlertCircle,
   Pencil,
   X,
+  KeyRound,
 } from "lucide-react";
-import { requestGetUserProfile } from "@/features/auth/api/auth.api";
+import {
+  requestGetUserProfile,
+  requestLogout,
+} from "@/features/auth/api/auth.api";
 import { requestUpdateProfile } from "../api/profile.api";
 import { useAuthStore } from "@/store/auth.store";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import ResetPasswordModal from "./ResetPasswordModal";
 
 export type ProfileData = {
   id?: string;
@@ -31,7 +37,10 @@ export type ProfileData = {
 };
 
 export default function ProfileForm() {
+  const router = useRouter();
   const userId = useAuthStore((state) => state.user_id);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+
   const [profile, setProfile] = useState<ProfileData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
@@ -40,6 +49,11 @@ export default function ProfileForm() {
     type: "success" | "error";
     text: string;
   } | null>(null);
+  const [isLogoutPendingOnSuccess, setIsLogoutPendingOnSuccess] = useState(false);
+
+  // Change password modal state
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+
   const { dict } = useTranslation();
 
   // Form states
@@ -193,6 +207,35 @@ export default function ProfileForm() {
     }
   };
 
+  const handlePasswordResetSuccess = () => {
+    setIsLogoutPendingOnSuccess(true);
+    setMessage({
+      type: "success",
+      text:
+        dict.pages.profile_form?.change_password_success ||
+        "Đổi mật khẩu thành công! Bạn sẽ được đăng xuất để đăng nhập lại.",
+    });
+  };
+
+  const handleModalOkClick = async () => {
+    if (isLogoutPendingOnSuccess) {
+      try {
+        await requestLogout();
+      } catch (e) {
+        console.error("Logout error after password change:", e);
+      } finally {
+        clearAuth();
+        setProfile(null);
+        setMessage(null);
+        setIsLogoutPendingOnSuccess(false);
+        router.replace("/login");
+        router.refresh();
+      }
+    } else {
+      setMessage(null);
+    }
+  };
+
   const genderLabel = (value: string) => {
     switch (value) {
       case "Nam":
@@ -241,49 +284,75 @@ export default function ProfileForm() {
               <AlertCircle className="w-16 h-16 text-red-500 mb-4" />
             )}
             <h3 className="text-xl font-bold text-on-surface mb-2">
-              {message.type === "success" ? dict.pages.profile_form.success_modal_title : dict.pages.profile_form.error_modal_title}
+              {message.type === "success"
+                ? dict.pages.profile_form.success_modal_title
+                : dict.pages.profile_form.error_modal_title}
             </h3>
             <p className="text-on-surface-variant mb-6 leading-relaxed">
               {message.text}
             </p>
             <button
               type="button"
-              onClick={() => setMessage(null)}
-              className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-semibold w-full hover:bg-primary-container hover:text-on-primary-container transition-all"
+              onClick={handleModalOkClick}
+              className="px-6 py-2.5 bg-primary text-on-primary rounded-xl font-semibold w-full hover:bg-primary-container hover:text-on-primary-container transition-all cursor-pointer"
             >
-              {dict.pages.profile_form.modal_close}
+              {isLogoutPendingOnSuccess
+                ? dict.pages.profile_form?.ok || "OK"
+                : dict.pages.profile_form.modal_close}
             </button>
           </div>
         </div>
       )}
 
+      {/* Modal Đổi Mật Khẩu */}
+      <ResetPasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        onSuccess={handlePasswordResetSuccess}
+      />
+
       <div className="bg-white rounded-2xl shadow-sm border border-outline-variant/30 overflow-hidden">
-        {/* Header with Edit Button */}
-        <div className="flex items-center justify-between px-6 md:px-8 pt-6 md:pt-8">
+        {/* Header with Change Password & Edit Button */}
+        <div className="flex items-center justify-between px-6 md:px-8 pt-6 md:pt-8 flex-wrap gap-4">
           <h2 className="text-lg font-semibold text-on-surface">
             {dict.pages.profile_form.title}
           </h2>
-          {!isEditing ? (
+          <div className="flex items-center gap-3">
             <button
               type="button"
-              onClick={handleEnableEditing}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-all cursor-pointer"
-              title={dict.pages.profile_form.edit}
+              onClick={() => setIsPasswordModalOpen(true)}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 rounded-xl transition-all cursor-pointer border border-amber-200/60"
+              title={
+                dict.pages.profile_form?.change_password || "Đổi mật khẩu"
+              }
             >
-              <Pencil className="w-4 h-4" />
-              <span>{dict.pages.profile_form.edit}</span>
+              <KeyRound className="w-4 h-4 text-amber-600" />
+              <span>
+                {dict.pages.profile_form?.change_password || "Đổi mật khẩu"}
+              </span>
             </button>
-          ) : (
-            <button
-              type="button"
-              onClick={handleCancelEditing}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container-low hover:bg-surface-container rounded-xl transition-all cursor-pointer"
-              title={dict.pages.profile_form.cancel}
-            >
-              <X className="w-4 h-4" />
-              <span>{dict.pages.profile_form.cancel}</span>
-            </button>
-          )}
+            {!isEditing ? (
+              <button
+                type="button"
+                onClick={handleEnableEditing}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-primary bg-primary/10 hover:bg-primary/20 rounded-xl transition-all cursor-pointer"
+                title={dict.pages.profile_form.edit}
+              >
+                <Pencil className="w-4 h-4" />
+                <span>{dict.pages.profile_form.edit}</span>
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleCancelEditing}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-on-surface-variant bg-surface-container-low hover:bg-surface-container rounded-xl transition-all cursor-pointer"
+                title={dict.pages.profile_form.cancel}
+              >
+                <X className="w-4 h-4" />
+                <span>{dict.pages.profile_form.cancel}</span>
+              </button>
+            )}
+          </div>
         </div>
 
         <div className="p-6 md:p-8 pt-4 md:pt-4">

@@ -34,3 +34,18 @@ export const requestLogout = async (): Promise<LogoutResponse> => {
     method: "POST",
   });
 };
+
+export const requestResetPassword = async (payload: {
+  currentPassword?: string;
+  password?: string;
+  confirmPassword?: string;
+}) => {
+  return await fetcher("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+};
+
+export const requestChangePassword = requestResetPassword;
+
+
