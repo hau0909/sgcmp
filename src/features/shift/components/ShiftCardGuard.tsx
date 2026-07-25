@@ -2,6 +2,7 @@
 
 import React from "react";
 import { Building2, Clock3, MapPin } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export type ShiftStatus = "assigned" | "completed" | "absent" | "late";
 
@@ -19,48 +20,26 @@ type ShiftCardProps = {
   shift: ShiftItem;
 };
 
-const getStatusLabel = (status: ShiftStatus, isReplacement?: boolean) => {
-  if (isReplacement) {
-    return "CA THAY THẾ";
-  }
-
-  if (status === "assigned") {
-    return "PHÂN CÔNG";
-  }
-
-  if (status === "completed") {
-    return "ĐANG TRỰC";
-  }
-
-  if (status === "late") {
-    return "ĐI TRỄ";
-  }
-
-  return "VẮNG MẶT";
-};
-
 const getStatusStyle = (status: ShiftStatus, isReplacement?: boolean) => {
-  if (isReplacement) {
-    return "bg-purple-100 text-purple-700";
-  }
-
-  if (status === "assigned") {
-    return "bg-blue-100 text-blue-700";
-  }
-
-  if (status === "completed") {
-    return "bg-emerald-100 text-emerald-700";
-  }
-
-  if (status === "late") {
-    return "bg-amber-100 text-amber-700";
-  }
-
+  if (isReplacement) return "bg-purple-100 text-purple-700";
+  if (status === "assigned") return "bg-blue-100 text-blue-700";
+  if (status === "completed") return "bg-emerald-100 text-emerald-700";
+  if (status === "late") return "bg-amber-100 text-amber-700";
   return "bg-red-100 text-red-700";
 };
 
 export function ShiftCard({ shift }: ShiftCardProps) {
+  const { dict } = useTranslation();
+  const card = dict.layout_guard.shift_card;
   const isAbsent = shift.status === "absent" && !shift.is_replacement;
+
+  const getStatusLabel = () => {
+    if (shift.is_replacement) return card.status_replacement;
+    if (shift.status === "assigned") return card.status_assigned;
+    if (shift.status === "completed") return card.status_completed;
+    if (shift.status === "late") return card.status_late;
+    return card.status_absent;
+  };
 
   return (
     <div
@@ -75,7 +54,7 @@ export function ShiftCard({ shift }: ShiftCardProps) {
             shift.is_replacement,
           )}`}
         >
-          {getStatusLabel(shift.status, shift.is_replacement)}
+          {getStatusLabel()}
         </span>
       </div>
 

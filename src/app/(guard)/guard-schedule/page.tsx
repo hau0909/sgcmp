@@ -7,6 +7,7 @@ import { requestGetGuardShiftsByWeek } from "@/features/shift/api/shift.api";
 import { getUserLocale, formatDate, getUserTimeZone } from "@/utils/dateTime";
 import type { GuardShiftItem } from "@/features/shift/type";
 import { useAuthStore } from "@/store/auth.store";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   type ShiftItem,
   ShiftCard,
@@ -51,10 +52,9 @@ const formatGuardShiftDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
-const formatMonthYear = (weekDays: Date[]) => {
+const formatMonthYear = (weekDays: Date[], locale: string) => {
   const firstDay = weekDays[0];
   const lastDay = weekDays[6];
-  const locale = getUserLocale();
 
   const firstMonth = firstDay.toLocaleDateString(locale, {
     month: "long",
@@ -136,10 +136,12 @@ const EmptyScheduleSkeleton = () => {
 
 export default function GuardSchedulePage() {
   const userId = useAuthStore((state) => state.user_id);
+  const { locale: appLocale, dict } = useTranslation();
+  const bcp47Locale = appLocale === "en" ? "en-US" : "vi-VN";
   const today = useMemo(() => new Date(), []);
   const resolvedWeekDayLabels = useMemo(() => {
-    return getWeekDayLabels(getUserLocale());
-  }, []);
+    return getWeekDayLabels(bcp47Locale);
+  }, [bcp47Locale]);
   const [weekStart, setWeekStart] = useState(() => startOfWeekMonday(today));
   const [selectedDate, setSelectedDate] = useState(today);
   const [shiftsByDate, setShiftsByDate] = useState<Record<string, ShiftItem[]>>(
@@ -184,7 +186,7 @@ export default function GuardSchedulePage() {
         const message =
           error instanceof Error
             ? error.message
-            : "Không thể lấy lịch trực theo tuần.";
+            : dict.layout_guard.schedule_fetch_error;
 
         setError(message);
         setShiftsByDate({});
@@ -208,14 +210,14 @@ export default function GuardSchedulePage() {
   }, [weekDays, shiftsByDate]);
 
   const formatDayMonth = (date: Date) => {
-    return new Intl.DateTimeFormat(getUserLocale(), {
+    return new Intl.DateTimeFormat(bcp47Locale, {
       day: "numeric",
       month: "numeric",
     }).format(date);
   };
 
   const formatWeekdayText = (date: Date) => {
-    return date.toLocaleDateString(getUserLocale(), { weekday: "long" });
+    return date.toLocaleDateString(bcp47Locale, { weekday: "long" });
   };
 
   const handleOpenCheckinByDate = (date: Date) => {
@@ -251,10 +253,10 @@ export default function GuardSchedulePage() {
       {/* Page Header */}
       <section className="px-4 pb-5 pt-8">
         <h1 className="text-4xl font-black leading-tight text-slate-950">
-          Lịch trực
+          {dict.layout_guard.schedule_title}
         </h1>
         <p className="mt-3 text-lg font-bold text-slate-600">
-          Xem lịch ca trực theo tuần.
+          {dict.layout_guard.schedule_subtitle}
         </p>
       </section>
 
@@ -278,7 +280,7 @@ export default function GuardSchedulePage() {
             className="rounded-xl px-4 py-2 text-center transition-all hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-70"
           >
             <h2 className="text-lg font-black capitalize text-[#0b4f9c]">
-              {formatMonthYear(weekDays)}
+              {formatMonthYear(weekDays, bcp47Locale)}
             </h2>
           </button>
 
@@ -422,7 +424,7 @@ export default function GuardSchedulePage() {
                   ) : (
                     <div className="flex h-full min-h-[128px] items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50">
                       <p className="text-sm font-bold text-slate-400">
-                        Trống lịch
+                        {dict.layout_guard.schedule_empty}
                       </p>
                     </div>
                   )}

@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { ChevronLeft, ChevronRight, MapPin, Plus, Calendar, ChevronDown } from "lucide-react";
 import { getUserTimeZone, getUserLocale, formatDate } from "@/utils/dateTime";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type ShiftToolbarProps = {
   viewMode: "day" | "week";
@@ -13,14 +14,14 @@ type ShiftToolbarProps = {
   onClickAdd: () => void;
 };
 
-const getContractStatusLabel = (status: string) => {
+const getContractStatusLabel = (status: string, dict?: any) => {
   switch (status) {
     case "active":
-      return "Hoạt động";
+      return dict?.create_shift_modal?.contract_status_active || "Hoạt động";
     case "completed":
-      return "Hoàn thành";
+      return dict?.create_shift_modal?.contract_status_completed || "Hoàn thành";
     case "cancelled":
-      return "Hủy bỏ";
+      return dict?.create_shift_modal?.contract_status_cancelled || "Hủy bỏ";
     default:
       return status;
   }
@@ -185,10 +186,12 @@ const YearDropdown = ({
   selectedYear,
   years,
   onChange,
+  dict,
 }: {
   selectedYear: number;
   years: number[];
   onChange: (year: number) => void;
+  dict?: any;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -210,7 +213,7 @@ const YearDropdown = ({
         onClick={() => setIsOpen(!isOpen)}
         className="flex h-10 items-center gap-1 border border-slate-300 bg-white px-3 hover:bg-slate-100 rounded-lg text-sm font-semibold text-slate-700 focus:outline-none focus:border-blue-700 transition-colors"
       >
-        <span className="text-xs text-slate-400 font-semibold uppercase mr-1">Năm</span>
+        <span className="text-xs text-slate-400 font-semibold uppercase mr-1">{dict?.shift_toolbar?.year_label || dict?.create_shift_modal?.unit_year || "Năm"}</span>
         <span className="font-bold text-slate-800">{selectedYear}</span>
         <ChevronDown size={14} className="text-slate-400 ml-1" />
       </button>
@@ -249,12 +252,14 @@ const DayPickerDropdown = ({
   maxDate,
   onChange,
   iconOnly = false,
+  locale,
 }: {
   value: string;
   minDate: string;
   maxDate: string;
   onChange: (date: string) => void;
   iconOnly?: boolean;
+  locale?: string;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -332,25 +337,25 @@ const DayPickerDropdown = ({
 
   const days = generateDays();
   const dayNames = useMemo(() => {
-    const locale = getUserLocale();
+    const activeLocale = locale || getUserLocale();
     const baseDate = new Date(Date.UTC(2026, 0, 5));
     return Array.from({ length: 7 }).map((_, i) => {
       const date = new Date(baseDate);
       date.setUTCDate(baseDate.getUTCDate() + i);
-      const name = date.toLocaleDateString(locale, { weekday: "short" });
+      const name = date.toLocaleDateString(activeLocale, { weekday: "short" });
       return name.toUpperCase();
     });
-  }, []);
+  }, [locale]);
 
   const monthNames = useMemo(() => {
-    const locale = getUserLocale();
+    const activeLocale = locale || getUserLocale();
     const baseDate = new Date(Date.UTC(2026, 0, 1));
     return Array.from({ length: 12 }).map((_, i) => {
       const date = new Date(baseDate);
       date.setUTCMonth(i);
-      return date.toLocaleDateString(locale, { month: "long" });
+      return date.toLocaleDateString(activeLocale, { month: "long" });
     });
-  }, []);
+  }, [locale]);
 
   return (
     <div className="relative" ref={dropdownRef}>
@@ -463,6 +468,8 @@ const WeekDropdown = ({
   minDayLimit: string;
   maxDayLimit: string;
 }) => {
+  const { locale: appLocale } = useTranslation();
+  const bcp47Locale = appLocale === "en" ? "en-US" : "vi-VN";
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -488,6 +495,7 @@ const WeekDropdown = ({
             maxDate={maxDayLimit}
             onChange={onCalendarClick}
             iconOnly={true}
+            locale={bcp47Locale}
           />
         </div>
 
@@ -539,6 +547,8 @@ export function ShiftToolbar({
   onChangeDate,
   onClickAdd,
 }: ShiftToolbarProps) {
+  const { dict, locale: appLocale } = useTranslation();
+  const bcp47Locale = appLocale === "en" ? "en-US" : "vi-VN";
   const dateTitle =
     viewMode === "day"
       ? formatDayTitle(currentDate)
@@ -638,7 +648,7 @@ export function ShiftToolbar({
               : "text-slate-600 hover:bg-slate-100"
           }`}
         >
-          Ngày
+          {dict.shift_toolbar?.view_day || "Ngày"}
         </button>
 
         <button
@@ -650,7 +660,7 @@ export function ShiftToolbar({
               : "text-slate-600 hover:bg-slate-100"
           }`}
         >
-          Tuần
+          {dict.shift_toolbar?.view_week || "Tuần"}
         </button>
       </div>
 
@@ -668,7 +678,7 @@ export function ShiftToolbar({
           type="button"
           onClick={handleToday}
           className="h-10 min-w-[220px] cursor-pointer border border-slate-300 bg-white px-4 text-center text-sm font-semibold text-slate-700 hover:bg-slate-100 hover:text-blue-700 rounded-lg"
-          title="Bấm để quay về hôm nay"
+          title={dict.shift_toolbar?.click_today_title || "Bấm để quay về hôm nay"}
         >
           {dateTitle}
         </button>
@@ -687,6 +697,7 @@ export function ShiftToolbar({
           selectedYear={selectedYear}
           years={getYearOptions()}
           onChange={handleSelectYear}
+          dict={dict}
         />
 
         {viewMode === "day" ? (
@@ -695,6 +706,7 @@ export function ShiftToolbar({
             minDate={minDayLimit}
             maxDate={maxDayLimit}
             onChange={handleSelectDate}
+            locale={bcp47Locale}
           />
         ) : (
           <WeekDropdown
@@ -725,7 +737,7 @@ export function ShiftToolbar({
                 value={loc.address}
                 style={{ color: getContractStatusColor(loc.status) }}
               >
-                {loc.address} [{getContractStatusLabel(loc.status)}]
+                {loc.address} [{getContractStatusLabel(loc.status, dict)}]
               </option>
             ))}
           </select>
@@ -737,7 +749,7 @@ export function ShiftToolbar({
           className="flex h-10 cursor-pointer items-center gap-2 bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 rounded-lg"
         >
           <Plus size={16} />
-          THÊM CA TRỰC
+          {dict.shift_toolbar?.add_shift_button || "THÊM CA TRỰC"}
         </button>
       </div>
     </div>

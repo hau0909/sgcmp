@@ -48,6 +48,8 @@ type EditSnapshot = {
   address: string;
   email: string;
   phone: string;
+  allowedLateMinutes: number;
+  allowedAbsentMinutes: number;
 };
 
 type EditField =
@@ -113,6 +115,10 @@ export default function MyCompanyDetail() {
   const [address, setAddress] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
+  const [allowedLateMinutes, setAllowedLateMinutes] = useState<number>(5);
+  const [allowedAbsentMinutes, setAllowedAbsentMinutes] = useState<number>(35);
+  const [allowedLateMinutesStr, setAllowedLateMinutesStr] = useState<string>("5");
+  const [allowedAbsentMinutesStr, setAllowedAbsentMinutesStr] = useState<string>("35");
 
   const [cities, setCities] = useState<City[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
@@ -357,7 +363,11 @@ export default function MyCompanyDetail() {
       address,
       email,
       phone,
+      allowedLateMinutes,
+      allowedAbsentMinutes,
     });
+    setAllowedLateMinutesStr(String(allowedLateMinutes));
+    setAllowedAbsentMinutesStr(String(allowedAbsentMinutes));
 
     const parts = address.split(",").map(p => p.trim());
     if (parts.length >= 3) {
@@ -426,6 +436,10 @@ export default function MyCompanyDetail() {
       setAddress(editSnapshot.address);
       setEmail(editSnapshot.email);
       setPhone(editSnapshot.phone);
+      setAllowedLateMinutes(editSnapshot.allowedLateMinutes);
+      setAllowedAbsentMinutes(editSnapshot.allowedAbsentMinutes);
+      setAllowedLateMinutesStr(String(editSnapshot.allowedLateMinutes));
+      setAllowedAbsentMinutesStr(String(editSnapshot.allowedAbsentMinutes));
     }
 
     setFieldErrors({});
@@ -605,12 +619,20 @@ export default function MyCompanyDetail() {
     try {
       setSaving(true);
 
+      const parsedLate = parseInt(allowedLateMinutesStr.replace(/\D/g, ""), 10);
+      const parsedAbsent = parseInt(allowedAbsentMinutesStr.replace(/\D/g, ""), 10);
+
+      const finalLate = isNaN(parsedLate) ? 5 : parsedLate;
+      const finalAbsent = isNaN(parsedAbsent) ? 35 : parsedAbsent;
+
       await requestUpdateCompanyProfile({
         company_name: fullName.trim(),
         description: description.trim(),
         email: email.trim(),
         phone: phone.trim(),
         address: newAddressStr,
+        allowed_late_minutes: finalLate,
+        allowed_absent_minutes: finalAbsent,
       });
 
       setCompanyName(fullName.trim());
@@ -621,6 +643,10 @@ export default function MyCompanyDetail() {
       setAddress(newAddressStr);
       setBusinessLicense(businessLicense.trim());
       setCompanyLicense(companyLicense.trim());
+      setAllowedLateMinutes(finalLate);
+      setAllowedAbsentMinutes(finalAbsent);
+      setAllowedLateMinutesStr(String(finalLate));
+      setAllowedAbsentMinutesStr(String(finalAbsent));
 
       setIsEditing(false);
       setEditSnapshot(null);
@@ -749,6 +775,12 @@ export default function MyCompanyDetail() {
           setEmail(data.email || "");
           setPhone(data.phone || "");
           setAddress(data.address || "");
+          const late = data.allowed_late_minutes ?? 5;
+          const absent = data.allowed_absent_minutes ?? 35;
+          setAllowedLateMinutes(late);
+          setAllowedAbsentMinutes(absent);
+          setAllowedLateMinutesStr(String(late));
+          setAllowedAbsentMinutesStr(String(absent));
 
           if (data.logoUrl) setLogoUrl(data.logoUrl);
           if (data.bannerUrl) setBannerUrl(data.bannerUrl);
@@ -1339,6 +1371,48 @@ export default function MyCompanyDetail() {
                   {address}
                 </span>
               )}
+            </div>
+
+            {/* Quy định điểm danh */}
+            <div className="pt-4 border-t border-outline-variant/40 space-y-3">
+              <h4 className="text-xs font-bold text-outline uppercase tracking-wider">
+                Quy định điểm danh (Đi trễ / Vắng mặt)
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div className="space-y-1">
+                  <span className="font-bold text-on-surface-variant text-xs block">
+                    Số phút cho phép đi trễ tối đa:
+                  </span>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={allowedLateMinutesStr}
+                      onChange={(e) => setAllowedLateMinutesStr(e.target.value)}
+                      className={baseEditControlClassName}
+                      placeholder="Ví dụ: 5 hoặc 5 phút"
+                    />
+                  ) : (
+                    <span className="font-semibold text-on-surface font-mono">{allowedLateMinutes} phút</span>
+                  )}
+                </div>
+
+                <div className="space-y-1">
+                  <span className="font-bold text-on-surface-variant text-xs block">
+                    Số phút tối đa tính vắng mặt:
+                  </span>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={allowedAbsentMinutesStr}
+                      onChange={(e) => setAllowedAbsentMinutesStr(e.target.value)}
+                      className={baseEditControlClassName}
+                      placeholder="Ví dụ: 35 hoặc 35 phút"
+                    />
+                  ) : (
+                    <span className="font-semibold text-on-surface font-mono">{allowedAbsentMinutes} phút</span>
+                  )}
+                </div>
+              </div>
             </div>
           </div>
         </section>

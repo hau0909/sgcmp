@@ -1,7 +1,16 @@
-import React from "react";
+"use client";
 
-const page = () => {
-  return <div className="flex justify-center ">Welcome to Guard Dashboard</div>;
+import React from "react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
+
+const OverviewPage = () => {
+  const { dict } = useTranslation();
+
+  return (
+    <div className="flex justify-center items-center py-10 text-lg font-semibold text-slate-800">
+      {dict.layout_guard.welcome}
+    </div>
+  );
 };
 
-export default page;
+export default OverviewPage;

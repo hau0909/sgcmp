@@ -7,7 +7,9 @@ import type {
   GetAllGuardsResponse,
   GetGuardDetailResponse,
   GetAllGuardsParams,
-  UpdateGuardAccountInput
+  UpdateGuardAccountInput,
+  GetGuardPerformanceSummaryResponse,
+  GetGuardPerformanceListResponse,
 } from "../type";
 
 interface ApiResponse<T> {
@@ -220,4 +222,50 @@ export const requestUpdateGuardProfile = async (guardId: string,
     },
     body: JSON.stringify(input),
   });
-}
+};
+
+export const requestGetGuardPerformanceSummary = async (params?: {
+  company_id?: string;
+  guard_id?: string;
+  startDate?: string;
+  endDate?: string;
+}): Promise<GetGuardPerformanceSummaryResponse> => {
+  const searchParams = new URLSearchParams();
+  if (params?.company_id) searchParams.set("company_id", params.company_id);
+  if (params?.guard_id) searchParams.set("guard_id", params.guard_id);
+  if (params?.startDate) searchParams.set("startDate", params.startDate);
+  if (params?.endDate) searchParams.set("endDate", params.endDate);
+
+  const queryString = searchParams.toString();
+  const url = `/api/company/guard-performance/summary${queryString ? `?${queryString}` : ""}`;
+
+  return fetcher(url, {
+    method: "GET",
+  });
+};
+
+export const requestGetGuardPerformanceList = async (params?: {
+  company_id?: string;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  tab?: "all" | "top10";
+  page?: number;
+  limit?: number;
+}): Promise<GetGuardPerformanceListResponse> => {
+  const searchParams = new URLSearchParams();
+  if (params?.company_id) searchParams.set("company_id", params.company_id);
+  if (params?.startDate) searchParams.set("startDate", params.startDate);
+  if (params?.endDate) searchParams.set("endDate", params.endDate);
+  if (params?.search) searchParams.set("search", params.search);
+  if (params?.tab) searchParams.set("tab", params.tab);
+  if (params?.page) searchParams.set("page", String(params.page));
+  if (params?.limit) searchParams.set("limit", String(params.limit));
+
+  const queryString = searchParams.toString();
+  const url = `/api/company/guard-performance/list${queryString ? `?${queryString}` : ""}`;
+
+  return fetcher(url, {
+    method: "GET",
+  });
+};

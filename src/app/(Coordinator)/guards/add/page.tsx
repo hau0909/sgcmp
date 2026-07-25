@@ -22,6 +22,8 @@ import {
   requestCheckGuardQuota,
 } from "@/features/guards/api/guard.api";
 
+import { useTranslation } from "@/components/providers/LanguageProvider";
+
 type Gender = "male" | "female";
 
 type GuardFormData = {
@@ -52,6 +54,7 @@ const INITIAL_FORM_DATA: GuardFormData = {
 };
 export default function AddGuardPage() {
   const router = useRouter();
+  const { dict } = useTranslation();
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const cccdFrontInputRef = useRef<HTMLInputElement>(null);
   const cccdBackInputRef = useRef<HTMLInputElement>(null);
@@ -92,7 +95,9 @@ export default function AddGuardPage() {
           const max = res.data.maxGuards;
           const curr = res.data.currentGuards;
           setQuotaMessage(
-            `Công ty đã đạt giới hạn số lượng bảo vệ được phép (${curr}/${max}). Vui lòng nâng cấp gói sử dụng dịch vụ trước khi thêm bảo vệ mới.`
+            (dict.add_guard?.quota_exceeded ?? "Quota exceeded ({curr}/{max})")
+              .replace("{curr}", String(curr))
+              .replace("{max}", String(max))
           );
         }
       } catch (error) {
@@ -248,13 +253,13 @@ export default function AddGuardPage() {
     const maximumSize = 2 * 1024 * 1024;
 
     if (!acceptedTypes.includes(file.type)) {
-      setErrorMessage("Ảnh chỉ hỗ trợ định dạng JPG hoặc PNG.");
+      setErrorMessage(dict.add_guard?.error_avatar_format ?? "Avatar only supports JPG or PNG format.");
       event.target.value = "";
       return;
     }
 
     if (file.size > maximumSize) {
-      setErrorMessage("Kích thước ảnh tối đa là 2MB.");
+      setErrorMessage(dict.add_guard?.error_avatar_size ?? "Maximum avatar size is 2MB.");
       event.target.value = "";
       return;
     }
@@ -298,7 +303,7 @@ export default function AddGuardPage() {
     if (!acceptedTypes.includes(file.type)) {
       setFieldErrors((prev) => ({
         ...prev,
-        cccdFront: "Ảnh CCCD chỉ hỗ trợ định dạng JPG hoặc PNG.",
+        cccdFront: dict.add_guard?.error_cccd_format ?? "ID card image only supports JPG or PNG format.",
       }));
       event.target.value = "";
       return;
@@ -343,7 +348,7 @@ export default function AddGuardPage() {
     if (!acceptedTypes.includes(file.type)) {
       setFieldErrors((prev) => ({
         ...prev,
-        cccdBack: "Ảnh CCCD chỉ hỗ trợ định dạng JPG hoặc PNG.",
+        cccdBack: dict.add_guard?.error_cccd_format ?? "ID card image only supports JPG or PNG format.",
       }));
       event.target.value = "";
       return;
@@ -380,22 +385,22 @@ export default function AddGuardPage() {
     const nextErrors: Record<string, string> = {};
 
     if (!formData.fullName) {
-      nextErrors.fullName = "Vui lòng nhập họ và tên.";
+      nextErrors.fullName = dict.add_guard?.validate_name_required ?? "Please enter full name.";
     } else {
       const name = formData.fullName;
       const nameRegex = /^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u;
 
       if (name.startsWith(" ") || name.endsWith(" ")) {
-        nextErrors.fullName = "Họ và tên không được chứa khoảng trắng ở đầu hoặc cuối.";
+        nextErrors.fullName = dict.add_guard?.validate_name_no_leading_trailing_space ?? "Full name must not have leading or trailing spaces.";
       } else if (/\s{2,}/.test(name)) {
-        nextErrors.fullName = "Họ và tên không được chứa nhiều khoảng trắng liên tiếp.";
+        nextErrors.fullName = dict.add_guard?.validate_name_no_multiple_spaces ?? "Full name must not contain multiple consecutive spaces.";
       } else if (!nameRegex.test(name)) {
-        nextErrors.fullName = "Họ và tên chỉ được chứa chữ cái và khoảng trắng giữa các từ.";
+        nextErrors.fullName = dict.add_guard?.validate_name_letters_only ?? "Full name must contain only letters and spaces between words.";
       }
     }
 
     if (!formData.dateOfBirth) {
-      nextErrors.dateOfBirth = "Vui lòng chọn ngày sinh.";
+      nextErrors.dateOfBirth = dict.add_guard?.validate_dob_required ?? "Please select date of birth.";
     } else {
       const dobDate = new Date(formData.dateOfBirth);
       const today = new Date();
@@ -405,7 +410,7 @@ export default function AddGuardPage() {
       dobDate.setHours(0, 0, 0, 0);
 
       if (dobDate > today) {
-        nextErrors.dateOfBirth = "Ngày sinh không được ở tương lai.";
+        nextErrors.dateOfBirth = dict.add_guard?.validate_dob_future ?? "Date of birth cannot be in the future.";
       } else {
         let age = today.getFullYear() - dobDate.getFullYear();
         const monthDiff = today.getMonth() - dobDate.getMonth();
@@ -414,65 +419,65 @@ export default function AddGuardPage() {
         }
 
         if (age < 18) {
-          nextErrors.dateOfBirth = "Nhân viên bảo vệ phải từ 18 tuổi trở lên.";
+          nextErrors.dateOfBirth = dict.add_guard?.validate_dob_min_age ?? "Security guards must be at least 18 years old.";
         }
       }
     }
 
     if (!formData.identityNumber.trim()) {
-      nextErrors.identityNumber = "Vui lòng nhập số CCCD/CMND.";
+      nextErrors.identityNumber = dict.add_guard?.validate_cccd_required ?? "Please enter ID card number.";
     } else if (!/^(\d{9}|\d{12})$/.test(formData.identityNumber.trim())) {
-      nextErrors.identityNumber = "CCCD/CMND phải gồm 9 hoặc 12 chữ số.";
+      nextErrors.identityNumber = dict.add_guard?.validate_cccd_format ?? "ID card number must be 9 or 12 digits.";
     }
 
     if (!formData.identityIssueDate) {
-      nextErrors.identityIssueDate = "Vui lòng chọn ngày cấp CCCD/CMND.";
+      nextErrors.identityIssueDate = dict.add_guard?.validate_issue_date_required ?? "Please select the ID card issue date.";
     } else {
       const issueDate = new Date(formData.identityIssueDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       issueDate.setHours(0, 0, 0, 0);
       if (issueDate > today) {
-        nextErrors.identityIssueDate = "Ngày cấp CCCD/CMND không được ở tương lai.";
+        nextErrors.identityIssueDate = dict.add_guard?.validate_issue_date_future ?? "ID card issue date cannot be in the future.";
       }
     }
 
     if (!formData.identityIssuePlace.trim()) {
-      nextErrors.identityIssuePlace = "Vui lòng nhập nơi cấp CCCD/CMND.";
+      nextErrors.identityIssuePlace = dict.add_guard?.validate_issue_place_required ?? "Please enter the ID card issue place.";
     }
 
     if (!formData.address.trim()) {
-      nextErrors.address = "Vui lòng nhập địa chỉ thường trú.";
+      nextErrors.address = dict.add_guard?.validate_address_required ?? "Please enter permanent address.";
     }
 
     if (!formData.phone.trim()) {
-      nextErrors.phone = "Vui lòng nhập số điện thoại.";
+      nextErrors.phone = dict.add_guard?.validate_phone_required ?? "Please enter phone number.";
     } else if (!/^(0|\+84)[0-9]{9,10}$/.test(formData.phone.trim())) {
-      nextErrors.phone = "Số điện thoại không hợp lệ.";
+      nextErrors.phone = dict.add_guard?.validate_phone_invalid ?? "Invalid phone number.";
     }
 
     if (!formData.email.trim()) {
-      nextErrors.email = "Vui lòng nhập email.";
+      nextErrors.email = dict.add_guard?.validate_email_required ?? "Please enter email.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      nextErrors.email = "Email không hợp lệ.";
+      nextErrors.email = dict.add_guard?.validate_email_invalid ?? "Invalid email.";
     }
 
     if (!avatarFile) {
-      nextErrors.avatar = "Vui lòng tải ảnh thẻ nhân viên.";
+      nextErrors.avatar = dict.add_guard?.validate_avatar_required ?? "Please upload a staff ID photo.";
     }
 
     if (!cccdFrontFile) {
-      nextErrors.cccdFront = "Vui lòng tải ảnh mặt trước CCCD.";
+      nextErrors.cccdFront = dict.add_guard?.validate_cccd_front_required ?? "Please upload the ID card front image.";
     }
 
     if (!cccdBackFile) {
-      nextErrors.cccdBack = "Vui lòng tải ảnh mặt sau CCCD.";
+      nextErrors.cccdBack = dict.add_guard?.validate_cccd_back_required ?? "Please upload the ID card back image.";
     }
 
     setFieldErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
-      setErrorMessage("Vui lòng kiểm tra lại các thông tin chưa hợp lệ.");
+      setErrorMessage(dict.add_guard?.validate_form_error ?? "Please review the invalid information.");
       return false;
     }
 
@@ -509,7 +514,7 @@ export default function AddGuardPage() {
 
       if (!accountResult.success || !accountResult.data?.user_id) {
         throw new Error(
-          accountResult.message || "Không thể tạo tài khoản bảo vệ.",
+          accountResult.message || (dict.add_guard?.error_create_account ?? "Unable to create guard account."),
         );
       }
 
@@ -527,7 +532,7 @@ export default function AddGuardPage() {
         );
 
         if (!uploadResult.success || !uploadResult.data?.public_url) {
-          throw new Error(uploadResult.message || "Không thể tải ảnh bảo vệ.");
+          throw new Error(uploadResult.message || (dict.add_guard?.error_upload_avatar ?? "Unable to upload guard photo."));
         }
 
         avatar_url = uploadResult.data.public_url;
@@ -548,7 +553,7 @@ export default function AddGuardPage() {
 
         if (!uploadResult.success || !uploadResult.data?.public_url) {
           throw new Error(
-            uploadResult.message || "Không thể tải ảnh mặt trước CCCD.",
+            uploadResult.message || (dict.add_guard?.error_upload_front ?? "Unable to upload ID card front image."),
           );
         }
 
@@ -564,7 +569,7 @@ export default function AddGuardPage() {
 
         if (!uploadResult.success || !uploadResult.data?.public_url) {
           throw new Error(
-            uploadResult.message || "Không thể tải ảnh mặt sau CCCD.",
+            uploadResult.message || (dict.add_guard?.error_upload_back ?? "Unable to upload ID card back image."),
           );
         }
 
@@ -596,12 +601,12 @@ export default function AddGuardPage() {
 
       if (!informationResult.success) {
         throw new Error(
-          informationResult.message || "Không thể lưu thông tin bảo vệ.",
+          informationResult.message || (dict.add_guard?.error_save_info ?? "Unable to save guard information."),
         );
       }
 
       setSuccessMessage(
-        "Tạo tài khoản bảo vệ thành công. Email xác thực đã được gửi.",
+        dict.add_guard?.success_message ?? "Guard account created successfully. A verification email has been sent.",
       );
       resetForm();
       setTimeout(() => {
@@ -615,7 +620,7 @@ export default function AddGuardPage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Không thể tạo tài khoản bảo vệ.",
+          : (dict.add_guard?.error_generic ?? "Unable to create guard account."),
       );
     } finally {
       setIsSubmitting(false);
@@ -637,11 +642,11 @@ export default function AddGuardPage() {
 
           <div>
             <h1 className="text-lg font-bold text-slate-950">
-              Thêm mới nhân viên bảo vệ
+              {dict.add_guard?.page_title}
             </h1>
 
             <p className="mt-1 text-sm text-slate-600">
-              Tạo hồ sơ nhân sự mới trong hệ thống quản lý điều phối.
+              {dict.add_guard?.page_desc}
             </p>
           </div>
         </div>
@@ -693,14 +698,14 @@ export default function AddGuardPage() {
                     {avatarPreview ? (
                       <img
                         src={avatarPreview}
-                        alt="Ảnh thẻ bảo vệ"
+                        alt={dict.add_guard?.avatar_label ?? "Staff photo"}
                         className="h-full w-full object-cover"
                       />
                     ) : (
                       <>
                         <Camera className="h-6 w-6" />
                         <span className="mt-2 text-sm font-bold">
-                          Tải ảnh lên
+                          {dict.add_guard?.avatar_upload}
                         </span>
                       </>
                     )}
@@ -712,7 +717,7 @@ export default function AddGuardPage() {
                       disabled={isFormDisabled}
                       onClick={handleRemoveAvatar}
                       className="absolute right-0 top-0 flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-white shadow transition hover:bg-red-600 disabled:cursor-not-allowed disabled:opacity-60"
-                      aria-label="Xóa ảnh"
+                      aria-label={dict.add_guard?.avatar_remove_aria}
                     >
                       <X className="h-4 w-4" />
                     </button>
@@ -720,11 +725,11 @@ export default function AddGuardPage() {
                 </div>
 
                 <p className="mt-5 text-base font-bold text-slate-950">
-                  Ảnh thẻ nhân viên
+                  {dict.add_guard?.avatar_label}
                 </p>
 
                 <p className="mt-1 text-sm leading-6 text-slate-600">
-                  Định dạng JPG, PNG. Kích thước tối đa 2MB.
+                  {dict.add_guard?.avatar_hint}
                 </p>
 
                 {fieldErrors.avatar && (
@@ -739,15 +744,15 @@ export default function AddGuardPage() {
           <div className="space-y-5">
             <section className="rounded-md border border-slate-300 bg-white p-5 shadow-sm">
               <SectionTitle icon={<User className="h-4 w-4" />}>
-                Thông tin cá nhân
+                {dict.add_guard?.section_personal}
               </SectionTitle>
 
               <div className="space-y-5">
                 <InputField
-                  label="Họ và tên"
+                  label={dict.add_guard?.field_fullname ?? "Full Name"}
                   required
                   value={formData.fullName}
-                  placeholder="Nhập họ và tên đầy đủ"
+                  placeholder={dict.add_guard?.field_fullname_placeholder}
                   disabled={isFormDisabled}
                   onChange={(value) => handleChange("fullName", value)}
                   error={fieldErrors.fullName}
@@ -755,7 +760,7 @@ export default function AddGuardPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <InputField
-                    label="Ngày sinh"
+                    label={dict.add_guard?.field_dob ?? "Date of Birth"}
                     required
                     type="date"
                     value={formData.dateOfBirth}
@@ -766,7 +771,7 @@ export default function AddGuardPage() {
                   />
 
                   <div>
-                    <Label text="Giới tính" required />
+                    <Label text={dict.add_guard?.field_gender ?? "Gender"} required />
 
                     <select
                       value={formData.gender}
@@ -776,17 +781,17 @@ export default function AddGuardPage() {
                       }
                       className="mt-2 h-10 w-full rounded border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                     >
-                      <option value="male">Nam</option>
-                      <option value="female">Nữ</option>
+                      <option value="male">{dict.add_guard?.gender_male}</option>
+                      <option value="female">{dict.add_guard?.gender_female}</option>
                     </select>
                   </div>
                 </div>
 
                 <InputField
-                  label="Số CCCD/CMND"
+                  label={dict.add_guard?.field_cccd ?? "National ID Number"}
                   required
                   value={formData.identityNumber}
-                  placeholder="Nhập 9 hoặc 12 số"
+                  placeholder={dict.add_guard?.field_cccd_placeholder}
                   disabled={isFormDisabled}
                   onChange={(value) =>
                     handleChange("identityNumber", value.replace(/\D/g, ""))
@@ -796,7 +801,7 @@ export default function AddGuardPage() {
 
                 <div className="grid gap-4 md:grid-cols-2">
                   <InputField
-                    label="Ngày cấp CCCD/CMND"
+                    label={dict.add_guard?.field_issue_date ?? "ID Issue Date"}
                     required
                     type="date"
                     value={formData.identityIssueDate}
@@ -809,10 +814,10 @@ export default function AddGuardPage() {
                   />
 
                   <InputField
-                    label="Nơi cấp CCCD/CMND"
+                    label={dict.add_guard?.field_issue_place ?? "ID Issue Place"}
                     required
                     value={formData.identityIssuePlace}
-                    placeholder="Nhập nơi cấp"
+                    placeholder={dict.add_guard?.field_issue_place_placeholder}
                     disabled={isFormDisabled}
                     onChange={(value) =>
                       handleChange("identityIssuePlace", value)
@@ -822,7 +827,7 @@ export default function AddGuardPage() {
                 </div>
 
                 <div>
-                  <Label text="Ảnh CCCD/CMND" />
+                  <Label text={dict.add_guard?.field_cccd_images ?? "ID Card Images"} />
                   <div className="mt-2 grid gap-4 sm:grid-cols-2">
                     {/* Front CCCD Image */}
                     <div>
@@ -863,7 +868,7 @@ export default function AddGuardPage() {
                           ) : (
                             <div className="flex flex-col items-center text-slate-500 hover:text-blue-800 transition">
                               <Camera className="h-8 w-8" />
-                              <span className="mt-1 text-xs font-semibold">Mặt trước CCCD</span>
+                              <span className="mt-1 text-xs font-semibold">{dict.add_guard?.cccd_front}</span>
                             </div>
                           )}
                         </div>
@@ -914,7 +919,7 @@ export default function AddGuardPage() {
                           ) : (
                             <div className="flex flex-col items-center text-slate-500 hover:text-blue-800 transition">
                               <Camera className="h-8 w-8" />
-                              <span className="mt-1 text-xs font-semibold">Mặt sau CCCD</span>
+                              <span className="mt-1 text-xs font-semibold">{dict.add_guard?.cccd_back}</span>
                             </div>
                           )}
                         </div>
@@ -930,18 +935,18 @@ export default function AddGuardPage() {
 
                 {/* Address: City + Ward + Street */}
                 <div>
-                  <Label text="Địa chỉ thường trú" required />
+                  <Label text={dict.add_guard?.field_address ?? "Permanent Address"} required />
                   <div className="mt-2 grid gap-3 md:grid-cols-2">
                     {/* City */}
                     <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Tỉnh / Thành phố</label>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">{dict.add_guard?.field_city}</label>
                       <select
                         value={selectedCityId}
                         disabled={isFormDisabled || loadingCities}
                         onChange={(e) => setSelectedCityId(e.target.value === "" ? "" : Number(e.target.value))}
                         className="h-10 w-full rounded border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                       >
-                        <option value="">{loadingCities ? "Đang tải..." : "Chọn tỉnh/thành phố"}</option>
+                        <option value="">{loadingCities ? dict.add_guard?.city_loading : dict.add_guard?.city_placeholder}</option>
                         {cities.map((c) => (
                           <option key={c.city_id} value={c.city_id}>{c.city_name}</option>
                         ))}
@@ -949,14 +954,14 @@ export default function AddGuardPage() {
                     </div>
                     {/* Ward */}
                     <div>
-                      <label className="text-xs font-medium text-slate-500 mb-1 block">Phường / Xã</label>
+                      <label className="text-xs font-medium text-slate-500 mb-1 block">{dict.add_guard?.field_ward}</label>
                       <select
                         value={selectedWardId}
                         disabled={isFormDisabled || loadingWards || selectedCityId === ""}
                         onChange={(e) => setSelectedWardId(e.target.value === "" ? "" : Number(e.target.value))}
                         className="h-10 w-full rounded border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100"
                       >
-                        <option value="">{loadingWards ? "Đang tải..." : selectedCityId === "" ? "Chọn tỉnh trước" : "Chọn phường/xã"}</option>
+                        <option value="">{loadingWards ? dict.add_guard?.ward_loading : selectedCityId === "" ? dict.add_guard?.ward_select_city_first : dict.add_guard?.ward_placeholder}</option>
                         {wards.map((w) => (
                           <option key={w.ward_id} value={w.ward_id}>{w.ward_name}</option>
                         ))}
@@ -965,12 +970,12 @@ export default function AddGuardPage() {
                   </div>
                   {/* Street */}
                   <div className="mt-2">
-                    <label className="text-xs font-medium text-slate-500 mb-1 block">Số nhà, tên đường</label>
+                    <label className="text-xs font-medium text-slate-500 mb-1 block">{dict.add_guard?.field_street}</label>
                     <input
                       type="text"
                       value={streetInput}
                       disabled={isFormDisabled}
-                      placeholder="VD: 123 Nguyễn Văn A"
+                      placeholder={dict.add_guard?.field_street_placeholder}
                       onChange={(e) => setStreetInput(e.target.value)}
                       className="h-10 w-full rounded border border-slate-300 bg-white px-3 text-sm font-medium text-slate-950 outline-none transition placeholder:text-slate-400 focus:border-blue-700 focus:ring-2 focus:ring-blue-100 disabled:bg-slate-100 disabled:cursor-not-allowed"
                     />
@@ -978,7 +983,7 @@ export default function AddGuardPage() {
                   {/* Preview */}
                   {formData.address && (
                     <p className="mt-2 text-xs text-slate-500">
-                      Địa chỉ đầy đủ: <span className="font-semibold text-slate-700">{formData.address}</span>
+                      {dict.add_guard?.address_full_preview} <span className="font-semibold text-slate-700">{formData.address}</span>
                     </p>
                   )}
                   {fieldErrors.address && (
@@ -990,15 +995,15 @@ export default function AddGuardPage() {
 
             <section className="rounded-md border border-slate-300 bg-white p-5 shadow-sm">
               <SectionTitle icon={<Mail className="h-4 w-4" />}>
-                Thông tin liên hệ
+                {dict.add_guard?.section_contact}
               </SectionTitle>
 
               <div className="grid gap-4 md:grid-cols-2">
                 <InputField
-                  label="Số điện thoại"
+                  label={dict.add_guard?.field_phone ?? "Phone Number"}
                   required
                   value={formData.phone}
-                  placeholder="09xx xxx xxx"
+                  placeholder={dict.add_guard?.field_phone_placeholder}
                   disabled={isFormDisabled}
                   onChange={(value) =>
                     handleChange("phone", value.replace(/[^\d+]/g, ""))
@@ -1007,7 +1012,7 @@ export default function AddGuardPage() {
                 />
 
                 <InputField
-                  label="Email"
+                  label={dict.add_guard?.field_email ?? "Email"}
                   required
                   type="email"
                   value={formData.email}
@@ -1039,7 +1044,7 @@ export default function AddGuardPage() {
                 className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 bg-white px-5 text-sm font-bold text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
               >
                 <X className="h-4 w-4" />
-                Hủy
+                {dict.add_guard?.btn_cancel}
               </button>
 
               <button
@@ -1050,12 +1055,12 @@ export default function AddGuardPage() {
                 {isSubmitting ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Đang tạo...
+                    {dict.add_guard?.btn_submitting}
                   </>
                 ) : (
                   <>
                     <Save className="h-4 w-4" />
-                    Lưu hồ sơ
+                    {dict.add_guard?.btn_submit}
                   </>
                 )}
               </button>

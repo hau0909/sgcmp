@@ -18,6 +18,7 @@ import {
   UserRound,
   X,
 } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 import type { GuardListItem } from "@/features/guards/type";
 import { requestGetGuardsByContract } from "@/features/guards/api/guard.api";
@@ -83,17 +84,19 @@ const getGuardProfile = (profiles: GuardListItem["profiles"]) => {
   return profiles;
 };
 
-const formatMinutesFriendly = (minutes: number): string => {
-  if (minutes <= 0) return "0 phút";
+const formatMinutesFriendly = (minutes: number, dict?: any): string => {
+  const hUnit = dict?.create_shift_modal?.unit_hours || "giờ";
+  const mUnit = dict?.create_shift_modal?.unit_minutes || "phút";
+  if (minutes <= 0) return dict?.create_shift_modal?.zero_mins || `0 ${mUnit}`;
   const hrs = Math.floor(minutes / 60);
   const mins = Math.round(minutes % 60);
   if (hrs > 0 && mins > 0) {
-    return `${hrs} giờ ${mins} phút`;
+    return `${hrs} ${hUnit} ${mins} ${mUnit}`;
   }
   if (hrs > 0) {
-    return `${hrs} giờ`;
+    return `${hrs} ${hUnit}`;
   }
-  return `${mins} phút`;
+  return `${mins} ${mUnit}`;
 };
 
 const diffMinutes = calculateDurationMinutes;
@@ -264,14 +267,14 @@ const InfoRow = ({ label, value }: InfoRowProps) => (
   </div>
 );
 
-const getContractStatusLabel = (status: string) => {
+const getContractStatusLabel = (status: string, dict?: any) => {
   switch (status) {
     case "active":
-      return "Hoạt động";
+      return dict?.create_shift_modal?.contract_status_active || "Hoạt động";
     case "completed":
-      return "Hoàn thành";
+      return dict?.create_shift_modal?.contract_status_completed || "Hoàn thành";
     case "cancelled":
-      return "Hủy bỏ";
+      return dict?.create_shift_modal?.contract_status_cancelled || "Hủy bỏ";
     default:
       return status;
   }
@@ -287,6 +290,23 @@ const getContractStatusColor = (status: string) => {
       return "#dc2626"; // red-600
     default:
       return "inherit";
+  }
+};
+
+const getGuardStatusLabel = (status: GuardShiftStatus, dict?: any): string => {
+  switch (status) {
+    case "available":
+      return dict?.create_shift_modal?.guard_status_available || "Sẵn sàng";
+    case "selected":
+      return dict?.create_shift_modal?.guard_status_selected || "Đã chọn";
+    case "assigned":
+      return dict?.create_shift_modal?.guard_status_assigned || "Đã phân công";
+    case "conflict":
+      return dict?.create_shift_modal?.guard_status_conflict || "Xung đột ca";
+    case "unavailable":
+      return dict?.create_shift_modal?.guard_status_unavailable || "Không khả dụng";
+    default:
+      return status;
   }
 };
 
@@ -328,6 +348,7 @@ const GUARD_STATUS_CFG: Record<
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalProps) {
+  const { dict } = useTranslation();
   // ── Contract & basic info ──────────────────────────────────────────────────
   const [contractId, setContractId] = useState("");
   const [shiftName, setShiftName] = useState("");
@@ -527,26 +548,26 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
   const periodError = useMemo<string | null>(() => {
     if (!selectedContract) return null;
     if (isFullyScheduled) {
-      return "Hợp đồng đã hoàn thành phân công tất cả các ngày làm việc.";
+      return dict?.create_shift_modal?.contract_fully_scheduled || "Hợp đồng đã hoàn thành phân công tất cả các ngày làm việc.";
     }
     if (periodValue === "" || periodValue === undefined || periodValue === null) {
-      return "Vui lòng nhập chu kỳ tạo ca.";
+      return dict?.create_shift_modal?.err_enter_cycle || "Vui lòng nhập chu kỳ tạo ca.";
     }
     const val = Number(periodValue);
     if (isNaN(val) || val <= 0) {
-      return "Chu kỳ tạo ca phải lớn hơn 0.";
+      return dict?.create_shift_modal?.err_cycle_gt_0 || "Chu kỳ tạo ca phải lớn hơn 0.";
     }
     if (!Number.isInteger(val)) {
-      return "Chu kỳ tạo ca phải là số nguyên.";
+      return dict?.create_shift_modal?.err_cycle_integer || "Chu kỳ tạo ca phải là số nguyên.";
     }
     if (periodUnit === "week" && val > 52) {
-      return "Chu kỳ tối đa là 52 tuần.";
+      return dict?.create_shift_modal?.err_max_weeks || "Chu kỳ tối đa là 52 tuần.";
     }
     if (periodUnit === "month" && val > 12) {
-      return "Chu kỳ tối đa là 12 tháng.";
+      return dict?.create_shift_modal?.err_max_months || "Chu kỳ tối đa là 12 tháng.";
     }
     if (periodUnit === "year" && val > 1) {
-      return "Chu kỳ tối đa là 1 năm.";
+      return dict?.create_shift_modal?.err_max_years || "Chu kỳ tối đa là 1 năm.";
     }
 
     const today = new Date();
@@ -555,11 +576,11 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     const cEnd = new Date(`${selectedContract.end_date}T00:00:00`);
 
     if (today > cEnd) {
-      return `Hợp đồng đã kết thúc vào ngày ${formatDateVN(selectedContract.end_date)}. Không thể tạo ca trực.`;
+      return (dict?.create_shift_modal?.err_contract_ended || "Hợp đồng đã kết thúc vào ngày {0}. Không thể tạo ca trực.").replace("{0}", formatDateVN(selectedContract.end_date));
     }
 
     if (generationStartDate && generationStartDate > selectedContract.end_date) {
-      return `Tất cả ca trực cho đến ngày kết thúc hợp đồng (${formatDateVN(selectedContract.end_date)}) đã được tạo.`;
+      return (dict?.create_shift_modal?.err_all_shifts_created || "Tất cả ca trực cho đến ngày kết thúc hợp đồng ({0}) đã được tạo.").replace("{0}", formatDateVN(selectedContract.end_date));
     }
 
     const cStart = new Date(`${generationStartDate}T00:00:00`);
@@ -576,14 +597,16 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     periodEnd.setDate(periodEnd.getDate() - 1);
 
     if (periodEnd < cStart) {
-      return `Chu kỳ kết thúc vào ngày ${formatDateVN(formatLocalDate(periodEnd))}, trước ngày hợp đồng bắt đầu (${formatDateVN(selectedContract.start_date)}).`;
+      return (dict?.create_shift_modal?.err_cycle_before_contract || "Chu kỳ kết thúc vào ngày {0}, trước ngày hợp đồng bắt đầu ({1}).")
+        .replace("{0}", formatDateVN(formatLocalDate(periodEnd)))
+        .replace("{1}", formatDateVN(selectedContract.start_date));
     }
 
     if (generatedDates.length === 0) {
-      return "Không có ngày nào khớp với lịch trực trong chu kỳ này.";
+      return dict?.create_shift_modal?.err_no_matching_days || "Không có ngày nào khớp với lịch trực trong chu kỳ này.";
     }
     return null;
-  }, [selectedContract, generationStartDate, periodValue, periodUnit, generatedDates, isFullyScheduled]);
+  }, [selectedContract, generationStartDate, periodValue, periodUnit, generatedDates, isFullyScheduled, dict]);
 
   const readySlots = useMemo(
     () => slots.filter((s) => s.configStatus === "configured" && s.segments && s.segments.length > 0),
@@ -600,11 +623,36 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
   const guardEndResult =
     guardTotal > 0 ? Math.min(guardPage * GUARD_PAGE_SIZE, guardTotal) : 0;
 
+  const translateAvailabilityReason = useCallback((rawReason: string | undefined) => {
+    if (!rawReason) return dict?.create_shift_modal?.status_assignable || "Có thể phân công";
+    if (rawReason === "Có thể phân công") return dict?.create_shift_modal?.status_assignable || "Có thể phân công";
+    if (rawReason === "Trùng với ca trực khác" || rawReason === "Trùng lịch ca trực") return dict?.create_shift_modal?.status_db_conflict || "Trùng với ca trực khác";
+    if (rawReason === "Vượt quá 48 giờ làm việc trong tuần") return dict?.create_shift_modal?.status_exceeds_weekly || "Vượt quá 48 giờ làm việc trong tuần";
+
+    if (rawReason.includes("Trùng lịch ngày ") || rawReason.includes("Trùng ca trực ngày ") || rawReason.includes("Trùng lịch")) {
+      const match = rawReason.match(/\d{1,2}\/\d{1,2}\/\d{4}/);
+      const dateStr = match ? match[0] : rawReason.replace(/^.*ngày\s+/, "").trim();
+      return (dict?.create_shift_modal?.status_conflict_on_date || "Trùng lịch ngày {0}").replace("{0}", dateStr);
+    }
+
+    if (rawReason.includes("Vượt quá 8 giờ ngày ") || rawReason.includes("Vượt quá 8h ngày ")) {
+      const match = rawReason.match(/\d{1,2}\/\d{1,2}\/\d{4}/);
+      const dateStr = match ? match[0] : rawReason.replace(/^.*ngày\s+/, "").trim();
+      return (dict?.create_shift_modal?.status_exceeds_daily_on_date || "Vượt quá 8 giờ ngày {0}").replace("{0}", dateStr);
+    }
+
+    if (rawReason.includes("Vượt quá 8 giờ") || rawReason.includes("Vượt quá 8h")) {
+      return dict?.create_shift_modal?.status_exceeds_daily || "Vượt quá 8 giờ làm việc trong ngày";
+    }
+
+    return rawReason;
+  }, [dict]);
+
   const getGuardStatusAndInfo = useCallback((guardId: string, profileStatus: string | null) => {
     if (profileStatus !== "active") {
       return {
         status: "unavailable" as GuardShiftStatus,
-        reason: "Không hoạt động",
+        reason: dict?.create_shift_modal?.status_inactive || "Không hoạt động",
         dbHours: 0,
         afterHours: 0,
         isDisabled: true,
@@ -638,23 +686,23 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     const isSelected = activeSegmentGuards.includes(guardId);
 
     let status: GuardShiftStatus = "available";
-    let reason = availData?.reason || "Có thể phân công";
+    let reason = translateAvailabilityReason(availData?.reason);
     let isDisabled = false;
 
     if (isSelected) {
       status = "selected";
-      reason = "Đã chọn";
+      reason = dict?.create_shift_modal?.status_selected || "Đã chọn";
     } else if (hasDbConflict) {
       status = "conflict";
-      reason = availData?.reason || "Trùng với ca trực khác";
+      reason = translateAvailabilityReason(availData?.reason) || (dict?.create_shift_modal?.status_db_conflict || "Trùng với ca trực khác");
       isDisabled = true;
     } else if (exceedsDaily) {
       status = "conflict";
-      reason = `Vượt quá 8 giờ làm việc trong ngày (${(totalAfterActiveSeg / 60).toFixed(1)}h)`;
+      reason = `${dict?.create_shift_modal?.status_exceeds_daily || "Vượt quá 8 giờ làm việc trong ngày"} (${(totalAfterActiveSeg / 60).toFixed(1)}h)`;
       isDisabled = true;
     } else if (exceedsWeekly) {
       status = "conflict";
-      reason = availData?.reason || "Vượt quá 48 giờ làm việc trong tuần";
+      reason = translateAvailabilityReason(availData?.reason) || (dict?.create_shift_modal?.status_exceeds_weekly || "Vượt quá 48 giờ làm việc trong tuần");
       isDisabled = true;
     }
 
@@ -1415,7 +1463,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
             }
             warnings.push(
               `${formatDateVN(date)} (${slot.bookingStart}–${slot.bookingEnd}): ` +
-              (errMsg || "Tạo thất bại"),
+              (errMsg || (dict?.create_shift_modal?.err_create_failed || "Tạo thất bại")),
             );
             skipped += slot.segments?.length || 1;
           }
@@ -1427,11 +1475,10 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       setGenerationWarnings(warnings);
 
       if (created > 0) {
-        setSubmitSuccess(
-          `Đã tạo thêm ${created} ca trực mới.` +
-          (skipped > 0 ? ` (Đã bỏ qua ${skipped} ca trùng lặp)` : "") +
-          (warnings.length > 0 ? `. Có ${warnings.length} cảnh báo.` : ""),
-        );
+        const msgCreated = (dict?.create_shift_modal?.msg_created_success || "Đã tạo thêm {0} ca trực mới.").replace("{0}", String(created));
+        const msgSkipped = skipped > 0 ? (dict?.create_shift_modal?.msg_skipped_duplicate || " (Đã bỏ qua {0} ca trùng lặp)").replace("{0}", String(skipped)) : "";
+        const msgWarns = warnings.length > 0 ? (dict?.create_shift_modal?.msg_warnings_count || ". Có {0} cảnh báo.").replace("{0}", String(warnings.length)) : "";
+        setSubmitSuccess(`${msgCreated}${msgSkipped}${msgWarns}`);
         await onCreated?.();
         // Re-fetch latest shift date, scheduled dates and contracts
         try {
@@ -1444,14 +1491,14 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
           await fetchContracts();
         } catch { }
       } else if (skipped > 0) {
-        setSubmitSuccess(`Tất cả ca trực (${skipped} ca) trong chu kỳ này đã được tạo trước đó.`);
+        setSubmitSuccess((dict?.create_shift_modal?.msg_all_already_created || "Tất cả ca trực ({0} ca) trong chu kỳ này đã được tạo trước đó.").replace("{0}", String(skipped)));
         await onCreated?.();
       } else {
-        setSubmitError("Không có ca trực nào được tạo thành công.");
+        setSubmitError(dict?.create_shift_modal?.err_none_created || "Không có ca trực nào được tạo thành công.");
       }
     } catch (err) {
       setSubmitError(
-        err instanceof Error ? err.message : "Tạo ca trực thất bại",
+        err instanceof Error ? err.message : (dict?.create_shift_modal?.err_create_shift_failed || "Tạo ca trực thất bại"),
       );
     } finally {
       setIsSubmitting(false);
@@ -1500,9 +1547,9 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               <CalendarDays size={22} />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-slate-900">Tạo ca trực & Phân công bảo vệ</h2>
+              <h2 className="text-xl font-bold text-slate-900">{dict.create_shift_modal?.title || "Tạo ca trực & Phân công bảo vệ"}</h2>
               <p className="mt-1 text-sm text-slate-500">
-                Hệ thống tự động cấu hình ca từ lịch booking và tạo theo chu kỳ
+                {dict.create_shift_modal?.step_1 || "Hệ thống tự động cấu hình ca từ lịch booking và tạo theo chu kỳ"}
               </p>
             </div>
           </div>
@@ -1523,21 +1570,21 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
           <div className="min-h-0 overflow-y-auto border-b md:border-b-0 md:border-r border-slate-200 p-6">
             <div className="mb-5 flex items-center gap-2 text-sm font-bold uppercase text-blue-700">
               <FileText size={17} />
-              <span>Thông tin ca trực</span>
+              <span>{dict.coor_schedules?.shift_name || "Thông tin ca trực"}</span>
             </div>
 
             <div className="space-y-5 pb-4">
 
               {/* Contract selector */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">Hợp đồng</label>
+                <label className="mb-2 block text-sm font-medium text-slate-700">{dict.create_shift_modal?.contract_label || "Hợp đồng"}</label>
                 <select
                   value={contractId}
                   onChange={(e) => handleSelectContract(e.target.value)}
                   className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                 >
                   <option value="">
-                    {isLoadingContracts ? "Đang tải hợp đồng..." : "Chọn hợp đồng"}
+                    {isLoadingContracts ? (dict.create_shift_modal?.loading_contracts || "Đang tải hợp đồng...") : (dict.create_shift_modal?.select_contract || "Chọn hợp đồng")}
                   </option>
                   {contracts.map((c) => (
                     <option
@@ -1545,7 +1592,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                       value={c.contract_id}
                       style={{ color: getContractStatusColor(c.status) }}
                     >
-                      {c.code} — {c.address} ({c.scheduled_days_count ?? 0}/{c.total_working_days_count ?? 0} ngày trực) [{getContractStatusLabel(c.status)}]
+                      {c.code} — {c.address} ({c.scheduled_days_count ?? 0}/{c.total_working_days_count ?? 0} ngày trực) [{getContractStatusLabel(c.status, dict)}]
                     </option>
                   ))}
                 </select>
@@ -1557,39 +1604,39 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               {/* Contract info card */}
               {selectedContract && (
                 <div className="rounded-md border border-blue-100 bg-blue-50 p-4">
-                  <p className="mb-3 text-sm font-semibold text-blue-800">Thông tin hợp đồng</p>
+                  <p className="mb-3 text-sm font-semibold text-blue-800">{dict.create_shift_modal?.contract_info_header || "Thông tin hợp đồng"}</p>
                   <div className="space-y-2 text-sm text-slate-700">
                     <div className="grid grid-cols-[130px_1fr] gap-4">
-                      <span className="whitespace-nowrap text-slate-500">Trạng thái:</span>
+                      <span className="whitespace-nowrap text-slate-500">{dict.create_shift_modal?.status_colon || "Trạng thái:"}</span>
                       <span
                         className="text-right font-semibold leading-5"
                         style={{ color: getContractStatusColor(selectedContract.status) }}
                       >
-                        {getContractStatusLabel(selectedContract.status)}
+                        {getContractStatusLabel(selectedContract.status, dict)}
                       </span>
                     </div>
-                    <InfoRow label="Khách hàng" value={selectedContract.customer_name} />
-                    <InfoRow label="Công ty" value={selectedContract.company_name} />
-                    <InfoRow label="Dịch vụ" value={selectedContract.service_name} />
-                    <InfoRow label="Địa điểm" value={selectedContract.address} />
+                    <InfoRow label={dict.company_verifications?.table_customer || "Khách hàng"} value={selectedContract.customer_name} />
+                    <InfoRow label={dict.layout_coordinator?.role || "Công ty"} value={selectedContract.company_name} />
+                    <InfoRow label={dict.company_verifications?.table_service || "Dịch vụ"} value={selectedContract.service_name} />
+                    <InfoRow label={dict.company_verifications?.table_address || "Địa điểm"} value={selectedContract.address} />
                     <InfoRow
-                      label="Mô tả yêu cầu"
-                      value={selectedContract.description || "Không có mô tả"}
+                      label={dict.create_shift_modal?.contract_description_label || "Mô tả yêu cầu"}
+                      value={selectedContract.description || (dict.create_shift_modal?.no_description || "Không có mô tả")}
                     />
                     <InfoRow
-                      label="Số bảo vệ / ca"
-                      value={`${selectedContract.guards_per_slot} bảo vệ`}
+                      label={dict.coor_schedules?.guard || "Số bảo vệ / ca"}
+                      value={`${selectedContract.guards_per_slot} ${dict.create_shift_modal?.guards_count_unit || "bảo vệ"}`}
                     />
                     <InfoRow
-                      label="Thời hạn HĐ"
+                      label={dict.create_shift_modal?.contract_period_label || "Thời hạn HĐ"}
                       value={`${formatDateVN(selectedContract.start_date)} — ${formatDateVN(selectedContract.end_date)}`}
                     />
                     <InfoRow
-                      label="Ngày trực / tuần"
+                      label={dict.create_shift_modal?.working_days_per_week || "Ngày trực / tuần"}
                       value={
                         selectedContract.day_per_week?.length
                           ? selectedContract.day_per_week.join(", ")
-                          : "Chưa cập nhật"
+                          : (dict.coor_guards?.unupdated || "Chưa cập nhật")
                       }
                     />
 
@@ -1597,12 +1644,12 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                     {!isLoadingScheduledDates && totalContractWorkingDays > 0 && (
                       <div className="mt-3 border-t border-blue-100 pt-3">
                         <div className="mb-2 flex items-center justify-between text-xs font-semibold text-blue-800">
-                          <span>Tiến độ phân công:</span>
+                          <span>{dict.create_shift_modal?.scheduling_progress || "Tiến độ phân công:"}</span>
                           <span className={`px-2 py-0.5 rounded font-bold text-xs shadow-sm ${isFullyScheduled
                             ? "bg-emerald-100 text-emerald-800 border border-emerald-200"
                             : "bg-blue-100 text-blue-800 border border-blue-200"
                             }`}>
-                            {scheduledCount} / {totalContractWorkingDays} ngày ({((scheduledCount / totalContractWorkingDays) * 100).toFixed(1)}%)
+                            {scheduledCount} / {totalContractWorkingDays} {dict.create_shift_modal?.days_unit || "ngày"} ({((scheduledCount / totalContractWorkingDays) * 100).toFixed(1)}%)
                           </span>
                         </div>
                         <div className="h-2 w-full rounded-full bg-slate-200 overflow-hidden">
@@ -1617,25 +1664,26 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
                     {isLoadingLatestDate || isLoadingScheduledDates ? (
                       <div className="pt-2 text-xs text-blue-600 animate-pulse font-medium">
-                        Đang kiểm tra lịch ca trực đã tồn tại...
+                        {dict.create_shift_modal?.checking_existing_shifts || "Đang kiểm tra lịch ca trực đã tồn tại..."}
                       </div>
                     ) : (
                       <div className="mt-2 rounded bg-white/60 p-2.5 text-xs text-slate-700 border border-blue-200">
                         {isFullyScheduled ? (
                           <p className="font-semibold text-emerald-700">
-                            ✓ Hợp đồng đã hoàn thành phân công tất cả các ngày làm việc ({scheduledCount}/{totalContractWorkingDays} ngày).
+                            {(dict.create_shift_modal?.contract_fully_scheduled_note || "✓ Hợp đồng đã hoàn thành phân công tất cả các ngày làm việc ({0}/{1} ngày).")
+                              .replace("{0}", String(scheduledCount))
+                              .replace("{1}", String(totalContractWorkingDays))}
                           </p>
                         ) : latestShiftDate ? (
                           <p>
-                            ✓ Hợp đồng đã có ca trực đến ngày{" "}
-                            <span className="font-semibold text-blue-800">{formatDateVN(latestShiftDate)}</span>.{" "}
-                            Lần tạo tiếp theo bắt đầu từ ngày{" "}
-                            <span className="font-semibold text-emerald-700">{formatDateVN(generationStartDate)}</span>.
+                            {(dict.create_shift_modal?.next_shift_starts_from || "✓ Hợp đồng đã có ca trực đến ngày {0}. Lần tạo tiếp theo bắt đầu từ ngày {1}.")
+                              .replace("{0}", formatDateVN(latestShiftDate))
+                              .replace("{1}", formatDateVN(generationStartDate))}
                           </p>
                         ) : (
                           <p>
-                            Lần tạo đầu tiên bắt đầu từ ngày hiệu lực hợp đồng{" "}
-                            <span className="font-semibold text-emerald-700">{formatDateVN(selectedContract.start_date)}</span>.
+                            {(dict.create_shift_modal?.first_creation_starts_from || "Lần tạo đầu tiên bắt đầu từ ngày hiệu lực hợp đồng {0}.")
+                              .replace("{0}", formatDateVN(selectedContract.start_date))}
                           </p>
                         )}
                       </div>
@@ -1646,13 +1694,13 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
               {/* Location */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">Vị trí trực cụ thể</label>
+                <label className="mb-2 block text-sm font-medium text-slate-700">{dict.create_shift_modal?.shift_location_label || "Vị trí trực cụ thể"}</label>
                 <div className="relative">
                   <MapPin size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     value={location}
                     onChange={(e) => { setLocation(e.target.value); setSubmitError(""); }}
-                    placeholder="Ví dụ: Sảnh chính tầng 1"
+                    placeholder={dict.create_shift_modal?.shift_location_placeholder || "Ví dụ: Sảnh chính tầng 1"}
                     className="w-full rounded-md border border-slate-300 px-9 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
@@ -1660,13 +1708,13 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
               {/* Shift name */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">Tên ca trực</label>
+                <label className="mb-2 block text-sm font-medium text-slate-700">{dict.create_shift_modal?.shift_name_label || "Tên ca trực"}</label>
                 <div className="relative">
                   <SquarePen size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     value={shiftName}
                     onChange={(e) => { setShiftName(e.target.value); setSubmitError(""); }}
-                    placeholder="Ví dụ: Ca sáng cửa hàng hoa"
+                    placeholder={dict.create_shift_modal?.shift_name_placeholder || "Ví dụ: Ca sáng cửa hàng hoa"}
                     className="w-full rounded-md border border-slate-300 px-9 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
@@ -1677,18 +1725,18 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 <div>
                   <div className="mb-3 flex items-center justify-between">
                     <label className="text-sm font-medium text-slate-700">
-                      Khung giờ booking
+                      {dict.create_shift_modal?.booking_time_slots || "Khung giờ booking"}
                     </label>
                     {slots.length > 0 && (
                       <div className="flex items-center gap-2 text-xs text-slate-500">
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 font-medium text-emerald-700">
                           <CheckCircle2 size={10} />
-                          {configuredSlots.length} hợp lệ
+                          {configuredSlots.length} {dict.create_shift_modal?.valid || "hợp lệ"}
                         </span>
                         {pendingSlots.length > 0 && (
                           <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2 py-0.5 font-medium text-amber-700">
                             <AlertTriangle size={10} />
-                            {pendingSlots.length} cần điều chỉnh
+                            {pendingSlots.length} {dict.create_shift_modal?.needs_adjustment || "cần điều chỉnh"}
                           </span>
                         )}
                       </div>
@@ -1700,8 +1748,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                       <Clock size={24} className="mx-auto mb-2 text-slate-300" />
                       <p className="text-sm text-slate-400">
                         {selectedContract.time_slots?.length === 0
-                          ? "Hợp đồng chưa có khung giờ booking."
-                          : "Đang tải khung giờ..."}
+                          ? (dict.create_shift_modal?.no_booking_time_slots || "Hợp đồng chưa có khung giờ booking.")
+                          : (dict.create_shift_modal?.loading_time_slots || "Đang tải khung giờ...")}
                       </p>
                     </div>
                   ) : (
@@ -1746,10 +1794,10 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                               }
                               title={
                                 needsEdit
-                                  ? "Khung giờ > 8h — click để chỉnh sửa"
+                                  ? (dict.create_shift_modal?.chip_exceed_8h_title || "Khung giờ > 8h — click để chỉnh sửa")
                                   : isInvalid
-                                    ? "Không hợp lệ — click để chỉnh sửa"
-                                    : "Hợp lệ — click để xem"
+                                    ? (dict.create_shift_modal?.chip_invalid_title || "Không hợp lệ — click để chỉnh sửa")
+                                    : (dict.create_shift_modal?.chip_valid_title || "Hợp lệ — click để xem")
                               }
                               className={`flex items-center gap-1.5 rounded-full border-2 px-3.5 py-1.5 text-sm font-semibold shadow-sm transition-all ${chipColor} ${isActive
                                 ? "ring-2 ring-blue-400 ring-offset-2"
@@ -1793,7 +1841,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             {/* Panel header */}
                             <div className="flex items-center justify-between">
                               <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-                                Ca {activeSlotIndex + 1} · Booking:{" "}
+                                {dict.create_shift_modal?.shift_slot || "Ca"} {activeSlotIndex + 1} · Booking:{" "}
                                 <span className="font-bold text-slate-700">
                                   {slot.bookingTimeSlot}
                                 </span>
@@ -1815,8 +1863,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                   <AlertTriangle size={10} />
                                 )}
                                 {slot.configStatus === "configured" && errs.length === 0
-                                  ? "Hợp lệ"
-                                  : "Cần điều chỉnh"}
+                                  ? (dict.create_shift_modal?.valid || "Hợp lệ")
+                                  : (dict.create_shift_modal?.needs_adjustment || "Cần điều chỉnh")}
                               </span>
                             </div>
 
@@ -1825,8 +1873,12 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                               <div className="rounded-md bg-amber-50 border border-amber-200 p-3 text-xs text-amber-800 flex items-start gap-2">
                                 <AlertTriangle size={16} className="shrink-0 mt-0.5" />
                                 <div>
-                                  <p className="font-bold">Cảnh báo: Ca trực gốc vượt quá 8 tiếng ({Math.round(bookingDurMin / 60)} tiếng).</p>
-                                  <p className="mt-1">Vui lòng điều chỉnh thời gian và bấm nút <strong className="font-bold">+</strong> để tách thành các ca nhỏ ≤ 8 tiếng.</p>
+                                  <p className="font-bold">
+                                    {(dict.create_shift_modal?.exceed_8h_warn_title || "Cảnh báo: Ca trực gốc vượt quá 8 tiếng ({0} tiếng).").replace("{0}", String(Math.round(bookingDurMin / 60)))}
+                                  </p>
+                                  <p className="mt-1">
+                                    {dict.create_shift_modal?.exceed_8h_warn_desc || "Vui lòng điều chỉnh thời gian và bấm nút + để tách thành các ca nhỏ ≤ 8 tiếng."}
+                                  </p>
                                 </div>
                               </div>
                             )}
@@ -1837,7 +1889,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                 return (
                                   <div key={seg.id} className="flex items-center gap-2 p-2.5 rounded-lg bg-slate-50 border border-slate-200">
                                     <span className="text-xs font-semibold text-slate-500 w-16">
-                                      Ca nhỏ {segIdx + 1}
+                                      {dict.create_shift_modal?.sub_shift || "Ca nhỏ"} {segIdx + 1}
                                     </span>
 
                                     {/* Start time input */}
@@ -1882,7 +1934,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                         type="button"
                                         onClick={() => handleRemoveSegment(activeSlotIndex, segIdx)}
                                         className="p-1 rounded text-red-500 hover:bg-red-50"
-                                        title="Xóa ca nhỏ này"
+                                        title={dict.create_shift_modal?.delete_sub_shift_title || "Xóa ca nhỏ này"}
                                       >
                                         <X size={15} />
                                       </button>
@@ -1895,7 +1947,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             {/* Add segment button and status */}
                             <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                               <div className="text-xs text-slate-500">
-                                Tổng thời gian đã chia:{" "}
+                                {dict.create_shift_modal?.total_split_time || "Tổng thời gian đã chia:"}{" "}
                                 <span className="font-semibold text-slate-700">
                                   {Math.round(validation.splitDurationMinutes / 6) / 10}h
                                 </span>{" "}
@@ -1904,16 +1956,16 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
                               {!canAddMore && validation.splitDurationMinutes >= validation.originalDurationMinutes ? (
                                 <span className="text-xs font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
-                                  Đã chia đủ thời gian
+                                  {dict.create_shift_modal?.split_time_complete || "Đã chia đủ thời gian"}
                                 </span>
                               ) : !canAddMore ? (
                                 <button
                                   type="button"
                                   disabled
-                                  title="Không thể thêm ca mới vì đã đủ tổng thời gian hoặc ca trước chưa hợp lệ"
+                                  title={dict.create_shift_modal?.cannot_add_sub_shift_title || "Không thể thêm ca mới vì đã đủ tổng thời gian hoặc ca trước chưa hợp lệ"}
                                   className="flex items-center gap-1 rounded bg-slate-100 text-slate-400 px-2.5 py-1 text-xs font-semibold cursor-not-allowed border border-slate-200"
                                 >
-                                  + Thêm ca tách
+                                  {dict.create_shift_modal?.add_split_shift || "+ Thêm ca tách"}
                                 </button>
                               ) : (
                                 <button
@@ -1921,7 +1973,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                   onClick={() => handleAddSegment(activeSlotIndex)}
                                   className="flex items-center gap-1 rounded bg-blue-50 text-blue-700 px-2.5 py-1 text-xs font-semibold hover:bg-blue-100 border border-blue-200 transition"
                                 >
-                                  <span className="font-bold text-sm">+</span> Thêm ca tách
+                                  {dict.create_shift_modal?.add_split_shift || "+ Thêm ca tách"}
                                 </button>
                               )}
                             </div>
@@ -1942,7 +1994,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             {slot.segments && slot.segments.some(seg => seg.startTime && seg.endTime && seg.endTime <= seg.startTime) && (
                               <p className="text-xs text-amber-600 flex items-center gap-1.5">
                                 <Clock size={12} />
-                                Có ca nhỏ kết thúc vào ngày hôm sau.
+                                {dict.create_shift_modal?.overnight_shift_note || "Có ca nhỏ kết thúc vào ngày hôm sau."}
                               </p>
                             )}
                           </div>
@@ -1957,7 +2009,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               {selectedContract && (
                 <div>
                   <label className="mb-3 block text-sm font-medium text-slate-700">
-                    Chu kỳ tạo ca
+                    {dict.create_shift_modal?.cycle_label || "Chu kỳ tạo ca"}
                   </label>
                   <div className="flex gap-2">
                     <input
@@ -1979,7 +2031,11 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                     />
                     <div className="flex flex-1 overflow-hidden rounded-md border border-slate-300">
                       {(["week", "month", "year"] as PeriodUnit[]).map((unit) => {
-                        const labels = { week: "Tuần", month: "Tháng", year: "Năm" };
+                        const labels = {
+                          week: dict.create_shift_modal?.unit_week || "Tuần",
+                          month: dict.create_shift_modal?.unit_month || "Tháng",
+                          year: dict.create_shift_modal?.unit_year || "Năm",
+                        };
                         const isSelected = periodUnit === unit;
                         return (
                           <button
@@ -2010,10 +2066,13 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                   ) : generatedDates.length > 0 && readySlots.length > 0 ? (
                     <div className="mt-2 flex items-center gap-2">
                       <span className="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-700">
-                        ✓ {totalShiftsToCreate} ca trực · {generatedDates.length} ngày × {totalSegmentsCount} ca
+                        {(dict.create_shift_modal?.shifts_preview_text || "✓ {0} ca trực · {1} ngày × {2} ca")
+                          .replace("{0}", String(totalShiftsToCreate))
+                          .replace("{1}", String(generatedDates.length))
+                          .replace("{2}", String(totalSegmentsCount))}
                       </span>
                       <span className="text-xs text-slate-400">
-                        trong {periodValue} {periodUnit === "week" ? "tuần" : periodUnit === "month" ? "tháng" : "năm"}
+                        {dict.create_shift_modal?.shifts_preview_in || "trong"} {periodValue} {periodUnit === "week" ? (dict.create_shift_modal?.unit_week?.toLowerCase() || "tuần") : periodUnit === "month" ? (dict.create_shift_modal?.unit_month?.toLowerCase() || "tháng") : (dict.create_shift_modal?.unit_year?.toLowerCase() || "năm")}
                       </span>
                     </div>
                   ) : selectedContract ? (
@@ -2040,16 +2099,16 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               {selectedContract && (
                 <div>
                   <label className="mb-2 block text-sm font-medium text-slate-700">
-                    Số lượng bảo vệ cần / ca
+                    {dict.create_shift_modal?.guards_required_per_slot || "Số lượng bảo vệ cần / ca"}
                   </label>
                   <input
                     type="text"
-                    value={`${requiredGuards} bảo vệ`}
+                    value={`${requiredGuards} ${dict.create_shift_modal?.guards_count_unit || "bảo vệ"}`}
                     readOnly
                     className="w-full cursor-not-allowed rounded-md border border-slate-300 bg-slate-100 px-3 py-2.5 text-sm text-slate-600 outline-none"
                   />
                   <p className="mt-1.5 text-xs text-slate-500">
-                    Số lượng bảo vệ lấy từ hợp đồng, không thể chỉnh sửa.
+                    {dict.create_shift_modal?.guards_contract_fixed_note || "Số lượng bảo vệ lấy từ hợp đồng, không thể chỉnh sửa."}
                   </p>
                 </div>
               )}
@@ -2063,21 +2122,21 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               <div className="mb-4 flex items-center justify-between gap-4">
                 <div className="flex items-center gap-2 text-sm font-bold uppercase text-blue-700">
                   <ShieldCheck size={17} />
-                  <span>Phân công bảo vệ</span>
+                  <span>{dict.create_shift_modal?.assign_guards_header || "Phân công bảo vệ"}</span>
                 </div>
                 <div className="flex items-center gap-2">
                   {isCheckingConflicts && (
                     <span className="flex items-center gap-1 text-xs text-slate-400">
                       <Loader2 size={12} className="animate-spin" />
-                      Kiểm tra lịch...
+                      {dict.create_shift_modal?.checking_schedule || "Kiểm tra lịch..."}
                     </span>
                   )}
                   <span className="text-sm font-medium text-slate-600">
-                    Đã chọn:{" "}
+                    {dict.create_shift_modal?.selected_colon || "Đã chọn:"}{" "}
                     <span className="font-bold text-blue-700">
                       {activeSegmentGuards.length}/{requiredGuards}
                     </span>{" "}
-                    bảo vệ
+                    {dict.create_shift_modal?.guards_count_unit || "bảo vệ"}
                   </span>
                 </div>
               </div>
@@ -2085,16 +2144,16 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               {/* Free-time Filter Section */}
               <div className="mb-4 rounded-md border border-slate-200 bg-slate-50/50 p-3">
                 <label className="mb-2 block text-xs font-semibold text-slate-700">
-                  Lọc bảo vệ rảnh (Không trùng ca):
+                  {dict.create_shift_modal?.filter_free_time || "Lọc bảo vệ rảnh (Không trùng ca):"}
                 </label>
                 <div className="grid grid-cols-5 gap-1 rounded bg-slate-200/50 p-0.5">
                   {(["today", "day", "week", "month", "custom"] as const).map((mode) => {
                     const labels = {
-                      today: "Hôm nay",
-                      day: "Ngày",
-                      week: "Tuần",
-                      month: "Tháng",
-                      custom: "Tự chọn",
+                      today: dict.create_shift_modal?.filter_today || "Hôm nay",
+                      day: dict.create_shift_modal?.filter_day || "Ngày",
+                      week: dict.create_shift_modal?.filter_week || "Tuần",
+                      month: dict.create_shift_modal?.filter_month || "Tháng",
+                      custom: dict.create_shift_modal?.filter_custom || "Tự chọn",
                     };
                     const isSelected = freeTimeMode === mode;
                     return (
@@ -2119,7 +2178,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 {/* Specific Day Field */}
                 {freeTimeMode === "day" && (
                   <div className="mt-3 border-t border-slate-200/60 pt-3">
-                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">Chọn ngày cụ thể</label>
+                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.select_specific_day || "Chọn ngày cụ thể"}</label>
                     <input
                       type="date"
                       value={filterDate}
@@ -2135,7 +2194,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 {/* Specific Week Field */}
                 {freeTimeMode === "week" && (
                   <div className="mt-3 border-t border-slate-200/60 pt-3">
-                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">Chọn ngày bắt đầu tuần</label>
+                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.select_week_start || "Chọn ngày bắt đầu tuần"}</label>
                     <input
                       type="date"
                       value={filterWeekDate}
@@ -2151,7 +2210,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 {/* Specific Month Field */}
                 {freeTimeMode === "month" && (
                   <div className="mt-3 border-t border-slate-200/60 pt-3">
-                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">Chọn tháng cụ thể</label>
+                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.select_specific_month || "Chọn tháng cụ thể"}</label>
                     <input
                       type="month"
                       value={filterMonth}
@@ -2168,7 +2227,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 {freeTimeMode === "custom" && (
                   <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200/60 pt-3">
                     <div>
-                      <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">Bắt đầu</label>
+                      <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.label_start || "Bắt đầu"}</label>
                       <div className="flex gap-1">
                         <input
                           type="date"
@@ -2185,7 +2244,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                       </div>
                     </div>
                     <div>
-                      <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">Kết thúc</label>
+                      <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.label_end || "Kết thúc"}</label>
                       <div className="flex gap-1">
                         <input
                           type="date"
@@ -2220,10 +2279,10 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                   };
 
                   const labelMap: Record<string, string> = {
-                    all: "Tất cả",
-                    available: "Sẵn sàng",
-                    conflict: "Xung đột",
-                    unavailable: "Không khả dụng",
+                    all: dict.coor_guards?.filter_all || "Tất cả",
+                    available: dict.create_shift_modal?.guard_status_available || "Sẵn sàng",
+                    conflict: dict.create_shift_modal?.guard_status_conflict || "Xung đột",
+                    unavailable: dict.create_shift_modal?.guard_status_unavailable || "Không khả dụng",
                   };
 
                   return (
@@ -2250,7 +2309,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                   <input
                     value={searchKeyword}
                     onChange={(e) => setSearchKeyword(e.target.value)}
-                    placeholder="Tìm tên, SĐT, email..."
+                    placeholder={dict.coor_guards?.search_placeholder || "Tìm tên, SĐT, email..."}
                     className="w-full rounded-md border border-slate-300 px-10 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />
                 </div>
@@ -2261,8 +2320,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 <div className="mb-3 flex items-center gap-2 rounded-md border border-blue-100 bg-blue-50 px-3 py-2 text-xs text-blue-700">
                   <Clock size={12} />
                   <span>
-                    Đang kiểm tra khả năng cho ca{" "}
-                    <strong>{activeSlot.startTime}–{activeSlot.endTime}</strong>
+                    {(dict.create_shift_modal?.checking_availability_for_slot || "Đang kiểm tra khả năng cho ca {0}").replace("{0}", `${activeSlot.startTime}–${activeSlot.endTime}`)}
                   </span>
                 </div>
               )}
@@ -2277,10 +2335,10 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               ) : filteredGuards.length === 0 ? (
                 <p className="py-6 text-center text-sm text-slate-500">
                   {debouncedSearch
-                    ? "Không tìm thấy bảo vệ phù hợp."
+                    ? (dict.create_shift_modal?.no_matching_guards || "Không tìm thấy bảo vệ phù hợp.")
                     : filterMode !== "all"
-                      ? "Không có bảo vệ trong trạng thái này."
-                      : "Chưa có bảo vệ để phân công."}
+                      ? (dict.create_shift_modal?.no_guards_in_status || "Không có bảo vệ trong trạng thái này.")
+                      : (dict.create_shift_modal?.no_guards_to_assign || "Chưa có bảo vệ để phân công.")}
                 </p>
               ) : (
                 filteredGuards.map((guard) => {
@@ -2333,7 +2391,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-2">
                             <p className="font-semibold text-slate-900">
-                              {profile?.full_name ?? "Chưa cập nhật"}
+                              {profile?.full_name ?? (dict.coor_guards?.unupdated || "Chưa cập nhật")}
                             </p>
                             <span
                               className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${isSelected ? "bg-blue-100 text-blue-700" :
@@ -2349,8 +2407,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             {profile?.phone_number ?? "—"} · {profile?.email ?? "—"}
                           </p>
                           <div className="mt-2 flex gap-4 text-xs text-slate-500">
-                            <span>Đã có: <strong className="font-semibold">{formatMinutesFriendly(info.dbHours)}</strong></span>
-                            <span>Sau khi chọn: <strong className="font-semibold text-blue-700">{formatMinutesFriendly(info.afterHours)}</strong></span>
+                            <span>{dict.create_shift_modal?.status_selected || "Đã có"}: <strong className="font-semibold">{formatMinutesFriendly(info.dbHours, dict)}</strong></span>
+                            <span>{dict.create_shift_modal?.after_selection || "Sau khi chọn"}: <strong className="font-semibold text-blue-700">{formatMinutesFriendly(info.afterHours, dict)}</strong></span>
                           </div>
                         </div>
 
@@ -2376,8 +2434,11 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
             <div className="mt-4 flex shrink-0 flex-col gap-3 border-t border-slate-200 pt-4 text-sm text-slate-600 md:flex-row md:items-center md:justify-between">
               <p>
                 {isLoadingGuards
-                  ? "Đang tải danh sách bảo vệ..."
-                  : `Hiển thị ${guardStartResult}–${guardEndResult} trong số ${guardTotal} bảo vệ`}
+                  ? (dict.coor_guards?.loading || "Đang tải danh sách bảo vệ...")
+                  : (dict.create_shift_modal?.showing_guards_count || "Hiển thị {0}–{1} trong số {2} bảo vệ")
+                      .replace("{0}", String(guardStartResult))
+                      .replace("{1}", String(guardEndResult))
+                      .replace("{2}", String(guardTotal))}
               </p>
               <div className="flex items-center gap-1">
                 <button
@@ -2416,7 +2477,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               <div className="mb-1 flex items-center justify-between text-xs text-slate-600">
                 <span className="flex items-center gap-1.5">
                   <Loader2 size={12} className="animate-spin" />
-                  Đang tạo ca trực...
+                  {dict.create_shift_modal?.creating || "Đang tạo ca trực..."}
                 </span>
                 <span>{generationProgress.current}/{generationProgress.total}</span>
               </div>
@@ -2438,7 +2499,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
             <div className="rounded-md border border-amber-200 bg-amber-50 p-3">
               <div className="mb-1 flex items-center gap-2 text-sm font-semibold text-amber-700">
                 <AlertTriangle size={15} />
-                {generationWarnings.length} cảnh báo phân công
+                {(dict.create_shift_modal?.assignment_warnings_count || "{0} cảnh báo phân công").replace("{0}", String(generationWarnings.length))}
               </div>
               <ul className="ml-4 list-disc space-y-0.5 text-xs text-amber-700">
                 {generationWarnings.map((w, i) => (
@@ -2458,10 +2519,10 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
           <div className="flex items-center justify-between">
             {slots.length > 0 && (
               <p className="text-xs text-slate-500">
-                {configuredSlots.length}/{slots.length} ca hợp lệ
+                {configuredSlots.length}/{slots.length} {dict.create_shift_modal?.valid_slots_summary || "ca hợp lệ"}
                 {pendingSlots.length > 0 && (
                   <span className="ml-2 text-amber-600">
-                    · {pendingSlots.length} cần điều chỉnh
+                    · {pendingSlots.length} {dict.create_shift_modal?.needs_adjustment || "cần điều chỉnh"}
                   </span>
                 )}
               </p>
@@ -2473,7 +2534,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 disabled={isSubmitting}
                 className="cursor-pointer rounded-md border border-slate-300 bg-white px-5 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-100 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                Hủy bỏ
+                {dict.create_shift_modal?.cancel || "Hủy bỏ"}
               </button>
 
               <button
@@ -2485,10 +2546,10 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     <Loader2 size={15} className="animate-spin" />
-                    Đang tạo {totalShiftsToCreate} ca...
+                    {dict.create_shift_modal?.creating || "Đang tạo..."}
                   </span>
                 ) : (
-                  `Lưu & Tạo ca`
+                  dict.create_shift_modal?.create_shift_submit || "Lưu & Tạo ca"
                 )}
               </button>
             </div>

@@ -139,51 +139,51 @@ export default function CompanyLayout({
     },
     ...(isActive
       ? [
-          {
-            name: dict.layout_company.requests,
-            href: "/requests",
-            icon: Calendar,
-            active:
-              pathname === "/requests" || pathname.startsWith("/requests/"),
-          },
-          {
-            name: dict.layout_company.verifications,
-            href: "/verifications",
-            icon: ClipboardCheck,
-            active:
-              pathname === "/verifications" ||
-              pathname.startsWith("/verifications/"),
-          },
-          {
-            name: dict.layout_company.contracts,
-            href: "/contracts",
-            icon: FileText,
-            active:
-              pathname === "/contracts" || pathname.startsWith("/contracts/"),
-          },
-          {
-            name: dict.layout_company.coordinators,
-            href: "/coordinators",
-            icon: Users,
-            active:
-              pathname === "/coordinators" ||
-              pathname.startsWith("/coordinators/"),
-          },
-          {
-            name: dict.layout_company.chat,
-            href: "/chat",
-            icon: MessageSquare,
-            active: pathname === "/chat" || pathname.startsWith("/chat/"),
-          },
-          {
-            name: dict.layout_company.reviews,
-            href: "/list-reviews",
-            icon: Star,
-            active:
-              pathname === "/list-reviews" ||
-              pathname.startsWith("/list-reviews/"),
-          },
-        ]
+        {
+          name: dict.layout_company.requests,
+          href: "/requests",
+          icon: Calendar,
+          active:
+            pathname === "/requests" || pathname.startsWith("/requests/"),
+        },
+        {
+          name: dict.layout_company.verifications,
+          href: "/verifications",
+          icon: ClipboardCheck,
+          active:
+            pathname === "/verifications" ||
+            pathname.startsWith("/verifications/"),
+        },
+        {
+          name: dict.layout_company.contracts,
+          href: "/contracts",
+          icon: FileText,
+          active:
+            pathname === "/contracts" || pathname.startsWith("/contracts/"),
+        },
+        {
+          name: dict.layout_company.coordinators,
+          href: "/coordinators",
+          icon: Users,
+          active:
+            pathname === "/coordinators" ||
+            pathname.startsWith("/coordinators/"),
+        },
+        {
+          name: dict.layout_company.chat,
+          href: "/chat",
+          icon: MessageSquare,
+          active: pathname === "/chat" || pathname.startsWith("/chat/"),
+        },
+        {
+          name: dict.layout_company.reviews,
+          href: "/list-reviews",
+          icon: Star,
+          active:
+            pathname === "/list-reviews" ||
+            pathname.startsWith("/list-reviews/"),
+        },
+      ]
       : []),
     {
       name: dict.layout_company.billing,
@@ -266,19 +266,17 @@ export default function CompanyLayout({
                   href={link.href}
                   onClick={() => setMobileSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2 rounded-lg font-body text-sm font-semibold transition-all duration-150 group
-                  ${
-                    link.active
+                  ${link.active
                       ? "bg-secondary-container text-on-secondary-container"
                       : "text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface"
-                  }`}
+                    }`}
                 >
                   <Icon
                     className={`w-5 h-5 transition-colors
-                    ${
-                      link.active
+                    ${link.active
                         ? "text-on-secondary-container"
                         : "text-on-surface-variant group-hover:text-primary"
-                    }`}
+                      }`}
                   />
                   <span>{link.name}</span>
                 </Link>
@@ -320,22 +318,14 @@ export default function CompanyLayout({
             <div className="flex items-center gap-4 relative">
               {isActive && (
                 <Link
-                  href="/schedules"
+                  href="/guard-performance"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary text-on-secondary hover:bg-secondary/90 transition-colors mr-2 animate-fade-in"
                 >
                   <ArrowRightLeft className="w-3.5 h-3.5" />
                   {dict.layout_company.switch_to_coordinator || "Chuyển sang điều phối"}
                 </Link>
               )}
-              {/* Search Box */}
-              <div className="hidden sm:flex items-center bg-surface-container-low rounded-full px-3 py-1.5 border border-outline-variant focus-within:border-secondary transition-colors">
-                <Search className="w-4 h-4 text-on-surface-variant mr-2" />
-                <input
-                  type="text"
-                  placeholder={dict.common?.search || "Search..."}
-                  className="bg-transparent border-none outline-none text-sm text-on-surface w-32 focus:w-48 transition-all duration-300 placeholder-on-surface-variant"
-                />
-              </div>
+
 
               {/* Notification */}
               <button className="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low relative">

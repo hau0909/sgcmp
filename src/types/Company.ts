@@ -13,5 +13,7 @@ export interface Company {
   description: string | null;
   rating_average: number | null;
   status: CompanyStatus;
+  allowed_late_minutes?: number | null;
+  allowed_absent_minutes?: number | null;
   created_at: string;
 }

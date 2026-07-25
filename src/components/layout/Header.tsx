@@ -266,6 +266,16 @@ export default function Header() {
                       </Link>
                     )}
 
+                    {profile?.role === "customer" && (
+                      <Link
+                        href="/my-registration"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                      >
+                        {dict.common.myRegistration}
+                      </Link>
+                    )}
+
                     <Link
                       href="/my-contracts"
                       onClick={closeMenus}
@@ -403,6 +413,16 @@ export default function Header() {
                   onClick={closeMenus}
                 >
                   {dict.common.myRequests}
+                </Link>
+              )}
+
+              {profile?.role === "customer" && (
+                <Link
+                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                  href="/my-registration"
+                  onClick={closeMenus}
+                >
+                  {dict.common.myRegistration}
                 </Link>
               )}
 

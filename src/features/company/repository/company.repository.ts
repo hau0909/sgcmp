@@ -22,6 +22,8 @@ export interface DbCompany {
   description?: string;
   rating_average: number | null;
   status: string;
+  allowed_late_minutes?: number | null;
+  allowed_absent_minutes?: number | null;
   created_at: string;
   company_imgs?: {
     image_url: string;
@@ -50,6 +52,8 @@ export const getAllActiveCompanies = async (): Promise<DbCompany[]> => {
       description,
       rating_average,
       status,
+      allowed_late_minutes,
+      allowed_absent_minutes,
       created_at,
       company_imgs (
         image_url,
@@ -97,6 +101,8 @@ export interface DbCompanyDetail {
   description?: string;
   rating_average: number | null;
   status: string;
+  allowed_late_minutes?: number | null;
+  allowed_absent_minutes?: number | null;
   created_at: string;
   email: string;
   phone: string;
@@ -136,6 +142,8 @@ export const getCompanyByIdWithDetails = async (
       description,
       rating_average,
       status,
+      allowed_late_minutes,
+      allowed_absent_minutes,
       created_at,
       email,
       phone,
@@ -194,15 +202,24 @@ export const updateCompanyprofile = async ({
 }) => {
   const supabase = await createClient();
 
+  const updatePayload: Record<string, any> = {
+    company_name: input.company_name,
+    description: input.description,
+    email: input.email,
+    phone: input.phone,
+    address: input.address,
+  };
+
+  if (input.allowed_late_minutes !== undefined) {
+    updatePayload.allowed_late_minutes = input.allowed_late_minutes;
+  }
+  if (input.allowed_absent_minutes !== undefined) {
+    updatePayload.allowed_absent_minutes = input.allowed_absent_minutes;
+  }
+
   const { data, error } = await supabase
     .from("companies")
-    .update({
-      company_name: input.company_name,
-      description: input.description,
-      email: input.email,
-      phone: input.phone,
-      address: input.address,
-    })
+    .update(updatePayload)
     .eq("company_id", company_id)
     .select(
       `
@@ -212,7 +229,9 @@ export const updateCompanyprofile = async ({
       email,
       phone,
       address,
-      business_license_no
+      business_license_no,
+      allowed_late_minutes,
+      allowed_absent_minutes
     `,
     )
     .single();

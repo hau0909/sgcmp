@@ -6,6 +6,8 @@ import {
   getGuardDetail,
   getGuardsByContract,
   updateGuardDetail,
+  getGuardPerformanceSummary,
+  getGuardPerformanceList,
 } from "../repository/guard.repository";
 import { getCurrentActivePlanService } from "@/features/subscription/service/subscription.service";
 import type {
@@ -15,6 +17,8 @@ import type {
   GuardDetailDatabase,
   GuardListPaginatedData,
   GetAllGuardsServiceParams,
+  GetGuardPerformanceSummaryParams,
+  GetGuardPerformanceListParams,
 } from "../type";
 import type { Guard } from "@/types/Guard";
 import {
@@ -262,4 +266,16 @@ export const updateGuardDetailService = async (
   if (!params.identity_id.trim()) throw new Error("Số CCCD/CMND không được để trống");
 
   return updateGuardDetail(guard_id, company_id, user_id, params);
+};
+
+export const getGuardPerformanceSummaryService = async (
+  params: GetGuardPerformanceSummaryParams
+) => {
+  return getGuardPerformanceSummary(params);
+};
+
+export const getGuardPerformanceListService = async (
+  params: GetGuardPerformanceListParams
+) => {
+  return getGuardPerformanceList(params);
 };
