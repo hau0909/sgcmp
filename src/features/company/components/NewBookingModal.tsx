@@ -22,6 +22,9 @@ import { requestCreateBooking } from "@/features/booking/api/booking.api";
 import { requestGetCities, requestGetWards } from "@/features/address/api/address.api";
 import { City, Ward } from "@/features/address/types";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { useAuthStore } from "@/store/auth.store";
+import { useRouter } from "next/navigation";
+
 
 const DAYS_OF_WEEK = [
   { value: "Monday", label: "T2" },
@@ -49,6 +52,8 @@ export default function NewBookingModal({
   services,
 }: NewBookingModalProps) {
   const { dict } = useTranslation();
+  const { user_id } = useAuthStore();
+  const router = useRouter();
   const [serviceId, setServiceId] = useState("");
   const [address, setAddress] = useState("");
   const [startDate, setStartDate] = useState("");
@@ -294,6 +299,15 @@ export default function NewBookingModal({
 
   const handleSubmit = async (e?: React.FormEvent, forceCreate: boolean = false) => {
     if (e) e.preventDefault();
+
+    if (!user_id) {
+      setToastMessage("Vui lòng đăng nhập để gửi yêu cầu đặt dịch vụ.");
+      setTimeout(() => {
+        router.push("/login");
+      }, 1500);
+      return;
+    }
+
     if (!forceCreate && !validate()) return;
 
     setIsSubmitting(true);
