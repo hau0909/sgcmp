@@ -1,6 +1,47 @@
 import { supabase } from "@/lib/supabase";
 import { RegistrationWithCompany, RegistrationDetail } from "../types";
 
+export const checkRegistrationDuplicatesRepo = async (
+  userId: string,
+  payload: {
+    phoneNumber: string;
+    identityId: string;
+    businessLicenseNo: string;
+  }
+) => {
+  if (payload.phoneNumber) {
+    const { data: dupPhone } = await supabase
+      .from("profiles")
+      .select("user_id")
+      .eq("phone_number", payload.phoneNumber)
+      .neq("user_id", userId)
+      .maybeSingle();
+    if (dupPhone) throw new Error("Số điện thoại người đại diện này đã được sử dụng bởi một tài khoản khác.");
+  }
+
+  if (payload.identityId) {
+    const { data: dupIdentity } = await supabase
+      .from("identities")
+      .select("user_id")
+      .eq("identity_id", payload.identityId)
+      .neq("user_id", userId)
+      .maybeSingle();
+    if (dupIdentity) throw new Error("Số CCCD/CMND này đã được sử dụng bởi một tài khoản khác.");
+  }
+
+
+
+  if (payload.businessLicenseNo) {
+    const { data: dupLicense } = await supabase
+      .from("companies")
+      .select("company_id")
+      .eq("business_license_no", payload.businessLicenseNo)
+      .neq("owner_id", userId)
+      .maybeSingle();
+    if (dupLicense) throw new Error("Mã số thuế/doanh nghiệp này đã được sử dụng.");
+  }
+};
+
 export const getRegistrations = async (): Promise<RegistrationWithCompany[]> => {
   const { data, error } = await supabase
     .from("registrations")
@@ -385,3 +426,128 @@ export const createRegistrationFlow = async (payload: {
 
   return regData.registration_code;
 };
+
+export const updateRegistrationFlow = async (
+  userId: string,
+  registrationId: string,
+  payload: {
+    profile: {
+      fullName: string;
+      phoneNumber: string;
+      avatarUrl: string | null;
+    };
+    identity: {
+      identityId: string;
+      issueDate: string;
+      issuePlace: string;
+      frontUrl: string;
+      backUrl: string;
+    };
+    company: {
+      companyName: string;
+      businessLicenseNo: string;
+      licenseFileUrl: string | null;
+      address: any;
+      email: string;
+      phone: string;
+      description: string | null;
+    };
+    images: {
+      imageUrl: string;
+      imageType: "logo" | "banner" | "other";
+    }[];
+    companyId: string;
+  }
+): Promise<void> => {
+  // 1. Update Profile
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update({
+      full_name: payload.profile.fullName,
+      phone_number: payload.profile.phoneNumber,
+      avatar_url: payload.profile.avatarUrl,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("user_id", userId);
+
+  if (profileError) {
+    throw new Error(`Cập nhật hồ sơ cá nhân thất bại: ${profileError.message}`);
+  }
+
+  // 2. Upsert Identity
+  const { error: identityError } = await supabase
+    .from("identities")
+    .upsert({
+      user_id: userId,
+      identity_id: payload.identity.identityId,
+      issue_date: payload.identity.issueDate,
+      issue_place: payload.identity.issuePlace,
+      front_url: payload.identity.frontUrl,
+      back_url: payload.identity.backUrl,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+
+  if (identityError) {
+    throw new Error(`Cập nhật thông tin CCCD thất bại: ${identityError.message}`);
+  }
+
+  // 3. Update Company (reset status to pending_register)
+  const { error: companyError } = await supabase
+    .from("companies")
+    .update({
+      company_name: payload.company.companyName,
+      business_license_no: payload.company.businessLicenseNo,
+      license_file_url: payload.company.licenseFileUrl,
+      address: payload.company.address,
+      email: payload.company.email,
+      phone: payload.company.phone,
+      description: payload.company.description,
+      status: "pending_register",
+    })
+    .eq("company_id", payload.companyId);
+
+  if (companyError) {
+    throw new Error(`Cập nhật thông tin công ty thất bại: ${companyError.message}`);
+  }
+
+  // 4. Delete all old company images, then re-insert new ones
+  const { error: deleteImgsError } = await supabase
+    .from("company_imgs")
+    .delete()
+    .eq("company_id", payload.companyId);
+
+  if (deleteImgsError) {
+    throw new Error(`Xóa ảnh cũ thất bại: ${deleteImgsError.message}`);
+  }
+
+  if (payload.images && payload.images.length > 0) {
+    const imageInserts = payload.images.map((img) => ({
+      company_id: payload.companyId,
+      image_url: img.imageUrl,
+      image_type: img.imageType,
+    }));
+
+    const { error: imgsError } = await supabase
+      .from("company_imgs")
+      .insert(imageInserts);
+
+    if (imgsError) {
+      throw new Error(`Lưu ảnh mới thất bại: ${imgsError.message}`);
+    }
+  }
+
+  // 5. Update Registration status to "resubmitted" and clear old rejection note
+  const { error: regError } = await supabase
+    .from("registrations")
+    .update({
+      status: "resubmitted",
+      note: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("registration_id", registrationId);
+
+  if (regError) {
+    throw new Error(`Cập nhật trạng thái hồ sơ thất bại: ${regError.message}`);
+  }
+};
+

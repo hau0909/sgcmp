@@ -248,13 +248,44 @@ export default function Header() {
                 </button>
                 {userDropdownOpen && (
                   <div className="absolute right-0 top-12 w-44 overflow-hidden rounded-xl border border-outline-variant/30 bg-white shadow-lg z-50">
-                    <Link
-                      href="/profile"
-                      onClick={closeMenus}
-                      className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
-                    >
-                      {dict.common.profile}
-                    </Link>
+                    {/* Nút quay về trang chính riêng theo role */}
+                    {profile?.role === "company-admin" && (
+                      <Link
+                        href="/dashboard"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                      >
+                        {dict.common.dashboard || "Quay về trang chính"}
+                      </Link>
+                    )}
+                    {profile?.role === "coordinator" && (
+                      <Link
+                        href="/guard-performance"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                      >
+                        {dict.common.dashboard || "Quay về trang chính"}
+                      </Link>
+                    )}
+                    {profile?.role === "guard" && (
+                      <Link
+                        href="/overview"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                      >
+                        {dict.common.dashboard || "Quay về trang chính"}
+                      </Link>
+                    )}
+                    {/* Xem hồ sơ - chỉ dành cho customer */}
+                    {profile?.role === "customer" && (
+                      <Link
+                        href="/profile"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                      >
+                        {dict.common.profile}
+                      </Link>
+                    )}
 
                     {profile?.role === "customer" && (
                       <Link
@@ -276,21 +307,25 @@ export default function Header() {
                       </Link>
                     )}
 
-                    <Link
-                      href="/my-contracts"
-                      onClick={closeMenus}
-                      className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
-                    >
-                      {dict.common.myContracts}
-                    </Link>
+                    {profile?.role === "customer" && (
+                      <Link
+                        href="/my-contracts"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                      >
+                        {dict.common.myContracts}
+                      </Link>
+                    )}
 
-                    <Link
-                      href="/my-reports"
-                      onClick={closeMenus}
-                      className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
-                    >
-                      {dict.common.myReports}
-                    </Link>
+                    {profile?.role === "customer" && (
+                      <Link
+                        href="/my-reports"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                      >
+                        {dict.common.myReports}
+                      </Link>
+                    )}
 
                     <button
                       type="button"
@@ -397,14 +432,45 @@ export default function Header() {
             <div className="h-11 w-full animate-pulse rounded-xl bg-slate-200" />
           ) : isAuthenticated ? (
             <>
-              <Link
-                className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
-                href="/profile"
-                onClick={closeMenus}
-              >
-                {dict.common.profile}
-              </Link>
+              {/* Nút quay về trang chính riêng theo role */}
+              {profile?.role === "company-admin" && (
+                <Link
+                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                  href="/dashboard"
+                  onClick={closeMenus}
+                >
+                  {dict.common.dashboard || "Quay về trang chính"}
+                </Link>
+              )}
+              {profile?.role === "coordinator" && (
+                <Link
+                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                  href="/guard-performance"
+                  onClick={closeMenus}
+                >
+                  {dict.common.dashboard || "Quay về trang chính"}
+                </Link>
+              )}
+              {profile?.role === "guard" && (
+                <Link
+                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                  href="/overview"
+                  onClick={closeMenus}
+                >
+                  {dict.common.dashboard || "Quay về trang chính"}
+                </Link>
+              )}
 
+              {/* Xem hồ sơ - chỉ dành cho customer */}
+              {profile?.role === "customer" && (
+                <Link
+                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                  href="/profile"
+                  onClick={closeMenus}
+                >
+                  {dict.common.profile}
+                </Link>
+              )}
 
               {profile?.role === "customer" && (
                 <Link
@@ -426,21 +492,25 @@ export default function Header() {
                 </Link>
               )}
 
-              <Link
-                className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
-                href="/my-contracts"
-                onClick={closeMenus}
-              >
-                {dict.common.myContracts}
-              </Link>
+              {profile?.role === "customer" && (
+                <Link
+                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                  href="/my-contracts"
+                  onClick={closeMenus}
+                >
+                  {dict.common.myContracts}
+                </Link>
+              )}
 
-              <Link
-                className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
-                href="/my-reports"
-                onClick={closeMenus}
-              >
-                {dict.common.myReports}
-              </Link>
+              {profile?.role === "customer" && (
+                <Link
+                  className="text-[15px] text-primary font-semibold text-center py-3 rounded-xl hover:bg-primary/5 transition-colors"
+                  href="/my-reports"
+                  onClick={closeMenus}
+                >
+                  {dict.common.myReports}
+                </Link>
+              )}
 
               <button
                 type="button"
