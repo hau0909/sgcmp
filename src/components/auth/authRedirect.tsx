@@ -92,8 +92,8 @@ export default function AuthRedirect() {
             router.replace(redirectPath);
           }
         }
-      } catch (error: any) {
-        if (error?.message !== "Người dùng chưa đăng nhập") {
+      } catch (error) {
+        if (!isPublicPath && !isCompanyRelatedPath) {
           console.error("AUTH REDIRECT ERROR:", error);
         }
       }

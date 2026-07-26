@@ -48,4 +48,21 @@ export const requestResetPassword = async (payload: {
 
 export const requestChangePassword = requestResetPassword;
 
+export const requestForgotPassword = async (payload: { email: string }) => {
+  return await fetcher("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+};
+
+export const requestUpdateForgotPassword = async (payload: {
+  password?: string;
+  confirmPassword?: string;
+}) => {
+  return await fetcher("/api/auth/update-forgot-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+};
+
 
