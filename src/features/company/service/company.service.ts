@@ -33,6 +33,7 @@ import {
 import { getProfileByUserId } from "@/features/profile/repository/profile.repository";
 import { Company } from "@/types/Company";
 import { CompanyStatus } from "@/types/Enum";
+import { createClient } from "@/lib/supabase/server";
 
 export interface CompanyFilterParams {
   search?: string;
@@ -294,8 +295,8 @@ export const getCompanyByIdServiceInCustomer = async (
           return {
             serviceId: cs.services.service_id,
             name: cs.services.name,
-            description: (cs.description || "").replace(/\.\.\.+$/, ""),
-            baseDescription: (cs.services.description || "").replace(/\.\.\.+$/, ""),
+            description: cs.description || "",
+            baseDescription: cs.services.description || "",
             price: cs.price,
           };
         })
@@ -315,6 +316,70 @@ export const getCompanyByIdServiceInCustomer = async (
       ? dbCompany.registrations[0].registration_code
       : dbCompany.business_license_no;
 
+  let ownerName: string | undefined = undefined;
+  let ownerPhone: string | undefined = undefined;
+  let ownerEmail: string | undefined = undefined;
+  let ownerAvatarUrl: string | undefined = undefined;
+
+  if (dbCompany.owner_id) {
+    try {
+      const ownerProfile = await getProfileByUserId(dbCompany.owner_id);
+      if (ownerProfile) {
+        ownerName = ownerProfile.full_name;
+        ownerPhone = ownerProfile.phone_number || dbCompany.phone || undefined;
+        ownerEmail = ownerProfile.email || dbCompany.email || undefined;
+        ownerAvatarUrl = ownerProfile.avatar_url || logoImg?.image_url || undefined;
+      }
+    } catch (err) {
+      console.error("Lỗi khi tải thông tin người đại diện:", err);
+    }
+  }
+
+  // Fetch real counts for statistics
+  let totalReviews = 0;
+  let completedContracts = 0;
+  let activeGoals = 0;
+
+  try {
+    const supabaseServer = await createClient();
+    
+    // Total reviews count
+    const { count: revCount } = await supabaseServer
+      .from("reviews")
+      .select("review_id", { count: "exact", head: true })
+      .eq("company_id", id);
+    if (revCount !== null && revCount !== undefined) {
+      totalReviews = revCount;
+    }
+
+    // Completed contracts count for this company (status = 'completed')
+    const { count: completedContractCount } = await supabaseServer
+      .from("contracts")
+      .select("contract_id, bookings!inner(company_id)", { count: "exact", head: true })
+      .eq("bookings.company_id", id)
+      .eq("status", "completed");
+    if (completedContractCount !== null && completedContractCount !== undefined) {
+      completedContracts = completedContractCount;
+    }
+
+    // Active goals count (contracts with status = 'active')
+    const { count: activeContractCount } = await supabaseServer
+      .from("contracts")
+      .select("contract_id, bookings!inner(company_id)", { count: "exact", head: true })
+      .eq("bookings.company_id", id)
+      .eq("status", "active");
+    if (activeContractCount !== null && activeContractCount !== undefined) {
+      activeGoals = activeContractCount;
+    }
+
+  } catch (err) {
+    console.error("Lỗi khi tải chỉ số thống kê công ty:", err);
+  }
+
+  const createdYear = dbCompany.created_at
+    ? new Date(dbCompany.created_at).getFullYear()
+    : new Date().getFullYear();
+
   return {
     id: dbCompany.company_id,
     name: dbCompany.company_name,
@@ -325,13 +390,22 @@ export const getCompanyByIdServiceInCustomer = async (
     phone: dbCompany.phone,
     email: dbCompany.email,
     services,
-    businessLicenseNo: registrationCode,
+    businessLicenseNo: dbCompany.business_license_no,
     licenseFileUrl: dbCompany.license_file_url || undefined,
     status: dbCompany.status as CompanyStatus,
     createdAt: dbCompany.created_at,
     activityImgs,
     companyLicenseNo: dbCompany.business_license_no,
     ownerId: dbCompany.owner_id,
+    ownerName,
+    ownerPhone,
+    ownerEmail,
+    ownerAvatarUrl,
+    rating: dbCompany.rating_average,
+    totalReviews,
+    completedContracts,
+    activeGoals,
+    createdYear,
     allowed_late_minutes: dbCompany.allowed_late_minutes ?? 5,
     allowed_absent_minutes: dbCompany.allowed_absent_minutes ?? 35,
   };

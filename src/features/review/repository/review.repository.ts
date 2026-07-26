@@ -62,7 +62,7 @@ export async function getReviewsByCompany(
 
   const { data, error } = await supabase
     .from("reviews")
-    .select("*, profiles(full_name, avatar_url)")
+    .select("*, profiles(full_name, avatar_url), contracts(contract_id, bookings(services(name)))")
     .eq("company_id", companyId)
     .order("created_at", { ascending: false });
 
@@ -72,6 +72,7 @@ export async function getReviewsByCompany(
 
   return (data as Review[]) || [];
 }
+
 
 export async function hasExistingReview(contract_id: string): Promise<boolean> {
   const supabase = await createClient();

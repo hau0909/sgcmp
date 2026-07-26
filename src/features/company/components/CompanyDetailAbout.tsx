@@ -9,14 +9,28 @@ interface CompanyDetailAboutProps {
 
 export default function CompanyDetailAbout({ description }: CompanyDetailAboutProps) {
   const { dict } = useTranslation();
+
+  const paragraphs = (description || "")
+    .split("\n")
+    .filter((p) => p.trim().length > 0);
+
+  const t = dict.customer?.company_detail || {};
+
   return (
-    <section className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 shadow-xs">
-      <h2 className="text-headline-sm font-semibold text-on-surface mb-4 uppercase tracking-wider text-[12px] border-b border-outline-variant pb-2">
-        {dict.customer.company_detail.about_title}
-      </h2>
-      <p className="text-body-md text-on-surface-variant leading-relaxed text-justify whitespace-pre-line">
-        {description}
-      </p>
+    <section className="py-8 border-b border-outline-variant/60">
+      <div className="text-[11px] font-bold tracking-widest text-primary uppercase mb-2">
+        {t.about_title || "Về chúng tôi"}
+      </div>
+
+      <div className="space-y-3.5 text-on-surface-variant text-sm sm:text-base font-normal leading-relaxed text-justify">
+        {paragraphs.length > 0 ? (
+          paragraphs.map((p, idx) => <p key={idx}>{p}</p>)
+        ) : (
+          <p>{t.about_sub || "Chưa có thông tin giới thiệu chi tiết."}</p>
+        )}
+      </div>
     </section>
   );
 }
+
+
