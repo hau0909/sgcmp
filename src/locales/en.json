@@ -738,6 +738,33 @@
           "email_not_confirmed": "Email not confirmed. Please check your email"
         }
       },
+      "forgot_password_page": {
+        "title": "Forgot Password?",
+        "subtitle": "Enter your email address to receive password reset instructions.",
+        "email_label": "Email Address",
+        "email_placeholder": "name@company.com",
+        "submit_btn": "Send Request",
+        "sending": "Sending...",
+        "success_title": "Email Sent!",
+        "success_desc": "A password reset link has been sent to your email. Please check your inbox.",
+        "back_to_login": "Back to Login"
+      },
+      "update_password_page": {
+        "email_verify_success_title": "Email Verified Successfully!",
+        "email_verify_success_desc": "Your link has been verified successfully. Please click Continue to set your new password.",
+        "continue_btn": "Continue to Reset Password",
+        "title": "Set New Password",
+        "subtitle": "Please enter a new password for your account.",
+        "new_password": "New Password",
+        "new_password_placeholder": "Enter new password (min. 8 characters)",
+        "confirm_password": "Confirm New Password",
+        "confirm_password_placeholder": "Re-enter new password",
+        "submit_btn": "Update Password",
+        "updating": "Updating...",
+        "success_title": "Update Successful!",
+        "success_desc": "Your password has been updated successfully. Please log in with your new password.",
+        "back_to_login": "Log In Now"
+      },
       "register": {
         "title": "SGCMP",
         "subtitle": "Create a new account",
