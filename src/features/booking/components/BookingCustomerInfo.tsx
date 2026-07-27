@@ -12,6 +12,7 @@ interface BookingCustomerInfoProps {
   address: string;
   title?: string;
   nameLabel?: string;
+  addressLabel?: string;
 }
 
 export function BookingCustomerInfo({
@@ -22,8 +23,10 @@ export function BookingCustomerInfo({
   address,
   title = "Thông tin khách hàng",
   nameLabel,
+  addressLabel,
 }: BookingCustomerInfoProps) {
   const { dict } = useTranslation();
+  const isCompanyTitle = title === "Thông tin doanh nghiệp" || title === dict.booking.detail.info.company_info_title;
   
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative overflow-hidden transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] duration-300 animate-in fade-in slide-in-from-top-3 duration-300">
@@ -82,10 +85,13 @@ export function BookingCustomerInfo({
           </a>
         </div>
 
-        {/* Implementation Location */}
+        {/* Address / Location */}
         <div className="flex flex-col md:col-span-2">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            {dict.booking.detail.info.implementation_location || "Địa chỉ triển khai"}
+            {addressLabel ||
+              (isCompanyTitle
+                ? dict.booking.detail.info.company_address || "Địa chỉ công ty"
+                : dict.booking.detail.info.implementation_location || "Địa chỉ triển khai")}
           </span>
           <span className="text-sm font-semibold text-on-surface flex items-start gap-1.5">
             <MapPin className="w-3.5 h-3.5 text-outline-variant mt-0.5" />

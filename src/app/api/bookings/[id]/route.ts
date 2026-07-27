@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { handleGetBookingDetail, handleUpdateBookingStatusAndPrice } from "@/features/booking/controller/booking.controller";
+import { handleGetBookingDetail, handleUpdateBookingStatusAndPrice, handleUpdateBookingDetails } from "@/features/booking/controller/booking.controller";
 
 interface RouteParams {
   params: Promise<{
@@ -49,11 +49,19 @@ export async function PATCH(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const result = await handleUpdateBookingStatusAndPrice(id, body);
-    return NextResponse.json({
-      booking: result.booking,
-      contract_id: result.contract_id,
-    }, { status: 200 });
+
+    if (body.status) {
+      const result = await handleUpdateBookingStatusAndPrice(id, body);
+      return NextResponse.json({
+        booking: result.booking,
+        contract_id: result.contract_id,
+      }, { status: 200 });
+    } else {
+      const result = await handleUpdateBookingDetails(id, body);
+      return NextResponse.json({
+        booking: result,
+      }, { status: 200 });
+    }
   } catch (error) {
     const err = error as Error;
     console.error("[PATCH /api/bookings/[id]] Error:", err);

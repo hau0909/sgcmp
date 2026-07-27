@@ -14,6 +14,7 @@ import {
 import { BookingDetailHeader } from "./BookingDetailHeader";
 import { BookingCustomerInfo } from "./BookingCustomerInfo";
 import { BookingServiceSpec } from "./BookingServiceSpec";
+import { EditBookingModal } from "./EditBookingModal";
 import { BookingQuotationPanel } from "./BookingQuotationPanel";
 import { BookingStatus } from "../types";
 import {
@@ -81,6 +82,7 @@ export function BookingDetailContainer({
   const [verificationStatus, setVerificationStatus] =
     useState<VerificationStatus | null>(null);
   const [isCreatingVerification, setIsCreatingVerification] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
 
   const fetchDetail = React.useCallback(
     async (showLoading = true) => {
@@ -479,7 +481,13 @@ export function BookingDetailContainer({
                   "Chưa cập nhật"
                 : booking.email
             }
-            address={booking.address}
+            address={
+              isCustomer
+                ? booking.company_address ||
+                  dict.booking.detail.info.not_updated ||
+                  "Chưa cập nhật"
+                : booking.address
+            }
             title={
               isCustomer
                 ? dict.booking.detail.info.company_info_title ||
@@ -502,9 +510,13 @@ export function BookingDetailContainer({
             guardsCount={booking.guards_count}
             startDate={booking.start_date}
             endDate={booking.end_date}
+            address={booking.address}
             timeSlots={booking.time_slots}
             day_per_week={booking.day_per_week}
             specialInstructions={booking.special_instructions}
+            status={booking.status}
+            isCustomer={isCustomer}
+            onEdit={() => setIsEditModalOpen(true)}
           />
         </div>
 
@@ -526,6 +538,29 @@ export function BookingDetailContainer({
           </div>
         )}
       </div>
+
+      {/* Edit Service Request Modal */}
+      {booking && (
+        <EditBookingModal
+          isOpen={isEditModalOpen}
+          onClose={() => setIsEditModalOpen(false)}
+          bookingId={bookingId}
+          initialData={{
+            address: booking.address,
+            guards_count: booking.guards_count,
+            start_date: booking.start_date,
+            end_date: booking.end_date,
+            time_slots: booking.time_slots,
+            day_per_week: booking.day_per_week,
+            special_instructions: booking.special_instructions,
+          }}
+          onSuccess={() => {
+            setToastMessage("Cập nhật thông tin yêu cầu dịch vụ thành công!");
+            setToastType("success");
+            fetchDetail(false);
+          }}
+        />
+      )}
     </div>
   );
 }

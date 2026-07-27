@@ -22,9 +22,10 @@ import { requestGetAccountDetail, requestBanAccount } from "../api/account.api";
 import type { Profile } from "@/types/Profile";
 import type { ReasonBan } from "@/types/ReasonBan";
 import type { UserRole, GeneralStatus } from "@/types/Enum";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
-const formatDate = (dateStr: string | null) => {
-  if (!dateStr) return "Chưa cập nhật";
+const formatDate = (dateStr: string | null, dict: any) => {
+  if (!dateStr) return dict.admin_accounts.not_updated || "Chưa cập nhật";
   try {
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return dateStr;
@@ -37,18 +38,18 @@ const formatDate = (dateStr: string | null) => {
   }
 };
 
-const getRoleLabel = (role: UserRole): string => {
+const getRoleLabel = (role: UserRole, dict: any): string => {
   switch (role) {
     case "admin":
-      return "Admin";
+      return dict.admin_accounts.admin || "Admin";
     case "customer":
-      return "Khách hàng";
+      return dict.admin_accounts.customer || "Khách hàng";
     case "company-admin":
-      return "Quản lý DN";
+      return dict.admin_accounts.company_admin || "Quản lý DN";
     case "guard":
-      return "Bảo vệ";
+      return dict.admin_accounts.guard || "Bảo vệ";
     case "coordinator":
-      return "Điều phối";
+      return dict.admin_accounts.coordinator || "Điều phối";
     default:
       return role;
   }
@@ -95,10 +96,10 @@ const getRoleBadge = (role: UserRole) => {
   }
 };
 
-const getStatusBadge = (status: GeneralStatus) => {
+const getStatusBadge = (status: GeneralStatus, dict: any) => {
   if (status === "active") {
     return {
-      label: "Active",
+      label: dict.admin_bank_accounts.active_status || "Active",
       bg: "bg-[#dcfce7]",
       text: "text-[#166534]",
       dot: "bg-[#22c55e]",
@@ -106,14 +107,14 @@ const getStatusBadge = (status: GeneralStatus) => {
   }
   if (status === "banned") {
     return {
-      label: "Banned",
+      label: dict.admin_accounts.lock_account ? (dict.admin_accounts.lock_account.includes("Khóa") ? "Bị khóa" : "Banned") : "Banned",
       bg: "bg-[#fef2f2] border border-[#fca5a5]",
       text: "text-[#991b1b]",
       dot: "bg-[#ef4444]",
     };
   }
   return {
-    label: "Unactive",
+    label: dict.admin_bank_accounts.inactive_status || "Inactive",
     bg: "bg-[#fee2e2]",
     text: "text-[#991b1b]",
     dot: "bg-[#ef4444]",
@@ -121,6 +122,7 @@ const getStatusBadge = (status: GeneralStatus) => {
 };
 
 export default function AccountDetail({ userId }: { userId: string }) {
+  const { dict } = useTranslation();
   const router = useRouter();
   const [account, setAccount] = React.useState<Profile | null>(null);
   const [banReason, setBanReason] = React.useState<ReasonBan | null>(null);
@@ -143,14 +145,14 @@ export default function AccountDetail({ userId }: { userId: string }) {
 
   const handleConfirmBan = async () => {
     if (!reasonInput.trim()) {
-      setReasonError("Vui lòng nhập lý do khóa tài khoản.");
+      setReasonError(dict.admin_accounts.reason_required);
       return;
     }
     try {
       setIsBanning(true);
       const res = await requestBanAccount(userId, reasonInput.trim());
       if (res.success) {
-        setToastMessage({ text: res.message || "Khóa tài khoản thành công.", type: "success" });
+        setToastMessage({ text: res.message || dict.admin_accounts.lock_success, type: "success" });
         setIsConfirmOpen(false);
         setAccount(prev => prev ? { ...prev, status: "banned" as GeneralStatus } : null);
         setBanReason({
@@ -162,11 +164,11 @@ export default function AccountDetail({ userId }: { userId: string }) {
         setReasonInput("");
         setReasonError(null);
       } else {
-        setToastMessage({ text: res.error || "Không thể khóa tài khoản.", type: "error" });
+        setToastMessage({ text: res.error || dict.admin_accounts.lock_fail, type: "error" });
       }
     } catch (err: any) {
       console.error("Error banning account:", err);
-      setToastMessage({ text: err.message || "Có lỗi xảy ra khi khóa tài khoản.", type: "error" });
+      setToastMessage({ text: err.message || dict.admin_accounts.lock_error, type: "error" });
     } finally {
       setIsBanning(false);
     }
@@ -183,8 +185,9 @@ export default function AccountDetail({ userId }: { userId: string }) {
         }
       } catch (err: any) {
         console.error("Error fetching account detail:", err);
-        setError(err.message || "Không thể tải thông tin tài khoản");
+        setError(err.message || dict.admin_accounts.error_load_detail);
       } finally {
+        setError(null);
         setLoading(false);
       }
     };
@@ -199,7 +202,7 @@ export default function AccountDetail({ userId }: { userId: string }) {
         <div className="flex items-center justify-center min-h-[400px] text-on-surface-variant font-medium">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-            <span>Đang tải thông tin tài khoản...</span>
+            <span>{dict.admin_accounts.loading_detail}</span>
           </div>
         </div>
       </div>
@@ -210,13 +213,13 @@ export default function AccountDetail({ userId }: { userId: string }) {
     return (
       <div className="max-w-4xl mx-auto p-6 space-y-6">
         <div className="flex flex-col items-center justify-center min-h-[400px] text-error font-medium gap-4">
-          <p>Lỗi: {error || "Không tìm thấy tài khoản"}</p>
+          <p>{dict.admin_accounts.error_load_detail}: {error || dict.admin_accounts.error_not_found}</p>
           <button
             onClick={() => router.push("/accounts")}
-            className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface hover:bg-surface-container rounded-xl transition-colors"
+            className="flex items-center gap-2 px-4 py-2 bg-surface-container-low text-on-surface hover:bg-surface-container rounded-xl transition-colors cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Quay lại danh sách</span>
+            <span>{dict.admin_accounts.back_to_list}</span>
           </button>
         </div>
       </div>
@@ -224,7 +227,7 @@ export default function AccountDetail({ userId }: { userId: string }) {
   }
 
   const roleBadge = getRoleBadge(account.role);
-  const statusBadge = getStatusBadge(account.status);
+  const statusBadge = getStatusBadge(account.status, dict);
 
   return (
     <div className="max-w-4xl mx-auto p-6 space-y-6 animate-in fade-in duration-300">
@@ -238,10 +241,10 @@ export default function AccountDetail({ userId }: { userId: string }) {
         </button>
         <div>
           <h2 className="text-2xl font-bold text-primary tracking-tight font-headline">
-            Chi tiết tài khoản
+            {dict.admin_accounts.title_detail}
           </h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Thông tin chi tiết của người dùng trong hệ thống.
+            {dict.admin_accounts.desc_detail}
           </p>
         </div>
 
@@ -256,7 +259,7 @@ export default function AccountDetail({ userId }: { userId: string }) {
             className="ml-auto flex items-center justify-center gap-2 rounded-lg border-2 bg-blue-800 px-4 py-2 font-medium text-white transition-all duration-300 hover:bg-blue-900 cursor-pointer animate-in fade-in duration-300"
           >
             <Ban className="shrink-0" size={20} />
-            <span>Khóa tài khoản</span>
+            <span>{dict.admin_accounts.lock_account}</span>
           </button>
         )}
       </div>
@@ -268,13 +271,13 @@ export default function AccountDetail({ userId }: { userId: string }) {
             <AlertTriangle className="w-5 h-5" />
           </div>
           <div className="space-y-1">
-            <h4 className="font-bold text-base text-red-800">Tài khoản này đã bị khóa</h4>
+            <h4 className="font-bold text-base text-red-800">{dict.admin_accounts.account_locked_title}</h4>
             {banReason?.reason ? (
               <p className="text-sm text-red-700">
-                <span className="font-semibold">Lý do khóa:</span> {banReason.reason}
+                <span className="font-semibold">{dict.admin_accounts.lock_reason}</span> {banReason.reason}
               </p>
             ) : (
-              <p className="text-sm text-red-700">Không có thông tin chi tiết về lý do khóa.</p>
+              <p className="text-sm text-red-700">{dict.admin_accounts.no_lock_reason}</p>
             )}
           </div>
         </div>
@@ -298,7 +301,7 @@ export default function AccountDetail({ userId }: { userId: string }) {
             </div>
 
             <h3 className="text-xl font-bold text-on-surface mb-1">
-              {account.full_name || "Chưa cập nhật"}
+              {account.full_name || dict.admin_accounts.not_updated}
             </h3>
 
             <div className="flex flex-col gap-2 mt-3 items-center">
@@ -308,7 +311,7 @@ export default function AccountDetail({ userId }: { userId: string }) {
                 <span
                   className={`w-1.5 h-1.5 rounded-full ${roleBadge.dot} shrink-0`}
                 />
-                {getRoleLabel(account.role)}
+                {getRoleLabel(account.role, dict)}
               </span>
 
               <span
@@ -329,7 +332,7 @@ export default function AccountDetail({ userId }: { userId: string }) {
             <div className="border-b border-outline-variant px-6 py-4 bg-surface-container-low/50">
               <h4 className="text-sm font-bold text-on-surface uppercase tracking-wider flex items-center gap-2">
                 <Settings className="w-4 h-4 text-primary" />
-                Thông tin cá nhân
+                {dict.admin_accounts.personal_info}
               </h4>
             </div>
             <div className="p-6 grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -344,37 +347,37 @@ export default function AccountDetail({ userId }: { userId: string }) {
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
-                  <Phone className="w-3.5 h-3.5" /> Số điện thoại
+                  <Phone className="w-3.5 h-3.5" /> {dict.admin_accounts.phone}
                 </label>
                 <p className="text-sm font-medium text-on-surface">
-                  {account.phone_number || "Chưa cập nhật"}
+                  {account.phone_number || dict.admin_accounts.not_updated}
                 </p>
               </div>
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
-                  <UserCircle className="w-3.5 h-3.5" /> Giới tính
+                  <UserCircle className="w-3.5 h-3.5" /> {dict.admin_accounts.gender}
                 </label>
                 <p className="text-sm font-medium text-on-surface">
-                  {account.gender || "Chưa cập nhật"}
+                  {account.gender || dict.admin_accounts.not_updated}
                 </p>
               </div>
 
               <div className="space-y-1">
                 <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
-                  <Calendar className="w-3.5 h-3.5" /> Ngày sinh
+                  <Calendar className="w-3.5 h-3.5" /> {dict.admin_accounts.dob}
                 </label>
                 <p className="text-sm font-medium text-on-surface">
-                  {formatDate(account.date_of_birth)}
+                  {formatDate(account.date_of_birth, dict)}
                 </p>
               </div>
 
               <div className="space-y-1 sm:col-span-2">
                 <label className="text-xs font-semibold text-on-surface-variant uppercase tracking-wider flex items-center gap-1.5">
-                  <MapPin className="w-3.5 h-3.5" /> Địa chỉ
+                  <MapPin className="w-3.5 h-3.5" /> {dict.admin_accounts.address}
                 </label>
                 <p className="text-sm font-medium text-on-surface">
-                  {account.address || "Chưa cập nhật"}
+                  {account.address || dict.admin_accounts.not_updated}
                 </p>
               </div>
             </div>
@@ -390,14 +393,14 @@ export default function AccountDetail({ userId }: { userId: string }) {
               <div className="flex items-center justify-center w-12 h-12 rounded-full bg-error/10 text-error mx-auto mb-4">
                 <AlertTriangle className="w-6 h-6" />
               </div>
-              <h3 className="text-lg font-bold text-center text-on-surface mb-2">Khóa tài khoản</h3>
+              <h3 className="text-lg font-bold text-center text-on-surface mb-2">{dict.admin_accounts.lock_confirm_title}</h3>
               <p className="text-sm text-center text-on-surface-variant/80 mb-4">
-                Bạn có chắc chắn muốn khóa tài khoản này không? Người dùng sẽ không thể đăng nhập vào hệ thống.
+                {dict.admin_accounts.lock_confirm_desc}
               </p>
 
               <div className="text-left space-y-1.5">
                 <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider">
-                  Lý do khóa tài khoản <span className="text-error">*</span>
+                  {dict.admin_accounts.lock_reason_label} <span className="text-error">*</span>
                 </label>
                 <textarea
                   rows={3}
@@ -406,7 +409,7 @@ export default function AccountDetail({ userId }: { userId: string }) {
                     setReasonInput(e.target.value);
                     if (reasonError) setReasonError(null);
                   }}
-                  placeholder="Nhập lý do khóa tài khoản (ví dụ: Vi phạm điều khoản, gian lận...)"
+                  placeholder={dict.admin_accounts.lock_reason_placeholder}
                   className={`w-full p-3 text-sm rounded-xl border ${
                     reasonError ? "border-error focus:ring-error" : "border-outline-variant focus:border-primary"
                   } bg-surface focus:outline-none focus:ring-1 text-on-surface resize-none`}
@@ -426,23 +429,23 @@ export default function AccountDetail({ userId }: { userId: string }) {
                   setReasonError(null);
                 }}
                 disabled={isBanning}
-                className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50"
+                className="flex-1 py-2.5 px-4 rounded-xl font-semibold text-on-surface-variant hover:bg-surface-container-high transition-colors text-sm disabled:opacity-50 cursor-pointer"
               >
-                Hủy
+                {dict.admin_accounts.cancel}
               </button>
               <button
                 type="button"
                 onClick={handleConfirmBan}
                 disabled={isBanning}
-                className="flex-1 py-2.5 px-4 rounded-xl font-bold bg-error hover:bg-error/90 text-white transition-all active:scale-95 text-sm flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 py-2.5 px-4 rounded-xl font-bold bg-error hover:bg-error/90 text-white transition-all active:scale-95 text-sm flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {isBanning ? (
                   <>
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Đang xử lý...</span>
+                    <span>{dict.admin_accounts.processing}</span>
                   </>
                 ) : (
-                  <span>Đồng ý</span>
+                  <span>{dict.admin_accounts.confirm}</span>
                 )}
               </button>
             </div>

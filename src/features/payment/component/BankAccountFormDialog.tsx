@@ -8,6 +8,7 @@ import {
   requestCreateBankAccount,
   requestUpdateBankAccount,
 } from "@/features/payment/api/payment.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 // Popular Vietnamese banks for the dropdown
 const BANK_OPTIONS = [
@@ -36,6 +37,7 @@ export default function BankAccountFormDialog({
   onSuccess,
   onClose,
 }: BankAccountFormDialogProps) {
+  const { dict } = useTranslation();
   const [form, setForm] = useState<UpsertBankAccountPayload>({
     bank_code: "",
     bank_name: "",
@@ -79,7 +81,7 @@ export default function BankAccountFormDialog({
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err?.message ?? "Đã xảy ra lỗi. Vui lòng thử lại.");
+      setError(err?.message ?? dict.admin_bank_accounts.error_general);
     } finally {
       setLoading(false);
     }
@@ -87,26 +89,26 @@ export default function BankAccountFormDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-slate-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#c3c6d3] bg-[#eff4ff]">
           <h2 className="text-base font-bold text-[#0b1c30] font-headline">
-            {mode === "add" ? "Thêm tài khoản ngân hàng" : "Cập nhật tài khoản ngân hàng"}
+            {mode === "add" ? dict.admin_bank_accounts.dialog_add_title : dict.admin_bank_accounts.dialog_edit_title}
           </h2>
           <button
             onClick={onClose}
-            className="text-[#434751] hover:text-[#0b1c30] p-1 rounded-full hover:bg-[#dce9ff] transition-colors"
+            className="text-[#434751] hover:text-[#0b1c30] p-1 rounded-full hover:bg-[#dce9ff] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4">
+        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4 font-body">
           {/* Bank Code */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-[#434751] font-body">
-              Ngân hàng <span className="text-red-500">*</span>
+            <label className="text-xs font-semibold text-[#434751]">
+              {dict.admin_bank_accounts.dialog_bank} <span className="text-red-500">*</span>
             </label>
             <select
               value={form.bank_code}
@@ -115,7 +117,7 @@ export default function BankAccountFormDialog({
               className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] bg-white focus:outline-none focus:border-[#2c5ead] transition-colors"
             >
               <option value="" disabled>
-                -- Chọn ngân hàng --
+                {dict.admin_bank_accounts.dialog_select_bank}
               </option>
               {BANK_OPTIONS.map((b) => (
                 <option key={b.code} value={b.code}>
@@ -127,23 +129,23 @@ export default function BankAccountFormDialog({
 
           {/* Bank Name (auto-filled, editable) */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-[#434751] font-body">
-              Tên ngân hàng <span className="text-red-500">*</span>
+            <label className="text-xs font-semibold text-[#434751]">
+              {dict.admin_bank_accounts.dialog_bank_name} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={form.bank_name}
               onChange={(e) => setForm((p) => ({ ...p, bank_name: e.target.value }))}
               required
-              placeholder="Nhập tên ngân hàng"
+              placeholder={dict.admin_bank_accounts.dialog_bank_name_placeholder}
               className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors"
             />
           </div>
 
           {/* Account Number */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-[#434751] font-body">
-              Số tài khoản <span className="text-red-500">*</span>
+            <label className="text-xs font-semibold text-[#434751]">
+              {dict.admin_bank_accounts.dialog_acc_number} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -153,18 +155,18 @@ export default function BankAccountFormDialog({
                 setForm((p) => ({ ...p, account_number: val }));
               }}
               required
-              placeholder="Nhập số tài khoản"
+              placeholder={dict.admin_bank_accounts.dialog_acc_number_placeholder}
               className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors"
             />
             <p className="text-[11px] text-[#737785]">
-              Chỉ nhập các ký tự số (0-9).
+              {dict.admin_bank_accounts.dialog_acc_number_hint}
             </p>
           </div>
 
           {/* Account Name */}
           <div className="flex flex-col gap-1.5">
-            <label className="text-xs font-semibold text-[#434751] font-body">
-              Tên chủ tài khoản <span className="text-red-500">*</span>
+            <label className="text-xs font-semibold text-[#434751]">
+              {dict.admin_bank_accounts.dialog_acc_name} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
@@ -174,17 +176,17 @@ export default function BankAccountFormDialog({
                 setForm((p) => ({ ...p, account_name: val.toUpperCase() }));
               }}
               required
-              placeholder="NGUYEN VAN A"
+              placeholder={dict.admin_bank_accounts.dialog_acc_name_placeholder || "NGUYEN VAN A"}
               className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] uppercase focus:outline-none focus:border-[#2c5ead] transition-colors"
             />
             <p className="text-[11px] text-[#737785]">
-              Chỉ nhập chữ cái và dấu cách. Tên sẽ tự động viết hoa.
+              {dict.admin_bank_accounts.dialog_acc_name_hint}
             </p>
           </div>
 
           {/* Error */}
           {error && (
-            <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2">
+            <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2 border border-red-100">
               {error}
             </p>
           )}
@@ -195,17 +197,17 @@ export default function BankAccountFormDialog({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors cursor-pointer"
             >
-              Huỷ
+              {dict.admin_bank_accounts.cancel}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2 disabled:opacity-60"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2 disabled:opacity-60 cursor-pointer"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {mode === "add" ? "Thêm mới" : "Lưu thay đổi"}
+              {mode === "add" ? dict.admin_bank_accounts.create : dict.admin_bank_accounts.save}
             </button>
           </div>
         </form>

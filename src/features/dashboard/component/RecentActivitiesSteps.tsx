@@ -6,7 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Building2, FilePlus2, Globe, BadgeCheck, CircleX, Loader2, ChevronRight, X } from "lucide-react";
 import { requestGetAdminRecentActivities, type ActivityItem } from "../api/dashboard.api";
 
+import { useTranslation } from "@/components/providers/LanguageProvider";
+
 export function RecentActivitiesSteps() {
+  const { dict, locale } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -76,7 +79,7 @@ export function RecentActivitiesSteps() {
         <div className="flex flex-col">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-semibold text-slate-800">
-              Hoạt động gần đây
+              {dict.admin_dashboard.recent_activities}
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-2 flex flex-col gap-6">
@@ -88,11 +91,11 @@ export function RecentActivitiesSteps() {
                 {loading ? (
                   <div className="flex items-center justify-center py-10 text-xs text-slate-400 gap-2">
                     <Loader2 className="size-4 animate-spin text-blue-500" />
-                    <span>Đang tải hoạt động...</span>
+                    <span>{dict.admin_dashboard.loading_activities}</span>
                   </div>
                 ) : displayedSteps.length === 0 ? (
                   <div className="text-center py-10 text-xs text-slate-400">
-                    Không có hoạt động nào gần đây.
+                    {dict.admin_dashboard.no_recent_activities}
                   </div>
                 ) : (
                   displayedSteps.map((step) => (
@@ -133,7 +136,7 @@ export function RecentActivitiesSteps() {
             onClick={() => setIsModalOpen(true)}
             className="w-full bg-blue-50/50 hover:bg-blue-50 text-blue-600 hover:text-blue-700 font-bold text-xs h-9 px-4 rounded-lg flex items-center justify-center gap-1 transition-colors border-0 cursor-pointer"
           >
-            <span>Xem toàn bộ hoạt động</span>
+            <span>{dict.admin_dashboard.view_all_activities}</span>
             <ChevronRight className="size-3.5" />
           </Button>
         </div>
@@ -154,10 +157,10 @@ export function RecentActivitiesSteps() {
             <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
                 <h3 className="text-base font-bold text-slate-800">
-                  Nhật ký hoạt động gần đây
+                  {dict.admin_dashboard.recent_activities_log}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Tổng hợp {activities.length} hoạt động gần nhất của hệ thống
+                  {dict.admin_dashboard.recent_activities_summary.replace("{count}", activities.length.toString())}
                 </p>
               </div>
               <button 
@@ -177,11 +180,11 @@ export function RecentActivitiesSteps() {
                 <div className="space-y-6">
                   {activities.length === 0 ? (
                     <div className="text-center py-10 text-xs text-slate-400">
-                      Không có hoạt động nào gần đây.
+                      {dict.admin_dashboard.no_recent_activities}
                     </div>
                   ) : (
                     activities.map((step) => (
-                      <div key={step.id} className="relative flex gap-4 items-start pl-8 group">
+                      <tr key={step.id} className="relative flex gap-4 items-start pl-8 group">
                         {/* Stepper Node Icon */}
                         <div className="absolute left-0 top-0">
                           {getActivityIcon(step.iconName, step.iconColor)}
@@ -204,7 +207,7 @@ export function RecentActivitiesSteps() {
                             {step.target}
                           </p>
                         </div>
-                      </div>
+                      </tr>
                     ))
                   )}
                 </div>
@@ -218,7 +221,7 @@ export function RecentActivitiesSteps() {
                 onClick={() => setIsModalOpen(false)}
                 className="text-xs font-bold px-4 h-8 rounded-lg cursor-pointer bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
               >
-                Đóng
+                {dict.admin_dashboard.close}
               </Button>
             </div>
           </div>

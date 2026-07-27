@@ -19,6 +19,7 @@ import {
 import type { Service } from "@/types/Service";
 import { requestGetAdminServices, requestDeleteService } from "../api/service.api";
 import ServiceFormDialog from "./ServiceFormDialog";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -40,6 +41,7 @@ const ITEMS_PER_PAGE = 10;
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function ServiceTable() {
+  const { dict, locale } = useTranslation();
   const [services, setServices] = React.useState<Service[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [search, setSearch] = React.useState("");
@@ -127,13 +129,13 @@ export default function ServiceTable() {
     try {
       const res = await requestDeleteService(serviceToDelete.service_id);
       if (res.success) {
-        setToastMessage({ text: "Xóa dịch vụ thành công!", type: "success" });
+        setToastMessage({ text: dict.admin_services.delete_success, type: "success" });
         loadData(false);
       } else {
-        setToastMessage({ text: res.message || "Xóa thất bại", type: "error" });
+        setToastMessage({ text: res.message || dict.admin_services.delete_fail, type: "error" });
       }
     } catch (err: any) {
-      setToastMessage({ text: "Lỗi hệ thống khi xóa dịch vụ.", type: "error" });
+      setToastMessage({ text: dict.admin_services.error_delete, type: "error" });
     } finally {
       setSubmittingDelete(false);
       setShowDeleteModal(false);
@@ -145,7 +147,7 @@ export default function ServiceTable() {
     return (
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-center min-h-[400px] text-on-surface-variant font-medium">
-          <span className="animate-pulse">Đang tải danh sách dịch vụ...</span>
+          <span className="animate-pulse">{dict.admin_services.loading}</span>
         </div>
       </div>
     );
@@ -158,16 +160,16 @@ export default function ServiceTable() {
         <div>
           <nav className="flex items-center gap-1 text-on-surface-variant/80 text-xs font-medium mb-1">
             <span className="hover:text-primary cursor-pointer transition-colors">
-              Hệ thống
+              {dict.admin_services.system}
             </span>
             <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant/50 shrink-0" />
-            <span className="text-primary font-bold">Dịch vụ</span>
+            <span className="text-primary font-bold">{dict.admin_services.title}</span>
           </nav>
           <h2 className="text-2xl font-bold text-primary tracking-tight font-headline">
-            Danh sách dịch vụ
+            {dict.admin_services.title}
           </h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Tất cả các dịch vụ đang được cung cấp trên hệ thống.
+            {dict.admin_services.desc}
           </p>
         </div>
 
@@ -177,7 +179,7 @@ export default function ServiceTable() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-xs font-semibold hover:bg-surface-container-low transition-all text-on-surface cursor-pointer shadow-sm"
           >
             <RefreshCw className="text-on-surface-variant w-3.5 h-3.5" />
-            <span>Làm mới</span>
+            <span>{dict.admin_services.refresh_btn}</span>
           </button>
 
           <button
@@ -185,7 +187,7 @@ export default function ServiceTable() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-primary text-white rounded-lg text-xs font-semibold hover:bg-primary/90 transition-all cursor-pointer shadow-sm"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Thêm dịch vụ</span>
+            <span>{dict.admin_services.add_btn}</span>
           </button>
         </div>
       </div>
@@ -201,7 +203,7 @@ export default function ServiceTable() {
               setSearch(e.target.value);
               setCurrentPage(1);
             }}
-            placeholder="Tìm kiếm theo tên dịch vụ..."
+            placeholder={dict.admin_services.search_placeholder}
             className="bg-transparent border-none outline-none text-sm text-on-surface w-full placeholder-on-surface-variant"
           />
         </div>
@@ -209,7 +211,7 @@ export default function ServiceTable() {
         <div className="flex items-center gap-2 px-3 py-2 bg-[#eff4ff] rounded-lg border border-[#c3c6d3] shrink-0">
           <Layers className="w-4 h-4 text-primary" />
           <span className="text-sm font-semibold text-primary">
-            {filteredServices.length} dịch vụ
+            {locale === 'vi' ? `${filteredServices.length} dịch vụ` : `${filteredServices.length} services`}
           </span>
         </div>
       </div>
@@ -221,16 +223,16 @@ export default function ServiceTable() {
             <thead>
               <tr className="bg-[#d5e3ff] border-b border-outline-variant">
                 <th className="py-3.5 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[60px] text-center whitespace-nowrap">
-                  STT
+                  {dict.admin_services.tbl_no}
                 </th>
                 <th className="py-3.5 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap min-w-[200px]">
-                  Tên dịch vụ
+                  {dict.admin_services.tbl_name}
                 </th>
                 <th className="py-3.5 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap min-w-[260px]">
-                  Mô tả
+                  {dict.admin_services.tbl_desc}
                 </th>
                 <th className="py-3.5 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[90px] text-center whitespace-nowrap">
-                  Hành động
+                  {dict.admin_services.tbl_actions}
                 </th>
               </tr>
             </thead>
@@ -245,8 +247,8 @@ export default function ServiceTable() {
                       <Layers className="w-10 h-10 text-on-surface-variant/40" />
                       <span>
                         {search
-                          ? "Không tìm thấy dịch vụ phù hợp."
-                          : "Chưa có dịch vụ nào trong hệ thống."}
+                          ? dict.admin_services.no_services_found
+                          : dict.admin_services.no_services}
                       </span>
                     </div>
                   </td>
@@ -274,7 +276,7 @@ export default function ServiceTable() {
                       <span className="text-on-surface-variant text-[13px] line-clamp-2">
                         {service.description || (
                           <span className="italic text-on-surface-variant/50">
-                            Không có mô tả
+                            {dict.admin_services.no_desc}
                           </span>
                         )}
                       </span>
@@ -285,15 +287,15 @@ export default function ServiceTable() {
                       <div className="flex items-center justify-center gap-1">
                         <button
                           onClick={() => handleOpenEditModal(service)}
-                          className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20"
-                          title="Chỉnh sửa"
+                          className="p-2 rounded-lg text-on-surface-variant hover:bg-surface-container hover:text-primary transition-colors focus:outline-none focus:ring-2 focus:ring-primary/20 cursor-pointer"
+                          title={locale === 'vi' ? 'Chỉnh sửa' : 'Edit'}
                         >
                           <Edit2 className="w-4 h-4" />
                         </button>
                         <button
                           onClick={() => handleDeleteClick(service)}
-                          className="p-2 rounded-lg text-on-surface-variant hover:bg-red-50 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/20"
-                          title="Xóa"
+                          className="p-2 rounded-lg text-on-surface-variant hover:bg-red-50 hover:text-red-600 transition-colors focus:outline-none focus:ring-2 focus:ring-red-500/20 cursor-pointer"
+                          title={locale === 'vi' ? 'Xóa' : 'Delete'}
                         >
                           <Trash2 className="w-4 h-4" />
                         </button>
@@ -309,13 +311,13 @@ export default function ServiceTable() {
         {/* Pagination Footer */}
         <div className="px-6 py-4 border-t border-outline-variant flex justify-between items-center bg-surface-container-low">
           <p className="text-on-surface-variant text-sm font-medium">
-            Hiển thị{" "}
+            {dict.admin_services.showing}{" "}
             {filteredServices.length === 0
               ? 0
               : (currentPage - 1) * ITEMS_PER_PAGE + 1}{" "}
             -{" "}
             {Math.min(currentPage * ITEMS_PER_PAGE, filteredServices.length)}{" "}
-            trên {filteredServices.length} kết quả
+            {dict.admin_services.of} {filteredServices.length} {dict.admin_services.results}
           </p>
           <div className="flex gap-1">
             <button
@@ -369,36 +371,38 @@ export default function ServiceTable() {
 
       {/* ─── Delete Confirmation Modal ─────────────────────────────────────── */}
       {showDeleteModal && serviceToDelete && (
-        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-[999] flex items-center justify-center p-4 font-body">
           <div 
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity" 
+            className="absolute inset-0 bg-black/40 backdrop-blur-sm transition-opacity animate-in fade-in duration-200" 
             onClick={() => !submittingDelete && setShowDeleteModal(false)} 
           />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto overflow-hidden text-center p-6 animate-in fade-in zoom-in-95 duration-200">
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-auto overflow-hidden text-center p-6 animate-in fade-in zoom-in-95 duration-200 border border-slate-200">
             <div className="w-12 h-12 rounded-full bg-red-50 flex items-center justify-center mx-auto mb-4 border border-red-100">
               <Trash2 className="w-6 h-6 text-red-500" />
             </div>
             <h3 className="text-lg font-bold text-[#0b1c30] mb-2 font-headline">
-              Xóa dịch vụ
+              {dict.admin_services.confirm_delete_title}
             </h3>
             <p className="text-sm text-[#434751] mb-6">
-              Bạn có chắc chắn muốn xóa dịch vụ <span className="font-semibold text-[#0b1c30]">"{serviceToDelete.name}"</span>? Hành động này không thể hoàn tác.
+              {locale === 'vi'
+                ? `Bạn có chắc chắn muốn xóa dịch vụ "${serviceToDelete.name}"? Hành động này không thể hoàn tác.`
+                : `Are you sure you want to delete service "${serviceToDelete.name}"? This action cannot be undone.`}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setShowDeleteModal(false)}
                 disabled={submittingDelete}
-                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors disabled:opacity-50"
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors disabled:opacity-50 cursor-pointer"
               >
-                Hủy bỏ
+                {dict.admin_services.cancel}
               </button>
               <button
                 onClick={confirmDelete}
                 disabled={submittingDelete}
-                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60"
+                className="flex-1 px-4 py-2.5 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center justify-center gap-2 disabled:opacity-60 cursor-pointer"
               >
                 {submittingDelete && <Loader2 className="w-4 h-4 animate-spin" />}
-                Xác nhận xóa
+                {dict.admin_services.confirm_delete}
               </button>
             </div>
           </div>

@@ -53,6 +53,7 @@ export interface Service {
   service_id: string;
   name: string;
   description: string;
+  is_active?: boolean;
 }
 
 export interface GetCompanyFiltersResponse {

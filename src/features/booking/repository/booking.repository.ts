@@ -191,6 +191,53 @@ export const createBooking = async (
   return data as Booking;
 };
 
+export const updateBookingDetails = async (
+  bookingId: string,
+  updates: {
+    address?: string;
+    description?: string | null;
+    guards_per_slot?: number;
+    time_slots?: string[];
+    day_per_week?: string[];
+    start_date?: string;
+    end_date?: string;
+  }
+): Promise<Booking> => {
+  const supabase = await createClient();
+
+  const { data: booking, error: fetchError } = await supabase
+    .from("bookings")
+    .select("status")
+    .eq("booking_id", bookingId)
+    .maybeSingle();
+
+  if (fetchError) throw fetchError;
+  if (!booking) throw new Error("Không tìm thấy yêu cầu đặt lịch.");
+
+  const editableStatuses: BookingStatus[] = ["pending", "rejected"];
+  if (!editableStatuses.includes(booking.status as BookingStatus)) {
+    if (booking.status === "quoted") {
+      throw new Error("Vui lòng từ chối báo giá trước khi thực hiện chỉnh sửa yêu cầu dịch vụ.");
+    }
+    throw new Error("Không thể chỉnh sửa yêu cầu ở trạng thái này.");
+  }
+
+  const updatePayload: any = {
+    ...updates,
+    updated_at: new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from("bookings")
+    .update(updatePayload)
+    .eq("booking_id", bookingId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data as Booking;
+};
+
 export const updateBookingStatusAndPrice = async (
   bookingId: string,
   updates: { status: BookingStatus; quoted_price?: number }

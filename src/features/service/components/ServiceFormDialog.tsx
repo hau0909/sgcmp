@@ -4,6 +4,7 @@ import React, { useState, useEffect } from "react";
 import { X, Loader2 } from "lucide-react";
 import { requestCreateService, requestUpdateService } from "../api/service.api";
 import type { Service } from "@/types/Service";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface ServiceFormDialogProps {
   mode: "add" | "edit";
@@ -18,6 +19,7 @@ export default function ServiceFormDialog({
   onSuccess,
   onClose,
 }: ServiceFormDialogProps) {
+  const { dict } = useTranslation();
   const [form, setForm] = useState({ name: "", description: "" });
   const [formError, setFormError] = useState("");
   const [submitting, setSubmitting] = useState(false);
@@ -46,7 +48,7 @@ export default function ServiceFormDialog({
           setFormError(result.message);
           return;
         }
-        onSuccess("Tạo dịch vụ thành công!");
+        onSuccess(dict.admin_services.create_success);
       } else if (mode === "edit" && service) {
         const result = await requestUpdateService(service.service_id, {
           name: form.name.trim(),
@@ -56,10 +58,10 @@ export default function ServiceFormDialog({
           setFormError(result.message);
           return;
         }
-        onSuccess("Cập nhật dịch vụ thành công!");
+        onSuccess(dict.admin_services.update_success);
       }
     } catch (err: any) {
-      setFormError(err?.message || "Đã có lỗi xảy ra.");
+      setFormError(err?.message || dict.admin_services.error_generic);
     } finally {
       setSubmitting(false);
     }
@@ -67,16 +69,16 @@ export default function ServiceFormDialog({
 
   return (
     <div className="fixed inset-0 z-[999] flex items-center justify-center bg-black/40 backdrop-blur-sm p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-auto overflow-hidden font-body border border-slate-200">
         {/* Dialog Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#c3c6d3] bg-[#eff4ff]">
           <h2 className="text-base font-bold text-[#0b1c30] font-headline">
-            {mode === "add" ? "Thêm dịch vụ mới" : "Cập nhật dịch vụ"}
+            {mode === "add" ? dict.admin_services.add_dialog_title : dict.admin_services.edit_dialog_title}
           </h2>
           <button
             onClick={onClose}
             disabled={submitting}
-            className="text-[#434751] hover:text-[#0b1c30] p-1 rounded-full hover:bg-[#dce9ff] transition-colors disabled:opacity-50"
+            className="text-[#434751] hover:text-[#0b1c30] p-1 rounded-full hover:bg-[#dce9ff] transition-colors disabled:opacity-50 cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -87,13 +89,13 @@ export default function ServiceFormDialog({
           {/* Tên dịch vụ */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-[#434751] font-body">
-              Tên dịch vụ <span className="text-red-500">*</span>
+              {dict.admin_services.name_label} <span className="text-red-500">*</span>
             </label>
             <input
               type="text"
               value={form.name}
               onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-              placeholder="VD: Bảo vệ sự kiện"
+              placeholder={dict.admin_services.name_placeholder}
               required
               disabled={submitting}
               className={`h-10 rounded-lg border px-3 text-sm text-[#0b1c30] bg-white focus:outline-none transition-colors disabled:opacity-60 placeholder:text-[#434751]/60 ${
@@ -114,7 +116,7 @@ export default function ServiceFormDialog({
           {/* Mô tả */}
           <div className="flex flex-col gap-1.5">
             <label className="text-xs font-semibold text-[#434751] font-body">
-              Mô tả <span className="text-red-500">*</span>
+              {dict.admin_services.desc_label} <span className="text-red-500">*</span>
             </label>
             <textarea
               value={form.description}
@@ -124,7 +126,7 @@ export default function ServiceFormDialog({
                   description: e.target.value,
                 }))
               }
-              placeholder="Mô tả ngắn về dịch vụ này..."
+              placeholder={dict.admin_services.desc_placeholder}
               rows={3}
               required
               disabled={submitting}
@@ -147,7 +149,7 @@ export default function ServiceFormDialog({
 
           {/* Error message */}
           {formError && (
-            <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2 mt-1">
+            <p className="text-xs text-red-600 font-medium bg-red-50 rounded-lg px-3 py-2 mt-1 border border-red-100">
               {formError}
             </p>
           )}
@@ -158,9 +160,9 @@ export default function ServiceFormDialog({
               type="button"
               onClick={onClose}
               disabled={submitting}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors cursor-pointer"
             >
-              Hủy
+              {dict.admin_services.cancel}
             </button>
             <button
               type="submit"
@@ -169,10 +171,10 @@ export default function ServiceFormDialog({
                 form.name.length > 50 ||
                 form.description.length > 150
               }
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
             >
               {submitting && <Loader2 className="w-4 h-4 animate-spin" />}
-              {mode === "add" ? "Tạo dịch vụ" : "Lưu thay đổi"}
+              {mode === "add" ? dict.admin_services.confirm_create : dict.admin_services.confirm_edit}
             </button>
           </div>
         </form>
