@@ -7,6 +7,7 @@ import {
   requestCreatePlan,
   requestUpdatePlan,
 } from "@/features/subscription/api/subscription.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface PlanFormDialogProps {
   mode: "add" | "edit";
@@ -21,6 +22,7 @@ export default function PlanFormDialog({
   onSuccess,
   onClose,
 }: PlanFormDialogProps) {
+  const { dict } = useTranslation();
   const [planName, setPlanName] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<string>("");
@@ -76,43 +78,43 @@ export default function PlanFormDialog({
 
     // Validation checks
     if (planName.trim().length > 50) {
-      setError("Tên gói dịch vụ không được vượt quá 50 ký tự.");
+      setError(dict.admin_service_packages.error_name_len);
       setLoading(false);
       return;
     }
 
     if (description.length > 200) {
-      setError("Mô tả ngắn không được vượt quá 200 ký tự.");
+      setError(dict.admin_service_packages.error_desc_len);
       setLoading(false);
       return;
     }
 
     if (Number(price) > 1000000000) {
-      setError("Giá dịch vụ không được vượt quá 1.000.000.000 VND.");
+      setError(dict.admin_service_packages.error_price_max);
       setLoading(false);
       return;
     }
 
     if (Number(durationDays) > 365) {
-      setError("Thời hạn gói không được vượt quá 365 ngày (01 năm).");
+      setError(dict.admin_service_packages.error_duration_max);
       setLoading(false);
       return;
     }
 
     if (maxCoordinators !== "" && Number(maxCoordinators) > 100000) {
-      setError("Giới hạn điều phối viên không được vượt quá 100.000 tài khoản.");
+      setError(dict.admin_service_packages.error_coor_max);
       setLoading(false);
       return;
     }
 
     if (maxGuards !== "" && Number(maxGuards) > 100000) {
-      setError("Giới hạn bảo vệ không được vượt quá 100.000 tài khoản.");
+      setError(dict.admin_service_packages.error_guard_max);
       setLoading(false);
       return;
     }
 
     if (featuresText.length > 500) {
-      setError("Tổng độ dài danh sách tính năng không được vượt quá 500 ký tự.");
+      setError(dict.admin_service_packages.error_feat_len);
       setLoading(false);
       return;
     }
@@ -138,18 +140,18 @@ export default function PlanFormDialog({
       if (mode === "add") {
         const res = await requestCreatePlan(payload);
         if (!res.success) {
-          throw new Error(res.error || "Không thể tạo gói dịch vụ");
+          throw new Error(res.error || dict.admin_service_packages.toast_add_success);
         }
       } else if (mode === "edit" && plan) {
         const res = await requestUpdatePlan(plan.plan_id, payload);
         if (!res.success) {
-          throw new Error(res.error || "Không thể cập nhật gói dịch vụ");
+          throw new Error(res.error || dict.admin_service_packages.toast_edit_success);
         }
       }
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err?.message || "Đã xảy ra lỗi. Vui lòng thử lại.");
+      setError(err?.message || dict.admin_service_packages.toast_edit_success);
     } finally {
       setLoading(false);
     }
@@ -157,27 +159,27 @@ export default function PlanFormDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm overflow-y-auto py-10">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden my-auto">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden my-auto border border-slate-200">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-5 border-b border-[#c3c6d3] bg-[#eff4ff]">
           <h2 className="text-base font-bold text-[#0b1c30] font-headline">
-            {mode === "add" ? "Thêm gói dịch vụ mới" : "Cập nhật gói dịch vụ"}
+            {mode === "add" ? dict.admin_service_packages.dialog_add_title : dict.admin_service_packages.dialog_edit_title}
           </h2>
           <button
             onClick={onClose}
-            className="text-[#434751] hover:text-[#0b1c30] p-1 rounded-full hover:bg-[#dce9ff] transition-colors"
+            className="text-[#434751] hover:text-[#0b1c30] p-1 rounded-full hover:bg-[#dce9ff] transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4 max-h-[80vh] overflow-y-auto">
+        <form onSubmit={handleSubmit} className="px-6 py-5 flex flex-col gap-4 max-h-[80vh] overflow-y-auto font-body">
           {/* Plan Name */}
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-[#434751] font-body">
-                Tên gói dịch vụ <span className="text-red-500">*</span>
+              <label className="text-xs font-semibold text-[#434751]">
+                {dict.admin_service_packages.dialog_name} <span className="text-red-500">*</span>
               </label>
               <span className="text-[10px] text-[#737785]">{planName.length}/50</span>
             </div>
@@ -187,7 +189,7 @@ export default function PlanFormDialog({
               onChange={(e) => setPlanName(e.target.value)}
               required
               maxLength={50}
-              placeholder="Ví dụ: Gói Cơ Bản, Gói Chuyên Nghiệp"
+              placeholder={dict.admin_service_packages.dialog_name_placeholder}
               className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors"
             />
           </div>
@@ -195,8 +197,8 @@ export default function PlanFormDialog({
           {/* Description */}
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-[#434751] font-body">
-                Mô tả ngắn
+              <label className="text-xs font-semibold text-[#434751]">
+                {dict.admin_service_packages.dialog_desc}
               </label>
               <span className="text-[10px] text-[#737785]">{description.length}/200</span>
             </div>
@@ -204,7 +206,7 @@ export default function PlanFormDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={200}
-              placeholder="Mô tả tóm tắt về gói dịch vụ..."
+              placeholder={dict.admin_service_packages.dialog_desc_placeholder}
               rows={2}
               className="rounded-lg border border-[#c3c6d3] p-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors resize-none"
             />
@@ -213,8 +215,8 @@ export default function PlanFormDialog({
           {/* Price & Duration */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#434751] font-body">
-                Giá dịch vụ (VND) <span className="text-red-500">*</span>
+              <label className="text-xs font-semibold text-[#434751]">
+                {dict.admin_service_packages.dialog_price} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -223,14 +225,14 @@ export default function PlanFormDialog({
                 required
                 min={0}
                 max={1000000000}
-                placeholder="Nhập giá tiền"
+                placeholder={dict.admin_service_packages.dialog_price_placeholder}
                 className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors"
               />
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#434751] font-body">
-                Thời hạn gói (Ngày) <span className="text-red-500">*</span>
+              <label className="text-xs font-semibold text-[#434751]">
+                {dict.admin_service_packages.dialog_duration} <span className="text-red-500">*</span>
               </label>
               <input
                 type="number"
@@ -239,7 +241,7 @@ export default function PlanFormDialog({
                 required
                 min={1}
                 max={3650}
-                placeholder="Ví dụ: 30, 90, 365"
+                placeholder={dict.admin_service_packages.dialog_duration_placeholder}
                 className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors"
               />
             </div>
@@ -248,8 +250,8 @@ export default function PlanFormDialog({
           {/* Max Coordinators & Max Guards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#434751] font-body">
-                Giới hạn điều phối viên (Coordinators)
+              <label className="text-xs font-semibold text-[#434751]">
+                {dict.admin_service_packages.dialog_coor}
               </label>
               <input
                 type="number"
@@ -260,15 +262,15 @@ export default function PlanFormDialog({
                 }}
                 min={0}
                 max={100000}
-                placeholder="Không giới hạn"
+                placeholder={dict.admin_service_packages.unlimited}
                 className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors"
               />
-              <p className="text-[10px] text-[#737785]">Để trống nếu không giới hạn.</p>
+              <p className="text-[10px] text-[#737785]">{dict.admin_service_packages.dialog_coor_hint}</p>
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#434751] font-body">
-                Giới hạn bảo vệ (Guards)
+              <label className="text-xs font-semibold text-[#434751]">
+                {dict.admin_service_packages.dialog_guard}
               </label>
               <input
                 type="number"
@@ -279,18 +281,18 @@ export default function PlanFormDialog({
                 }}
                 min={0}
                 max={100000}
-                placeholder="Không giới hạn"
+                placeholder={dict.admin_service_packages.unlimited}
                 className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors"
               />
-              <p className="text-[10px] text-[#737785]">Để trống nếu không giới hạn.</p>
+              <p className="text-[10px] text-[#737785]">{dict.admin_service_packages.dialog_guard_hint}</p>
             </div>
           </div>
 
           {/* Features list */}
           <div className="flex flex-col gap-1.5">
             <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-[#434751] font-body">
-                Các tính năng nổi bật (Mỗi dòng một tính năng)
+              <label className="text-xs font-semibold text-[#434751]">
+                {dict.admin_service_packages.dialog_features}
               </label>
               <span className="text-[10px] text-[#737785]">{featuresText.length}/500</span>
             </div>
@@ -298,7 +300,7 @@ export default function PlanFormDialog({
               value={featuresText}
               onChange={(e) => setFeaturesText(e.target.value)}
               maxLength={500}
-              placeholder="Quản lý tối đa 20 bảo vệ.&#10;Lên lịch trực ca cơ bản.&#10;Check-in/Check-out ca làm."
+              placeholder={dict.admin_service_packages.dialog_features_placeholder}
               rows={4}
               className="rounded-lg border border-[#c3c6d3] p-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors resize-y font-body"
             />
@@ -318,17 +320,17 @@ export default function PlanFormDialog({
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors cursor-pointer"
             >
-              Huỷ
+              {dict.admin_service_packages.cancel}
             </button>
             <button
               type="submit"
               disabled={loading}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2 disabled:opacity-60"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2 disabled:opacity-60 cursor-pointer"
             >
               {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {mode === "add" ? "Thêm mới" : "Lưu thay đổi"}
+              {mode === "add" ? dict.admin_service_packages.confirm : dict.admin_service_packages.save}
             </button>
           </div>
         </form>

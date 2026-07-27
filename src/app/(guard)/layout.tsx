@@ -17,7 +17,6 @@ import {
   CalendarDays,
   ShieldCheck,
   LogOut,
-  Bell,
   UserCircle,
   ChevronDown,
 } from "lucide-react";
@@ -305,13 +304,6 @@ export default function GuardLayout({
             </Link>
 
             <div className="flex items-center gap-2 relative">
-              <button
-                type="button"
-                className="relative flex h-10 w-10 items-center justify-center rounded-full text-slate-600 transition-colors hover:bg-slate-100"
-              >
-                <Bell className="h-5 w-5" />
-                <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500" />
-              </button>
 
               <button
                 type="button"

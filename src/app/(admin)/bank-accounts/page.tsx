@@ -21,6 +21,7 @@ import {
   requestDeleteBankAccount,
 } from "@/features/payment/api/payment.api";
 import BankAccountFormDialog from "@/features/payment/component/BankAccountFormDialog";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 // ─── Delete Confirm Dialog ────────────────────────────────────────────────────
 function DeleteConfirmDialog({
@@ -34,9 +35,10 @@ function DeleteConfirmDialog({
   onCancel: () => void;
   deleting: boolean;
 }) {
+  const { dict } = useTranslation();
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden border border-slate-200">
         <div className="px-6 py-5 flex flex-col gap-4">
           <div className="flex items-start gap-4">
             <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center shrink-0">
@@ -44,14 +46,12 @@ function DeleteConfirmDialog({
             </div>
             <div>
               <h3 className="text-base font-bold text-[#0b1c30] font-headline">
-                Xác nhận xóa tài khoản
+                {dict.admin_bank_accounts.delete_confirm_title}
               </h3>
               <p className="text-sm text-[#434751] mt-1 font-body">
-                Bạn có chắc muốn xóa tài khoản{" "}
-                <span className="font-bold text-[#0b1c30]">
-                  {account.account_number}
-                </span>{" "}
-                ({account.bank_name})?
+                {dict.admin_bank_accounts.delete_confirm_desc
+                  .replace("{number}", account.account_number)
+                  .replace("{bank}", account.bank_name)}
               </p>
             </div>
           </div>
@@ -60,9 +60,7 @@ function DeleteConfirmDialog({
             <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
               <TriangleAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
               <p className="text-sm text-amber-700 font-medium">
-                <span className="font-bold">Cảnh báo:</span> Đây là tài khoản
-                đang <span className="font-bold">hoạt động</span>. Sau khi xóa,
-                chức năng thanh toán sẽ tạm thời ngưng hoạt động.
+                {dict.admin_bank_accounts.active_warning}
               </p>
             </div>
           )}
@@ -71,17 +69,17 @@ function DeleteConfirmDialog({
             <button
               onClick={onCancel}
               disabled={deleting}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] transition-colors cursor-pointer"
             >
-              Huỷ
+              {dict.admin_bank_accounts.cancel}
             </button>
             <button
               onClick={onConfirm}
               disabled={deleting}
-              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-60"
+              className="px-4 py-2 rounded-lg text-sm font-semibold text-white bg-red-600 hover:bg-red-700 transition-colors flex items-center gap-2 disabled:opacity-60 cursor-pointer"
             >
               {deleting && <Loader2 className="w-4 h-4 animate-spin" />}
-              Xóa tài khoản
+              {dict.admin_bank_accounts.delete_account}
             </button>
           </div>
         </div>
@@ -126,6 +124,7 @@ function BankAccountCard({
   onEdit: (acc: BankAccount) => void;
   onDelete: (acc: BankAccount) => void;
 }) {
+  const { dict, locale } = useTranslation();
   const [imgError, setImgError] = useState(false);
   const abbrev = account.bank_code.slice(0, 4).toUpperCase();
   const logoUrl = getBankLogoUrl(account.bank_code);
@@ -172,11 +171,11 @@ function BankAccountCard({
           {account.is_active ? (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-primary/10 text-primary shrink-0">
               <CheckCircle2 className="w-3 h-3" />
-              Đang hoạt động
+              {dict.admin_bank_accounts.active_status}
             </span>
           ) : (
             <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold bg-[#eff4ff] text-[#434751] shrink-0">
-              Ngừng hoạt động
+              {dict.admin_bank_accounts.inactive_status}
             </span>
           )}
         </div>
@@ -189,7 +188,7 @@ function BankAccountCard({
       <div className="px-5 py-4 flex flex-col gap-3 flex-1">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold text-[#434751] uppercase tracking-widest">
-            Chủ tài khoản
+            {dict.admin_bank_accounts.account_holder}
           </span>
           <span className="text-xs font-bold text-[#0b1c30] uppercase">
             {account.account_name}
@@ -198,7 +197,7 @@ function BankAccountCard({
 
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold text-[#434751] uppercase tracking-widest">
-            Số tài khoản
+            {dict.admin_bank_accounts.account_number}
           </span>
           <span className="text-sm font-bold text-[#0b1c30] font-mono tracking-wide">
             {account.account_number}
@@ -207,11 +206,11 @@ function BankAccountCard({
 
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold text-[#434751] uppercase tracking-widest">
-            Vai trò
+            {dict.admin_bank_accounts.role}
           </span>
           {account.is_active ? (
             <span className="flex items-center gap-1 text-xs font-bold text-primary">
-              Mặc định
+              {dict.admin_bank_accounts.default}
             </span>
           ) : (
             <span className="text-xs text-[#434751] font-medium">—</span>
@@ -226,14 +225,14 @@ function BankAccountCard({
           <button
             onClick={() => onDelete(account)}
             disabled={deletingId === account.id}
-            className="h-8 px-3 rounded-lg text-xs font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors flex items-center gap-1.5 disabled:opacity-50"
+            className="h-8 px-3 rounded-lg text-xs font-semibold text-red-500 hover:text-red-700 hover:bg-red-50 transition-colors flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
           >
             {deletingId === account.id ? (
               <Loader2 className="w-3.5 h-3.5 animate-spin" />
             ) : (
               <Trash2 className="w-3.5 h-3.5" />
             )}
-            Xóa
+            {dict.admin_bank_accounts.delete}
           </button>
         </div>
 
@@ -243,36 +242,36 @@ function BankAccountCard({
             <button
               onClick={() => onDeactivate(account)}
               disabled={switchingId === account.id}
-              className="h-8 px-3 rounded-lg text-xs font-semibold text-[#434751] bg-white hover:bg-gray-50 border border-[#c3c6d3] transition-colors flex items-center justify-center shadow-sm w-auto disabled:opacity-60"
+              className="h-8 px-3 rounded-lg text-xs font-semibold text-[#434751] bg-white hover:bg-gray-50 border border-[#c3c6d3] transition-colors flex items-center justify-center shadow-sm w-auto disabled:opacity-60 cursor-pointer"
             >
               {switchingId === account.id ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
-                <span>Ngừng hoạt động</span>
+                <span>{dict.admin_bank_accounts.inactive_status}</span>
               )}
             </button>
           ) : (
             <button
               onClick={() => onActivate(account)}
               disabled={switchingId === account.id}
-              className="h-8 px-3 rounded-lg text-xs font-semibold text-[#2c5ead] bg-white hover:bg-[#dce9ff] border border-[#c3c6d3] transition-colors flex items-center gap-1.5 disabled:opacity-60 shadow-sm"
+              className="h-8 px-3 rounded-lg text-xs font-semibold text-[#2c5ead] bg-white hover:bg-[#dce9ff] border border-[#c3c6d3] transition-colors flex items-center gap-1.5 disabled:opacity-60 shadow-sm cursor-pointer"
             >
               {switchingId === account.id ? (
                 <Loader2 className="w-3.5 h-3.5 animate-spin" />
               ) : (
                 <CheckCircle2 className="w-3.5 h-3.5" />
               )}
-              Đặt làm mặc định
+              {dict.admin_bank_accounts.set_default}
             </button>
           )}
 
           <button
             onClick={() => onEdit(account)}
-            className="h-8 px-3 rounded-lg text-xs font-semibold text-[#434751] bg-white hover:bg-[#dce9ff] border border-[#c3c6d3] transition-colors flex items-center justify-center shadow-sm w-8 sm:w-auto sm:px-3"
-            title="Chỉnh sửa"
+            className="h-8 px-3 rounded-lg text-xs font-semibold text-[#434751] bg-white hover:bg-[#dce9ff] border border-[#c3c6d3] transition-colors flex items-center justify-center shadow-sm w-8 sm:w-auto sm:px-3 cursor-pointer"
+            title={dict.admin_bank_accounts.edit}
           >
             <Pencil className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline ml-1.5">Chỉnh sửa</span>
+            <span className="hidden sm:inline ml-1.5">{dict.admin_bank_accounts.edit}</span>
           </button>
         </div>
       </div>
@@ -282,6 +281,7 @@ function BankAccountCard({
 
 // ─── Main Page ────────────────────────────────────────────────────────────────
 export default function BankAccountsPage() {
+  const { dict, locale } = useTranslation();
   const [accounts, setAccounts] = useState<BankAccount[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -305,11 +305,11 @@ export default function BankAccountsPage() {
       const res = await requestGetAllBankAccounts();
       if (res.success) setAccounts(res.data);
     } catch (err: any) {
-      setError(err?.message ?? "Không thể tải danh sách tài khoản.");
+      setError(err?.message ?? dict.admin_bank_accounts.error_general);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [dict]);
 
   useEffect(() => {
     fetchAccounts();
@@ -334,7 +334,7 @@ export default function BankAccountsPage() {
       await requestSwitchActiveBankAccount(account.id);
       await fetchAccounts();
     } catch (err: any) {
-      setError(err?.message ?? "Không thể kích hoạt tài khoản.");
+      setError(err?.message ?? dict.admin_bank_accounts.error_activate);
     } finally {
       setSwitchingId(null);
     }
@@ -347,7 +347,7 @@ export default function BankAccountsPage() {
       await requestDeactivateBankAccount(account.id);
       await fetchAccounts();
     } catch (err: any) {
-      setError(err?.message ?? "Không thể ngừng hoạt động tài khoản.");
+      setError(err?.message ?? dict.admin_bank_accounts.error_deactivate);
     } finally {
       setSwitchingId(null);
     }
@@ -359,11 +359,11 @@ export default function BankAccountsPage() {
       setDeletingId(deleteTarget.id);
       setError(null);
       const res = await requestDeleteBankAccount(deleteTarget.id);
-      if (!res.success) throw new Error("Xóa thất bại");
+      if (!res.success) throw new Error(dict.admin_bank_accounts.error_delete);
       setDeleteTarget(null);
       await fetchAccounts();
     } catch (err: any) {
-      setError(err?.message ?? "Không thể xóa tài khoản.");
+      setError(err?.message ?? dict.admin_bank_accounts.error_delete);
       setDeleteTarget(null);
     } finally {
       setDeletingId(null);
@@ -382,10 +382,10 @@ export default function BankAccountsPage() {
           </div>
           <div>
             <h1 className="text-lg font-bold text-[#0b1c30] font-headline">
-              Tài khoản Ngân hàng
+              {dict.admin_bank_accounts.title}
             </h1>
             <p className="text-xs text-[#434751] font-body">
-              Quản lý tài khoản nhận thanh toán của hệ thống
+              {dict.admin_bank_accounts.subtitle}
             </p>
           </div>
         </div>
@@ -394,16 +394,16 @@ export default function BankAccountsPage() {
           <button
             onClick={fetchAccounts}
             disabled={loading}
-            className="h-9 px-3 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] border border-[#c3c6d3] transition-colors flex items-center gap-2 disabled:opacity-50"
+            className="h-9 px-3 rounded-lg text-sm font-semibold text-[#434751] bg-[#eff4ff] hover:bg-[#dce9ff] border border-[#c3c6d3] transition-colors flex items-center gap-2 disabled:opacity-50 cursor-pointer"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? "animate-spin" : ""}`} />
           </button>
           <button
             onClick={handleOpenAdd}
-            className="h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2"
+            className="h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Thêm tài khoản
+            {dict.admin_bank_accounts.add_account}
           </button>
         </div>
       </div>
@@ -413,11 +413,7 @@ export default function BankAccountsPage() {
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
           <TriangleAlert className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <p className="text-sm text-amber-700 font-medium">
-            <span className="font-bold">
-              Chưa có tài khoản nào được kích hoạt.
-            </span>{" "}
-            Chức năng thanh toán gói dịch vụ hiện không khả dụng. Vui lòng đặt
-            một tài khoản làm mặc định.
+            {dict.admin_bank_accounts.no_active_alert}
           </p>
         </div>
       )}
@@ -434,23 +430,23 @@ export default function BankAccountsPage() {
       {loading ? (
         <div className="flex items-center justify-center py-20 gap-3 text-[#434751]">
           <Loader2 className="w-5 h-5 animate-spin" />
-          <span className="text-sm font-medium">Đang tải...</span>
+          <span className="text-sm font-medium">{dict.admin_bank_accounts.loading}</span>
         </div>
       ) : accounts.length === 0 ? (
         /* Empty state */
-        <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-2xl border border-dashed border-[#c3c6d3]">
+        <div className="flex flex-col items-center justify-center py-20 gap-3 bg-white rounded-2xl border border-dashed border-[#c3c6d3] font-body">
           <div className="w-14 h-14 rounded-2xl bg-[#eff4ff] flex items-center justify-center">
             <Landmark className="w-7 h-7 text-[#2c5ead]/40" />
           </div>
           <p className="text-sm text-[#434751] font-medium">
-            Chưa có tài khoản ngân hàng nào.
+            {dict.admin_bank_accounts.no_accounts}
           </p>
           <button
             onClick={handleOpenAdd}
-            className="mt-1 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2"
+            className="mt-1 h-9 px-4 rounded-lg text-sm font-semibold text-white bg-[#2c5ead] hover:bg-[#024594] transition-colors flex items-center gap-2 cursor-pointer"
           >
             <Plus className="w-4 h-4" />
-            Thêm tài khoản đầu tiên
+            {dict.admin_bank_accounts.add_first_account}
           </button>
         </div>
       ) : (
@@ -477,12 +473,12 @@ export default function BankAccountsPage() {
       {/* Stats */}
       {!loading && accounts.length > 0 && (
         <p className="text-xs text-[#434751] font-body">
-          Tổng {accounts.length} tài khoản —{" "}
+          {dict.admin_bank_accounts.total_accounts.replace("{count}", String(accounts.length))} —{" "}
           {hasActive ? (
-            <span className="text-primary font-semibold">1 đang hoạt động</span>
+            <span className="text-primary font-semibold">{dict.admin_bank_accounts.active_status}</span>
           ) : (
             <span className="text-amber-600 font-semibold">
-              Chưa có tài khoản mặc định
+              {dict.admin_bank_accounts.no_default_account}
             </span>
           )}
         </p>

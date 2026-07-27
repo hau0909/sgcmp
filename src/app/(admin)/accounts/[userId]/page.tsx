@@ -1,5 +1,6 @@
 import React, { Suspense } from "react";
 import { AccountDetail } from "@/features/account";
+import LoadingFallback from "@/components/ui/LoadingFallback";
 
 export default async function AccountDetailPage({
   params,
@@ -9,13 +10,7 @@ export default async function AccountDetailPage({
   const { userId } = await params;
 
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-[400px] text-on-surface-variant font-medium">
-          Đang tải chi tiết tài khoản...
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingFallback />}>
       <AccountDetail userId={userId} />
     </Suspense>
   );

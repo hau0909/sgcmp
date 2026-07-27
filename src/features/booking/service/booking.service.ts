@@ -1,5 +1,5 @@
 import { Booking, BookingWithCustomerProfile, BookingStatus } from "../types";
-import { getBookings, getBookingDetail, getBookingById, createBooking, updateBookingStatusAndPrice, getCustomerBookings, getActiveBookingsByAddressAndService } from "../repository/booking.repository";
+import { getBookings, getBookingDetail, getBookingById, createBooking, updateBookingStatusAndPrice, updateBookingDetails, getCustomerBookings, getActiveBookingsByAddressAndService } from "../repository/booking.repository";
 import { formatAddressService } from "@/features/address/service/address.service";
 import { validateBookingUpdateStatusData } from "../validator/booking.validator";
 import { checkTimeOverlap, checkDateOverlap } from "@/utils/calcTime";
@@ -182,6 +182,21 @@ export const createBookingService = async (
   }
 
   return await createBooking(bookingData);
+};
+
+export const updateBookingDetailsService = async (
+  bookingId: string,
+  updates: {
+    address?: string;
+    description?: string | null;
+    guards_per_slot?: number;
+    time_slots?: string[];
+    day_per_week?: string[];
+    start_date?: string;
+    end_date?: string;
+  }
+): Promise<Booking> => {
+  return await updateBookingDetails(bookingId, updates);
 };
 
 export const updateBookingStatusAndPriceService = async (

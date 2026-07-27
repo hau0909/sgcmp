@@ -26,16 +26,12 @@ import {
 import { formatPrice } from "@/utils/formatPrice";
 import type { PaymentMethod, PaymentStatus } from "@/types/Enum";
 import type { PaymentWithCompany } from "@/features/payment/controller/payment.controller";
-
-const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = {
-    bank_transfer: "Chuyển khoản ngân hàng",
-    credit_card: "Thẻ tín dụng",
-    e_wallet: "Ví điện tử",
-};
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 const PAGE_SIZE = 10;
 
 export default function AdminPaymentHistoryPage() {
+    const { dict, locale } = useTranslation();
     const [searchKeyword, setSearchKeyword] = useState("");
     const [status, setStatus] = useState("all");
     const [dateRange, setDateRange] = useState<DateRange>({ start: null, end: null });
@@ -44,6 +40,12 @@ export default function AdminPaymentHistoryPage() {
     const [payments, setPayments] = useState<PaymentWithCompany[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const PAYMENT_METHOD_LABEL: Record<PaymentMethod, string> = useMemo(() => ({
+        bank_transfer: dict.admin_payment_history.method_bank || "Chuyển khoản ngân hàng",
+        credit_card: dict.admin_payment_history.method_credit || "Thẻ tín dụng",
+        e_wallet: dict.admin_payment_history.method_wallet || "Ví điện tử",
+    }), [dict]);
 
     // Fetch ALL payments once on mount
     useEffect(() => {
@@ -57,14 +59,14 @@ export default function AdminPaymentHistoryPage() {
                 const json = await res.json();
 
                 if (!res.ok || !json.success) {
-                    throw new Error(json.error ?? "Không thể tải dữ liệu");
+                    throw new Error(json.error ?? dict.admin_payment_history.error_load);
                 }
 
                 if (!cancelled) {
                     setPayments(json.data);
                 }
             } catch (err: any) {
-                if (!cancelled) setError(err.message ?? "Đã xảy ra lỗi");
+                if (!cancelled) setError(err.message ?? dict.admin_payment_history.error_general);
             } finally {
                 if (!cancelled) setLoading(false);
             }
@@ -72,7 +74,7 @@ export default function AdminPaymentHistoryPage() {
 
         fetchPayments();
         return () => { cancelled = true; };
-    }, []);
+    }, [dict]);
 
     // Filter payments completely client-side
     const filteredPayments = useMemo(() => {
@@ -166,8 +168,13 @@ export default function AdminPaymentHistoryPage() {
 
     const handleExportReport = useCallback(() => {
         const headers = [
-            "Mã giao dịch", "Công ty (ID)", "Gói", "Số tiền",
-            "Phương thức", "Ngày thanh toán", "Trạng thái",
+            dict.admin_payment_history.tbl_tx_code || "Mã giao dịch",
+            dict.admin_payment_history.tbl_company || "Tên công ty",
+            dict.admin_payment_history.tbl_plan || "Gói",
+            dict.admin_payment_history.tbl_amount || "Số tiền",
+            dict.admin_payment_history.tbl_method || "Phương thức",
+            dict.admin_payment_history.tbl_date || "Ngày thanh toán",
+            dict.admin_payment_history.tbl_status || "Trạng thái",
         ];
         const rows = filteredPayments.map((p) => [
             p.transaction_code ?? "",
@@ -188,7 +195,7 @@ export default function AdminPaymentHistoryPage() {
         a.download = "payment-history.csv";
         a.click();
         URL.revokeObjectURL(url);
-    }, [filteredPayments]);
+    }, [filteredPayments, dict, PAYMENT_METHOD_LABEL]);
 
     // Pagination helpers
     const getPageNumbers = () => {
@@ -207,73 +214,65 @@ export default function AdminPaymentHistoryPage() {
     };
 
     return (
-        <main className="min-h-screen bg-slate-50 p-4 md:p-6">
+        <main className="min-h-screen bg-slate-50 p-4 md:p-6 font-body">
             <div className="mx-auto max-w-[1500px] space-y-6">
                 {/* ── Header ───────────────────────────────────────────── */}
                 <section className="flex items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold text-slate-900">Lịch sử thanh toán</h1>
+                        <h1 className="text-2xl font-bold text-slate-900 font-headline">{dict.admin_payment_history.title}</h1>
                         <p className="mt-1 text-sm text-slate-500">
-                            Theo dõi và quản lý các giao dịch thanh toán của doanh nghiệp.
+                            {dict.admin_payment_history.subtitle}
                         </p>
                     </div>
-                    <button
-                        type="button"
-                        onClick={handleExportReport}
-                        className="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-lg bg-blue-700 px-5 text-sm font-semibold text-white transition hover:bg-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-200"
-                    >
-                        <Download className="h-4 w-4" />
-                        Xuất báo cáo
-                    </button>
                 </section>
 
                 {/* ── KPI Cards ─────────────────────────────────────────── */}
                 <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                     <KpiCard
-                        title="Tổng doanh thu"
+                        title={dict.admin_payment_history.total_revenue}
                         value={formatPrice(summary.totalRevenue)}
-                        description="Từ các giao dịch thành công"
+                        description={dict.admin_payment_history.total_revenue_desc}
                         icon={<BadgeDollarSign className="h-5 w-5" />}
                     />
                     <KpiCard
-                        title="Giao dịch thành công"
+                        title={dict.admin_payment_history.success_transactions}
                         value={String(summary.successCount)}
-                        description="Trong kết quả đang lọc"
+                        description={dict.admin_payment_history.success_transactions_desc}
                         icon={<CircleCheckBig className="h-5 w-5" />}
                         iconColor="bg-emerald-50 text-emerald-600"
                     />
                     <KpiCard
-                        title="Đang xử lý"
+                        title={dict.admin_payment_history.pending_transactions}
                         value={String(summary.pendingCount)}
-                        description="Cần tiếp tục theo dõi"
+                        description={dict.admin_payment_history.pending_transactions_desc}
                         icon={<Clock3 className="h-5 w-5" />}
                         iconColor="bg-amber-50 text-amber-500"
                     />
                     <KpiCard
-                        title="Giao dịch thất bại"
+                        title={dict.admin_payment_history.failed_transactions}
                         value={String(summary.failedCount)}
-                        description="Cần kiểm tra nguyên nhân"
+                        description={dict.admin_payment_history.failed_transactions_desc}
                         icon={<CircleX className="h-5 w-5" />}
                         iconColor="bg-red-50 text-red-600"
                     />
                 </section>
 
                 {/* ── Table Card ────────────────────────────────────────── */}
-                <section className="rounded-2xl border border-slate-200 bg-white shadow-sm">
+                <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
                     {/* Filters */}
                     <div className="rounded-t-2xl border-b border-slate-200 p-4 md:p-5">
                         <div className="grid gap-4 xl:grid-cols-[minmax(280px,1.6fr)_minmax(180px,0.6fr)]">
                             {/* Search */}
                             <div>
                                 <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
-                                    Tìm kiếm
+                                    {dict.admin_payment_history.search_label}
                                 </label>
                                 <div className="relative">
                                     <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
                                     <input
                                         value={searchKeyword}
                                         onChange={(e) => handleKeywordChange(e.target.value)}
-                                        placeholder="Mã giao dịch / Tên công ty..."
+                                        placeholder={dict.admin_payment_history.search_placeholder}
                                         className="h-11 w-full rounded-lg border border-slate-300 bg-slate-50 pl-10 pr-4 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
                                     />
                                 </div>
@@ -282,16 +281,26 @@ export default function AdminPaymentHistoryPage() {
                             {/* Status */}
                             <div>
                                 <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
-                                    Trạng thái
+                                    {dict.admin_payment_history.status_label}
                                 </label>
                                 <div className="relative">
                                     <select
                                         value={status}
                                         onChange={(e) => handleStatusChange(e.target.value)}
-                                        className="h-11 w-full appearance-none rounded-lg border border-slate-300 bg-slate-50 px-3 pr-9 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100"
+                                        className="h-11 w-full appearance-none rounded-lg border border-slate-300 bg-slate-50 px-3 pr-9 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer"
                                     >
                                         {statusOptions.map((o) => (
-                                            <option key={o.value} value={o.value}>{o.label}</option>
+                                            <option key={o.value} value={o.value}>
+                                                {o.value === 'all'
+                                                    ? dict.admin_payment_history.status_all
+                                                    : o.value === 'pending'
+                                                    ? dict.admin_payment_history.status_pending
+                                                    : o.value === 'completed'
+                                                    ? dict.admin_payment_history.status_completed
+                                                    : o.value === 'failed'
+                                                    ? dict.admin_payment_history.status_failed
+                                                    : o.label}
+                                            </option>
                                         ))}
                                     </select>
                                     <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
@@ -303,7 +312,7 @@ export default function AdminPaymentHistoryPage() {
                         <div className="mt-4">
                             <div className="w-full sm:max-w-[340px]">
                                 <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
-                                    Khoảng thời gian
+                                    {dict.admin_payment_history.time_range_label}
                                 </label>
                                 <DateRangePicker
                                     value={dateRange}
@@ -316,7 +325,7 @@ export default function AdminPaymentHistoryPage() {
                     {/* Error Banner */}
                     {error && (
                         <div className="border-b border-red-200 bg-red-50 px-5 py-3 text-sm text-red-700">
-                            Lỗi: {error}
+                            {error}
                         </div>
                     )}
 
@@ -326,14 +335,14 @@ export default function AdminPaymentHistoryPage() {
                             <thead>
                                 <tr className="bg-blue-50">
                                     {[
-                                        { label: "Mã giao dịch", cls: "w-[180px]" },
-                                        { label: "Tên công ty", cls: "min-w-[200px]" },
-                                        { label: "Gói", cls: "w-[120px]" },
-                                        { label: "Số tiền", cls: "w-[150px] text-right" },
-                                        { label: "Phương thức", cls: "min-w-[190px]" },
-                                        { label: "Ngày thanh toán", cls: "w-[170px]" },
-                                        { label: "Trạng thái", cls: "w-[130px]" },
-                                        { label: "Hành động", cls: "w-[90px] text-center" },
+                                        { label: dict.admin_payment_history.tbl_tx_code, cls: "w-[180px]" },
+                                        { label: dict.admin_payment_history.tbl_company, cls: "min-w-[200px]" },
+                                        { label: dict.admin_payment_history.tbl_plan, cls: "w-[120px]" },
+                                        { label: dict.admin_payment_history.tbl_amount, cls: "w-[150px] text-right" },
+                                        { label: dict.admin_payment_history.tbl_method, cls: "min-w-[190px]" },
+                                        { label: dict.admin_payment_history.tbl_date, cls: "w-[170px]" },
+                                        { label: dict.admin_payment_history.tbl_status, cls: "w-[130px]" },
+                                        { label: dict.admin_payment_history.tbl_action, cls: "w-[90px] text-center" },
                                     ].map(({ label, cls }) => (
                                         <th
                                             key={label}
@@ -384,7 +393,7 @@ export default function AdminPaymentHistoryPage() {
                                             key={payment.payment_id}
                                             className="border-b border-slate-200 transition hover:bg-slate-50"
                                         >
-                                            <td className="border-r border-slate-200 px-4 py-5 align-middle">
+                                            <td className="border-r border-slate-200 px-4 py-5 align-middle font-mono">
                                                 <span className="text-sm font-medium text-blue-700">
                                                     {payment.transaction_code ?? "—"}
                                                 </span>
@@ -404,7 +413,7 @@ export default function AdminPaymentHistoryPage() {
                                                     </div>
                                                     <span className="text-sm font-semibold text-slate-900">
                                                         {payment.company_name ?? (
-                                                            <span className="text-slate-400 italic">Không rõ</span>
+                                                            <span className="text-slate-400 italic">{dict.admin_payment_history.unknown_company}</span>
                                                         )}
                                                     </span>
                                                 </div>
@@ -412,15 +421,15 @@ export default function AdminPaymentHistoryPage() {
                                             <td className="border-r border-slate-200 px-4 py-5 text-sm text-slate-800">
                                                 {payment.plan_name ?? <span className="text-slate-400">—</span>}
                                             </td>
-                                            <td className="border-r border-slate-200 px-4 py-5 text-right text-sm font-bold text-slate-900">
+                                            <td className="border-r border-slate-200 px-4 py-5 text-right text-sm font-bold text-slate-900 font-mono">
                                                 {formatPrice(payment.amount)}
                                             </td>
                                             <td className="border-r border-slate-200 px-4 py-5 text-sm font-medium text-slate-800">
                                                 {PAYMENT_METHOD_LABEL[payment.payment_method as PaymentMethod] ?? payment.payment_method}
                                             </td>
-                                            <td className="border-r border-slate-200 px-4 py-5 text-sm text-slate-700">
+                                            <td className="border-r border-slate-200 px-4 py-5 text-sm text-slate-700 font-mono">
                                                 {payment.paid_at
-                                                    ? new Date(payment.paid_at).toLocaleString("vi-VN")
+                                                    ? new Date(payment.paid_at).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')
                                                     : <span className="text-slate-400">—</span>
                                                 }
                                             </td>
@@ -441,25 +450,23 @@ export default function AdminPaymentHistoryPage() {
                                 ) : (
                                     <tr>
                                         <td colSpan={8} className="px-4 py-16 text-center">
-                                            <p className="font-semibold text-slate-800">Không tìm thấy giao dịch</p>
+                                            <p className="font-semibold text-slate-800">{dict.admin_payment_history.no_transactions}</p>
                                             <p className="mt-1 text-sm text-slate-500">
-                                                Hãy thay đổi từ khóa hoặc bộ lọc để xem kết quả khác.
+                                                {dict.admin_payment_history.no_transactions_hint}
                                             </p>
                                         </td>
                                     </tr>
                                 )}
-                            </tbody>
+                             </tbody>
                         </table>
                     </div>
 
                     {/* Pagination */}
                     <div className="flex flex-col gap-4 bg-slate-50 px-4 py-4 sm:flex-row sm:items-center sm:justify-between rounded-b-2xl">
                         <p className="text-sm text-slate-600">
-                            Tổng{" "}
-                            <span className="font-semibold text-slate-900">{total}</span>{" "}
-                            giao dịch
+                            {dict.admin_payment_history.total_tx.replace("{count}", String(total))}
                             {totalPages > 1 && (
-                                <> · Trang <span className="font-semibold text-slate-900">{currentPage}</span> / {totalPages}</>
+                                <> · {dict.admin_payment_history.page_info.replace("{current}", String(currentPage)).replace("{total}", String(totalPages))}</>
                             )}
                         </p>
 
@@ -469,7 +476,7 @@ export default function AdminPaymentHistoryPage() {
                                     type="button"
                                     disabled={currentPage === 1 || loading}
                                     onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300 cursor-pointer shadow-xs"
                                 >
                                     <ChevronLeft className="h-4 w-4" />
                                 </button>
@@ -483,7 +490,7 @@ export default function AdminPaymentHistoryPage() {
                                             type="button"
                                             disabled={loading}
                                             onClick={() => setCurrentPage(page as number)}
-                                            className={`h-9 min-w-9 rounded-md px-3 text-sm font-semibold transition
+                                            className={`h-9 min-w-9 rounded-md px-3 text-sm font-semibold transition cursor-pointer
                                                 ${currentPage === page
                                                     ? "bg-blue-700 text-white"
                                                     : "border border-transparent bg-white text-slate-700 hover:border-blue-200 hover:text-blue-700"
@@ -498,7 +505,7 @@ export default function AdminPaymentHistoryPage() {
                                     type="button"
                                     disabled={currentPage === totalPages || loading}
                                     onClick={() => setCurrentPage((p) => Math.min(p + 1, totalPages))}
-                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300"
+                                    className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-slate-200 bg-white text-slate-500 transition hover:border-blue-300 hover:text-blue-700 disabled:cursor-not-allowed disabled:bg-slate-50 disabled:text-slate-300 cursor-pointer shadow-xs"
                                 >
                                     <ChevronRight className="h-4 w-4" />
                                 </button>

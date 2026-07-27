@@ -16,7 +16,10 @@ import {
 import { Card, CardContent } from "@/components/ui/card";
 import { requestGetAdminRevenue, requestGetAdminTotalCompanies, requestGetAdminPublishedCompanies, requestGetAdminTotalUsers, requestGetAdminPendingApprovalCompanies, requestGetAdminPendingPublicationRequests, type MetricWithTrend } from "../api/dashboard.api";
 
+import { useTranslation } from "@/components/providers/LanguageProvider";
+
 export function StatsCards() {
+  const { dict, locale } = useTranslation();
   const [revenue, setRevenue] = useState<MetricWithTrend | null>(null);
   const [totalCompanies, setTotalCompanies] = useState<MetricWithTrend | null>(null);
   const [publishedCompanies, setPublishedCompanies] = useState<MetricWithTrend | null>(null);
@@ -48,28 +51,34 @@ export function StatsCards() {
     ]).finally(() => setLoading(false));
   }, []);
 
+  const numLocale = locale === "vi" ? "vi-VN" : "en-US";
+
   const formattedRevenue = revenue
-    ? `${new Intl.NumberFormat("vi-VN").format(revenue.count)} đ`
-    : "0 đ";
+    ? locale === "vi"
+      ? `${new Intl.NumberFormat(numLocale).format(revenue.count)} đ`
+      : `${new Intl.NumberFormat(numLocale).format(revenue.count)} VND`
+    : locale === "vi"
+    ? "0 đ"
+    : "0 VND";
 
   const formattedTotalCompanies = totalCompanies
-    ? new Intl.NumberFormat("vi-VN").format(totalCompanies.count)
+    ? new Intl.NumberFormat(numLocale).format(totalCompanies.count)
     : "0";
 
   const formattedPublishedCompanies = publishedCompanies
-    ? new Intl.NumberFormat("vi-VN").format(publishedCompanies.count)
+    ? new Intl.NumberFormat(numLocale).format(publishedCompanies.count)
     : "0";
 
   const formattedTotalUsers = totalUsers
-    ? new Intl.NumberFormat("vi-VN").format(totalUsers.count)
+    ? new Intl.NumberFormat(numLocale).format(totalUsers.count)
     : "0";
 
   const formattedPendingApprovalCompanies = pendingApprovalCompanies
-    ? new Intl.NumberFormat("vi-VN").format(pendingApprovalCompanies.count)
+    ? new Intl.NumberFormat(numLocale).format(pendingApprovalCompanies.count)
     : "0";
 
   const formattedPendingPublicationRequests = pendingPublicationRequests
-    ? new Intl.NumberFormat("vi-VN").format(pendingPublicationRequests.count)
+    ? new Intl.NumberFormat(numLocale).format(pendingPublicationRequests.count)
     : "0";
 
   const getTrendBadge = (metric: MetricWithTrend | null) => {
@@ -105,7 +114,7 @@ export function StatsCards() {
 
   const stats = [
     {
-      label: "TỔNG DOANH THU",
+      label: dict.admin_dashboard.total_revenue,
       value: loading ? (
         <span className="inline-block w-24 h-6 bg-slate-100 rounded animate-pulse" />
       ) : (
@@ -120,7 +129,7 @@ export function StatsCards() {
       ),
     },
     {
-      label: "TỔNG DOANH NGHIỆP",
+      label: dict.admin_dashboard.total_companies,
       value: loading ? (
         <span className="inline-block w-24 h-6 bg-slate-100 rounded animate-pulse" />
       ) : (
@@ -135,7 +144,7 @@ export function StatsCards() {
       ),
     },
     {
-      label: "DOANH NGHIỆP ĐANG CÔNG KHAI",
+      label: dict.admin_dashboard.published_companies,
       value: loading ? (
         <span className="inline-block w-24 h-6 bg-slate-100 rounded animate-pulse" />
       ) : (
@@ -150,7 +159,7 @@ export function StatsCards() {
       ),
     },
     {
-      label: "TỔNG NGƯỜI DÙNG",
+      label: dict.admin_dashboard.total_users,
       value: loading ? (
         <span className="inline-block w-24 h-6 bg-slate-100 rounded animate-pulse" />
       ) : (
@@ -165,11 +174,11 @@ export function StatsCards() {
       ),
     },
     {
-      label: "DOANH NGHIỆP ĐỢI PHÊ DUYỆT",
+      label: dict.admin_dashboard.pending_approval_companies,
       value: loading ? (
         <span className="inline-block w-24 h-6 bg-slate-100 rounded animate-pulse" />
       ) : (
-        `${formattedPendingApprovalCompanies} chờ phê duyệt`
+        `${formattedPendingApprovalCompanies} ${dict.admin_dashboard.awaiting_approval}`
       ),
       icon: ClockArrowUp,
       iconColor: "text-blue-500 bg-blue-50",
@@ -180,11 +189,11 @@ export function StatsCards() {
       ),
     },
     {
-      label: "YÊU CẦU CÔNG KHAI DOANH NGHIỆP",
+      label: dict.admin_dashboard.pending_publication_requests,
       value: loading ? (
         <span className="inline-block w-24 h-6 bg-slate-100 rounded animate-pulse" />
       ) : (
-        `${formattedPendingPublicationRequests} chờ công khai`
+        `${formattedPendingPublicationRequests} ${dict.admin_dashboard.awaiting_publication}`
       ),
       icon: Globe2,
       iconColor: "text-violet-500 bg-violet-50",

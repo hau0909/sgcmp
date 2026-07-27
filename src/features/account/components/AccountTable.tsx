@@ -18,6 +18,7 @@ import {
 import { requestGetAllAccounts } from "../api/account.api";
 import type { Profile } from "@/types/Profile";
 import type { UserRole, GeneralStatus } from "@/types/Enum";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 const formatDate = (dateStr: string) => {
   try {
@@ -32,18 +33,18 @@ const formatDate = (dateStr: string) => {
   }
 };
 
-const getRoleLabel = (role: UserRole): string => {
+const getRoleLabel = (role: UserRole, dict: any): string => {
   switch (role) {
     case "admin":
-      return "Admin";
+      return dict.admin_accounts.admin || "Admin";
     case "customer":
-      return "Khách hàng";
+      return dict.admin_accounts.customer || "Khách hàng";
     case "company-admin":
-      return "Quản lý DN";
+      return dict.admin_accounts.company_admin || "Quản lý DN";
     case "guard":
-      return "Bảo vệ";
+      return dict.admin_accounts.guard || "Bảo vệ";
     case "coordinator":
-      return "Điều phối";
+      return dict.admin_accounts.coordinator || "Điều phối";
     default:
       return role;
   }
@@ -90,10 +91,10 @@ const getRoleBadge = (role: UserRole) => {
   }
 };
 
-const getStatusBadge = (status: GeneralStatus) => {
+const getStatusBadge = (status: GeneralStatus, dict: any) => {
   if (status === "active") {
     return {
-      label: "Active",
+      label: dict.admin_bank_accounts.active_status || "Active",
       bg: "bg-[#dcfce7]",
       text: "text-[#166534]",
       dot: "bg-[#22c55e]",
@@ -101,14 +102,14 @@ const getStatusBadge = (status: GeneralStatus) => {
   }
   if (status === "banned") {
     return {
-      label: "Banned",
+      label: dict.admin_accounts.lock_account ? (dict.admin_accounts.lock_account.includes("Khóa") ? "Bị khóa" : "Banned") : "Banned",
       bg: "bg-[#fef2f2] border border-[#fca5a5]",
       text: "text-[#991b1b]",
       dot: "bg-[#ef4444]",
     };
   }
   return {
-    label: "Unactive",
+    label: dict.admin_bank_accounts.inactive_status || "Inactive",
     bg: "bg-[#fee2e2]",
     text: "text-[#991b1b]",
     dot: "bg-[#ef4444]",
@@ -119,6 +120,7 @@ type RoleFilter = "all" | UserRole;
 type StatusFilter = "all" | GeneralStatus;
 
 export default function AccountTable() {
+  const { dict, locale } = useTranslation();
   const [accounts, setAccounts] = React.useState<Profile[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -197,7 +199,7 @@ export default function AccountTable() {
         setAccounts(res.accounts || []);
       } catch (err: any) {
         console.error("Error fetching accounts:", err);
-        setError(err.message || "Không thể tải danh sách tài khoản");
+        setError(err.message || dict.admin_accounts.error_load_list);
       } finally {
         setLoading(false);
       }
@@ -211,7 +213,7 @@ export default function AccountTable() {
         <div className="flex items-center justify-center min-h-[400px] text-on-surface-variant font-medium">
           <div className="flex flex-col items-center gap-3">
             <div className="w-8 h-8 border-3 border-primary border-t-transparent rounded-full animate-spin" />
-            <span>Đang tải danh sách tài khoản...</span>
+            <span>{dict.admin_accounts.loading_list}</span>
           </div>
         </div>
       </div>
@@ -222,7 +224,7 @@ export default function AccountTable() {
     return (
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-center min-h-[400px] text-error font-medium">
-          Lỗi: {error}
+          {dict.admin_accounts.error_load_list}: {error}
         </div>
       </div>
     );
@@ -235,16 +237,16 @@ export default function AccountTable() {
         <div>
           <nav className="flex items-center gap-1 text-on-surface-variant/80 text-xs font-medium mb-1">
             <span className="hover:text-primary cursor-pointer transition-colors">
-              Quản trị
+              {dict.admin_accounts.admin}
             </span>
             <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant/50 shrink-0" />
-            <span className="text-primary font-bold">Quản lý tài khoản</span>
+            <span className="text-primary font-bold">{dict.admin_accounts.title_list}</span>
           </nav>
           <h2 className="text-2xl font-bold text-primary tracking-tight font-headline">
-            Quản lý tài khoản
+            {dict.admin_accounts.title_list}
           </h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Xem và quản lý tất cả tài khoản người dùng trong hệ thống.
+            {dict.admin_accounts.desc_list}
           </p>
         </div>
 
@@ -253,7 +255,7 @@ export default function AccountTable() {
           <Search className="text-on-surface-variant w-4 h-4 mr-2 shrink-0" />
           <input
             type="text"
-            placeholder="Tìm theo tên, email, SĐT..."
+            placeholder={dict.admin_accounts.search_placeholder}
             value={searchQuery}
             onChange={(e) => {
               setSearchQuery(e.target.value);
@@ -283,7 +285,7 @@ export default function AccountTable() {
                 : "text-on-surface-variant"
               }`}
           />
-          <span>Tất cả</span>
+          <span>{dict.admin_accounts.all}</span>
           <span
             className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "all"
                 ? "bg-primary text-white"
@@ -306,7 +308,7 @@ export default function AccountTable() {
             }`}
         >
           <UserCircle className="w-4.5 h-4.5 shrink-0 text-[#1e40af]" />
-          <span>Khách hàng</span>
+          <span>{dict.admin_accounts.customer}</span>
           <span
             className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "customer"
                 ? "bg-[#1e40af] text-white"
@@ -329,7 +331,7 @@ export default function AccountTable() {
             }`}
         >
           <Building2 className="w-4.5 h-4.5 shrink-0 text-[#b45309]" />
-          <span>Quản lý DN</span>
+          <span>{dict.admin_accounts.company_admin}</span>
           <span
             className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "company-admin"
                 ? "bg-[#b45309] text-white"
@@ -352,7 +354,7 @@ export default function AccountTable() {
             }`}
         >
           <Shield className="w-4.5 h-4.5 shrink-0 text-[#065f46]" />
-          <span>Bảo vệ</span>
+          <span>{dict.admin_accounts.guard}</span>
           <span
             className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "guard"
                 ? "bg-[#065f46] text-white"
@@ -375,7 +377,7 @@ export default function AccountTable() {
             }`}
         >
           <Crosshair className="w-4.5 h-4.5 shrink-0 text-[#9d174d]" />
-          <span>Điều phối</span>
+          <span>{dict.admin_accounts.coordinator}</span>
           <span
             className={`text-xs px-2 py-0.5 rounded-full font-bold ${activeRoleFilter === "coordinator"
                 ? "bg-[#9d174d] text-white"
@@ -403,22 +405,22 @@ export default function AccountTable() {
                   #
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap min-w-[250px]">
-                  Người dùng
+                  {dict.admin_accounts.tbl_user}
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap min-w-[200px]">
                   Email
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap w-[130px]">
-                  Vai trò
+                  {dict.admin_accounts.tbl_role}
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap w-[110px]">
-                  Trạng thái
+                  {dict.admin_accounts.tbl_status}
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap w-[110px]">
-                  Ngày tạo
+                  {dict.admin_accounts.tbl_created}
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] text-right whitespace-nowrap">
-                  Thao tác
+                  {dict.admin_accounts.tbl_actions}
                 </th>
               </tr>
             </thead>
@@ -432,10 +434,10 @@ export default function AccountTable() {
                     <div className="flex flex-col items-center gap-2">
                       <Users className="w-10 h-10 text-on-surface-variant/30" />
                       <p className="font-medium">
-                        Không tìm thấy tài khoản nào
+                        {dict.admin_accounts.no_accounts}
                       </p>
                       <p className="text-xs">
-                        Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.
+                        {dict.admin_accounts.no_accounts_hint}
                       </p>
                     </div>
                   </td>
@@ -443,7 +445,7 @@ export default function AccountTable() {
               ) : (
                 paginatedAccounts.map((account, index) => {
                   const roleBadge = getRoleBadge(account.role);
-                  const statusBadge = getStatusBadge(account.status);
+                  const statusBadge = getStatusBadge(account.status, dict);
                   const rowNumber =
                     (currentPage - 1) * itemsPerPage + index + 1;
 
@@ -473,7 +475,7 @@ export default function AccountTable() {
                               href={`/accounts/${account.user_id}`}
                               className="font-semibold text-[#1f1f1f] hover:text-primary transition-colors cursor-pointer block"
                             >
-                              {account.full_name || "Chưa cập nhật"}
+                              {account.full_name || dict.admin_accounts.not_updated}
                             </Link>
                             {account.phone_number && (
                               <p className="text-[11px] text-on-surface-variant mt-0.5">
@@ -493,7 +495,7 @@ export default function AccountTable() {
                           <span
                             className={`w-1.5 h-1.5 rounded-full ${roleBadge.dot} shrink-0`}
                           />
-                          {getRoleLabel(account.role)}
+                          {getRoleLabel(account.role, dict)}
                         </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -514,7 +516,7 @@ export default function AccountTable() {
                           href={`/accounts/${account.user_id}`}
                           className="text-secondary font-semibold text-xs hover:text-primary inline-flex items-center gap-1 transition-colors whitespace-nowrap"
                         >
-                          Xem chi tiết{" "}
+                          {dict.admin_accounts.view_detail}{" "}
                           <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
                       </td>
@@ -529,13 +531,13 @@ export default function AccountTable() {
         {/* Pagination */}
         <div className="px-6 py-4 border-t border-outline-variant flex justify-between items-center bg-surface-container-low">
           <p className="text-on-surface-variant text-sm font-medium">
-            Hiển thị{" "}
+            {dict.admin_accounts.showing}{" "}
             {filteredAccounts.length === 0
               ? 0
               : (currentPage - 1) * itemsPerPage + 1}{" "}
             -{" "}
             {Math.min(currentPage * itemsPerPage, filteredAccounts.length)}{" "}
-            trên {filteredAccounts.length} kết quả
+            {dict.admin_accounts.of} {filteredAccounts.length} {dict.admin_accounts.results}
           </p>
           <div className="flex gap-1">
             <button

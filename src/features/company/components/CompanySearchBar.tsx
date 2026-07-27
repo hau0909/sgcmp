@@ -12,6 +12,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { Service, City, Ward } from "../types";
 import { requestGetCompanyFilters } from "../api/company.api";
 import { requestGetWards } from "@/features/address";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 
 
@@ -116,6 +117,7 @@ interface CompanySearchBarProps {
 
 
 export default function CompanySearchBar({ variant = "large" }: CompanySearchBarProps) {
+  const { dict, locale } = useTranslation();
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -284,7 +286,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
 
   const handleNearbySelect = () => {
     if (!navigator.geolocation) {
-      alert("Trình duyệt của bạn không hỗ trợ định vị vị trí.");
+      alert(dict.customer.search.bar_alert_no_location_service);
       return;
     }
 
@@ -330,7 +332,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
       (error) => {
         console.error("Geolocation error:", error);
         setIsLocating(false);
-        alert("Không thể lấy vị trí hiện tại của bạn. Vui lòng tự nhập hoặc chọn tỉnh thành gợi ý.");
+        alert(dict.customer.search.bar_alert_cannot_locate);
       }
     );
   };
@@ -402,14 +404,14 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
               setCityInput(e.target.value);
               setCityDropdownOpen(true);
             }}
-            placeholder={isLocating ? "Đang định vị..." : "Tỉnh / Thành phố"}
+            placeholder={isLocating ? dict.customer.search.bar_placeholder_locating : dict.customer.search.bar_placeholder_city}
             disabled={isLocating}
             className="w-full text-[11px] bg-transparent outline-none placeholder:text-outline font-medium truncate"
           />
           {cityDropdownOpen && (
             <div className="absolute top-full left-0 mt-1.5 w-60 bg-white border border-outline-variant/40 rounded-xl shadow-xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto">
               <div className="px-3 py-1.5 text-[9px] font-bold text-outline uppercase tracking-wider bg-surface-container-low/50">
-                Tỉnh / Thành phố
+                {dict.customer.search.bar_placeholder_city}
               </div>
               {dropdownOptions.map((dest) => {
                 const IconComponent = dest.icon;
@@ -448,7 +450,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
             {selectedWard ? (
               <span className="text-on-surface font-medium">{selectedWard.ward_name}</span>
             ) : (
-              <span className="text-outline">Phường / Xã</span>
+              <span className="text-outline">{dict.customer.search.bar_ward}</span>
             )}
           </button>
           {wardDropdownOpen && (
@@ -457,16 +459,16 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                 <div className="flex flex-col items-center justify-center px-4 py-5 gap-2 text-center">
                   <MapPin className="w-5 h-5 text-outline/40" />
                   <p className="text-[11px] text-on-surface-variant font-medium leading-snug">
-                    Vui lòng chọn <span className="font-bold text-primary">Tỉnh / Thành phố</span> trước
+                    {dict.customer.search.bar_select_city_first}
                   </p>
                 </div>
               ) : (
                 <>
                   <div className="px-3 py-1.5 text-[9px] font-bold text-outline uppercase tracking-wider bg-surface-container-low/50">
-                    Phường / Xã tại {selectedCity.city_name}
+                    {dict.customer.search.bar_ward_in.replace("{city}", selectedCity.city_name)}
                   </div>
                   {isLoadingWards ? (
-                    <div className="px-3.5 py-2 text-xs text-on-surface-variant">Đang tải...</div>
+                    <div className="px-3.5 py-2 text-xs text-on-surface-variant">{dict.customer.search.bar_loading_wards}</div>
                   ) : wards.length > 0 ? (
                     wards.map((ward) => (
                       <button
@@ -478,7 +480,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                       </button>
                     ))
                   ) : (
-                    <div className="px-3.5 py-2 text-xs text-on-surface-variant">Không tìm thấy phường/xã</div>
+                    <div className="px-3.5 py-2 text-xs text-on-surface-variant">{dict.customer.search.bar_no_wards}</div>
                   )}
                 </>
               )}
@@ -503,7 +505,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                   {selectedServices.length <= 2 ? selectedServices.join(", ") : `${selectedServices.slice(0, 2).join(", ")}, ...`}
                 </span>
               ) : (
-                <span className="text-outline">Bộ lọc</span>
+                <span className="text-outline">{dict.customer.search.bar_filter}</span>
               )}
             </span>
             <ChevronDown className="w-3 h-3 text-outline shrink-0 ml-1" />
@@ -514,17 +516,17 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                 <div className="flex flex-col items-center justify-center py-4 gap-2 text-center">
                   <MapPin className="w-6 h-6 text-outline/50" />
                   <p className="text-[11px] text-on-surface-variant font-medium">
-                    Vui lòng chọn <span className="font-bold text-primary">địa điểm</span> trước khi lọc
+                    {dict.customer.search.bar_select_city_first_filter}
                   </p>
                 </div>
               ) : (
                 <>
                   <div>
                     <label className="block text-[10px] font-bold uppercase tracking-wider text-outline mb-1.5">
-                      Dịch vụ (Tối đa 3)
+                      {dict.customer.search.bar_services_limit}
                     </label>
                     <div className="flex flex-col gap-1.5 max-h-36 overflow-y-auto pr-1">
-                      {availableServices.map((s) => {
+                      {availableServices.filter((s) => s.is_active !== false).map((s) => {
                         const isChecked = selectedServices.includes(s.name);
                         return (
                           <label key={s.service_id} className="flex items-center gap-2 text-xs text-on-surface cursor-pointer select-none">
@@ -547,38 +549,15 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                       })}
                     </div>
                   </div>
-
-                  <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-outline mb-1.5">
-                      Khoảng giá (đ/giờ)
-                    </label>
-                    <div className="flex justify-between text-[10px] font-bold text-primary mb-2 bg-primary/5 rounded px-2 py-1">
-                      <span>{(minPriceInput ?? 10000).toLocaleString("vi-VN")}đ</span>
-                      <span>–</span>
-                      <span>{maxPriceInput !== undefined && maxPriceInput < 500000 ? `${maxPriceInput.toLocaleString("vi-VN")}đ` : "Không giới hạn"}</span>
-                    </div>
-                    <DualRangeSlider
-                      min={10000} max={500000} step={10000}
-                      minVal={minPriceInput ?? 10000}
-                      maxVal={maxPriceInput ?? 500000}
-                      onChange={(lo, hi) => {
-                        setMinPriceInput(lo > 10000 ? lo : undefined);
-                        setMaxPriceInput(hi < 500000 ? hi : undefined);
-                      }}
-                    />
-                    <div className="flex justify-between text-[9px] text-outline mt-1 font-medium">
-                      <span>10.000đ</span><span>500.000đ+</span>
-                    </div>
-                  </div>
                 </>
               )}
 
               <div className="flex justify-end gap-2 border-t border-outline-variant/30 pt-2.5">
                 <button onClick={handleResetFilters} className="px-2.5 py-1 text-[10px] font-semibold text-outline-variant hover:text-primary transition-colors">
-                  Đặt lại
+                  {dict.customer.search.bar_reset}
                 </button>
                 <button onClick={handleApplyFilters} className="px-3 py-1 text-[10px] font-bold bg-primary hover:bg-primary/95 text-white rounded transition-colors">
-                  Áp dụng
+                  {dict.customer.search.bar_apply}
                 </button>
               </div>
             </div>
@@ -630,14 +609,14 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
               }
             }
           }}
-          placeholder={isLocating ? "Đang xác định..." : "Tỉnh / Thành phố"}
+          placeholder={isLocating ? dict.customer.search.bar_placeholder_locating_general : dict.customer.search.bar_placeholder_city}
           disabled={isLocating}
           className="flex-1 text-sm bg-transparent outline-none placeholder:text-outline font-medium text-on-surface"
         />
         {cityDropdownOpen && (
-          <div className="absolute top-full left-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-xl z-50 overflow-hidden py-1.5 max-h-80 overflow-y-auto">
+          <div className="absolute top-full left-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-xl z-[9999] overflow-hidden py-1.5 max-h-80 overflow-y-auto">
             <div className="px-4.5 py-2.5 text-xs font-bold text-outline uppercase tracking-wider bg-surface-container-low/50">
-              Gợi ý điểm đến
+              {dict.customer.search.bar_suggested_cities}
             </div>
             {dropdownOptions.map((dest) => {
               const IconComponent = dest.icon;
@@ -677,32 +656,32 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
           {selectedWard ? (
             <span className="text-on-surface font-medium">{selectedWard.ward_name}</span>
           ) : (
-            <span className="text-outline">Phường / Xã</span>
+            <span className="text-outline">{dict.customer.search.bar_ward}</span>
           )}
         </button>
         <ChevronDown className={`w-3.5 h-3.5 text-outline shrink-0 ml-auto transition-transform duration-200 ${wardDropdownOpen ? "rotate-180" : ""}`} />
         
         {wardDropdownOpen && (
-          <div className="absolute top-full left-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-xl z-50 overflow-hidden py-1.5 max-h-80 overflow-y-auto">
+          <div className="absolute top-full left-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-xl z-[9999] overflow-hidden py-1.5 max-h-80 overflow-y-auto">
             {!selectedCity ? (
               <div className="flex flex-col items-center justify-center py-8 gap-3 text-center px-5">
                 <div className="w-12 h-12 rounded-full bg-primary/8 flex items-center justify-center">
                   <MapPin className="w-6 h-6 text-primary/50" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-on-surface">Chưa chọn địa điểm</p>
+                  <p className="text-sm font-bold text-on-surface">{dict.customer.search.bar_no_location_selected}</p>
                   <p className="text-xs text-on-surface-variant mt-1 leading-snug">
-                    Vui lòng chọn <span className="font-bold text-primary">Tỉnh / Thành phố</span> trước khi chọn Phường / Xã
+                    {dict.customer.search.bar_select_city_first}
                   </p>
                 </div>
               </div>
             ) : (
               <>
                 <div className="px-4 py-2.5 text-xs font-bold text-outline uppercase tracking-wider bg-surface-container-low/50">
-                  Phường / Xã tại {selectedCity.city_name}
+                  {dict.customer.search.bar_ward_in.replace("{city}", selectedCity.city_name)}
                 </div>
                 {isLoadingWards ? (
-                  <div className="px-4 py-4 text-xs text-on-surface-variant">Đang tải danh sách...</div>
+                  <div className="px-4 py-4 text-xs text-on-surface-variant">{dict.customer.search.bar_loading_wards}</div>
                 ) : wards.length > 0 ? (
                   wards.map((ward) => (
                     <button
@@ -716,7 +695,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                     </button>
                   ))
                 ) : (
-                  <div className="px-4 py-4 text-xs text-on-surface-variant">Không tìm thấy phường/xã nào</div>
+                  <div className="px-4 py-4 text-xs text-on-surface-variant">{dict.customer.search.bar_no_wards}</div>
                 )}
               </>
             )}
@@ -741,22 +720,22 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                 {selectedServices.length <= 2 ? selectedServices.join(", ") : `${selectedServices.slice(0, 2).join(", ")}, ...`}
               </span>
             ) : (
-              <span className="text-outline">Bộ lọc</span>
+              <span className="text-outline">{dict.customer.search.bar_filter}</span>
             )}
           </span>
           <ChevronDown className="w-3.5 h-3.5 text-outline shrink-0 ml-2" />
         </button>
         {filterDropdownOpen && (
-          <div className="absolute top-full right-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-2xl z-50 p-5 flex flex-col gap-4">
+          <div className="absolute top-full right-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-2xl z-[9999] p-5 flex flex-col gap-4">
             {!selectedCity ? (
               <div className="flex flex-col items-center justify-center py-6 gap-3 text-center">
                 <div className="w-12 h-12 rounded-full bg-primary/8 flex items-center justify-center">
                   <MapPin className="w-6 h-6 text-primary/60" />
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-on-surface">Chọn địa điểm trước</p>
+                  <p className="text-sm font-bold text-on-surface">{dict.customer.search.bar_no_location_selected}</p>
                   <p className="text-xs text-on-surface-variant mt-0.5">
-                    Vui lòng chọn Tỉnh / Thành phố để mở bộ lọc dịch vụ và giá
+                    {dict.customer.search.bar_select_city_first_filter}
                   </p>
                 </div>
               </div>
@@ -764,10 +743,10 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
               <>
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-outline mb-2">
-                    Dịch vụ bảo vệ (Tối đa 3)
+                    {dict.customer.search.bar_services_limit}
                   </label>
                   <div className="flex flex-col gap-2 max-h-44 overflow-y-auto pr-1">
-                    {availableServices.map((s) => {
+                    {availableServices.filter((s) => s.is_active !== false).map((s) => {
                       const isChecked = selectedServices.includes(s.name);
                       return (
                         <label key={s.service_id} className="flex items-center gap-2.5 text-sm text-on-surface cursor-pointer select-none">
@@ -790,38 +769,15 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                     })}
                   </div>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold uppercase tracking-wider text-outline mb-2">
-                    Khoảng giá (đ/giờ)
-                  </label>
-                  <div className="flex justify-between text-xs font-bold text-primary bg-primary/5 rounded-lg px-3 py-2 mb-3">
-                    <span>{(minPriceInput ?? 10000).toLocaleString("vi-VN")}đ</span>
-                    <span className="text-outline">–</span>
-                    <span>{maxPriceInput !== undefined && maxPriceInput < 500000 ? `${maxPriceInput.toLocaleString("vi-VN")}đ` : "Không giới hạn"}</span>
-                  </div>
-                  <DualRangeSlider
-                    min={10000} max={500000} step={10000}
-                    minVal={minPriceInput ?? 10000}
-                    maxVal={maxPriceInput ?? 500000}
-                    onChange={(lo, hi) => {
-                      setMinPriceInput(lo > 10000 ? lo : undefined);
-                      setMaxPriceInput(hi < 500000 ? hi : undefined);
-                    }}
-                  />
-                  <div className="flex justify-between text-[10px] text-outline mt-1 font-medium">
-                    <span>10.000đ</span><span>500.000đ+</span>
-                  </div>
-                </div>
               </>
             )}
 
             <div className="flex justify-end gap-2 border-t border-outline-variant/30 pt-3">
               <button onClick={handleResetFilters} className="px-3.5 py-1.5 text-xs font-bold text-outline-variant hover:text-primary transition-colors">
-                Đặt lại
+                {dict.customer.search.bar_reset}
               </button>
               <button onClick={handleApplyFilters} className="px-4.5 py-1.5 text-xs font-bold bg-primary hover:bg-primary/95 text-white rounded-xl transition-colors shadow-sm">
-                Áp dụng bộ lọc
+                {dict.customer.search.bar_apply}
               </button>
             </div>
           </div>

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { PublishRequest } from "@/types/PublishRequest";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -33,56 +34,57 @@ const formatDateTime = (dateStr: string) => {
   }
 };
 
-type StatusKey = "pending" | "approved" | "rejected" | string;
 
-const STATUS_CONFIG: Record<
-  StatusKey,
-  {
-    label: string;
-    bg: string;
-    text: string;
-    icon: React.ReactNode;
-  }
-> = {
-  pending: {
-    label: "Chờ duyệt",
-    bg: "bg-[#fef3c7]",
-    text: "text-[#b45309]",
-    icon: <Clock className="w-3.5 h-3.5" />,
-  },
-  approved: {
-    label: "Đã duyệt",
-    bg: "bg-[#dcfce7]",
-    text: "text-[#166534]",
-    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-  },
-  rejected: {
-    label: "Từ chối",
-    bg: "bg-[#fee2e2]",
-    text: "text-[#991b1b]",
-    icon: <XCircle className="w-3.5 h-3.5" />,
-  },
-};
-
-const getStatusConfig = (status: string) => {
-  const key = (status || "").toLowerCase();
-  return (
-    STATUS_CONFIG[key] ?? {
-      label: status.toUpperCase(),
-      bg: "bg-[#f3f4f6]",
-      text: "text-[#374151]",
-      icon: <AlertCircle className="w-3.5 h-3.5" />,
-    }
-  );
-};
 
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export default function PublishRequestTable() {
+  const { dict } = useTranslation();
   const [requests, setRequests] = React.useState<PublishRequest[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [currentPage, setCurrentPage] = React.useState(1);
   const [activeFilter, setActiveFilter] = React.useState<"all" | "pending" | "approved" | "rejected">("all");
+
+  const STATUS_CONFIG: Record<
+    string,
+    {
+      label: string;
+      bg: string;
+      text: string;
+      icon: React.ReactNode;
+    }
+  > = React.useMemo(() => ({
+    pending: {
+      label: dict.admin_publish_requests.status_pending || "Chờ duyệt",
+      bg: "bg-[#fef3c7]",
+      text: "text-[#b45309]",
+      icon: <Clock className="w-3.5 h-3.5" />,
+    },
+    approved: {
+      label: dict.admin_publish_requests.status_approved || "Đã duyệt",
+      bg: "bg-[#dcfce7]",
+      text: "text-[#166534]",
+      icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    },
+    rejected: {
+      label: dict.admin_publish_requests.status_rejected || "Từ chối",
+      bg: "bg-[#fee2e2]",
+      text: "text-[#991b1b]",
+      icon: <XCircle className="w-3.5 h-3.5" />,
+    },
+  }), [dict]);
+
+  const getStatusConfig = React.useCallback((status: string) => {
+    const key = (status || "").toLowerCase();
+    return (
+      STATUS_CONFIG[key] ?? {
+        label: status.toUpperCase(),
+        bg: "bg-[#f3f4f6]",
+        text: "text-[#374151]",
+        icon: <AlertCircle className="w-3.5 h-3.5" />,
+      }
+    );
+  }, [STATUS_CONFIG]);
 
   const fetchData = React.useCallback(async () => {
     setLoading(true);
@@ -151,7 +153,7 @@ export default function PublishRequestTable() {
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-center min-h-[400px] text-on-surface-variant font-medium">
           <span className="animate-pulse">
-            Đang tải danh sách yêu cầu công khai...
+            {dict.admin_publish_requests.loading_list}
           </span>
         </div>
       </div>
@@ -164,15 +166,15 @@ export default function PublishRequestTable() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2">
         <div>
           <nav className="flex items-center gap-1 text-on-surface-variant/80 text-xs font-medium mb-1">
-            <span className="hover:text-primary cursor-pointer transition-colors">Doanh nghiệp</span>
+            <span className="hover:text-primary cursor-pointer transition-colors">{dict.admin_publish_requests.admin}</span>
             <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant/50 shrink-0" />
-            <span className="text-primary font-bold">Yêu cầu công khai</span>
+            <span className="text-primary font-bold">{dict.admin_publish_requests.title_list}</span>
           </nav>
           <h2 className="text-2xl font-bold text-primary tracking-tight font-headline">
-            Danh sách yêu cầu công khai
+            {dict.admin_publish_requests.title_list}
           </h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Xem xét và xử lý các yêu cầu đăng công khai thông tin công ty lên hệ thống.
+            {dict.admin_publish_requests.desc_list}
           </p>
         </div>
         <div className="flex gap-2 shrink-0">
@@ -181,7 +183,7 @@ export default function PublishRequestTable() {
             className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-xs font-semibold hover:bg-surface-container-low transition-all text-on-surface cursor-pointer shadow-sm"
           >
             <RefreshCw className="text-on-surface-variant w-3.5 h-3.5" />
-            <span>Làm mới</span>
+            <span>{dict.admin_publish_requests.refresh_btn}</span>
           </button>
         </div>
       </div>
@@ -198,7 +200,7 @@ export default function PublishRequestTable() {
           }`}
         >
           <Clock className={`w-4.5 h-4.5 shrink-0 ${activeFilter === "pending" ? "text-[#b45309]" : "text-primary"}`} />
-          <span>Chờ duyệt</span>
+          <span>{dict.admin_publish_requests.status_pending}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
             activeFilter === "pending" ? "bg-[#b45309] text-white" : "bg-surface-container-high text-on-surface"
           }`}>
@@ -216,7 +218,7 @@ export default function PublishRequestTable() {
           }`}
         >
           <CheckCircle2 className="w-4.5 h-4.5 shrink-0 text-[#166534]" />
-          <span>Đã phê duyệt</span>
+          <span>{dict.admin_publish_requests.status_approved}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
             activeFilter === "approved" ? "bg-[#166534] text-white" : "bg-surface-container-high text-on-surface"
           }`}>
@@ -234,7 +236,7 @@ export default function PublishRequestTable() {
           }`}
         >
           <XCircle className="w-4.5 h-4.5 shrink-0 text-error" />
-          <span>Từ chối</span>
+          <span>{dict.admin_publish_requests.status_rejected}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
             activeFilter === "rejected" ? "bg-error text-white" : "bg-surface-container-high text-on-surface"
           }`}>
@@ -252,7 +254,7 @@ export default function PublishRequestTable() {
           }`}
         >
           <Globe className={`w-4.5 h-4.5 shrink-0 ${activeFilter === "all" ? "text-primary" : "text-on-surface-variant"}`} />
-          <span>Tất cả yêu cầu</span>
+          <span>{dict.admin_publish_requests.status_all}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
             activeFilter === "all" ? "bg-primary text-white" : "bg-surface-container-high text-on-surface"
           }`}>
@@ -268,19 +270,19 @@ export default function PublishRequestTable() {
             <thead>
               <tr className="bg-[#d5e3ff] border-b border-outline-variant">
                 <th className="py-3.5 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[70px] text-center whitespace-nowrap">
-                  STT
+                  {dict.admin_publish_requests.tbl_no}
                 </th>
                 <th className="py-3.5 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap min-w-[240px]">
-                  Tên công ty
+                  {dict.admin_publish_requests.tbl_company}
                 </th>
                 <th className="py-3.5 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[160px] text-center whitespace-nowrap">
-                  Trạng thái
+                  {dict.admin_publish_requests.tbl_status}
                 </th>
                 <th className="py-3.5 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[180px] text-center whitespace-nowrap">
-                  Ngày giờ
+                  {dict.admin_publish_requests.tbl_created}
                 </th>
                 <th className="py-3.5 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] text-right whitespace-nowrap">
-                  Thao tác
+                  {dict.admin_publish_requests.tbl_actions}
                 </th>
               </tr>
             </thead>
@@ -293,7 +295,7 @@ export default function PublishRequestTable() {
                   >
                     <div className="flex flex-col items-center gap-3">
                       <Globe className="w-10 h-10 text-on-surface-variant/40" />
-                      <span>Chưa có yêu cầu công khai nào.</span>
+                      <span>{dict.admin_publish_requests.no_requests}</span>
                     </div>
                   </td>
                 </tr>
@@ -343,7 +345,7 @@ export default function PublishRequestTable() {
                           href={`/publish-requests/${req.request_id}`}
                           className="text-secondary font-semibold text-xs hover:text-primary inline-flex items-center gap-1 transition-colors whitespace-nowrap px-2 py-1 rounded hover:bg-surface-container-high"
                         >
-                          Xem chi tiết <ExternalLink className="w-3.5 h-3.5" />
+                          {dict.admin_publish_requests.view_detail} <ExternalLink className="w-3.5 h-3.5" />
                         </Link>
                       </td>
                     </tr>
@@ -357,7 +359,7 @@ export default function PublishRequestTable() {
         {/* Pagination Footer */}
         <div className="px-6 py-4 border-t border-outline-variant flex justify-between items-center bg-surface-container-low">
           <p className="text-on-surface-variant text-sm font-medium">
-            Hiển thị {filteredRequests.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredRequests.length)} trên {filteredRequests.length} kết quả
+            {dict.admin_publish_requests.showing} {filteredRequests.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredRequests.length)} {dict.admin_publish_requests.of} {filteredRequests.length} {dict.admin_publish_requests.results}
           </p>
           <div className="flex gap-1">
             <button

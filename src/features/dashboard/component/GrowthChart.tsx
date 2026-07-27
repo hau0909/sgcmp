@@ -13,16 +13,17 @@ import {
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { ChevronDown } from "lucide-react";
 import { requestGetAdminGrowth, type GrowthDataPoint } from "../api/dashboard.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export function GrowthChart() {
-  const [timeRange, setTimeRange] = useState("6 tháng qua");
+  const { dict, locale } = useTranslation();
+  const [timeRange, setTimeRange] = useState<"6m" | "1y">("6m");
   const [chartData, setChartData] = useState<GrowthDataPoint[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setLoading(true);
-    const range = timeRange === "1 năm" ? "1y" : "6m";
-    requestGetAdminGrowth(range)
+    requestGetAdminGrowth(timeRange)
       .then((res) => {
         setChartData(res);
       })
@@ -43,10 +44,16 @@ export function GrowthChart() {
 
   const formatTooltipValue = (value: any, name: any) => {
     if (name === "revenue") {
-      return [`${value.toLocaleString("vi-VN")} đ`, "Doanh thu"];
+      const formattedVal = locale === "vi"
+        ? `${value.toLocaleString("vi-VN")} đ`
+        : `${value.toLocaleString("en-US")} VND`;
+      return [formattedVal, dict.admin_dashboard.revenue];
     }
     if (name === "companies") {
-      return [`${value} doanh nghiệp`, "Doanh nghiệp"];
+      const formattedVal = locale === "vi"
+        ? `${value} doanh nghiệp`
+        : `${value} ${value === 1 ? "company" : "companies"}`;
+      return [formattedVal, dict.admin_dashboard.company];
     }
     return [value, name];
   };
@@ -55,16 +62,16 @@ export function GrowthChart() {
     <Card className="border border-slate-100 bg-white rounded-xl col-span-1 lg:col-span-2">
       <CardHeader className="flex flex-row items-center justify-between pb-2">
         <CardTitle className="text-base font-semibold text-slate-800">
-          Tăng trưởng doanh thu & Doanh nghiệp
+          {dict.admin_dashboard.revenue_growth_title}
         </CardTitle>
         <div className="relative">
           <select
             value={timeRange}
-            onChange={(e) => setTimeRange(e.target.value)}
+            onChange={(e) => setTimeRange(e.target.value as "6m" | "1y")}
             className="appearance-none bg-white pl-3 pr-8 py-1.5 border border-slate-200 hover:bg-slate-50 text-xs font-medium text-slate-600 rounded-lg transition-colors cursor-pointer outline-none"
           >
-            <option value="6 tháng qua">6 tháng qua</option>
-            <option value="1 năm">1 năm qua</option>
+            <option value="6m">{dict.admin_dashboard.six_months_ago}</option>
+            <option value="1y">{dict.admin_dashboard.one_year_ago}</option>
           </select>
           <ChevronDown className="absolute right-2.5 top-1/2 -translate-y-1/2 size-3.5 text-slate-400 pointer-events-none" />
         </div>
@@ -73,7 +80,7 @@ export function GrowthChart() {
         <div className="h-[300px] w-full flex items-center justify-center">
           {loading && chartData.length === 0 ? (
             <div className="w-full h-full bg-slate-50 animate-pulse rounded-lg flex items-center justify-center text-slate-400 text-xs font-medium">
-              Đang tải dữ liệu tăng trưởng...
+              {dict.admin_dashboard.loading_growth}
             </div>
           ) : (
             <ResponsiveContainer width="100%" height="100%">

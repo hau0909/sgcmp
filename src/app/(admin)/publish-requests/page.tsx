@@ -1,15 +1,10 @@
 import React, { Suspense } from "react";
 import { PublishRequestTable } from "@/features/company";
+import LoadingFallback from "@/components/ui/LoadingFallback";
 
 export default function PublishRequestsPage() {
   return (
-    <Suspense
-      fallback={
-        <div className="flex items-center justify-center min-h-[400px] text-on-surface-variant font-medium">
-          Đang tải danh sách yêu cầu công khai...
-        </div>
-      }
-    >
+    <Suspense fallback={<LoadingFallback />}>
       <PublishRequestTable />
     </Suspense>
   );

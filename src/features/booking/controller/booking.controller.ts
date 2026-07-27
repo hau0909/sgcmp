@@ -1,5 +1,5 @@
 import { Booking, BookingStatus } from "../types";
-import { getBookingsService, getBookingDetailService, createBookingService, updateBookingStatusAndPriceService, getCustomerBookingsService } from "../service/booking.service";
+import { getBookingsService, getBookingDetailService, createBookingService, updateBookingStatusAndPriceService, updateBookingDetailsService, getCustomerBookingsService } from "../service/booking.service";
 import { checkCompanySubscriptionService } from "@/features/subscription/service/subscription.service";
 
 export const handleGetBookings = async (
@@ -33,6 +33,21 @@ export const handleUpdateBookingStatusAndPrice = async (
   updates: { status: BookingStatus; quoted_price?: number }
 ): Promise<{ booking: Booking; contract_id?: string }> => {
   return await updateBookingStatusAndPriceService(bookingId, updates);
+};
+
+export const handleUpdateBookingDetails = async (
+  bookingId: string,
+  updates: {
+    address?: string;
+    description?: string | null;
+    guards_per_slot?: number;
+    time_slots?: string[];
+    day_per_week?: string[];
+    start_date?: string;
+    end_date?: string;
+  }
+): Promise<Booking> => {
+  return await updateBookingDetailsService(bookingId, updates);
 };
 
 export const handleGetCustomerBookings = async (
