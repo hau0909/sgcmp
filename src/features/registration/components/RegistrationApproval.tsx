@@ -287,6 +287,12 @@ export default function RegistrationApproval() {
                 ĐANG CHỜ DUYỆT
               </span>
             )}
+            {registration.status === "resubmitted" && (
+              <span className="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 text-[10px] font-bold px-2.5 py-0.5 rounded-full border border-blue-200">
+                <Clock className="w-3 h-3" />
+                NỘP LẠI - CHỜ DUYỆT
+              </span>
+            )}
           </div>
           <p className="text-xs text-on-surface-variant mt-0.5 font-body flex items-center gap-3 flex-wrap">
             <span>
@@ -299,7 +305,7 @@ export default function RegistrationApproval() {
           </p>
         </div>
 
-        {registration.status === "pending" && (
+        {(registration.status === "pending" || registration.status === "resubmitted") && (
           <div className="flex items-center gap-2.5 w-full md:w-auto">
             <button
               onClick={() => setRejectModalOpen(true)}

@@ -42,7 +42,7 @@ export default function RegistrationTable() {
   const filteredRegistrations = React.useMemo(() => {
     switch (activeFilter) {
       case "pending":
-        return registrations.filter((r) => r.status === "pending");
+      return registrations.filter((r) => r.status === "pending" || r.status === "resubmitted");
       case "approved":
         return registrations.filter((r) => r.status === "approved");
       case "error":
@@ -71,7 +71,7 @@ export default function RegistrationTable() {
   }, [filteredRegistrations, currentPage, itemsPerPage]);
 
   // Calculate dynamic stats
-  const pendingCount = React.useMemo(() => registrations.filter((r) => r.status === "pending").length, [registrations]);
+  const pendingCount = React.useMemo(() => registrations.filter((r) => r.status === "pending" || r.status === "resubmitted").length, [registrations]);
   const approvedCount = React.useMemo(() => registrations.filter((r) => r.status === "approved").length, [registrations]);
   const errorCount = React.useMemo(() => registrations.filter((r) => r.status === "rejected" || r.status === "action_required").length, [registrations]);
 
@@ -278,6 +278,11 @@ export default function RegistrationTable() {
                         <span className="inline-flex items-center gap-1.5 bg-[#fef3c7] text-[#b45309] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] shrink-0"></span>
                           PENDING
+                        </span>
+                      ) : reg.status === "resubmitted" ? (
+                        <span className="inline-flex items-center gap-1.5 bg-[#dbeafe] text-[#1d4ed8] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] shrink-0"></span>
+                          RESUBMITTED
                         </span>
                       ) : reg.status === "approved" ? (
                         <span className="inline-flex items-center gap-1.5 bg-[#dcfce7] text-[#166534] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">

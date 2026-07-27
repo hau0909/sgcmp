@@ -11,4 +11,5 @@ export {
   requestGetMyRegistration,
   requestUpdateRegistrationStatus,
   requestSubmitRegistration,
+  requestUpdateMyRegistration,
 } from "./api/registration.api";

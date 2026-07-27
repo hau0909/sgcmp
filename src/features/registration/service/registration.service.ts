@@ -5,6 +5,8 @@ import {
   updateRegistrationStatus,
   createRegistrationFlow,
   getRegistrationByOwnerId,
+  updateRegistrationFlow,
+  checkRegistrationDuplicatesRepo,
 } from "../repository/registration.repository";
 
 
@@ -61,4 +63,19 @@ export const createRegistrationFlowService = async (payload: {
 export const getRegistrationByOwnerIdService = async (userId: string): Promise<RegistrationDetail | null> => {
   const result = await getRegistrationByOwnerId(userId);
   return result;
+};
+
+export const updateRegistrationFlowService = async (
+  userId: string,
+  registrationId: string,
+  payload: Parameters<typeof updateRegistrationFlow>[2]
+): Promise<void> => {
+  // Validate duplicates explicitly for edit flow
+  await checkRegistrationDuplicatesRepo(userId, {
+    phoneNumber: payload.profile.phoneNumber,
+    identityId: payload.identity.identityId,
+    businessLicenseNo: payload.company.businessLicenseNo,
+  });
+
+  await updateRegistrationFlow(userId, registrationId, payload);
 };
