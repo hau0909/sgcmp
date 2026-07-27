@@ -241,7 +241,7 @@ export const handleUpdateCoordinator = async (
         return { success: false, message: "Số CCCD/CMND đã tồn tại trong hệ thống", field: "identityId" };
       }
     }
-    
+
     // Call service to update
     await updateCoordinatorService(userId, payload);
 

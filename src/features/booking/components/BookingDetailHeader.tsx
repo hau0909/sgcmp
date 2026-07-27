@@ -13,6 +13,7 @@ import {
 import { BookingStatus } from "../types";
 import { VerificationStatus } from "@/features/verification/types";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { useAuthStore } from "@/store/auth.store";
 
 interface BookingDetailHeaderProps {
   bookingId: string;
@@ -42,6 +43,7 @@ export function BookingDetailHeader({
   onCancelBooking,
 }: BookingDetailHeaderProps) {
   const { dict } = useTranslation();
+  const { role } = useAuthStore();
   const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
 
   // Format receipt time
@@ -216,7 +218,7 @@ export function BookingDetailHeader({
               </button>
             ))}
           {renderStatusBadge()}
-          {contractId && (
+          {contractId && (role === "company-admin" || isCustomer) && (
             <Link
               href={
                 isCustomer

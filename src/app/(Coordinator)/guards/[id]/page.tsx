@@ -24,9 +24,9 @@ const getProfile = (
   return profiles;
 };
 
-const formatDate = (date: string | null | undefined): string => {
+const formatDate = (date: string | null | undefined, notUpdated: string): string => {
   if (!date) {
-    return "Chưa cập nhật";
+    return notUpdated;
   }
 
   const parsedDate = new Date(`${date}T00:00:00`);
@@ -38,26 +38,29 @@ const formatDate = (date: string | null | undefined): string => {
   return new Intl.DateTimeFormat("vi-VN").format(parsedDate);
 };
 
-const formatGender = (gender: string | null | undefined): string => {
+const formatGender = (gender: string | null | undefined, male: string, female: string, notUpdated: string): string => {
   if (!gender) {
-    return "Chưa cập nhật";
+    return notUpdated;
   }
 
   const normalizedGender = gender.trim().toLowerCase();
 
   if (normalizedGender === "male" || normalizedGender === "nam") {
-    return "Nam";
+    return male;
   }
 
   if (normalizedGender === "female" || normalizedGender === "nữ" || normalizedGender === "nu") {
-    return "Nữ";
+    return female;
   }
 
   return gender;
 };
 
+import { useTranslation } from "@/components/providers/LanguageProvider";
+
 export default function GuardDetailPage() {
   const router = useRouter();
+  const { dict } = useTranslation();
   const params = useParams<{ id: string | string[] }>();
 
   const guardId = Array.isArray(params.id) ? params.id[0] : params.id;
@@ -106,7 +109,7 @@ export default function GuardDetailPage() {
 
   const fetchGuardDetail = async (silent = false) => {
     if (!guardId) {
-      setErrorMessage("Không tìm thấy bảo vệ");
+      setErrorMessage(dict.guard_detail?.error_guard_not_found ?? "Guard not found");
       setLoading(false);
       return;
     }
@@ -128,7 +131,7 @@ export default function GuardDetailPage() {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Không thể tải thông tin bảo vệ",
+          : (dict.guard_detail?.error_load_guard ?? "Unable to load guard information"),
       );
     } finally {
       if (!silent) setLoading(false);
@@ -255,22 +258,22 @@ export default function GuardDetailPage() {
     const nextErrors: Record<string, string> = {};
 
     if (!formData.full_name.trim()) {
-      nextErrors.full_name = "Vui lòng nhập họ và tên.";
+      nextErrors.full_name = dict.guard_detail?.validate_name_required ?? "Please enter full name.";
     } else {
       const name = formData.full_name;
       const nameRegex = /^[\p{L}\p{M}]+(?: [\p{L}\p{M}]+)*$/u;
 
       if (name.startsWith(" ") || name.endsWith(" ")) {
-        nextErrors.full_name = "Họ và tên không được chứa khoảng trắng ở đầu hoặc cuối.";
+        nextErrors.full_name = dict.guard_detail?.validate_name_no_leading_trailing_space ?? "Full name must not have leading or trailing spaces.";
       } else if (/\s{2,}/.test(name)) {
-        nextErrors.full_name = "Họ và tên không được chứa nhiều khoảng trắng liên tiếp.";
+        nextErrors.full_name = dict.guard_detail?.validate_name_no_multiple_spaces ?? "Full name must not contain multiple consecutive spaces.";
       } else if (!nameRegex.test(name)) {
-        nextErrors.full_name = "Họ và tên chỉ được chứa chữ cái và khoảng trắng giữa các từ.";
+        nextErrors.full_name = dict.guard_detail?.validate_name_letters_only ?? "Full name must contain only letters and spaces between words.";
       }
     }
 
     if (!formData.date_of_birth) {
-      nextErrors.date_of_birth = "Vui lòng chọn ngày sinh.";
+      nextErrors.date_of_birth = dict.guard_detail?.validate_dob_required ?? "Please select date of birth.";
     } else {
       const dobDate = new Date(formData.date_of_birth);
       const today = new Date();
@@ -278,7 +281,7 @@ export default function GuardDetailPage() {
       dobDate.setHours(0, 0, 0, 0);
 
       if (dobDate > today) {
-        nextErrors.date_of_birth = "Ngày sinh không được ở tương lai.";
+        nextErrors.date_of_birth = dict.guard_detail?.validate_dob_future ?? "Date of birth cannot be in the future.";
       } else {
         let age = today.getFullYear() - dobDate.getFullYear();
         const monthDiff = today.getMonth() - dobDate.getMonth();
@@ -287,63 +290,63 @@ export default function GuardDetailPage() {
         }
 
         if (age < 18) {
-          nextErrors.date_of_birth = "Nhân viên bảo vệ phải từ 18 tuổi trở lên.";
+          nextErrors.date_of_birth = dict.guard_detail?.validate_dob_min_age ?? "Security guards must be at least 18 years old.";
         }
       }
     }
 
     if (!formData.identity_id.trim()) {
-      nextErrors.identity_id = "Vui lòng nhập số CCCD/CMND.";
+      nextErrors.identity_id = dict.guard_detail?.validate_cccd_required ?? "Please enter ID card number.";
     } else if (!/^(\d{9}|\d{12})$/.test(formData.identity_id.trim())) {
-      nextErrors.identity_id = "CCCD/CMND phải gồm 9 hoặc 12 chữ số.";
+      nextErrors.identity_id = dict.guard_detail?.validate_cccd_format ?? "ID card number must be 9 or 12 digits.";
     }
 
     if (!formData.identity_issue_date) {
-      nextErrors.identity_issue_date = "Vui lòng chọn ngày cấp CCCD/CMND.";
+      nextErrors.identity_issue_date = dict.guard_detail?.validate_issue_date_required ?? "Please select the ID card issue date.";
     } else {
       const issueDate = new Date(formData.identity_issue_date);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       issueDate.setHours(0, 0, 0, 0);
       if (issueDate > today) {
-        nextErrors.identity_issue_date = "Ngày cấp CCCD/CMND không được ở tương lai.";
+        nextErrors.identity_issue_date = dict.guard_detail?.validate_issue_date_future ?? "ID card issue date cannot be in the future.";
       }
     }
 
     if (!formData.identity_issue_place.trim()) {
-      nextErrors.identity_issue_place = "Vui lòng nhập nơi cấp CCCD/CMND.";
+      nextErrors.identity_issue_place = dict.guard_detail?.validate_issue_place_required ?? "Please enter the ID card issue place.";
     } else {
       const issuePlaceRegex = /^[\p{L}\p{M}0-9\s]+$/u;
       if (!issuePlaceRegex.test(formData.identity_issue_place.trim())) {
-        nextErrors.identity_issue_place = "Nơi cấp không được chứa ký tự đặc biệt.";
+        nextErrors.identity_issue_place = dict.guard_detail?.validate_issue_place_special_chars ?? "Issue place must not contain special characters.";
       }
     }
 
     if (!formData.address.trim()) {
-      nextErrors.address = "Vui lòng nhập địa chỉ thường trú.";
+      nextErrors.address = dict.guard_detail?.validate_address_required ?? "Please enter permanent address.";
     } else {
       const addressRegex = /^[\p{L}\p{M}0-9\s,\/.-]+$/u;
       if (!addressRegex.test(formData.address.trim())) {
-        nextErrors.address = "Địa chỉ không được chứa ký tự đặc biệt.";
+        nextErrors.address = dict.guard_detail?.validate_address_special_chars ?? "Address must not contain special characters.";
       }
     }
 
     if (!formData.phone_number.trim()) {
-      nextErrors.phone_number = "Vui lòng nhập số điện thoại.";
+      nextErrors.phone_number = dict.guard_detail?.validate_phone_required ?? "Please enter phone number.";
     } else if (!/^(0|\+84)[0-9]{9,10}$/.test(formData.phone_number.trim())) {
-      nextErrors.phone_number = "Số điện thoại không hợp lệ.";
+      nextErrors.phone_number = dict.guard_detail?.validate_phone_invalid ?? "Invalid phone number.";
     }
 
     if (!formData.email.trim()) {
-      nextErrors.email = "Vui lòng nhập email.";
+      nextErrors.email = dict.guard_detail?.validate_email_required ?? "Please enter email.";
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim())) {
-      nextErrors.email = "Email không hợp lệ.";
+      nextErrors.email = dict.guard_detail?.validate_email_invalid ?? "Invalid email.";
     }
 
     setFieldErrors(nextErrors);
 
     if (Object.keys(nextErrors).length > 0) {
-      setEditError("Vui lòng kiểm tra lại các thông tin chưa hợp lệ.");
+      setEditError(dict.guard_detail?.validate_form_error ?? "Please review the invalid information.");
       return false;
     }
 
@@ -360,7 +363,7 @@ export default function GuardDetailPage() {
       setEditError("");
 
       if (!guard?.user_id) {
-        throw new Error("Không tìm thấy thông tin tài khoản bảo vệ.");
+        throw new Error(dict.guard_detail?.error_no_account ?? "Guard account information not found.");
       }
 
       let currentAvatarUrl = avatarPreview;
@@ -377,7 +380,7 @@ export default function GuardDetailPage() {
         if (res.success && res.data) {
           currentAvatarUrl = res.data.public_url;
         } else {
-          throw new Error(res.message || "Không thể tải ảnh đại diện lên");
+          throw new Error(res.message || (dict.guard_detail?.error_upload_avatar ?? "Unable to upload avatar"));
         }
       }
 
@@ -391,7 +394,7 @@ export default function GuardDetailPage() {
         if (res.success && res.data) {
           currentFrontUrl = res.data.public_url;
         } else {
-          throw new Error(res.message || "Không thể tải ảnh mặt trước CCCD lên");
+          throw new Error(res.message || (dict.guard_detail?.error_upload_front ?? "Unable to upload ID card front image"));
         }
       }
 
@@ -405,7 +408,7 @@ export default function GuardDetailPage() {
         if (res.success && res.data) {
           currentBackUrl = res.data.public_url;
         } else {
-          throw new Error(res.message || "Không thể tải ảnh mặt sau CCCD lên");
+          throw new Error(res.message || (dict.guard_detail?.error_upload_back ?? "Unable to upload ID card back image"));
         }
       }
 
@@ -419,15 +422,15 @@ export default function GuardDetailPage() {
       });
 
       if (!res.success) {
-        throw new Error(res.message || "Không thể cập nhật hồ sơ");
+        throw new Error(res.message || (dict.guard_detail?.error_save_profile ?? "Unable to update profile"));
       }
 
       setIsEditing(false);
-      setToastMessage("Cập nhật thông tin bảo vệ thành công.");
+      setToastMessage(dict.guard_detail?.toast_updated ?? "Guard information updated successfully.");
       await fetchGuardDetail(true);
     } catch (error: unknown) {
       setEditError(
-        error instanceof Error ? error.message : "Đã xảy ra lỗi khi lưu hồ sơ",
+        error instanceof Error ? error.message : (dict.guard_detail?.error_save_generic ?? "An error occurred while saving the profile"),
       );
     } finally {
       setSaving(false);
@@ -445,7 +448,7 @@ export default function GuardDetailPage() {
       <div className="min-h-screen bg-slate-50 px-6 py-6">
         <div className="rounded-md border border-slate-300 bg-white p-10 text-center">
           <p className="text-sm font-medium text-slate-500">
-            Đang tải thông tin bảo vệ...
+            {dict.guard_detail?.loading}
           </p>
         </div>
       </div>
@@ -461,19 +464,21 @@ export default function GuardDetailPage() {
           className="mb-4 flex cursor-pointer items-center gap-2 text-sm font-semibold text-blue-800 hover:underline"
         >
           <ArrowLeft className="h-4 w-4" />
-          Quay lại
+          {dict.guard_detail?.cancel ?? dict.coordinator?.detail_go_back ?? "Go Back"}
         </button>
 
         <div className="rounded-md border border-slate-300 bg-white p-6 text-center">
           <p className="text-sm font-semibold text-red-600">
-            {errorMessage || "Không tìm thấy hồ sơ bảo vệ"}
+            {errorMessage || dict.guard_detail?.not_found}
           </p>
         </div>
       </div>
     );
   }
 
-  const fullName = profile?.full_name ?? "Chưa cập nhật";
+  const notUpdated = dict.guard_detail?.not_found ?? "N/A";
+  const notUpdatedLabel = dict.coor_guards?.not_updated ?? "Not updated";
+  const fullName = profile?.full_name ?? notUpdatedLabel;
 
   return (
     <div className="min-h-screen bg-slate-50 px-6 py-6">
@@ -482,7 +487,7 @@ export default function GuardDetailPage() {
           <button
             type="button"
             onClick={() => router.back()}
-            aria-label="Quay lại"
+            aria-label={dict.coordinator?.detail_go_back ?? "Go Back"}
             className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-full text-slate-700 transition hover:bg-slate-200"
           >
             <ArrowLeft className="h-5 w-5" />
@@ -492,12 +497,12 @@ export default function GuardDetailPage() {
             <div
               onClick={() => avatarInputRef.current?.click()}
               className="relative h-16 w-16 cursor-pointer group rounded-md overflow-hidden border border-slate-300 shadow-sm"
-              title="Click để chọn ảnh đại diện mới"
+              title={dict.guard_detail?.avatar_click_hint}
             >
               {avatarPreview ? (
                 <img
                   src={avatarPreview}
-                  alt={`Ảnh đại diện preview`}
+                  alt={dict.guard_detail?.avatar_click_hint ?? "Avatar preview"}
                   className="h-full w-full object-cover transition group-hover:brightness-50"
                 />
               ) : (
@@ -512,7 +517,7 @@ export default function GuardDetailPage() {
           ) : profile?.avatar_url ? (
             <Image
               src={profile.avatar_url}
-              alt={`Ảnh của ${fullName}`}
+              alt={fullName}
               width={64}
               height={64}
               className="h-16 w-16 rounded-md border border-slate-300 object-cover shadow-sm"
@@ -531,17 +536,17 @@ export default function GuardDetailPage() {
 
               {profile?.status === "active" ? (
                 <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                  HOẠT ĐỘNG
+                  {dict.guard_detail?.status_active}
                 </span>
               ) : (
                 <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                  VÔ HIỆU HÓA
+                  {dict.guard_detail?.status_inactive}
                 </span>
               )}
             </div>
 
             <p className="mt-2 text-sm font-medium text-slate-600">
-              Thông tin chi tiết nhân viên bảo vệ
+              {dict.guard_detail?.subtitle}
             </p>
           </div>
         </div>
@@ -554,7 +559,7 @@ export default function GuardDetailPage() {
               onClick={handleCancel}
               className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
             >
-              Hủy
+              {dict.guard_detail?.cancel}
             </button>
 
             <button
@@ -563,7 +568,7 @@ export default function GuardDetailPage() {
               onClick={handleSave}
               className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-blue-800 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-blue-900 disabled:opacity-50"
             >
-              {saving ? "Đang lưu..." : "Lưu thay đổi"}
+              {saving ? dict.guard_detail?.saving : dict.guard_detail?.save}
             </button>
           </div>
         ) : (
@@ -573,7 +578,7 @@ export default function GuardDetailPage() {
             className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 bg-white px-4 text-sm font-bold text-blue-800 shadow-sm transition hover:bg-blue-50"
           >
             <Edit className="h-4 w-4" />
-            Chỉnh sửa hồ sơ
+            {dict.guard_detail?.edit_profile}
           </button>
         )}
       </div>
@@ -591,7 +596,7 @@ export default function GuardDetailPage() {
               <User className="h-4 w-4 text-blue-800" />
 
               <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
-                Thông tin cá nhân
+                {dict.guard_detail?.section_personal}
               </h2>
             </div>
 
@@ -600,7 +605,7 @@ export default function GuardDetailPage() {
                 <>
                   <div>
                     <label className="text-sm font-medium text-slate-500 block mb-1">
-                      Họ và tên <span className="text-red-500">*</span>
+                      {dict.guard_detail?.field_fullname} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -622,7 +627,7 @@ export default function GuardDetailPage() {
 
                   <div>
                     <label className="text-sm font-medium text-slate-500 block mb-1">
-                      Ngày sinh
+                      {dict.guard_detail?.field_dob}
                     </label>
                     <input
                       type="date"
@@ -647,7 +652,7 @@ export default function GuardDetailPage() {
 
                   <div>
                     <label className="text-sm font-medium text-slate-500 block mb-1">
-                      Giới tính
+                      {dict.guard_detail?.field_gender}
                     </label>
                     <select
                       className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
@@ -659,14 +664,14 @@ export default function GuardDetailPage() {
                         })
                       }
                     >
-                      <option value="male">Nam</option>
-                      <option value="female">Nữ</option>
+                      <option value="male">{dict.guard_detail?.gender_male}</option>
+                      <option value="female">{dict.guard_detail?.gender_female}</option>
                     </select>
                   </div>
 
                   <div>
                     <label className="text-sm font-medium text-slate-500 block mb-1">
-                      CCCD/CMND <span className="text-red-500">*</span>
+                      {dict.guard_detail?.field_cccd} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -691,7 +696,7 @@ export default function GuardDetailPage() {
 
                   <div>
                     <label className="text-sm font-medium text-slate-500 block mb-1">
-                      Ngày cấp
+                      {dict.guard_detail?.field_issue_date}
                     </label>
                     <input
                       type="date"
@@ -716,7 +721,7 @@ export default function GuardDetailPage() {
 
                   <div>
                     <label className="text-sm font-medium text-slate-500 block mb-1">
-                      Nơi cấp
+                      {dict.guard_detail?.field_issue_place}
                     </label>
                     <input
                       type="text"
@@ -741,33 +746,33 @@ export default function GuardDetailPage() {
 
                   <div className="md:col-span-2">
                     <label className="text-sm font-medium text-slate-500 block mb-1">
-                      Địa chỉ thường trú
+                      {dict.guard_detail?.field_address}
                     </label>
                     {/* City + Ward dropdowns */}
                     <div className="grid gap-2 md:grid-cols-2 mb-2">
                       <div>
-                        <label className="text-xs font-medium text-slate-400 mb-1 block">Tỉnh / Thành phố</label>
+                        <label className="text-xs font-medium text-slate-400 mb-1 block">{dict.guard_detail?.field_city}</label>
                         <select
                           value={selectedCityId}
                           disabled={loadingCities}
                           onChange={(e) => setSelectedCityId(e.target.value === "" ? "" : Number(e.target.value))}
                           className={`w-full rounded border px-3 py-2 text-sm focus:outline-none border-slate-300 focus:border-blue-500`}
                         >
-                          <option value="">{loadingCities ? "Đang tải..." : "Chọn tỉnh/thành phố"}</option>
+                          <option value="">{loadingCities ? dict.guard_detail?.city_loading : dict.guard_detail?.city_placeholder}</option>
                           {cities.map((c) => (
                             <option key={c.city_id} value={c.city_id}>{c.city_name}</option>
                           ))}
                         </select>
                       </div>
                       <div>
-                        <label className="text-xs font-medium text-slate-400 mb-1 block">Phường / Xã</label>
+                        <label className="text-xs font-medium text-slate-400 mb-1 block">{dict.guard_detail?.field_ward}</label>
                         <select
                           value={selectedWardId}
                           disabled={loadingWards || selectedCityId === ""}
                           onChange={(e) => setSelectedWardId(e.target.value === "" ? "" : Number(e.target.value))}
                           className={`w-full rounded border px-3 py-2 text-sm focus:outline-none border-slate-300 focus:border-blue-500`}
                         >
-                          <option value="">{loadingWards ? "Đang tải..." : selectedCityId === "" ? "Chọn tỉnh trước" : "Chọn phường/xã"}</option>
+                          <option value="">{loadingWards ? dict.guard_detail?.ward_loading : selectedCityId === "" ? dict.guard_detail?.ward_select_city_first : dict.guard_detail?.ward_placeholder}</option>
                           {wards.map((w) => (
                             <option key={w.ward_id} value={w.ward_id}>{w.ward_name}</option>
                           ))}
@@ -776,11 +781,11 @@ export default function GuardDetailPage() {
                     </div>
                     {/* Street */}
                     <div className="mb-2">
-                      <label className="text-xs font-medium text-slate-400 mb-1 block">Số nhà, tên đường</label>
+                      <label className="text-xs font-medium text-slate-400 mb-1 block">{dict.guard_detail?.field_street}</label>
                       <input
                         type="text"
                         value={streetInput}
-                        placeholder="VD: 123 Nguyễn Văn A"
+                        placeholder={dict.guard_detail?.field_street_placeholder}
                         onChange={(e) => setStreetInput(e.target.value)}
                         className="w-full rounded border border-slate-300 px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
                       />
@@ -794,7 +799,7 @@ export default function GuardDetailPage() {
                         ? "border-red-500"
                         : "border-slate-200"
                         }`}
-                      placeholder="Địa chỉ đầy đủ sẽ tự điền"
+                      placeholder={dict.guard_detail?.field_address_placeholder}
                     />
                     {fieldErrors.address && (
                       <p className="mt-1 text-xs text-red-500 font-medium">
@@ -805,37 +810,37 @@ export default function GuardDetailPage() {
                 </>
               ) : (
                 <>
-                  <InfoItem label="Họ và tên" value={fullName} />
+                  <InfoItem label={dict.guard_detail?.field_fullname ?? "Full Name"} value={fullName} />
 
                   <InfoItem
-                    label="Ngày sinh"
-                    value={formatDate(profile?.date_of_birth)}
+                    label={dict.guard_detail?.field_dob ?? "Date of Birth"}
+                    value={formatDate(profile?.date_of_birth, notUpdatedLabel)}
                   />
 
                   <InfoItem
-                    label="Giới tính"
-                    value={formatGender(profile?.gender)}
+                    label={dict.guard_detail?.field_gender ?? "Gender"}
+                    value={formatGender(profile?.gender, dict.guard_detail?.gender_male ?? "Male", dict.guard_detail?.gender_female ?? "Female", notUpdatedLabel)}
                   />
 
                   <InfoItem
-                    label="CCCD/CMND"
-                    value={identity?.identity_id ?? "Chưa cập nhật"}
+                    label={dict.guard_detail?.field_cccd ?? "CCCD/CMND"}
+                    value={identity?.identity_id ?? notUpdatedLabel}
                   />
 
                   <InfoItem
-                    label="Ngày cấp"
-                    value={formatDate(identity?.issue_date)}
+                    label={dict.guard_detail?.field_issue_date ?? "Issue Date"}
+                    value={formatDate(identity?.issue_date, notUpdatedLabel)}
                   />
 
                   <InfoItem
-                    label="Nơi cấp"
-                    value={identity?.issue_place ?? "Chưa cập nhật"}
+                    label={dict.guard_detail?.field_issue_place ?? "Issue Place"}
+                    value={identity?.issue_place ?? notUpdatedLabel}
                   />
 
                   <div className="md:col-span-2">
                     <InfoItem
-                      label="Địa chỉ thường trú"
-                      value={profile?.address ?? "Chưa cập nhật"}
+                      label={dict.guard_detail?.field_address ?? "Permanent Address"}
+                      value={profile?.address ?? notUpdatedLabel}
                     />
                   </div>
                 </>
@@ -848,23 +853,29 @@ export default function GuardDetailPage() {
               <IdCard className="h-4 w-4 text-blue-800" />
 
               <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
-                Hình ảnh CCCD/CMND
+                {dict.guard_detail?.section_cccd}
               </h2>
             </div>
 
             <div className="grid gap-5 md:grid-cols-2">
               <CccdPreviewBox
-                label="Mặt trước CCCD/CMND"
+                label={dict.guard_detail?.cccd_front ?? "ID Card Front"}
                 imageUrl={isEditing ? cccdFrontPreview : identity?.front_url}
                 isEditing={isEditing}
                 onClick={() => cccdFrontInputRef.current?.click()}
+                noImageLabel={dict.guard_detail?.no_image}
+                uploadLabel={dict.guard_detail?.upload_image}
+                clickToChangeLabel={dict.guard_detail?.click_to_change}
               />
 
               <CccdPreviewBox
-                label="Mặt sau CCCD/CMND"
+                label={dict.guard_detail?.cccd_back ?? "ID Card Back"}
                 imageUrl={isEditing ? cccdBackPreview : identity?.back_url}
                 isEditing={isEditing}
                 onClick={() => cccdBackInputRef.current?.click()}
+                noImageLabel={dict.guard_detail?.no_image}
+                uploadLabel={dict.guard_detail?.upload_image}
+                clickToChangeLabel={dict.guard_detail?.click_to_change}
               />
             </div>
 
@@ -878,12 +889,12 @@ export default function GuardDetailPage() {
                   const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg"];
                   const MAXIMUM_IMAGE_SIZE = 2 * 1024 * 1024;
                   if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-                    setEditError("Ảnh đại diện chỉ hỗ trợ định dạng JPG hoặc PNG.");
+                    setEditError(dict.guard_detail?.error_avatar_format ?? "Avatar only supports JPG or PNG format.");
                     e.target.value = "";
                     return;
                   }
                   if (file.size > MAXIMUM_IMAGE_SIZE) {
-                    setEditError("Kích thước ảnh đại diện không được vượt quá 2MB.");
+                    setEditError(dict.guard_detail?.error_avatar_size ?? "Avatar file size must not exceed 2MB.");
                     e.target.value = "";
                     return;
                   }
@@ -903,7 +914,7 @@ export default function GuardDetailPage() {
                 if (file) {
                   const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg"];
                   if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-                    setEditError("Ảnh mặt trước CCCD chỉ hỗ trợ định dạng JPG hoặc PNG.");
+                    setEditError(dict.guard_detail?.error_front_format ?? "ID card front only supports JPG or PNG format.");
                     e.target.value = "";
                     return;
                   }
@@ -923,7 +934,7 @@ export default function GuardDetailPage() {
                 if (file) {
                   const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png", "image/jpg"];
                   if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-                    setEditError("Ảnh mặt sau CCCD chỉ hỗ trợ định dạng JPG hoặc PNG.");
+                    setEditError(dict.guard_detail?.error_back_format ?? "ID card back only supports JPG or PNG format.");
                     e.target.value = "";
                     return;
                   }
@@ -944,7 +955,7 @@ export default function GuardDetailPage() {
               <Mail className="h-4 w-4 text-blue-800" />
 
               <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
-                Thông tin liên hệ
+                {dict.guard_detail?.section_contact}
               </h2>
             </div>
 
@@ -953,7 +964,7 @@ export default function GuardDetailPage() {
                 <>
                   <div>
                     <label className="text-sm font-medium text-slate-500 block mb-1">
-                      Số điện thoại <span className="text-red-500">*</span>
+                      {dict.guard_detail?.field_phone} <span className="text-red-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -1002,11 +1013,11 @@ export default function GuardDetailPage() {
 
                     <div>
                       <p className="text-sm font-medium text-slate-500">
-                        Số điện thoại
+                        {dict.guard_detail?.field_phone}
                       </p>
 
                       <p className="mt-1 text-sm font-bold text-slate-950">
-                        {profile?.phone_number ?? "Chưa cập nhật"}
+                        {profile?.phone_number ?? notUpdatedLabel}
                       </p>
                     </div>
                   </div>
@@ -1018,7 +1029,7 @@ export default function GuardDetailPage() {
                       <p className="text-sm font-medium text-slate-500">Email</p>
 
                       <p className="mt-1 break-all text-sm font-bold text-slate-950">
-                        {profile?.email ?? "Chưa cập nhật"}
+                        {profile?.email ?? notUpdatedLabel}
                       </p>
                     </div>
                   </div>
@@ -1061,11 +1072,17 @@ function CccdPreviewBox({
   imageUrl,
   isEditing,
   onClick,
+  noImageLabel,
+  uploadLabel,
+  clickToChangeLabel,
 }: {
   label: string;
   imageUrl?: string | null;
   isEditing?: boolean;
   onClick?: () => void;
+  noImageLabel?: string;
+  uploadLabel?: string;
+  clickToChangeLabel?: string;
 }) {
   return (
     <div>
@@ -1076,7 +1093,7 @@ function CccdPreviewBox({
           onClick={isEditing ? onClick : undefined}
           className={`relative aspect-[16/10] overflow-hidden rounded-md border border-slate-300 ${isEditing ? "cursor-pointer group" : ""
             }`}
-          title={isEditing ? "Click để chọn ảnh mới" : undefined}
+          title={isEditing ? clickToChangeLabel : undefined}
         >
           <img
             src={imageUrl}
@@ -1095,7 +1112,7 @@ function CccdPreviewBox({
           onClick={isEditing ? onClick : undefined}
           className={`flex aspect-[16/10] items-center justify-center rounded-md border border-dashed border-slate-300 bg-slate-100 ${isEditing ? "cursor-pointer hover:bg-slate-200 transition group" : ""
             }`}
-          title={isEditing ? "Click để chọn ảnh mới" : undefined}
+          title={isEditing ? clickToChangeLabel : undefined}
         >
           <div className="text-center">
             <User
@@ -1107,11 +1124,11 @@ function CccdPreviewBox({
               className={`mt-2 text-sm font-medium text-slate-500 ${isEditing ? "group-hover:text-blue-600 transition" : ""
                 }`}
             >
-              Chưa có hình ảnh
+              {noImageLabel}
             </p>
             {isEditing && (
               <p className="mt-1 text-xs text-blue-600 font-semibold opacity-0 group-hover:opacity-100 transition">
-                Tải ảnh lên
+                {uploadLabel}
               </p>
             )}
           </div>

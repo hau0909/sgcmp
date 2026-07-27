@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useTransition } from "react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 import { createPortal } from "react-dom";
 import {
   X,
@@ -41,6 +42,7 @@ type GuardCandidate = {
  * activeSlotAssignmentId: which slot the user is currently picking for
  */
 export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps) {
+  const { dict } = useTranslation();
   const [mounted, setMounted] = useState(false);
   const [isDispatchPanelOpen, setIsDispatchPanelOpen] = useState(false);
 
@@ -87,12 +89,14 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   const eligibleAssignments = shift.assignments.filter(canDispatchReplacement);
 
   const getStatusLabel = (assign: ShiftAssignment) => {
-    if (assign.status === "assigned") return "Đã phân công";
-    if (assign.status === "completed") return "Đang trực";
+    if (assign.status === "assigned") return dict?.coor_schedules?.assigned || "Đã phân công";
+    if (assign.status === "completed") return dict?.coor_schedules?.completed || dict?.coor_schedules?.on_duty || "Hoàn thành";
     if (assign.status === "late") {
-      return assign.check_in_time ? "Đã điểm danh trễ" : "Đi trễ - chưa điểm danh";
+      return assign.check_in_time
+        ? (dict?.shift_detail_modal?.checked_in_late || "Đã điểm danh trễ")
+        : (dict?.shift_detail_modal?.late_not_checked_in || "Đi trễ - chưa điểm danh");
     }
-    return "Vắng mặt";
+    return dict?.coor_schedules?.absent || "Vắng mặt";
   };
 
   const getStatusStyle = (assign: ShiftAssignment) => {
@@ -160,7 +164,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
         setOutsideContractGuards(res.data.outsideContractGuards);
       }
     } catch (err: any) {
-      setErrorMessage(err?.message || "Không thể tải danh sách bảo vệ thay thế.");
+      setErrorMessage(err?.message || (dict?.shift_detail_modal?.load_guards_error || "Không thể tải danh sách bảo vệ thay thế."));
     } finally {
       setIsLoadingCandidates(false);
     }
@@ -223,7 +227,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   const handleConfirmReplacement = () => {
     if (!allSlotsAssigned) {
       setErrorMessage(
-        `Vui lòng chọn bảo vệ thay thế cho tất cả ${eligibleAssignments.length} vị trí.`
+        (dict?.shift_detail_modal?.select_all_error || "Vui lòng chọn bảo vệ thay thế cho tất cả {0} vị trí.").replace("{0}", String(eligibleAssignments.length))
       );
       return;
     }
@@ -244,14 +248,14 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
         const results = await Promise.all(promises);
         const failed = results.find((r) => !r.success);
         if (failed) {
-          throw new Error((failed as any).message || "Một số vị trí cập nhật thất bại.");
+          throw new Error((failed as any).message || (dict?.shift_detail_modal?.update_failed || "Một số vị trí cập nhật thất bại."));
         }
 
         // Success
         window.dispatchEvent(new CustomEvent("refresh-shifts"));
         onClose();
       } catch (err: any) {
-        setErrorMessage(err?.message || "Cập nhật bảo vệ thay thế thất bại.");
+        setErrorMessage(err?.message || (dict?.shift_detail_modal?.update_failed || "Cập nhật bảo vệ thay thế thất bại."));
       }
     });
   };
@@ -290,9 +294,9 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
         {/* Header */}
         <div className="flex items-center justify-between border-b border-slate-200 px-5 py-4 bg-slate-50">
           <div>
-            <h3 className="text-base font-bold text-slate-800">Chi tiết ca trực</h3>
+            <h3 className="text-base font-bold text-slate-800">{dict?.guard_shift_detail?.title || "Chi tiết ca trực"}</h3>
             <p className="text-xs text-slate-500 font-medium">
-              {shift.shift_name || "Ca trực"}
+              {shift.shift_name || (dict?.shift_week?.shift_name || "Ca trực")}
             </p>
           </div>
           {!isDispatchPanelOpen && (
@@ -309,28 +313,28 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
         <div className="p-5 overflow-y-auto flex-1 space-y-5">
           {/* Shift info */}
           <div className="grid grid-cols-2 gap-4">
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-start gap-2.5 min-w-0">
               <Clock size={16} className="text-blue-600 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Thời gian</p>
+              <div className="min-w-0">
+                <p className="text-[10px] font-bold text-slate-400 uppercase">{dict?.shift_week?.shift_time || "Thời gian"}</p>
                 <p className="text-xs font-semibold text-slate-800">
                   {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
                 </p>
               </div>
             </div>
-            <div className="flex items-start gap-2.5">
+            <div className="flex items-start gap-2.5 min-w-0">
               <MapPin size={16} className="text-blue-600 mt-0.5 shrink-0" />
-              <div>
-                <p className="text-[10px] font-bold text-slate-400 uppercase">Địa điểm</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase">{dict?.shift_week?.location || "Địa điểm"}</p>
                 <p
-                  className="text-xs font-semibold text-slate-800 truncate"
+                  className="text-xs font-semibold text-slate-800 break-words whitespace-normal leading-relaxed"
                   title={shift.contract_address}
                 >
-                  {shift.contract_address || "Chưa có địa chỉ"}
+                  {shift.contract_address || (dict?.shift_week?.unupdated || "Chưa có địa chỉ")}
                 </p>
                 {shift.location && (
-                  <p className="text-[10px] text-slate-500 font-medium">
-                    Khu vực: {shift.location}
+                  <p className="text-[10px] text-slate-500 font-medium break-words whitespace-normal leading-normal mt-0.5">
+                    {dict?.shift_week?.position || "Khu vực"}: {shift.location}
                   </p>
                 )}
               </div>
@@ -340,20 +344,20 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
           {/* Guard stats */}
           <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-100 flex items-center justify-between">
             <div>
-              <p className="text-xs font-semibold text-slate-700">Nhân sự ca trực</p>
+              <p className="text-xs font-semibold text-slate-700">{dict?.shift_detail_modal?.shift_staffing || "Nhân sự ca trực"}</p>
               <p className="text-[11px] text-slate-500 mt-0.5">
-                Thực tế:{" "}
+                {dict?.shift_detail_modal?.actual || "Thực tế"}:{" "}
                 <span className="font-bold text-blue-600">{actualGuards}</span> /{" "}
-                {shift.required_guards} bảo vệ
+                {shift.required_guards} {dict?.guard_shift_detail?.guards_count?.replace("{0}", "").trim() || "bảo vệ"}
               </p>
             </div>
             {missingGuards > 0 ? (
               <span className="text-[10px] font-bold bg-rose-50 text-rose-600 px-2.5 py-1 rounded-full border border-rose-100">
-                Thiếu {missingGuards} vị trí
+                {(dict?.shift_detail_modal?.missing_slots || "Thiếu {0} vị trí").replace("{0}", String(missingGuards))}
               </span>
             ) : (
               <span className="text-[10px] font-bold bg-emerald-50 text-emerald-600 px-2.5 py-1 rounded-full border border-emerald-100">
-                Đủ nhân sự
+                {dict?.shift_detail_modal?.full_staffing || "Đủ nhân sự"}
               </span>
             )}
           </div>
@@ -361,7 +365,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
           {/* Assignments List */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-              Danh sách bảo vệ trực
+              {dict?.guard_shift_detail?.guard_list || "Danh sách bảo vệ trực"}
             </h4>
             <div className="space-y-2">
               {shift.assignments.map((assign) => (
@@ -390,7 +394,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                           {assign.guard_name}
                         </p>
                         <span className="text-[10px] text-slate-400 font-medium">
-                          Bảo vệ chính
+                          {dict?.shift_detail_modal?.main_guard || "Bảo vệ chính"}
                         </span>
                       </div>
                     </div>
@@ -416,8 +420,8 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                             }`}
                         >
                           {replacementMap[assign.assignment_id]
-                            ? "✓ Đã chọn"
-                            : "Chọn thay thế"}
+                            ? (dict?.shift_detail_modal?.selected_badge || "✓ Đã chọn")
+                            : (dict?.shift_detail_modal?.select_replacement || "Chọn thay thế")}
                         </button>
                       )}
                     </div>
@@ -448,7 +452,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                     assign.replacement_guards.length > 0 && (
                       <div className="bg-slate-50 rounded p-2.5 border border-slate-100 space-y-1.5">
                         <p className="text-[10px] font-bold text-slate-500 uppercase">
-                          Nhân sự thay thế đã gán:
+                          {dict?.shift_detail_modal?.dispatched_replacements || "Nhân sự thay thế đã gán:"}
                         </p>
                         <div className="space-y-1">
                           {assign.replacement_guards.map((rep) => (
@@ -483,7 +487,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
               className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2"
             >
               <UserCheck size={14} />
-              Điều phối thay thế ({eligibleAssignments.length} vị trí)
+              {(dict?.shift_detail_modal?.dispatch_replacement_btn || "Điều phối thay thế ({0} vị trí)").replace("{0}", String(eligibleAssignments.length))}
               <ChevronRight size={14} />
             </button>
           </div>
@@ -497,12 +501,12 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
           <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4 bg-slate-50">
             <div>
               <h3 className="text-sm font-bold text-slate-800">
-                Điều phối bảo vệ thay thế
+                {dict?.shift_detail_modal?.dispatch_header || "Điều phối bảo vệ thay thế"}
               </h3>
               <p className="text-[11px] text-slate-500 font-medium">
                 {activeSlotId
-                  ? `Đang chọn cho: `
-                  : "Tất cả vị trí đã được chọn"}
+                  ? `${dict?.shift_detail_modal?.selecting_for || "Đang chọn cho:"} `
+                  : (dict?.shift_detail_modal?.all_selected || "Tất cả vị trí đã được chọn")}
                 {activeSlotId && (
                   <span className="font-bold text-blue-600">
                     {eligibleAssignments.find((a) => a.assignment_id === activeSlotId)
@@ -538,11 +542,11 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                   ) : (
                     <span className="h-2 w-2 rounded-full bg-current inline-block opacity-40" />
                   )}
-                  Vị trí {i + 1}
+                  {dict?.guard_shift_detail?.location || "Vị trí"} {i + 1}
                 </button>
               ))}
               <span className="text-[10px] text-slate-400 ml-auto font-medium">
-                {Object.values(replacementMap).filter(Boolean).length}/{eligibleAssignments.length} đã chọn
+                {(dict?.shift_detail_modal?.selected_count || "{0}/{1} đã chọn").replace("{0}", String(Object.values(replacementMap).filter(Boolean).length)).replace("{1}", String(eligibleAssignments.length))}
               </span>
             </div>
           </div>
@@ -561,7 +565,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
               <Search size={14} className="absolute left-2.5 top-2.5 text-slate-400" />
               <input
                 type="text"
-                placeholder="Tìm theo tên hoặc số điện thoại..."
+                placeholder={dict?.shift_detail_modal?.search_placeholder || "Tìm theo tên hoặc số điện thoại..."}
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-8 pr-3 py-1.5 text-xs rounded border border-slate-300 bg-slate-50/50 outline-none focus:bg-white focus:border-blue-500 transition-colors"
@@ -574,7 +578,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
             {isLoadingCandidates ? (
               <div className="flex flex-col items-center justify-center py-10 text-slate-400 gap-2">
                 <div className="h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full animate-spin" />
-                <span className="text-xs font-medium">Đang tải danh sách bảo vệ...</span>
+                <span className="text-xs font-medium">{dict?.shift_detail_modal?.loading_guards || "Đang tải danh sách bảo vệ..."}</span>
               </div>
             ) : (
               <>
@@ -582,10 +586,10 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Bảo vệ trong hợp đồng ({filteredContractGuards.length})
+                      {(dict?.shift_detail_modal?.contract_guards || "Bảo vệ trong hợp đồng ({0})").replace("{0}", String(filteredContractGuards.length))}
                     </p>
                     <span className="text-[9px] bg-blue-50 text-blue-600 border border-blue-100 font-bold px-1.5 py-0.5 rounded">
-                      Trong HĐ
+                      {dict?.shift_detail_modal?.in_contract || "Trong HĐ"}
                     </span>
                   </div>
                   <div className="space-y-1.5">
@@ -611,7 +615,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                                 {g.full_name}
                               </p>
                               <p className="text-[10px] text-slate-400 mt-0.5">
-                                {g.phone_number || "Chưa có SĐT"}
+                                {g.phone_number || (dict?.shift_detail_modal?.no_phone || "Chưa có SĐT")}
                               </p>
                             </div>
                             <div
@@ -627,7 +631,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                       })
                     ) : (
                       <p className="text-[11px] text-slate-400 italic text-center py-2">
-                        Không có bảo vệ khả dụng trong hợp đồng.
+                        {dict?.shift_detail_modal?.no_contract_guards || "Không có bảo vệ khả dụng trong hợp đồng."}
                       </p>
                     )}
                   </div>
@@ -637,10 +641,10 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                 <div className="space-y-2 pt-2 border-t border-slate-100">
                   <div className="flex items-center justify-between">
                     <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                      Bảo vệ ngoài hợp đồng ({filteredOutsideContractGuards.length})
+                      {(dict?.shift_detail_modal?.outside_guards || "Bảo vệ ngoài hợp đồng ({0})").replace("{0}", String(filteredOutsideContractGuards.length))}
                     </p>
                     <span className="text-[9px] bg-slate-100 text-slate-600 border border-slate-200 font-bold px-1.5 py-0.5 rounded">
-                      Ngoài HĐ
+                      {dict?.shift_detail_modal?.outside_contract || "Ngoài HĐ"}
                     </span>
                   </div>
                   <div className="space-y-1.5">
@@ -666,7 +670,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                                 {g.full_name}
                               </p>
                               <p className="text-[10px] text-slate-400 mt-0.5">
-                                {g.phone_number || "Chưa có SĐT"}
+                                {g.phone_number || (dict?.shift_detail_modal?.no_phone || "Chưa có SĐT")}
                               </p>
                             </div>
                             <div
@@ -682,7 +686,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                       })
                     ) : (
                       <p className="text-[11px] text-slate-400 italic text-center py-2">
-                        Không có bảo vệ ngoài hợp đồng rảnh hôm nay.
+                        {dict?.shift_detail_modal?.no_outside_guards || "Không có bảo vệ ngoài hợp đồng rảnh hôm nay."}
                       </p>
                     )}
                   </div>
@@ -703,14 +707,14 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
               ) : (
                 <UserCheck size={14} />
               )}
-              Xác nhận điều phối ({eligibleAssignments.length} vị trí)
+              {(dict?.shift_detail_modal?.confirm_dispatch || "Xác nhận điều phối ({0} vị trí)").replace("{0}", String(eligibleAssignments.length))}
             </button>
             <button
               disabled={isPending}
               onClick={onClose}
               className="w-full py-2 bg-white hover:bg-slate-100 text-slate-600 border border-slate-200 text-xs font-bold uppercase rounded-lg transition-colors disabled:opacity-50"
             >
-              Hủy
+              {dict?.shift_detail_modal?.cancel || dict?.common?.cancel || "Hủy"}
             </button>
           </div>
         </div>

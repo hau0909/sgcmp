@@ -11,14 +11,14 @@ export default function ChatPage() {
 
   if (!companyId || !userId) {
     return (
-      <div className="h-[calc(100vh-4rem)] w-full flex items-center justify-center text-on-surface-variant text-sm">
+      <div className="h-[calc(100vh-114px)] w-full flex items-center justify-center text-on-surface-variant text-sm">
         {dict.chat?.not_found_company || "Không tìm thấy thông tin công ty. Vui lòng đăng nhập lại."}
       </div>
     );
   }
 
   return (
-    <div className="h-[calc(100vh-4rem)] w-full bg-white flex flex-col">
+    <div className="h-[calc(100vh-114px)] w-full bg-white flex flex-col">
       <CompanyChat companyId={companyId} userId={userId} />
     </div>
   );

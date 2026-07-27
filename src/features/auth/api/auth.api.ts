@@ -34,3 +34,35 @@ export const requestLogout = async (): Promise<LogoutResponse> => {
     method: "POST",
   });
 };
+
+export const requestResetPassword = async (payload: {
+  currentPassword?: string;
+  password?: string;
+  confirmPassword?: string;
+}) => {
+  return await fetcher("/api/auth/reset-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+};
+
+export const requestChangePassword = requestResetPassword;
+
+export const requestForgotPassword = async (payload: { email: string }) => {
+  return await fetcher("/api/auth/forgot-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+};
+
+export const requestUpdateForgotPassword = async (payload: {
+  password?: string;
+  confirmPassword?: string;
+}) => {
+  return await fetcher("/api/auth/update-forgot-password", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+};
+
+

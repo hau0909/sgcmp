@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { ShieldCheck, MessageSquare, Calendar } from "lucide-react";
+import { ShieldCheck, Shield } from "lucide-react";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CompanyDetailHeaderProps {
@@ -9,6 +9,8 @@ interface CompanyDetailHeaderProps {
   logoUrl?: string;
   bannerUrl?: string;
   companyId: string;
+  address?: string;
+  createdYear?: number;
   onOpenBookingModal?: () => void;
 }
 
@@ -17,76 +19,79 @@ export default function CompanyDetailHeader({
   logoUrl,
   bannerUrl,
   companyId,
+  address,
+  createdYear,
   onOpenBookingModal,
 }: CompanyDetailHeaderProps) {
   const { dict } = useTranslation();
-  const handleOpenChat = () => {
-    window.dispatchEvent(
-      new CustomEvent("open-customer-chat", {
-        detail: { companyId, companyName: name },
-      })
-    );
-  };
+
+  const t = dict.customer?.company_detail || {};
+
+  const cityOrRegion = address
+    ? address.split(",").slice(-2).join(",").trim()
+    : (t.nationwide || "Toàn quốc");
+
+  const operatingYearText = createdYear
+    ? `${t.operating_since || "Hoạt động trên nền tảng từ"} ${createdYear}`
+    : (t.operating_platform || "Hoạt động trên nền tảng");
 
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden shadow-xs">
-      {/* cover banner */}
-      <div className="relative h-48 sm:h-72 w-full bg-linear-to-r from-primary via-primary/90 to-secondary/80 overflow-hidden">
+    <div className="w-full relative rounded-2xl overflow-hidden shadow-xs">
+      {/* Editorial Dark Navy Hero Banner */}
+      <div className="relative h-64 sm:h-72 w-full bg-gradient-to-r from-primary via-primary-container to-secondary overflow-hidden">
         {bannerUrl ? (
           <img
             alt={`${name} Banner`}
-            className="w-full h-full object-cover animate-fade-in"
+            className="w-full h-full object-cover animate-fade-in opacity-80"
             src={bannerUrl}
           />
         ) : (
-          <>
-            <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff05_1px,transparent_1px),linear-gradient(to_bottom,#ffffff05_1px,transparent_1px)] bg-[size:14px_24px] [mask-image:radial-gradient(ellipse_60%_50%_at_50%_0%,#000_70%,transparent_100%)]" />
-            <div className="absolute inset-0 bg-linear-to-t from-black/30 via-transparent to-transparent" />
-          </>
+          <div className="absolute inset-0 bg-grid-pattern opacity-15" />
         )}
-      </div>
 
-      {/* profile row */}
-      <div className="px-5 pb-5 relative flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 z-10">
-        <div className="flex flex-row items-end gap-3.5 min-w-0 flex-1">
-          {logoUrl ? (
-            <img
-              alt={`${name} Logo`}
-              className="-mt-10 sm:-mt-12 w-18 h-18 sm:w-22 sm:h-22 rounded-xl border-4 border-surface-container-lowest object-cover shadow-sm bg-surface-bright shrink-0"
-              src={logoUrl}
-            />
-          ) : (
-            <div className="-mt-10 sm:-mt-12 w-18 h-18 sm:w-22 sm:h-22 rounded-xl border-4 border-surface-container-lowest bg-primary text-on-primary flex items-center justify-center font-bold text-lg sm:text-2xl shadow-sm shrink-0 uppercase">
-              {name.replace(/^(Công ty|TNHH|Cổ phần|Dịch vụ|Bảo vệ)\s+/gi, "").substring(0, 2).toUpperCase()}
-            </div>
-          )}
-          <div className="pb-1 min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[18px] sm:text-[24px] font-bold text-on-surface tracking-tight leading-tight break-words">
-                {name}
-              </h1>
-              <span className="bg-surface-dim text-primary border border-primary/20 px-2 py-0.5 rounded-full text-[9px] font-semibold uppercase tracking-wider flex items-center gap-0.5 shrink-0">
-                <ShieldCheck className="w-3 h-3" /> {dict.customer.company_detail.verified}
-              </span>
-            </div>
+        {/* Overlay gradient */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/20" />
+
+        {/* Top Header Eyebrow Row */}
+        <div className="absolute top-6 left-6 right-6 flex justify-between items-center z-10">
+          <div className="text-white/75 text-[11px] font-semibold tracking-widest uppercase">
+            {t.eyebrow_header || "Hồ sơ đơn vị cung cấp dịch vụ bảo vệ"}
+          </div>
+          <div className="flex items-center gap-1.5 text-amber-300 text-xs font-medium">
+            <span>✓</span>
+            <span>{t.verified || "Đã xác minh"}</span>
           </div>
         </div>
 
-        <div className="flex items-center gap-2 w-full sm:w-auto mt-3 sm:mt-0 shrink-0">
-          <button
-            onClick={handleOpenChat}
-            className="flex-1 sm:flex-none px-2.5 py-1.5 sm:px-3.5 sm:py-2 border border-primary text-primary font-semibold rounded-lg hover:bg-surface-container transition-colors text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
-          >
-            <MessageSquare className="w-4 h-4" /> {dict.customer.company_detail.chat_btn}
-          </button>
-          <button
-            onClick={onOpenBookingModal}
-            className="flex-1 sm:flex-none px-2.5 py-1.5 sm:px-3.5 sm:py-2 bg-primary text-on-primary font-semibold rounded-lg hover:bg-primary/90 transition-colors shadow-xs text-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-[0.98]"
-          >
-            <Calendar className="w-4 h-4" /> {dict.customer.company_detail.book_btn}
-          </button>
+        {/* Bottom Hero Logo & Info Row */}
+        <div className="absolute left-6 right-6 bottom-6 flex flex-col sm:flex-row sm:items-end gap-5 z-10">
+          {/* Logo Ring */}
+          <div className="relative shrink-0">
+            {logoUrl ? (
+              <img
+                alt={`${name} Logo`}
+                className="w-18 h-18 sm:w-20 sm:h-20 rounded-full border-3 border-amber-400/90 object-cover shadow-md bg-surface-container-lowest"
+                src={logoUrl}
+              />
+            ) : (
+              <div className="w-18 h-18 sm:w-20 sm:h-20 rounded-full border-3 border-amber-400/90 bg-primary text-on-primary flex items-center justify-center font-bold shadow-md shrink-0">
+                <Shield className="w-9 h-9 text-amber-300 stroke-[1.8]" />
+              </div>
+            )}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <h1 className="text-2xl sm:text-3.5xl font-bold text-white tracking-tight leading-tight">
+              {name}
+            </h1>
+            <p className="text-white/80 text-xs sm:text-sm mt-1.5 font-normal">
+              {t.pro_security || "Dịch vụ an ninh chuyên nghiệp"} · {operatingYearText} · {cityOrRegion}
+            </p>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
+

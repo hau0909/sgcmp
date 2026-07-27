@@ -63,7 +63,9 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
     if (!password) {
       newErrors.password = dict.pages.registration.err_password_required;
     } else if (password.length < 8) {
-      newErrors.password = dict.pages.registration.err_password_short;
+      newErrors.password = (dict.pages.registration as any).err_password_short || "Mật khẩu phải có ít nhất 8 ký tự";
+    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/.test(password)) {
+      newErrors.password = (dict.pages.registration as any).err_password_invalid || "Mật khẩu phải chứa chữ hoa, chữ thường, số và ký tự đặc biệt";
     }
 
     if (!confirmPassword) {
@@ -287,10 +289,6 @@ export default function StepSignUp({ onSuccess }: StepSignUpProps) {
           </div>
         </div>
 
-        {/* Password hint */}
-        <p className="text-xs text-on-surface-variant">
-          {dict.pages.registration.password_hint}
-        </p>
 
         {/* Submit */}
         <button

@@ -34,6 +34,7 @@ import {
   deactivateCompanySubscriptions,
 } from "../../subscription/repository/subscription.repository";
 import { getPlanByIdService } from "../../subscription/service/subscription.service";
+import { validatePaymentPayload, validateWebhookTransactionCode } from "../validator/payment.validator";
 
 export const getPaymentHistoryService = async (
   companyId: string,
@@ -53,9 +54,7 @@ export const createPaymentService = async (
   planId: number,
   paymentMethod: PaymentMethod,
 ): Promise<Payment> => {
-  if (!companyId) throw new Error("Company ID is required");
-  if (!planId) throw new Error("Plan ID is required");
-  if (!paymentMethod) throw new Error("Payment method is required");
+  validatePaymentPayload(companyId, planId, paymentMethod);
 
   // Fetch plan details to verify and get duration/price
   const plan = await getPlanByIdService(planId);
@@ -168,13 +167,11 @@ export const handleSePayWebhookService = async (payload: any): Promise<boolean> 
   const { transferAmount, content } = payload;
   if (!content) return false;
 
-  const match = content.toUpperCase().match(/TXN\d+/);
-  if (!match) {
+  const transactionCode = validateWebhookTransactionCode(content);
+  if (!transactionCode) {
     console.log("No transaction code found in content:", content);
     return false;
   }
-
-  const transactionCode = match[0];
   const payment = await getPaymentByTransactionCode(transactionCode);
 
   if (!payment) {

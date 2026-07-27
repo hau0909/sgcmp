@@ -473,7 +473,7 @@ export const handleCreateWorkShift = async (request: Request) => {
         );
       }
       const originalDurationMin = calculateDurationMinutes(parsedSlot.start, parsedSlot.end);
-      
+
       const totalSplitDurationMin = input.splits.reduce((sum, split) => {
         const start = new Date(split.start_time);
         const end = new Date(split.end_time);
@@ -1017,39 +1017,43 @@ export const handleGetGuardShiftDetail = async ({
     required_guards: shift.required_guards,
     assigned_by: assignedByProfile
       ? {
-          user_id: assignedByProfile.user_id,
-          full_name: assignedByProfile.full_name || "Điều phối viên",
-          phone_number: assignedByProfile.phone_number || null,
-        }
+        user_id: assignedByProfile.user_id,
+        full_name: assignedByProfile.full_name || "Điều phối viên",
+        phone_number: assignedByProfile.phone_number || null,
+      }
       : null,
+    allowed_late_minutes: company?.allowed_late_minutes ?? 5,
+    allowed_absent_minutes: company?.allowed_absent_minutes ?? 35,
     company: company
       ? {
-          company_id: company.company_id,
-          company_name: company.company_name || "Chưa cập nhật công ty",
-          address: typeof company.address === "string" ? company.address : null,
-        }
+        company_id: company.company_id,
+        company_name: company.company_name || "Chưa cập nhật công ty",
+        address: typeof company.address === "string" ? company.address : null,
+        allowed_late_minutes: company.allowed_late_minutes ?? 5,
+        allowed_absent_minutes: company.allowed_absent_minutes ?? 35,
+      }
       : null,
     service: service
       ? {
-          service_id: service.service_id,
-          name: service.name,
-        }
+        service_id: service.service_id,
+        name: service.name,
+      }
       : null,
     contract: contract
       ? {
-          contract_id: contract.contract_id,
-          start_date: contract.start_date,
-          end_date: contract.end_date,
-          status: contract.status,
-        }
+        contract_id: contract.contract_id,
+        start_date: contract.start_date,
+        end_date: contract.end_date,
+        status: contract.status,
+      }
       : null,
     guards: guardList,
     checkin_image: shiftImage
       ? {
-          image_url: shiftImage.image_url,
-          image_path: shiftImage.image_path,
-          created_at: shiftImage.created_at,
-        }
+        image_url: shiftImage.image_url,
+        image_path: shiftImage.image_path,
+        created_at: shiftImage.created_at,
+      }
       : null,
   };
 };
@@ -1118,9 +1122,30 @@ export const handleCheckinGuardShift = async ({
     throw new ShiftApiError("Thời gian bắt đầu ca trực không hợp lệ.", 400);
   }
 
+  let companyLateMinutes = 5;
+  let companyAbsentMinutes = 35;
+
+  if (shift.contract_id) {
+    const contract = await getContractByIdService(shift.contract_id);
+    if (contract?.booking_id) {
+      const booking = await getBookingByIdService(contract.booking_id);
+      if (booking?.company_id) {
+        const company = await getCompanyByIdService(booking.company_id);
+        if (company) {
+          if (typeof company.allowed_late_minutes === "number" && company.allowed_late_minutes >= 0) {
+            companyLateMinutes = company.allowed_late_minutes;
+          }
+          if (typeof company.allowed_absent_minutes === "number" && company.allowed_absent_minutes > 0) {
+            companyAbsentMinutes = company.allowed_absent_minutes;
+          }
+        }
+      }
+    }
+  }
+
   const startCheckinLimit = new Date(shiftStartTime.getTime());
-  const lateCheckinLimit = new Date(shiftStartTime.getTime() + 5 * 60 * 1000);
-  const absentLimit = new Date(shiftStartTime.getTime() + 35 * 60 * 1000);
+  const lateCheckinLimit = new Date(shiftStartTime.getTime() + companyLateMinutes * 60 * 1000);
+  const absentLimit = new Date(shiftStartTime.getTime() + companyAbsentMinutes * 60 * 1000);
 
   if (now < startCheckinLimit) {
     throw new ShiftApiError("Chưa đến thời gian điểm danh.", 400);
@@ -1316,7 +1341,7 @@ export const handleGetGuardAvailability = async (request: Request) => {
 
           if (gsDateStr === propDateStr) {
             assignedToday += gs.duration_minutes;
-            
+
             const startDb = new Date(gs.start_time).getTime();
             const endDb = new Date(gs.end_time).getTime();
             if (startDb < endProposed && endDb > startProposed) {
@@ -1640,16 +1665,16 @@ export const handleGetReplacementGuards = async (
 
     const guardAssignedInContract = contract.guard_assigned || [];
 
-    const contractGuards = candidateGuards.filter(g => 
+    const contractGuards = candidateGuards.filter(g =>
       guardAssignedInContract.includes(g.guard_id)
     );
 
-    const outsideContractGuards = candidateGuards.filter(g => 
+    const outsideContractGuards = candidateGuards.filter(g =>
       !guardAssignedInContract.includes(g.guard_id) &&
       !guardsWithShiftsOnDay.has(g.user_id)
     );
 
-    const currentReplacementGuards = activeGuards.filter(g => 
+    const currentReplacementGuards = activeGuards.filter(g =>
       assignment.replacement_guard_ids && assignment.replacement_guard_ids.includes(g.guard_id)
     );
 

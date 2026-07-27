@@ -93,7 +93,9 @@ export default function AuthRedirect() {
           }
         }
       } catch (error) {
-        console.error("AUTH REDIRECT ERROR:", error);
+        if (!isPublicPath && !isCompanyRelatedPath) {
+          console.error("AUTH REDIRECT ERROR:", error);
+        }
       }
     };
 

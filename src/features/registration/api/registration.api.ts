@@ -12,6 +12,12 @@ export async function requestGetRegistrationDetail(id: string) {
   });
 }
 
+export async function requestGetMyRegistration(userId: string) {
+  return await fetcher(`/api/my-registrations?userId=${userId}`, {
+    method: "GET",
+  });
+}
+
 export async function requestUpdateRegistrationStatus(
   id: string,
   status: "approved" | "rejected",
@@ -63,3 +69,43 @@ export async function requestSubmitRegistration(payload: {
     },
   });
 }
+
+export async function requestUpdateMyRegistration(payload: {
+  userId: string;
+  registrationId: string;
+  profile: {
+    fullName: string;
+    phoneNumber: string;
+    avatarUrl: string | null;
+  };
+  identity: {
+    identityId: string;
+    issueDate: string;
+    issuePlace: string;
+    frontUrl: string;
+    backUrl: string;
+  };
+  company: {
+    companyName: string;
+    businessLicenseNo: string;
+    licenseFileUrl: string | null;
+    address: any;
+    email: string;
+    phone: string;
+    description: string | null;
+  };
+  images: {
+    imageUrl: string;
+    imageType: "logo" | "banner" | "other";
+  }[];
+  companyId: string;
+}) {
+  return await fetcher("/api/my-registrations", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+}
+

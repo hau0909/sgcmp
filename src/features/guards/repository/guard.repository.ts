@@ -9,6 +9,10 @@ import type {
   GuardDetailDatabase,
   GetAllGuardsRepositoryParams,
   GetAllGuardsRepositoryResult,
+  GetGuardPerformanceSummaryParams,
+  GuardPerformanceSummaryData,
+  GetGuardPerformanceListParams,
+  GuardPerformanceListItem,
 } from "../type";
 import { Guard } from "@/types/Guard";
 
@@ -351,9 +355,75 @@ export const getAllGuards = async ({
     } else if (workStatus === "assigned") {
       // Upcoming today but not currently on duty
       workStatusMatchedUserIds = upcomingUserIds.filter((id) => !activeUserIds.includes(id));
+    } else if (workStatus === "absent") {
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const { data: absentAssignments } = await supabase
+        .from("shift_assignments")
+        .select("guard_id, shifts!inner(start_time, end_time)")
+        .or("status.ilike.%absent%,status.ilike.%vắng mặt%")
+        .lt("shifts.start_time", todayEnd)
+        .gt("shifts.end_time", todayStart.toISOString());
+
+      workStatusMatchedUserIds = Array.from(new Set((absentAssignments ?? []).map((a) => a.guard_id)));
+    } else if (workStatus === "late") {
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const { data: lateAssignments } = await supabase
+        .from("shift_assignments")
+        .select("guard_id, check_in_time, status, shifts!inner(start_time, end_time)")
+        .lt("shifts.start_time", todayEnd)
+        .gt("shifts.end_time", todayStart.toISOString());
+
+      const lateIds = (lateAssignments ?? [])
+        .filter((a: any) => {
+          const st = (a.status || "").toLowerCase();
+          const isLateStatus = st === "late" || st === "trễ";
+          const checkIn = a.check_in_time ? new Date(a.check_in_time).getTime() : null;
+          const shiftStart = a.shifts?.start_time ? new Date(a.shifts.start_time).getTime() : null;
+          const isCheckInLate = Boolean(checkIn && shiftStart && checkIn > shiftStart);
+          return isLateStatus || isCheckInLate;
+        })
+        .map((a: any) => a.guard_id);
+
+      workStatusMatchedUserIds = Array.from(new Set(lateIds));
+    } else if (workStatus === "substitute" || workStatus === "replacement") {
+      const todayStart = new Date(now);
+      todayStart.setHours(0, 0, 0, 0);
+      const { data: repAssignments } = await supabase
+        .from("shift_assignments")
+        .select("replacement_guard_ids, shifts!inner(start_time, end_time)")
+        .not("replacement_guard_ids", "is", null)
+        .lt("shifts.start_time", todayEnd)
+        .gt("shifts.end_time", todayStart.toISOString());
+
+      const repDbIds: string[] = [];
+      (repAssignments ?? []).forEach((a: any) => {
+        if (Array.isArray(a.replacement_guard_ids)) {
+          repDbIds.push(...a.replacement_guard_ids);
+        }
+      });
+
+      if (repDbIds.length > 0) {
+        const { data: guardsForRep } = await supabase
+          .from("guards")
+          .select("user_id, guard_id")
+          .in("guard_id", repDbIds);
+
+        workStatusMatchedUserIds = Array.from(new Set((guardsForRep ?? []).map((g) => g.user_id)));
+      } else {
+        workStatusMatchedUserIds = [];
+      }
     }
 
-    if (workStatus === "on_duty" || workStatus === "assigned") {
+    if (
+      workStatus === "on_duty" ||
+      workStatus === "assigned" ||
+      workStatus === "absent" ||
+      workStatus === "late" ||
+      workStatus === "substitute" ||
+      workStatus === "replacement"
+    ) {
       if (workStatusMatchedUserIds.length === 0) {
         return {
           guards: [],
@@ -751,5 +821,378 @@ export const updateGuardDetail = async (
   if (identityError) {
     throw new Error(`Cập nhật thông tin định danh thất bại: ${identityError.message}`);
   }
+};
+
+export const getGuardPerformanceSummary = async ({
+  company_id,
+  guard_id,
+  startDate,
+  endDate,
+}: GetGuardPerformanceSummaryParams): Promise<GuardPerformanceSummaryData> => {
+  const supabase = await createClient();
+
+  let query = supabase.from("shifts").select(`
+    shift_id,
+    start_time,
+    end_time,
+    contracts!inner (
+      bookings!inner (
+        company_id
+      )
+    ),
+    shift_assignments (
+      guard_id,
+      status,
+      check_in_time,
+      replacement_guard_ids
+    )
+  `);
+
+  if (company_id) {
+    query = query.eq("contracts.bookings.company_id", company_id);
+  }
+  if (startDate) {
+    query = query.gte("start_time", startDate);
+  }
+  if (endDate) {
+    query = query.lte("start_time", endDate);
+  }
+
+  const { data: shifts, error } = await query;
+
+  if (error || !shifts || shifts.length === 0) {
+    return {
+      attendance_rate: {
+        percentage: 0.0,
+        trend_percentage: 0.0,
+        total_shifts: 0,
+        total_assignments: 0,
+        absent_count: 0,
+        absent_percentage: 0.0,
+      },
+      total_absent_count: {
+        count: 0,
+        total_shifts: 0,
+      },
+      late_rate: {
+        percentage: 0.0,
+        late_shift_count: 0,
+        total_shifts: 0,
+      },
+      on_time_rate: {
+        percentage: 0.0,
+        trend_percentage: 0.0,
+        on_time_shift_count: 0,
+        total_shifts: 0,
+      },
+      late_check_in_rate: {
+        percentage: 0.0,
+        count: 0,
+      },
+      replacement_rate: {
+        percentage: 0.0,
+        count: 0,
+      },
+    };
+  }
+
+  let totalAssignedShifts = 0;
+  let attendedShifts = 0;
+  let lateCheckInShifts = 0;
+  let onTimeCheckInShifts = 0;
+  let absentShifts = 0;
+  let lateCheckInTimeShifts = 0;
+  let replacementShifts = 0;
+  const guardShiftsSet = new Set<string>();
+
+  shifts.forEach((shift: any) => {
+    const shiftStartTime = shift.start_time ? new Date(shift.start_time).getTime() : null;
+    const assignments = shift.shift_assignments || [];
+    assignments.forEach((assignment: any) => {
+      if (guard_id && assignment.guard_id !== guard_id) {
+        return;
+      }
+      guardShiftsSet.add(shift.shift_id);
+      totalAssignedShifts += 1;
+      const status = (assignment.status || "").toLowerCase();
+      const checkInTime = assignment.check_in_time ? new Date(assignment.check_in_time).getTime() : null;
+      const hasCheckIn = Boolean(checkInTime);
+
+      const isReplacement = Array.isArray(assignment.replacement_guard_ids) && assignment.replacement_guard_ids.length > 0;
+
+      if (isReplacement) {
+        replacementShifts += 1;
+      } else if (status === "absent" || status === "vắng mặt" || !hasCheckIn) {
+        absentShifts += 1;
+      } else {
+        attendedShifts += 1;
+        if (status === "late" || status === "trễ") {
+          lateCheckInShifts += 1;
+        } else if (status === "completed" || status === "present" || status === "đúng giờ" || status === "ontime") {
+          onTimeCheckInShifts += 1;
+        }
+
+        if (shiftStartTime && checkInTime && checkInTime > shiftStartTime) {
+          lateCheckInTimeShifts += 1;
+        }
+      }
+    });
+  });
+
+  const distinctShiftsCount = guard_id ? guardShiftsSet.size : shifts.length;
+  const effectiveAssignedShifts = Math.max(0, totalAssignedShifts - replacementShifts);
+
+  const attendancePercentage = effectiveAssignedShifts > 0
+    ? Number(((attendedShifts / effectiveAssignedShifts) * 100).toFixed(1))
+    : (totalAssignedShifts > 0 && absentShifts === 0 ? 100.0 : 0.0);
+
+  const absentPercentage = effectiveAssignedShifts > 0
+    ? Number(((absentShifts / effectiveAssignedShifts) * 100).toFixed(1))
+    : 0.0;
+
+  const latePercentage = attendedShifts > 0
+    ? Number(((lateCheckInShifts / attendedShifts) * 100).toFixed(1))
+    : 0.0;
+
+  const onTimePercentage = attendedShifts > 0
+    ? Number(((onTimeCheckInShifts / attendedShifts) * 100).toFixed(1))
+    : 0.0;
+
+  const lateCheckInPercentage = attendedShifts > 0
+    ? Number(((lateCheckInTimeShifts / attendedShifts) * 100).toFixed(1))
+    : 0.0;
+
+  const replacementPercentage = totalAssignedShifts > 0
+    ? Number(((replacementShifts / totalAssignedShifts) * 100).toFixed(1))
+    : 0.0;
+
+  return {
+    attendance_rate: {
+      percentage: attendancePercentage,
+      trend_percentage: 0.0,
+      total_shifts: distinctShiftsCount,
+      total_assignments: totalAssignedShifts,
+      absent_count: absentShifts,
+      absent_percentage: absentPercentage,
+    },
+    total_absent_count: {
+      count: absentShifts,
+      total_shifts: totalAssignedShifts,
+    },
+    late_rate: {
+      percentage: latePercentage,
+      late_shift_count: lateCheckInShifts,
+      total_shifts: attendedShifts,
+    },
+    on_time_rate: {
+      percentage: onTimePercentage,
+      trend_percentage: 0.0,
+      on_time_shift_count: onTimeCheckInShifts,
+      total_shifts: attendedShifts,
+    },
+    late_check_in_rate: {
+      percentage: lateCheckInPercentage,
+      count: lateCheckInTimeShifts,
+    },
+    replacement_rate: {
+      percentage: replacementPercentage,
+      count: replacementShifts,
+    },
+  };
+};
+
+export const getGuardPerformanceList = async ({
+  company_id,
+  startDate,
+  endDate,
+  search = "",
+  tab = "all",
+  page = 1,
+  limit = 10,
+}: GetGuardPerformanceListParams): Promise<{
+  guards: GuardPerformanceListItem[];
+  total: number;
+  totalPages: number;
+}> => {
+  const supabase = await createClient();
+
+  // 1. Fetch guards belonging to company
+  let guardsQuery = supabase.from("guards").select("guard_id, user_id, company_id");
+  if (company_id) {
+    guardsQuery = guardsQuery.eq("company_id", company_id);
+  }
+
+  const { data: guardsData, error: guardsError } = await guardsQuery;
+
+  if (guardsError) {
+    console.error("getGuardPerformanceList guardsQuery error:", guardsError);
+  }
+
+  if (!guardsData || guardsData.length === 0) {
+    return { guards: [], total: 0, totalPages: 0 };
+  }
+
+  const guardUserIds = guardsData.map((g: any) => g.user_id).filter(Boolean);
+
+  // 2. Fetch profiles for these guards
+  const profilesByUserId: Record<string, any> = {};
+  if (guardUserIds.length > 0) {
+    const { data: profilesData, error: profilesError } = await supabase
+      .from("profiles")
+      .select("user_id, full_name, email, phone_number, avatar_url")
+      .in("user_id", guardUserIds);
+
+    if (profilesError) {
+      console.error("getGuardPerformanceList profilesQuery error:", profilesError);
+    } else if (profilesData) {
+      profilesData.forEach((p: any) => {
+        profilesByUserId[p.user_id] = p;
+      });
+    }
+  }
+
+  // 3. Fetch shift assignments for shift statistics
+  let assignQuery = supabase.from("shift_assignments").select(`
+    assignment_id,
+    guard_id,
+    status,
+    check_in_time,
+    replacement_guard_ids,
+    shifts!inner (
+      start_time
+    )
+  `).in("guard_id", guardUserIds);
+
+  if (startDate) {
+    assignQuery = assignQuery.gte("shifts.start_time", startDate);
+  }
+  if (endDate) {
+    assignQuery = assignQuery.lte("shifts.start_time", endDate);
+  }
+
+  const { data: assignments, error: assignError } = await assignQuery;
+  if (assignError) {
+    console.warn("getGuardPerformanceList assignQuery error:", assignError);
+  }
+
+  const assignmentsByGuard: Record<string, any[]> = {};
+  (assignments || []).forEach((a: any) => {
+    if (!assignmentsByGuard[a.guard_id]) {
+      assignmentsByGuard[a.guard_id] = [];
+    }
+    assignmentsByGuard[a.guard_id].push(a);
+  });
+
+  const keyword = search.trim().toLowerCase();
+
+  let items: GuardPerformanceListItem[] = guardsData.map((g: any) => {
+    const list = assignmentsByGuard[g.user_id] || [];
+    let totalAssigned = 0;
+    let attended = 0;
+    let absent = 0;
+    let late = 0;
+    let onTime = 0;
+
+    list.forEach((assignment: any) => {
+      totalAssigned += 1;
+      const status = (assignment.status || "").toLowerCase();
+      const shiftStartTime = assignment.shifts?.start_time ? new Date(assignment.shifts.start_time).getTime() : null;
+      const checkInTime = assignment.check_in_time ? new Date(assignment.check_in_time).getTime() : null;
+      const hasCheckIn = Boolean(checkInTime);
+      const isReplacement = Array.isArray(assignment.replacement_guard_ids) && assignment.replacement_guard_ids.length > 0;
+
+      if (isReplacement) {
+        // Replacement shift - no check-in, do not count as absent, late, or onTime
+      } else if (status === "absent" || status === "vắng mặt" || !hasCheckIn) {
+        absent += 1;
+      } else {
+        attended += 1;
+        const isLate = status === "late" || status === "trễ" || (shiftStartTime && checkInTime && checkInTime > shiftStartTime);
+        if (isLate) {
+          late += 1;
+        } else {
+          onTime += 1;
+        }
+      }
+    });
+
+    const replacementCount = list.filter((a: any) => Array.isArray(a.replacement_guard_ids) && a.replacement_guard_ids.length > 0).length;
+    const effectiveAssigned = Math.max(0, totalAssigned - replacementCount);
+
+    // Độ chuyên cần = Số ca có check-in / Tổng ca phân công không thay ca * 100
+    const attendancePercentage = effectiveAssigned > 0
+      ? Number(((attended / effectiveAssigned) * 100).toFixed(1))
+      : (totalAssigned > 0 && absent === 0 ? 100.0 : 0.0);
+
+    // Tỷ lệ vắng mặt = Số ca vắng / Tổng ca phân công không thay ca * 100
+    const absentRate = effectiveAssigned > 0
+      ? Number(((absent / effectiveAssigned) * 100).toFixed(1))
+      : 0.0;
+
+    // Tỷ lệ đi trễ = Số ca đi trễ / Số ca đã tham gia * 100
+    const lateRate = attended > 0
+      ? Number(((late / attended) * 100).toFixed(1))
+      : 0.0;
+
+    const performanceScore = attendancePercentage;
+
+    const rating = totalAssigned > 0
+      ? Number((4.0 + (performanceScore / 100) * 1.0).toFixed(1))
+      : 0.0;
+
+    let category: "XUẤT SẮC" | "TIÊU CHUẨN" | "CẦN CẢI THIỆN" | "CHƯA PHÂN CÔNG" = "CHƯA PHÂN CÔNG";
+    if (totalAssigned === 0) {
+      category = "CHƯA PHÂN CÔNG";
+    } else if (attendancePercentage >= 95.0 && absentRate <= 2.0 && lateRate <= 3.0) {
+      category = "XUẤT SẮC";
+    } else if (attendancePercentage >= 90.0 && absentRate <= 5.0 && lateRate <= 10.0) {
+      category = "TIÊU CHUẨN";
+    } else {
+      category = "CẦN CẢI THIỆN";
+    }
+
+    const profile = profilesByUserId[g.user_id] || {};
+    return {
+      id: g.user_id,
+      name: profile.full_name || "Nhân viên bảo vệ",
+      guardId: g.guard_code || `SG-${(g.guard_id || g.user_id).substring(0, 5)}`,
+      avatar: profile.avatar_url ?? null,
+      location: "Trụ sở chính",
+      role: "Bảo vệ",
+      performanceScore,
+      rating,
+      category,
+    };
+  });
+
+  if (keyword) {
+    items = items.filter(
+      (item) =>
+        item.name.toLowerCase().includes(keyword) ||
+        item.guardId.toLowerCase().includes(keyword) ||
+        item.location.toLowerCase().includes(keyword)
+    );
+  }
+
+  if (tab === "top10") {
+    items = items.filter((item) => item.category === "XUẤT SẮC");
+  }
+
+  items.sort((a, b) => b.performanceScore - a.performanceScore);
+
+  if (tab === "top10") {
+    items = items.slice(0, 10);
+  }
+
+  const total = items.length;
+  const totalPages = Math.ceil(total / limit) || 1;
+  const startIdx = (page - 1) * limit;
+  const paginatedGuards = items.slice(startIdx, startIdx + limit);
+
+  return {
+    guards: paginatedGuards,
+    total,
+    totalPages,
+  };
 };
 

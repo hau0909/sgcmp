@@ -15,7 +15,12 @@ import {
 } from "../repository/contract.repository";
 import { createClient } from "@/lib/supabase/server";
 import { formatAddressService } from "@/features/address/service/address.service";
-
+import { 
+  validateContractExpiration, 
+  validateAssignGuardsRules, 
+  validateCustomerSignatureEligibility 
+} from "../validator/contract.validator";
+import { calculateHoursFromSlot } from "@/utils/calcTime";
 export const getContractsService = async (
   page: number,
   limit: number,
@@ -373,13 +378,7 @@ export const signContractCustomerService = async (id: string, customerId: string
     throw new Error("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập");
   }
 
-  if (contract.customer_agreed) {
-    throw new Error("Bạn đã ký xác nhận hợp đồng này rồi");
-  }
-
-  if (!contract.guard_assigned || contract.guard_assigned.length === 0) {
-    throw new Error("Hợp đồng này chưa được phân công nhân sự bảo vệ. Vui lòng liên hệ công ty để được phân công trước khi ký.");
-  }
+  validateCustomerSignatureEligibility(contract.customer_agreed, contract.guard_assigned);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payload: any = {
@@ -406,19 +405,7 @@ export const completeContractCustomerService = async (id: string, customerId: st
     throw new Error("Chỉ có thể hoàn thành hợp đồng đang hoạt động");
   }
 
-  if (!contract.end_date) {
-    throw new Error("Hợp đồng không có ngày kết thúc");
-  }
-
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-
-  const endDate = new Date(contract.end_date);
-  endDate.setHours(0, 0, 0, 0);
-
-  if (endDate > today) {
-    throw new Error("Chưa đến ngày kết thúc hợp đồng");
-  }
+  validateContractExpiration(contract.end_date);
 
   return await updateContract(id, {
     status: "completed",
@@ -549,34 +536,6 @@ export const getContractByIdService = async (
   return await getContractById(contractId);
 };
 
-const calculateHoursFromSlot = (slot: string): number => {
-  const parts = slot.split("-");
-  if (parts.length !== 2) return 0;
-  
-  const [startStr, endStr] = parts;
-  const startParts = startStr.split(":");
-  const endParts = endStr.split(":");
-  if (startParts.length !== 2 || endParts.length !== 2) return 0;
-  
-  const startHour = parseInt(startParts[0], 10);
-  const startMin = parseInt(startParts[1], 10);
-  const endHour = parseInt(endParts[0], 10);
-  const endMin = parseInt(endParts[1], 10);
-  
-  if (isNaN(startHour) || isNaN(startMin) || isNaN(endHour) || isNaN(endMin)) {
-    return 0;
-  }
-  
-  const startTotalMinutes = startHour * 60 + startMin;
-  let endTotalMinutes = endHour * 60 + endMin;
-  
-  if (endTotalMinutes <= startTotalMinutes) {
-    endTotalMinutes += 24 * 60;
-  }
-  
-  return (endTotalMinutes - startTotalMinutes) / 60;
-};
-
 export const assignGuardsToContractService = async (
   contractId: string,
   guardIds: string[],
@@ -620,24 +579,8 @@ export const assignGuardsToContractService = async (
   // Validate shift duration and minimum guards
   const booking = contract.bookings;
   const timeSlots: string[] = booking?.time_slots || [];
-  const hasShiftOver8Hours = timeSlots.some((slot) => {
-    const hours = calculateHoursFromSlot(slot);
-    return hours > 8;
-  });
-
-  if (hasShiftOver8Hours && guardIds.length < 2) {
-    throw new Error(
-      "Hợp đồng này có ca trực kéo dài hơn 8 tiếng, yêu cầu phân công ít nhất 2 nhân sự bảo vệ."
-    );
-  }
-
-  // Validate total assigned guards >= required guards (guards_per_slot)
   const requiredGuards = booking?.guards_per_slot || 1;
-  if (guardIds.length < requiredGuards) {
-    throw new Error(
-      `Hợp đồng yêu cầu tối thiểu ${requiredGuards} nhân sự bảo vệ, hiện tại mới phân công ${guardIds.length} bảo vệ.`
-    );
-  }
+  validateAssignGuardsRules(timeSlots, requiredGuards, guardIds.length);
 
   return await updateContract(contractId, {
     guard_assigned: guardIds,

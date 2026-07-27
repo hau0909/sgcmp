@@ -5,8 +5,43 @@ export const getUserTimeZone = (): string => {
   return "UTC";
 };
 
+/**
+ * Maps app locale (vi/en) to BCP 47 locale string used by Intl APIs.
+ */
+const APP_LOCALE_TO_BCP47: Record<string, string> = {
+  vi: "vi-VN",
+  en: "en-US",
+};
+
+/**
+ * Maps IANA timezone identifiers to the most appropriate BCP 47 locale.
+ * Extend this map as the app expands to more regions.
+ */
+const TIMEZONE_LOCALE_MAP: Record<string, string> = {
+  "Asia/Ho_Chi_Minh": "vi-VN",
+  "Asia/Saigon": "vi-VN",
+};
+
+/**
+ * Returns the locale that best matches the user's environment.
+ * Priority: app language switcher (NEXT_LOCALE cookie) → timezone-derived → browser language → vi-VN default.
+ */
 export const getUserLocale = (): string => {
-  if (typeof window !== "undefined" && typeof navigator !== "undefined" && navigator.language) {
+  // 1. Check the app's language switcher stored in localStorage / cookie
+  if (typeof window !== "undefined") {
+    const appLocale = localStorage.getItem("NEXT_LOCALE");
+    if (appLocale && APP_LOCALE_TO_BCP47[appLocale]) {
+      return APP_LOCALE_TO_BCP47[appLocale];
+    }
+  }
+
+  // 2. Fallback: derive from timezone
+  const tz = getUserTimeZone();
+  const localeFromTz = TIMEZONE_LOCALE_MAP[tz];
+  if (localeFromTz) return localeFromTz;
+
+  // 3. Fallback: browser language
+  if (typeof navigator !== "undefined" && navigator.language) {
     return navigator.language;
   }
   return "vi-VN";

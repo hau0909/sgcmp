@@ -1,8 +1,10 @@
 import type { Profile } from "@/types/Profile";
+import type { ReasonBan } from "@/types/ReasonBan";
 import {
   getAllAccountsService,
   getAccountByUserIdService,
   banAcountService,
+  getBanReasonByUserIdService,
 } from "../service/account.service";
 import {
   getUserProfileService,
@@ -16,13 +18,28 @@ export const handleGetAllAccounts = async (): Promise<Profile[]> => {
 
 export const handleGetAccountByUserId = async (
   userId: string,
-): Promise<Profile | null> => {
-  const result = await getAccountByUserIdService(userId);
-  return result;
+): Promise<{ account: Profile; banReason: ReasonBan | null } | null> => {
+  const account = await getAccountByUserIdService(userId);
+  if (!account) return null;
+
+  let banReason: ReasonBan | null = null;
+  if (account.status === "banned") {
+    banReason = await getBanReasonByUserIdService(userId);
+  }
+
+  return { account, banReason };
 };
 
-export const handleBanAccount = async (userId: string) => {
+export const handleBanAccount = async (userId: string, reason: string) => {
   if (!userId) throw new Error("Không tìm thấy tài khoản");
+
+  if (!reason || !reason.trim()) {
+    return {
+      success: false,
+      status: 400,
+      message: "Vui lòng nhập lý do khóa tài khoản.",
+    };
+  }
 
   const user = await getCurrentUserProfileService();
 
@@ -63,7 +80,7 @@ export const handleBanAccount = async (userId: string) => {
     };
   }
 
-  const account = await banAcountService(userId);
+  const account = await banAcountService(userId, reason.trim(), user.user_id);
 
   return {
     success: true,
@@ -72,3 +89,4 @@ export const handleBanAccount = async (userId: string) => {
     data: account,
   };
 };
+

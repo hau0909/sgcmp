@@ -1,6 +1,7 @@
 import React from "react";
 import { ChevronRight, ShieldAlert, CheckCircle, Clock } from "lucide-react";
 import { Report, REPORT_TYPE_LABELS } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CoorReportTableProps {
   reports: Report[];
@@ -8,30 +9,32 @@ interface CoorReportTableProps {
 }
 
 export function CoorReportTable({ reports, onViewDetail }: CoorReportTableProps) {
+  const { dict } = useTranslation();
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "RESOLVED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
-            <CheckCircle className="w-3.5 h-3.5" /> Đã giải quyết
+            <CheckCircle className="w-3.5 h-3.5" /> {dict.report?.filters?.status_resolved}
           </span>
         );
       case "IN_PROGRESS":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
-            <Clock className="w-3.5 h-3.5" /> Đang xử lý
+            <Clock className="w-3.5 h-3.5" /> {dict.report?.filters?.status_in_progress}
           </span>
         );
       case "CLOSED":
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700 border border-slate-200">
-            <CheckCircle className="w-3.5 h-3.5" /> Đã đóng
+            <CheckCircle className="w-3.5 h-3.5" /> {dict.report?.filters?.status_closed}
           </span>
         );
       default:
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
-            <Clock className="w-3.5 h-3.5" /> Chờ tiếp nhận
+            <Clock className="w-3.5 h-3.5" /> {dict.report?.filters?.status_pending}
           </span>
         );
     }
@@ -51,9 +54,9 @@ export function CoorReportTable({ reports, onViewDetail }: CoorReportTableProps)
     return (
       <div className="bg-surface-container-lowest border border-outline-variant/60 rounded-xl p-16 text-center shadow-2xs">
         <ShieldAlert className="w-12 h-12 text-on-surface-variant/40 mx-auto mb-4" />
-        <h3 className="font-bold text-on-surface text-base">Không tìm thấy báo cáo nào</h3>
+        <h3 className="font-bold text-on-surface text-base">{dict.report?.table?.no_data_title}</h3>
         <p className="text-xs text-on-surface-variant mt-1.5 max-w-sm mx-auto leading-relaxed">
-          Chưa có báo cáo phản ánh nào từ khách hàng hoặc bộ lọc tìm kiếm của bạn không khớp với kết quả nào.
+          {dict.report?.table?.no_data_desc}
         </p>
       </div>
     );
@@ -73,24 +76,24 @@ export function CoorReportTable({ reports, onViewDetail }: CoorReportTableProps)
                 {report.report_code || report.id}
               </span>
               <span className="text-xs text-on-surface-variant/80 font-medium">
-                Khách hàng: <span className="font-semibold text-on-surface">{report.customer_name || "N/A"}</span>
+                {dict.report?.table?.customer}: <span className="font-semibold text-on-surface">{report.customer_name || "N/A"}</span>
               </span>
               <span className="text-xs text-on-surface-variant/50">•</span>
               <span className="text-xs text-on-surface-variant/80 font-medium">
-                Hợp đồng: <span className="font-semibold text-on-surface">{report.contract_code || "N/A"}</span>
+                {dict.report?.table?.contract}: <span className="font-semibold text-on-surface">{report.contract_code || "N/A"}</span>
               </span>
               <span className="text-xs text-on-surface-variant/50">•</span>
               <span className="text-xs text-on-surface-variant/80 font-medium">
-                Vấn đề khiếu nại: <span className="font-bold text-on-surface">{report.type ? (REPORT_TYPE_LABELS[report.type] || report.type) : "Chưa phân loại"}</span>
+                {dict.report?.table?.issue}: <span className="font-bold text-on-surface">{report.type ? (REPORT_TYPE_LABELS[report.type] || report.type) : (dict.report?.table?.no_type ?? "Unclassified")}</span>
               </span>
             </div>
 
             <p className="text-sm text-on-surface line-clamp-2 leading-relaxed">
-              {report.description || "(Không có mô tả)"}
+              {report.description || (dict.report?.table?.no_desc ?? "(No description)")}
             </p>
 
             <div className="flex items-center gap-3 pt-1 text-[11px] text-on-surface-variant/75 font-medium">
-              <span>Thời gian gửi: {formatDate(report.created_at)}</span>
+              <span>{dict.report?.table?.sent_at}: {formatDate(report.created_at)}</span>
             </div>
           </div>
 
