@@ -21,6 +21,7 @@ import {
 import type { GuardShiftDetailItem } from "@/features/shift/type";
 import { createClient } from "@/lib/supabase/client";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { getUserTimeZone } from "@/utils/dateTime";
 
 const CHECKIN_BEFORE_MINUTES = 5;
 const CHECKIN_AFTER_MINUTES = 5;
@@ -68,7 +69,7 @@ const formatCheckinTime = (date: Date) => {
     hour: "2-digit",
     minute: "2-digit",
     hour12: false,
-    timeZone: "Asia/Ho_Chi_Minh",
+    timeZone: getUserTimeZone(),
   });
 };
 
