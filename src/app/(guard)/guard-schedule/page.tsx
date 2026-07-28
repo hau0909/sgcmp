@@ -34,20 +34,23 @@ const addDays = (date: Date, days: number) => {
 };
 
 const startOfWeekMonday = (date: Date) => {
-  const result = new Date(date);
-  const day = result.getDay();
+  const weekdayStr = new Intl.DateTimeFormat("en-US", { timeZone: getUserTimeZone(), weekday: "short" }).format(date);
+  const map: Record<string, number> = { Sun: 0, Mon: 1, Tue: 2, Wed: 3, Thu: 4, Fri: 5, Sat: 6 };
+  const day = map[weekdayStr] ?? 1;
   const diff = day === 0 ? -6 : 1 - day;
-
-  result.setDate(result.getDate() + diff);
-  result.setHours(0, 0, 0, 0);
-
-  return result;
+  return addDays(date, diff);
 };
 
 const formatGuardShiftDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: getUserTimeZone(),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
 
   return `${year}-${month}-${day}`;
 };
@@ -58,14 +61,16 @@ const formatMonthYear = (weekDays: Date[], locale: string) => {
 
   const firstMonth = firstDay.toLocaleDateString(locale, {
     month: "long",
+    timeZone: getUserTimeZone(),
   });
 
   const lastMonth = lastDay.toLocaleDateString(locale, {
     month: "long",
+    timeZone: getUserTimeZone(),
   });
 
-  const firstYear = firstDay.getFullYear();
-  const lastYear = lastDay.getFullYear();
+  const firstYear = Number(new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: getUserTimeZone() }).format(firstDay));
+  const lastYear = Number(new Intl.DateTimeFormat("en-US", { year: "numeric", timeZone: getUserTimeZone() }).format(lastDay));
 
   if (firstMonth === lastMonth && firstYear === lastYear) {
     return `${firstMonth} ${firstYear}`;
@@ -79,11 +84,7 @@ const formatMonthYear = (weekDays: Date[], locale: string) => {
 };
 
 const isSameDate = (first: Date, second: Date) => {
-  return (
-    first.getDate() === second.getDate() &&
-    first.getMonth() === second.getMonth() &&
-    first.getFullYear() === second.getFullYear()
-  );
+  return formatGuardShiftDateKey(first) === formatGuardShiftDateKey(second);
 };
 
 const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
@@ -213,11 +214,12 @@ export default function GuardSchedulePage() {
     return new Intl.DateTimeFormat(bcp47Locale, {
       day: "numeric",
       month: "numeric",
+      timeZone: getUserTimeZone(),
     }).format(date);
   };
 
   const formatWeekdayText = (date: Date) => {
-    return date.toLocaleDateString(bcp47Locale, { weekday: "long" });
+    return date.toLocaleDateString(bcp47Locale, { weekday: "long", timeZone: getUserTimeZone() });
   };
 
   const handleOpenCheckinByDate = (date: Date) => {
