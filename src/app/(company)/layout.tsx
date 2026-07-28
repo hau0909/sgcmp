@@ -22,7 +22,6 @@ import {
   ChevronDown,
   ArrowRightLeft,
   Search,
-  Bell,
 } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
 import { useSubscriptionStore } from "@/store/subscription.store";
@@ -326,12 +325,6 @@ export default function CompanyLayout({
                 </Link>
               )}
 
-
-              {/* Notification */}
-              <button className="text-on-surface-variant hover:text-primary transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-surface-container-low relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-error rounded-full" />
-              </button>
 
               {/* User Dropdown Trigger */}
               <button

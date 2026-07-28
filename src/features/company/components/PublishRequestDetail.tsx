@@ -28,32 +28,10 @@ import {
   User,
   AlertTriangle,
 } from "lucide-react";
-
-const STATUS_CONFIG: Record<
-  string,
-  { label: string; bg: string; text: string; icon: React.ReactNode }
-> = {
-  pending: {
-    label: "CHỜ DUYỆT",
-    bg: "bg-[#fef3c7] border-[#fde68a]",
-    text: "text-[#b45309]",
-    icon: <Clock className="w-3.5 h-3.5" />,
-  },
-  approved: {
-    label: "ĐÃ PHÊ DUYỆT",
-    bg: "bg-emerald-50 border-emerald-200",
-    text: "text-emerald-700",
-    icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-  },
-  rejected: {
-    label: "ĐÃ TỪ CHỐI",
-    bg: "bg-red-50 border-red-200",
-    text: "text-red-700",
-    icon: <XCircle className="w-3.5 h-3.5" />,
-  },
-};
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function PublishRequestDetail() {
+  const { dict, locale } = useTranslation();
   const params = useParams();
   const requestId = params?.id as string;
 
@@ -80,6 +58,30 @@ export default function PublishRequestDetail() {
   // Processing state
   const [actionLoading, setActionLoading] = useState(false);
 
+  const STATUS_CONFIG: Record<
+    string,
+    { label: string; bg: string; text: string; icon: React.ReactNode }
+  > = React.useMemo(() => ({
+    pending: {
+      label: dict.admin_publish_requests.status_pending || "CHỜ DUYỆT",
+      bg: "bg-[#fef3c7] border-[#fde68a]",
+      text: "text-[#b45309]",
+      icon: <Clock className="w-3.5 h-3.5" />,
+    },
+    approved: {
+      label: dict.admin_publish_requests.status_approved || "ĐÃ PHÊ DUYỆT",
+      bg: "bg-emerald-50 border-emerald-200",
+      text: "text-emerald-700",
+      icon: <CheckCircle2 className="w-3.5 h-3.5" />,
+    },
+    rejected: {
+      label: dict.admin_publish_requests.status_rejected || "ĐÃ TỪ CHỐI",
+      bg: "bg-red-50 border-red-200",
+      text: "text-red-700",
+      icon: <XCircle className="w-3.5 h-3.5" />,
+    },
+  }), [dict]);
+
   useEffect(() => {
     if (!requestId) return;
 
@@ -90,11 +92,11 @@ export default function PublishRequestDetail() {
         if (res.success && res.data) {
           setRequest(res.data);
         } else {
-          setError("Không thể tải thông tin yêu cầu.");
+          setError(dict.admin_publish_requests.error_load_detail);
         }
       } catch (err) {
         console.error("Lỗi khi fetch chi tiết yêu cầu:", err);
-        const errMsg = err instanceof Error ? err.message : "Đã xảy ra lỗi khi kết nối đến máy chủ.";
+        const errMsg = err instanceof Error ? err.message : dict.admin_publish_requests.error_load_detail;
         setError(errMsg);
       } finally {
         setLoading(false);
@@ -127,7 +129,7 @@ export default function PublishRequestDetail() {
       const filename = `giay-phep-kinh-doanh-${request?.company?.registration_code || "license"}.${extension}`;
 
       const response = await fetch(url);
-      if (!response.ok) throw new Error("Không thể tải file");
+      if (!response.ok) throw new Error(dict.admin_registrations.file_load_error);
       const blob = await response.blob();
       const blobUrl = window.URL.createObjectURL(blob);
       const link = document.createElement("a");
@@ -155,14 +157,14 @@ export default function PublishRequestDetail() {
             status: "approved",
           });
         }
-        showToast("Phê duyệt yêu cầu công khai thông tin công ty thành công!");
+        showToast(dict.admin_publish_requests.approve_success);
       } else {
-        showToast(res.message || "Không thể phê duyệt yêu cầu");
+        showToast(res.message || dict.admin_publish_requests.approve_error);
       }
       setApproveModalOpen(false);
     } catch (err) {
       console.error(err);
-      const errMsg = err instanceof Error ? err.message : "Không thể phê duyệt yêu cầu";
+      const errMsg = err instanceof Error ? err.message : dict.admin_publish_requests.approve_error;
       showToast(errMsg);
     } finally {
       setActionLoading(false);
@@ -172,7 +174,7 @@ export default function PublishRequestDetail() {
   const handleReject = async () => {
     if (!requestId) return;
     if (!rejectReason.trim()) {
-      showToast("Vui lòng nhập lý do từ chối");
+      showToast(dict.admin_publish_requests.reject_reason_required);
       return;
     }
     try {
@@ -186,15 +188,15 @@ export default function PublishRequestDetail() {
             reject_reason: rejectReason,
           });
         }
-        showToast("Từ chối yêu cầu công khai thông tin công ty thành công!");
+        showToast(dict.admin_publish_requests.reject_success);
       } else {
-        showToast(res.message || "Không thể từ chối yêu cầu");
+        showToast(res.message || dict.admin_publish_requests.reject_error);
       }
       setRejectModalOpen(false);
       setRejectReason("");
     } catch (err) {
       console.error(err);
-      const errMsg = err instanceof Error ? err.message : "Không thể từ chối yêu cầu";
+      const errMsg = err instanceof Error ? err.message : dict.admin_publish_requests.reject_error;
       showToast(errMsg);
     } finally {
       setActionLoading(false);
@@ -205,7 +207,7 @@ export default function PublishRequestDetail() {
     return (
       <div className="flex flex-col items-center justify-center min-h-[450px] space-y-4">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#024594]"></div>
-        <p className="text-sm text-slate-500 font-medium">Đang tải thông tin yêu cầu...</p>
+        <p className="text-sm text-slate-500 font-medium">{dict.admin_publish_requests.loading_detail}</p>
       </div>
     );
   }
@@ -215,13 +217,13 @@ export default function PublishRequestDetail() {
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="bg-red-50 border border-red-200 rounded-2xl p-6 text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <h3 className="text-lg font-bold text-slate-900 mb-2">Đã xảy ra lỗi</h3>
-          <p className="text-sm text-slate-600 mb-4">{error || "Không tìm thấy thông tin yêu cầu."}</p>
+          <h3 className="text-lg font-bold text-slate-900 mb-2">{dict.admin_publish_requests.error_load_detail}</h3>
+          <p className="text-sm text-slate-600 mb-4">{error || dict.admin_publish_requests.error_not_found}</p>
           <Link
             href="/publish-requests"
-            className="inline-flex items-center gap-2 bg-[#024594] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#013570] transition-colors"
+            className="inline-flex items-center gap-2 bg-[#024594] text-white px-4 py-2 rounded-xl text-sm font-semibold hover:bg-[#013570] transition-colors cursor-pointer"
           >
-            <ChevronLeft className="w-4 h-4" /> Quay lại danh sách
+            <ChevronLeft className="w-4 h-4" /> {dict.admin_publish_requests.back_to_list}
           </Link>
         </div>
       </div>
@@ -270,10 +272,10 @@ export default function PublishRequestDetail() {
             className="hover:text-primary transition-colors flex items-center gap-1"
           >
             <ChevronLeft className="w-3.5 h-3.5" />
-            Yêu cầu công khai
+            {dict.admin_publish_requests.title_list}
           </Link>
           <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant/70 shrink-0" />
-          <span className="text-primary font-bold">Chi tiết yêu cầu</span>
+          <span className="text-primary font-bold">{dict.admin_publish_requests.title_detail}</span>
         </nav>
 
         {/* Header Bar */}
@@ -291,9 +293,9 @@ export default function PublishRequestDetail() {
               </span>
             </div>
             <p className="text-[11px] text-on-surface-variant mt-0.5">
-              Ngày gửi:{" "}
+              {locale === 'vi' ? 'Ngày gửi:' : 'Requested at:'}{" "}
               <span className="font-mono font-semibold text-[#0b1c30]">
-                {new Date(request.requested_at).toLocaleString("vi-VN")}
+                {new Date(request.requested_at).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}
               </span>
             </p>
           </div>
@@ -303,13 +305,13 @@ export default function PublishRequestDetail() {
                 onClick={() => setRejectModalOpen(true)}
                 className="flex-1 md:flex-initial px-3 py-1.5 border border-[#ff0c3b] text-[#ff0c3b] hover:bg-red-50 active:scale-95 transition-all rounded-lg text-xs font-bold cursor-pointer"
               >
-                TỪ CHỐI HỒ SƠ
+                {dict.admin_publish_requests.reject_action}
               </button>
               <button
                 onClick={() => setApproveModalOpen(true)}
                 className="flex-1 md:flex-initial px-3 py-1.5 bg-[#024594] text-white hover:bg-[#023b7e] active:scale-95 transition-all rounded-lg text-xs font-bold shadow-xs cursor-pointer"
               >
-                PHÊ DUYỆT ĐĂNG KÝ
+                {dict.admin_publish_requests.approve_action}
               </button>
             </div>
           )}
@@ -321,7 +323,7 @@ export default function PublishRequestDetail() {
         <div className="bg-red-50 border border-red-200 rounded-2xl p-4 flex gap-3 items-start animate-in fade-in slide-in-from-top-3">
           <AlertCircle className="w-5 h-5 text-red-600 shrink-0 mt-0.5" />
           <div className="space-y-0.5">
-            <h4 className="text-xs font-bold text-red-900">Lý do từ chối phê duyệt</h4>
+            <h4 className="text-xs font-bold text-red-900">{dict.admin_publish_requests.reject_reason_title}</h4>
             <p className="text-xs text-red-700 font-medium whitespace-pre-line">&ldquo;{request.reject_reason}&rdquo;</p>
           </div>
         </div>
@@ -336,19 +338,19 @@ export default function PublishRequestDetail() {
               <User className="w-5 h-5" />
             </div>
             <div className="space-y-0.5">
-              <span className="text-[10px] font-bold text-black uppercase tracking-wider block">Người gửi yêu cầu</span>
+              <span className="text-[10px] font-bold text-black uppercase tracking-wider block">{locale === 'vi' ? 'Người gửi yêu cầu' : 'Requester'}</span>
               <h4 className="text-xs font-bold text-slate-800">
-                {request.requested_by?.full_name || "Chưa cập nhật"}
+                {request.requested_by?.full_name || dict.admin_publish_requests.not_updated}
               </h4>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-500">
                 <span className="flex items-center gap-1">
                   <Phone className="w-3.5 h-3.5 text-slate-400" />
-                  <span className="font-mono">{request.requested_by?.phone || "Chưa cập nhật"}</span>
+                  <span className="font-mono">{request.requested_by?.phone || dict.admin_publish_requests.not_updated}</span>
                 </span>
                 <span className="w-1 h-1 rounded-full bg-slate-200 hidden sm:inline-block"></span>
                 <span className="flex items-center gap-1">
                   <Mail className="w-3.5 h-3.5 text-slate-400" />
-                  <span>{request.requested_by?.email || "Chưa cập nhật"}</span>
+                  <span>{request.requested_by?.email || dict.admin_publish_requests.not_updated}</span>
                 </span>
               </div>
             </div>
@@ -356,9 +358,9 @@ export default function PublishRequestDetail() {
 
           {/* Right Column: Requester Notes (Compact Box) */}
           <div className="md:w-2/5 shrink-0 bg-slate-50 border border-slate-150 p-3 rounded-xl flex flex-col justify-center">
-            <span className="text-[10px] font-bold text-black uppercase tracking-wider block mb-0.5">Ghi chú kèm theo</span>
+            <span className="text-[10px] font-bold text-black uppercase tracking-wider block mb-0.5">{locale === 'vi' ? 'Ghi chú kèm theo' : 'Requester note'}</span>
             <p className="text-xs text-slate-600 leading-relaxed font-normal">
-              {request.note ? `"${request.note}"` : "Không có ghi chú thêm cho yêu cầu này."}
+              {request.note ? `"${request.note}"` : (locale === 'vi' ? 'Không có ghi chú thêm cho yêu cầu này.' : 'No additional note for this request.')}
             </p>
           </div>
         </div>
@@ -367,7 +369,7 @@ export default function PublishRequestDetail() {
       {/* ── CARD 2: THÔNG TIN DOANH NGHIỆP ────────────────────────────────────── */}
       <div className="bg-white rounded-2xl border border-[#c3c6d3] p-5 shadow-sm hover:shadow-md transition-shadow space-y-5">
         <h3 className="text-base font-bold text-[#024594] uppercase tracking-wider flex items-center gap-2 border-b border-slate-150 pb-3">
-          <Building2 className="w-5.5 h-5.5 text-[#024594]" /> Thông tin doanh nghiệp
+          <Building2 className="w-5.5 h-5.5 text-[#024594]" /> {dict.admin_publish_requests.section_company_info}
         </h3>
 
         {/* 1. Logo & Banner Row */}
@@ -375,7 +377,7 @@ export default function PublishRequestDetail() {
           {/* Logo container */}
           <div className="md:col-span-1 flex flex-col items-center justify-center p-2">
             <span className="text-[11px] font-bold text-black uppercase tracking-wider mb-2 self-start flex items-center gap-1">
-              <Building2 className="w-3.5 h-3.5" /> Logo công ty
+              <Building2 className="w-3.5 h-3.5" /> {locale === 'vi' ? 'Logo công ty' : 'Company logo'}
             </span>
             {request.company.logo_url ? (
               <div
@@ -401,7 +403,7 @@ export default function PublishRequestDetail() {
           {/* Banner container */}
           <div className="md:col-span-3 h-36 relative overflow-hidden rounded-2xl border border-slate-150 shadow-xs hover:shadow transition-all">
             <span className="absolute top-3 left-3 z-10 text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1 bg-white/90 backdrop-blur-xs px-2.5 py-1 rounded-lg border border-slate-200/50 shadow-xs">
-              <ImageIcon className="w-3.5 h-3.5 text-[#024594]" /> Banner quảng bá
+              <ImageIcon className="w-3.5 h-3.5 text-[#024594]" /> {locale === 'vi' ? 'Banner quảng bá' : 'Promotional banner'}
             </span>
             {request.company.banner_url ? (
               <div
@@ -415,13 +417,13 @@ export default function PublishRequestDetail() {
                 />
                 <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity duration-300">
                   <span className="bg-slate-900/85 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 backdrop-blur-xs shadow-md">
-                    <Eye className="w-4 h-4" /> Xem banner đầy đủ
+                    <Eye className="w-4 h-4" /> {locale === 'vi' ? 'Xem banner đầy đủ' : 'View full banner'}
                   </span>
                 </div>
               </div>
             ) : (
               <div className="absolute inset-0 bg-gradient-to-r from-slate-100 to-slate-200 flex items-center justify-center text-slate-400 font-medium">
-                Chưa cập nhật ảnh Banner
+                {locale === 'vi' ? 'Chưa cập nhật ảnh Banner' : 'No banner image uploaded'}
               </div>
             )}
           </div>
@@ -430,10 +432,10 @@ export default function PublishRequestDetail() {
         {/* 2. Giới thiệu công ty */}
         <div className="space-y-2 pt-2">
           <label className="text-[11px] font-bold text-black uppercase tracking-wider block">
-            Giới thiệu công ty
+            {dict.admin_publish_requests.company_desc}
           </label>
           <p className="text-xs text-slate-600 leading-relaxed font-normal bg-slate-50/60 p-4 rounded-2xl border border-slate-150/70 shadow-2xs">
-            {request.company.description || "Chưa có thông tin giới thiệu."}
+            {request.company.description || (locale === 'vi' ? 'Chưa có thông tin giới thiệu.' : 'No company introduction provided.')}
           </p>
         </div>
 
@@ -442,48 +444,48 @@ export default function PublishRequestDetail() {
           {/* Details Column */}
           <div className="flex flex-col">
             <h4 className="text-xs font-bold text-[#024594] uppercase tracking-wider mb-2 flex items-center gap-2 pb-1.5 border-b border-slate-100">
-              <Building2 className="w-4.5 h-4.5 text-[#024594]" /> Chi tiết thông tin
+              <Building2 className="w-4.5 h-4.5 text-[#024594]" /> {locale === 'vi' ? 'Chi tiết thông tin' : 'Detailed information'}
             </h4>
             <div className="flex-1 space-y-3 text-xs py-2 flex flex-col justify-center">
               <div className="flex justify-between items-start py-1">
-                <span className="text-black font-semibold">Tên chính thức:</span>
+                <span className="text-black font-semibold">{locale === 'vi' ? 'Tên chính thức:' : 'Official name:'}</span>
                 <span className="font-bold text-slate-800 text-right max-w-[280px]">
                   {request.company.company_name}
                 </span>
               </div>
 
               <div className="flex justify-between items-center py-1">
-                <span className="text-black font-semibold">Mã hồ sơ xét duyệt:</span>
+                <span className="text-black font-semibold">{locale === 'vi' ? 'Mã hồ sơ xét duyệt:' : 'Review code:'}</span>
                 <span className="font-mono font-bold text-[#024594]">
                   {request.company.registration_code}
                 </span>
               </div>
 
               <div className="flex justify-between items-center py-1">
-                <span className="text-black font-semibold">Mã số thuế:</span>
+                <span className="text-black font-semibold">{locale === 'vi' ? 'Mã số thuế:' : 'Tax code:'}</span>
                 <span className="font-mono font-semibold text-slate-800">
                   {request.company.business_license_no}
                 </span>
               </div>
 
               <div className="flex justify-between items-center py-1">
-                <span className="text-black font-semibold">Số điện thoại:</span>
+                <span className="text-black font-semibold">{locale === 'vi' ? 'Số điện thoại:' : 'Phone number:'}</span>
                 <span className="font-mono font-semibold text-slate-800">
-                  {request.company.phone || "Chưa cập nhật"}
+                  {request.company.phone || dict.admin_publish_requests.not_updated}
                 </span>
               </div>
 
               <div className="flex justify-between items-center py-1">
-                <span className="text-black font-semibold">Email liên hệ:</span>
+                <span className="text-black font-semibold">{locale === 'vi' ? 'Email liên hệ:' : 'Contact email:'}</span>
                 <span className="font-semibold text-slate-800 truncate max-w-[240px]">
-                  {request.company.email || "Chưa cập nhật"}
+                  {request.company.email || dict.admin_publish_requests.not_updated}
                 </span>
               </div>
 
               <div className="flex justify-between items-start py-1">
-                <span className="text-black font-semibold shrink-0">Địa chỉ trụ sở:</span>
+                <span className="text-black font-semibold shrink-0">{locale === 'vi' ? 'Địa chỉ trụ sở:' : 'Headquarters:'}</span>
                 <span className="text-slate-800 font-medium text-right max-w-[280px] leading-snug">
-                  {request.company.address || "Chưa cập nhật"}
+                  {request.company.address || dict.admin_publish_requests.not_updated}
                 </span>
               </div>
             </div>
@@ -493,7 +495,7 @@ export default function PublishRequestDetail() {
           <div className="flex flex-col">
             <div className="flex items-center justify-between mb-2 pb-1.5 border-b border-slate-100">
               <h4 className="text-xs font-bold text-[#024594] uppercase tracking-wider flex items-center gap-2">
-                <ShieldCheck className="w-4.5 h-4.5 text-[#024594]" /> Giấy phép kinh doanh
+                <ShieldCheck className="w-4.5 h-4.5 text-[#024594]" /> {locale === 'vi' ? 'Giấy phép kinh doanh' : 'Business license'}
               </h4>
               {request.company.license_file_url && (
                 <a
@@ -501,7 +503,7 @@ export default function PublishRequestDetail() {
                   onClick={(e) => handleDownloadFile(e, request.company.license_file_url!)}
                   className="text-xs font-bold text-[#024594] hover:text-[#023b7e] hover:underline flex items-center gap-1 cursor-pointer transition-colors"
                 >
-                  <Download className="w-3.5 h-3.5" /> Tải về
+                  <Download className="w-3.5 h-3.5" /> {locale === 'vi' ? 'Tải về' : 'Download'}
                 </a>
               )}
             </div>
@@ -523,7 +525,7 @@ export default function PublishRequestDetail() {
                       <button
                         className="bg-[#024594] text-white px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-md transition-transform transform hover:scale-105"
                       >
-                        <Eye className="w-3.5 h-3.5" /> Phóng to PDF
+                        <Eye className="w-3.5 h-3.5" /> {locale === 'vi' ? 'Phóng to PDF' : 'Zoom PDF'}
                       </button>
                     </div>
                   </div>
@@ -539,7 +541,7 @@ export default function PublishRequestDetail() {
                     />
                     <div className="absolute inset-0 bg-black/30 rounded-lg opacity-0 group-hover:opacity-100 flex items-center justify-center text-white transition-opacity">
                       <span className="bg-[#024594] px-3.5 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1 shadow-md">
-                        <Eye className="w-3.5 h-3.5" /> Xem ảnh lớn
+                        <Eye className="w-3.5 h-3.5" /> {locale === 'vi' ? 'Xem ảnh lớn' : 'View large image'}
                       </span>
                     </div>
                   </div>
@@ -548,7 +550,7 @@ export default function PublishRequestDetail() {
                 <div className="text-center space-y-2">
                   <FileText className="w-12 h-12 text-slate-300 mx-auto" />
                   <p className="text-xs text-slate-500 font-medium">
-                    Chưa tải lên Giấy phép kinh doanh
+                    {locale === 'vi' ? 'Chưa tải lên Giấy phép kinh doanh' : 'No business license uploaded'}
                   </p>
                 </div>
               )}
@@ -560,13 +562,13 @@ export default function PublishRequestDetail() {
         <div className="space-y-3 pt-1">
           <div className="flex items-center justify-between border-b border-slate-100 pb-1.5">
             <label className="text-[11px] font-bold text-black uppercase tracking-wider flex items-center gap-1.5">
-              <ImageIcon className="w-4 h-4 text-[#024594]" /> Hình ảnh hoạt động công ty
+              <ImageIcon className="w-4 h-4 text-[#024594]" /> {locale === 'vi' ? 'Hình ảnh hoạt động công ty' : 'Company activity photos'}
             </label>
             <button
               onClick={() => setAllImagesModalOpen(true)}
               className="text-xs font-bold text-[#024594] hover:text-[#023b7e] hover:underline flex items-center gap-0.5 transition-colors cursor-pointer"
             >
-              Xem tất cả ({request.company.activity_images.length}) <ChevronRight className="w-3 h-3" />
+              {locale === 'vi' ? 'Xem tất cả' : 'View all'} ({request.company.activity_images.length}) <ChevronRight className="w-3 h-3" />
             </button>
           </div>
 
@@ -590,7 +592,7 @@ export default function PublishRequestDetail() {
               ))}
             </div>
           ) : (
-            <p className="text-xs text-slate-500">Chưa có hình ảnh hoạt động nào được đăng tải.</p>
+            <p className="text-xs text-slate-500">{locale === 'vi' ? 'Chưa có hình ảnh hoạt động nào được đăng tải.' : 'No activity photos uploaded.'}</p>
           )}
         </div>
 
@@ -598,13 +600,13 @@ export default function PublishRequestDetail() {
         <div className="space-y-3 pt-1">
           {request.company.services.length > 0 ? (
             <div className="flex flex-row items-center justify-between pb-2 border-b border-slate-150 text-[11px] font-bold text-black uppercase tracking-wider">
-              <span className="sm:w-72 shrink-0">Dịch vụ đăng ký hiển thị</span>
-              <span className="hidden sm:inline-block flex-1 sm:px-4 text-center">Mô tả dịch vụ</span>
-              <span className="hidden sm:inline-block w-32 shrink-0 text-right">Giá dịch vụ</span>
+              <span className="sm:w-72 shrink-0">{locale === 'vi' ? 'Dịch vụ đăng ký hiển thị' : 'Registered marketplace services'}</span>
+              <span className="hidden sm:inline-block flex-1 sm:px-4 text-center">{locale === 'vi' ? 'Mô tả dịch vụ' : 'Service description'}</span>
+              <span className="hidden sm:inline-block w-32 shrink-0 text-right">{locale === 'vi' ? 'Giá dịch vụ' : 'Service price'}</span>
             </div>
           ) : (
             <label className="text-[11px] font-bold text-black uppercase tracking-wider block border-b border-slate-100 pb-1.5">
-              Dịch vụ đăng ký hiển thị
+              {locale === 'vi' ? 'Dịch vụ đăng ký hiển thị' : 'Registered marketplace services'}
             </label>
           )}
           
@@ -639,7 +641,7 @@ export default function PublishRequestDetail() {
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-slate-500 text-center py-6">Doanh nghiệp chưa có dịch vụ đăng ký.</p>
+              <p className="text-xs text-slate-500 text-center py-6">{locale === 'vi' ? 'Doanh nghiệp chưa có dịch vụ đăng ký.' : 'The company has no registered marketplace services.'}</p>
             )}
           </div>
         </div>
@@ -668,7 +670,7 @@ export default function PublishRequestDetail() {
           <div className="bg-white rounded-2xl border border-[#c3c6d3] max-w-4xl w-full max-h-[85vh] overflow-hidden flex flex-col shadow-2xl">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <h3 className="font-bold text-[#0b1c30] text-base flex items-center gap-2">
-                <ImageIcon className="w-5 h-5 text-[#024594]" /> Tất cả hình ảnh hoạt động ({request.company.activity_images.length})
+                <ImageIcon className="w-5 h-5 text-[#024594]" /> {locale === 'vi' ? 'Tất cả hình ảnh hoạt động' : 'All activity photos'} ({request.company.activity_images.length})
               </h3>
               <button
                 onClick={() => setAllImagesModalOpen(false)}
@@ -708,7 +710,7 @@ export default function PublishRequestDetail() {
           <div className="bg-white rounded-2xl border border-[#c3c6d3] w-full max-w-5xl h-[85vh] flex flex-col overflow-hidden shadow-2xl">
             <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50">
               <h3 className="font-bold text-[#0b1c30] text-base flex items-center gap-2">
-                <FileText className="w-5 h-5 text-red-600" /> Xem Giấy Phép Kinh Doanh (PDF)
+                <FileText className="w-5 h-5 text-red-600" /> {locale === 'vi' ? 'Xem Giấy Phép Kinh Doanh (PDF)' : 'View Business License (PDF)'}
               </h3>
               <div className="flex items-center gap-3">
                 <a
@@ -717,7 +719,7 @@ export default function PublishRequestDetail() {
                   rel="noopener noreferrer"
                   className="text-slate-600 hover:text-slate-800 text-sm font-semibold flex items-center gap-1 border border-slate-200 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 transition-colors"
                 >
-                  <ExternalLink className="w-4 h-4" /> Mở tab mới
+                  <ExternalLink className="w-4 h-4" /> {locale === 'vi' ? 'Mở tab mới' : 'Open in new tab'}
                 </a>
                 <button
                   onClick={() => setPreviewPdf(null)}
@@ -745,7 +747,7 @@ export default function PublishRequestDetail() {
             <div className="bg-red-50 border-b border-red-100 px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[#ff0c3b]">
                 <AlertTriangle className="w-5 h-5 shrink-0" />
-                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">Từ chối yêu cầu công khai</h3>
+                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">{dict.admin_publish_requests.confirm_reject_title}</h3>
               </div>
               <button onClick={() => { setRejectModalOpen(false); setRejectReason(""); }} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -753,17 +755,19 @@ export default function PublishRequestDetail() {
             </div>
             <div className="p-6 space-y-4">
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                Bạn có chắc chắn muốn từ chối yêu cầu công khai thông tin của doanh nghiệp <span className="font-bold text-[#0b1c30]">{request.company.company_name}</span> không?
+                {locale === 'vi'
+                  ? `Bạn có chắc chắn muốn từ chối yêu cầu công khai thông tin của doanh nghiệp ${request.company.company_name} không?`
+                  : `Are you sure you want to reject the request to publish information for ${request.company.company_name}?`}
               </p>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-500 uppercase tracking-wider block">
-                  Lý do từ chối (Bắt buộc)
+                  {dict.admin_publish_requests.reject_input_label}
                 </label>
                 <textarea
                   value={rejectReason}
                   onChange={(e) => setRejectReason(e.target.value)}
-                  placeholder="Nhập lý do từ chối cụ thể để thông báo cho doanh nghiệp qua email..."
+                  placeholder={dict.admin_publish_requests.reject_input_placeholder}
                   className="w-full min-h-[100px] border border-slate-200 rounded-xl p-3 text-sm focus:outline-none focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all resize-none text-slate-800"
                   required
                 />
@@ -771,7 +775,9 @@ export default function PublishRequestDetail() {
 
               <p className="text-xs text-[#b91c1c] bg-[#fef2f2] border border-[#fca5a5] p-3 rounded-lg leading-normal flex gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444] mt-0.5" />
-                Lưu ý: Hệ thống sẽ tự động gửi email thông báo kèm lý do từ chối này tới doanh nghiệp. Doanh nghiệp sẽ trở về trạng thái hoạt động bình thường.
+                {locale === 'vi'
+                  ? 'Lưu ý: Hệ thống sẽ tự động gửi email thông báo kèm lý do từ chối này tới doanh nghiệp. Doanh nghiệp sẽ trở về trạng thái hoạt động bình thường.'
+                  : 'Note: The system will automatically send an email notification with this reject reason. The company will return to its normal active state.'}
               </p>
             </div>
             <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
@@ -780,7 +786,7 @@ export default function PublishRequestDetail() {
                 disabled={actionLoading}
                 className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded-xl text-sm font-semibold text-slate-700 disabled:opacity-50"
               >
-                Hủy bỏ
+                {dict.admin_publish_requests.cancel}
               </button>
               <button
                 onClick={handleReject}
@@ -788,7 +794,7 @@ export default function PublishRequestDetail() {
                 className="px-4 py-2 bg-[#ff0c3b] hover:bg-[#d80a32] active:scale-95 text-white transition-all rounded-xl text-sm font-bold shadow-md disabled:opacity-55 flex items-center gap-2 cursor-pointer"
               >
                 {actionLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                Từ chối yêu cầu
+                {dict.admin_publish_requests.reject_action}
               </button>
             </div>
           </div>
@@ -802,7 +808,7 @@ export default function PublishRequestDetail() {
             <div className="bg-[#eff4ff] border-b border-[#acc7ff] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[#024594]">
                 <CheckCircle2 className="w-5 h-5 shrink-0" />
-                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">Phê duyệt yêu cầu</h3>
+                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">{dict.admin_publish_requests.confirm_approve_title}</h3>
               </div>
               <button onClick={() => setApproveModalOpen(false)} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
@@ -810,11 +816,15 @@ export default function PublishRequestDetail() {
             </div>
             <div className="p-6 space-y-3">
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                Bạn có chắc chắn muốn phê duyệt yêu cầu công khai thông tin của doanh nghiệp <span className="font-bold text-[#0b1c30]">{request.company.company_name}</span> không?
+                {locale === 'vi'
+                  ? `Bạn có chắc chắn muốn phê duyệt yêu cầu công khai thông tin của doanh nghiệp ${request.company.company_name} không?`
+                  : `Are you sure you want to approve the request to publish information for ${request.company.company_name}?`}
               </p>
               <p className="text-xs text-[#b45309] bg-[#fffbeb] border border-[#fde68a] p-3 rounded-lg leading-normal flex gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-[#d97706] mt-0.5" />
-                Lưu ý: Hành động này sẽ chuyển trạng thái của doanh nghiệp sang &ldquo;published&rdquo;, cho phép hiển thị và tìm kiếm trên trang chủ (Marketplace).
+                {locale === 'vi'
+                  ? 'Lưu ý: Hành động này sẽ chuyển trạng thái của doanh nghiệp sang "published", cho phép hiển thị và tìm kiếm trên trang chủ (Marketplace).'
+                  : 'Note: This action will change the company status to "published", allowing it to be shown and searched on the marketplace homepage.'}
               </p>
             </div>
             <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
@@ -823,7 +833,7 @@ export default function PublishRequestDetail() {
                 disabled={actionLoading}
                 className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded-xl text-sm font-semibold text-slate-700 disabled:opacity-50"
               >
-                Hủy bỏ
+                {dict.admin_publish_requests.cancel}
               </button>
               <button
                 onClick={handleApprove}
@@ -831,7 +841,7 @@ export default function PublishRequestDetail() {
                 className="px-4 py-2 bg-[#024594] hover:bg-[#023b7e] active:scale-95 text-white transition-all rounded-xl text-sm font-bold shadow-md disabled:opacity-50 flex items-center gap-2 cursor-pointer"
               >
                 {actionLoading && <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>}
-                Đồng ý phê duyệt
+                {locale === 'vi' ? 'Đồng ý phê duyệt' : 'Confirm approval'}
               </button>
             </div>
           </div>

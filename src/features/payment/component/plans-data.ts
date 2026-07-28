@@ -38,7 +38,8 @@ export const getLandingPlans = (dict: any): LandingPlan[] => [
       dict.landing.plans.chuyen_nghiep.f1,
       dict.landing.plans.chuyen_nghiep.f2,
       dict.landing.plans.chuyen_nghiep.f3,
-      dict.landing.plans.chuyen_nghiep.f4
+      dict.landing.plans.chuyen_nghiep.f4,
+      dict.landing.plans.chuyen_nghiep.f5
     ],
     isPopular: true,
     actionText: dict.landing.plans.chuyen_nghiep.action,

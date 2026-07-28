@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { requestGetRegistrations } from "../api/registration.api";
 import { RegistrationWithCompany } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 const formatDate = (dateStr: string) => {
   try {
@@ -32,6 +33,7 @@ const formatDate = (dateStr: string) => {
 
 
 export default function RegistrationTable() {
+  const { dict, locale } = useTranslation();
   const [registrations, setRegistrations] = React.useState<RegistrationWithCompany[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [error, setError] = React.useState<string | null>(null);
@@ -83,7 +85,7 @@ export default function RegistrationTable() {
         setRegistrations(res.registrations || []);
       } catch (err: any) {
         console.error("Error fetching registrations:", err);
-        setError(err.message || "Không thể tải danh sách đăng ký");
+        setError(err.message || dict.admin_registrations.error_load_list);
       } finally {
         setLoading(false);
       }
@@ -95,7 +97,7 @@ export default function RegistrationTable() {
     return (
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-center min-h-[400px] text-on-surface-variant font-medium">
-          Đang tải danh sách đăng ký...
+          {dict.admin_registrations.loading_list}
         </div>
       </div>
     );
@@ -105,7 +107,7 @@ export default function RegistrationTable() {
     return (
       <div className="max-w-7xl mx-auto p-6 space-y-6">
         <div className="flex items-center justify-center min-h-[400px] text-error font-medium">
-          Lỗi: {error}
+          {dict.admin_registrations.error_load_list}: {error}
         </div>
       </div>
     );
@@ -119,22 +121,16 @@ export default function RegistrationTable() {
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-2">
         <div>
           <nav className="flex items-center gap-1 text-on-surface-variant/80 text-xs font-medium mb-1">
-            <span className="hover:text-primary cursor-pointer transition-colors">Doanh nghiệp</span>
+            <span className="hover:text-primary cursor-pointer transition-colors">{dict.admin_registrations.admin}</span>
             <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant/50 shrink-0" />
-            <span className="text-primary font-bold">Đăng ký doanh nghiệp</span>
+            <span className="text-primary font-bold">{dict.admin_registrations.title_list}</span>
           </nav>
           <h2 className="text-2xl font-bold text-primary tracking-tight font-headline">
-            Danh sách đăng ký doanh nghiệp
+            {dict.admin_registrations.title_list}
           </h2>
           <p className="text-xs text-on-surface-variant mt-0.5">
-            Quản lý và xét duyệt hồ sơ đăng ký mới của các tổ chức.
+            {dict.admin_registrations.desc_list}
           </p>
-        </div>
-        <div className="flex gap-2 shrink-0">
-          <button className="flex items-center gap-1.5 px-3 py-1.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-xs font-semibold hover:bg-surface-container-low transition-all text-on-surface cursor-pointer shadow-sm">
-            <Filter className="text-on-surface-variant w-3.5 h-3.5" />
-            <span>Bộ lọc</span>
-          </button>
         </div>
       </div>
 
@@ -150,7 +146,7 @@ export default function RegistrationTable() {
           }`}
         >
           <FileClock className={`w-4.5 h-4.5 shrink-0 ${activeFilter === "pending" ? "text-[#b45309]" : "text-primary"}`} />
-          <span>Chờ duyệt</span>
+          <span>{dict.admin_registrations.status_pending}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
             activeFilter === "pending" ? "bg-[#b45309] text-white" : "bg-surface-container-high text-on-surface"
           }`}>
@@ -168,7 +164,7 @@ export default function RegistrationTable() {
           }`}
         >
           <ShieldCheck className="w-4.5 h-4.5 shrink-0 text-[#166534]" />
-          <span>Đã duyệt</span>
+          <span>{dict.admin_registrations.status_approved}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
             activeFilter === "approved" ? "bg-[#166534] text-white" : "bg-surface-container-high text-on-surface"
           }`}>
@@ -186,7 +182,7 @@ export default function RegistrationTable() {
           }`}
         >
           <ShieldAlert className="w-4.5 h-4.5 shrink-0 text-error" />
-          <span>Hồ sơ lỗi</span>
+          <span>{dict.admin_registrations.status_rejected}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
             activeFilter === "error" ? "bg-error text-white" : "bg-surface-container-high text-on-surface"
           }`}>
@@ -204,7 +200,7 @@ export default function RegistrationTable() {
           }`}
         >
           <Files className={`w-4.5 h-4.5 shrink-0 ${activeFilter === "all" ? "text-primary" : "text-on-surface-variant"}`} />
-          <span>Tất cả hồ sơ</span>
+          <span>{dict.admin_registrations.status_all}</span>
           <span className={`text-xs px-2 py-0.5 rounded-full font-bold ${
             activeFilter === "all" ? "bg-primary text-white" : "bg-surface-container-high text-on-surface"
           }`}>
@@ -220,19 +216,19 @@ export default function RegistrationTable() {
             <thead>
               <tr className="bg-[#d5e3ff] border-b border-outline-variant">
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[130px] whitespace-nowrap">
-                  ID Đăng ký
+                  {dict.admin_registrations.tbl_id}
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] whitespace-nowrap min-w-[240px]">
-                  Tên Công ty
+                  {dict.admin_registrations.tbl_company}
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[110px] whitespace-nowrap">
-                  Ngày gửi
+                  {dict.admin_registrations.tbl_created}
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] w-[150px] whitespace-nowrap">
-                  Trạng thái
+                  {dict.admin_registrations.tbl_status}
                 </th>
                 <th className="py-3 px-6 text-[12px] font-semibold text-on-surface uppercase tracking-[0.05em] text-right whitespace-nowrap">
-                  Thao tác
+                  {dict.admin_registrations.tbl_actions}
                 </th>
               </tr>
             </thead>
@@ -265,7 +261,7 @@ export default function RegistrationTable() {
                       </Link>
                       {isError && (
                         <p className="text-[11px] mt-0.5 text-error font-medium">
-                          Hồ sơ có lỗi cần bổ sung
+                          {locale === 'vi' ? 'Hồ sơ có lỗi cần bổ sung' : 'Profile has errors, amendments required'}
                         </p>
                       )}
                     </td>
@@ -306,7 +302,7 @@ export default function RegistrationTable() {
                         href={`/registrations/${reg.registration_id}`}
                         className="text-secondary font-semibold text-xs hover:text-primary inline-flex items-center gap-1 transition-colors whitespace-nowrap"
                       >
-                        Xem chi tiết <ExternalLink className="w-3.5 h-3.5" />
+                        {dict.admin_registrations.view_detail} <ExternalLink className="w-3.5 h-3.5" />
                       </Link>
                     </td>
                   </tr>
@@ -319,7 +315,7 @@ export default function RegistrationTable() {
         {/* Pagination */}
         <div className="px-6 py-4 border-t border-outline-variant flex justify-between items-center bg-surface-container-low">
           <p className="text-on-surface-variant text-sm font-medium">
-            Hiển thị {filteredRegistrations.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredRegistrations.length)} trên {filteredRegistrations.length} kết quả
+            {dict.admin_registrations.showing} {filteredRegistrations.length === 0 ? 0 : (currentPage - 1) * itemsPerPage + 1} - {Math.min(currentPage * itemsPerPage, filteredRegistrations.length)} {dict.admin_registrations.of} {filteredRegistrations.length} {dict.admin_registrations.results}
           </p>
           <div className="flex gap-1">
             <button
@@ -354,6 +350,7 @@ export default function RegistrationTable() {
           </div>
         </div>
       </div>
+
 
 
     </div>

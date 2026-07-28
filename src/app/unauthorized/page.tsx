@@ -1,8 +1,8 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { Suspense } from "react";
-import { ShieldAlert, ArrowLeft, LogOut, Mail, Unlock } from "lucide-react";
+import { Suspense, useEffect, useState } from "react";
+import { ShieldAlert, ArrowLeft, LogOut, Mail, Unlock, AlertCircle } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { useAuthStore } from "@/store/auth.store";
 import { useTranslation } from "@/components/providers/LanguageProvider";
@@ -16,6 +16,20 @@ function UnauthorizedContent() {
 
   const isInactive = reason === "inactive";
   const isBanned = reason === "banned";
+
+  const [banReason, setBanReason] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!isBanned) return;
+    fetch("/api/auth/ban-reason")
+      .then((res) => res.json())
+      .then((json) => {
+        if (json?.success && json?.data?.reason) {
+          setBanReason(json.data.reason);
+        }
+      })
+      .catch(() => {});
+  }, [isBanned]);
 
   const handleGoBack = () => {
     router.back();
@@ -57,6 +71,19 @@ function UnauthorizedContent() {
               ? dict.pages.unauthorized.inactive_desc
               : dict.pages.unauthorized.no_access_desc}
         </p>
+
+        {/* Ban Reason Box */}
+        {isBanned && banReason && (
+          <div className="mt-5 flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left">
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-red-500" />
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-red-600 mb-1">
+                {dict.pages.unauthorized.ban_reason_label || "Lý do khóa"}
+              </p>
+              <p className="text-sm text-red-700 leading-relaxed">{banReason}</p>
+            </div>
+          </div>
+        )}
 
         {/* Action Buttons */}
         <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:justify-center">

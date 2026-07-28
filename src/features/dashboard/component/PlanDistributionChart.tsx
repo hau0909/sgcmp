@@ -4,8 +4,10 @@ import React, { useState, useEffect } from "react";
 import { PieChart, Pie, Cell, Label, Tooltip, ResponsiveContainer } from "recharts";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { requestGetAdminPlanDistribution, type PlanDistributionItem } from "../api/dashboard.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export function PlanDistributionChart() {
+  const { dict, locale } = useTranslation();
   const [chartData, setChartData] = useState<PlanDistributionItem[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -24,18 +26,20 @@ export function PlanDistributionChart() {
 
   const total = chartData.reduce((sum, item) => sum + item.count, 0);
 
+  const numLocale = locale === "vi" ? "vi-VN" : "en-US";
+
   return (
     <Card className="border border-slate-100 bg-white rounded-xl col-span-1 flex flex-col justify-between">
       <CardHeader className="pb-1">
         <CardTitle className="text-base font-semibold text-slate-800">
-          Phân bố gói dịch vụ
+          {dict.admin_dashboard.plan_distribution}
         </CardTitle>
       </CardHeader>
       <CardContent className="pt-2 flex flex-col items-center justify-center flex-1">
         {loading && chartData.length === 0 ? (
           <div className="w-full flex-1 min-h-[220px] flex items-center justify-center">
             <div className="size-[160px] bg-slate-50 animate-pulse rounded-full flex items-center justify-center text-slate-400 text-[10px] font-medium">
-              Đang tải...
+              {dict.admin_dashboard.loading}
             </div>
           </div>
         ) : (
@@ -46,7 +50,10 @@ export function PlanDistributionChart() {
                   <Tooltip
                     formatter={(value: any, name: any, props: any) => {
                       const payload = props.payload;
-                      return [`${value}% (${payload.count} doanh nghiệp)`, name];
+                      const label = locale === "vi"
+                        ? `${value}% (${payload.count} doanh nghiệp)`
+                        : `${value}% (${payload.count} ${payload.count === 1 ? "company" : "companies"})`;
+                      return [label, name];
                     }}
                     contentStyle={{
                       backgroundColor: "#ffffff",
@@ -83,14 +90,14 @@ export function PlanDistributionChart() {
                                 y={viewBox.cy}
                                 className="fill-slate-800 text-lg font-bold tracking-tight"
                               >
-                                {total.toLocaleString("vi-VN")}
+                                {total.toLocaleString(numLocale)}
                               </tspan>
                               <tspan
                                 x={viewBox.cx}
                                 y={(viewBox.cy || 0) + 16}
                                 className="fill-slate-400 text-[10px] font-semibold"
                               >
-                                Tổng cộng
+                                {dict.admin_dashboard.total}
                               </tspan>
                             </text>
                           );

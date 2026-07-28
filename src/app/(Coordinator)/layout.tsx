@@ -14,7 +14,6 @@ import {
   Menu,
   X,
   Gauge,
-  Bell,
   BookOpen,
   ShieldUser,
   CalendarDays,

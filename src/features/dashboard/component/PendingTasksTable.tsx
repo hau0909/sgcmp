@@ -1,12 +1,14 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { ChevronDown, X, Loader2 } from "lucide-react";
 import { requestGetAdminPendingTasks, type PendingTaskItem } from "../api/dashboard.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 
 export function PendingTasksTable() {
+  const { dict, locale } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [tasks, setTasks] = useState<PendingTaskItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -24,11 +26,37 @@ export function PendingTasksTable() {
       });
   }, []);
 
+  const getCategoryText = (category: PendingTaskItem["category"], defaultText: string) => {
+    switch (category) {
+      case "register":
+        return locale === "vi" ? "Đăng ký" : "Registration";
+      case "urgent":
+        return locale === "vi" ? "Khẩn cấp" : "Urgent";
+      case "compliance":
+        return locale === "vi" ? "Tuân thủ" : "Compliance";
+      default:
+        return defaultText;
+    }
+  };
+
+  const getStatusText = (status: PendingTaskItem["status"], defaultText: string) => {
+    switch (status) {
+      case "pending_approval":
+        return locale === "vi" ? "Chờ phê duyệt" : "Awaiting Approval";
+      case "pending_resolve":
+        return locale === "vi" ? "Chờ xử lý" : "Awaiting Resolution";
+      case "pending_renew":
+        return locale === "vi" ? "Chờ gia hạn" : "Awaiting Renewal";
+      default:
+        return defaultText;
+    }
+  };
+
   // Default display is first 5 tasks
   const displayedTasks = tasks.slice(0, 5);
 
-
-  const getCategoryBadge = (category: PendingTaskItem["category"], text: string) => {
+  const getCategoryBadge = (category: PendingTaskItem["category"], defaultText: string) => {
+    const text = getCategoryText(category, defaultText);
     switch (category) {
       case "register":
         return (
@@ -57,7 +85,8 @@ export function PendingTasksTable() {
     }
   };
 
-  const getStatusBadge = (status: PendingTaskItem["status"], text: string) => {
+  const getStatusBadge = (status: PendingTaskItem["status"], defaultText: string) => {
+    const text = getStatusText(status, defaultText);
     switch (status) {
       case "pending_approval":
         return (
@@ -92,10 +121,10 @@ export function PendingTasksTable() {
         <div className="flex flex-col">
           <CardHeader className="flex flex-row items-center justify-between pb-3">
             <CardTitle className="text-base font-semibold text-slate-800">
-              Đang chờ xử lý
+              {dict.admin_dashboard.pending_tasks}
             </CardTitle>
             <span className="text-[11px] font-bold text-slate-400">
-              {tasks.length} yêu cầu
+              {dict.admin_dashboard.pending_tasks_count.replace("{count}", tasks.length.toString())}
             </span>
           </CardHeader>
           <CardContent className="p-0">
@@ -107,16 +136,16 @@ export function PendingTasksTable() {
                       STT
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider">
-                      CHI TIẾT CÔNG VIỆC
+                      {dict.admin_dashboard.task_details}
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider w-[120px]">
-                      THỜI GIAN
+                      {dict.admin_dashboard.task_time}
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider w-[140px]">
-                      LOẠI YÊU CẦU
+                      {dict.admin_dashboard.task_type}
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider w-[120px]">
-                      TRẠNG THÁI
+                      {dict.admin_dashboard.task_status}
                     </th>
                   </tr>
                 </thead>
@@ -126,14 +155,14 @@ export function PendingTasksTable() {
                       <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
                         <div className="flex items-center justify-center gap-2">
                           <Loader2 className="size-4 animate-spin text-blue-500" />
-                          <span>Đang tải danh sách...</span>
+                          <span>{dict.admin_dashboard.loading_list}</span>
                         </div>
                       </td>
                     </tr>
                   ) : displayedTasks.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
-                        Không có yêu cầu nào đang chờ xử lý.
+                        {dict.admin_dashboard.no_pending_tasks}
                       </td>
                     </tr>
                   ) : (
@@ -177,7 +206,7 @@ export function PendingTasksTable() {
               onClick={() => setIsModalOpen(true)}
               className="text-xs font-bold text-blue-600 border-blue-150 bg-blue-50/30 hover:bg-blue-50/60 px-4 h-8 rounded-lg flex items-center gap-1 transition-all cursor-pointer"
             >
-              <span>Xem thêm</span>
+              <span>{dict.admin_dashboard.view_more}</span>
               <ChevronDown className="size-3.5" />
             </Button>
           </div>
@@ -199,10 +228,10 @@ export function PendingTasksTable() {
             <div className="p-5 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
               <div>
                 <h3 className="text-base font-bold text-slate-800">
-                  Tất cả yêu cầu đang chờ xử lý
+                  {dict.admin_dashboard.all_pending_tasks}
                 </h3>
                 <p className="text-xs text-slate-500 mt-0.5">
-                  Tổng số {tasks.length} yêu cầu cần được xử lý trong hệ thống
+                  {dict.admin_dashboard.pending_tasks_summary.replace("{count}", tasks.length.toString())}
                 </p>
               </div>
               <button 
@@ -222,16 +251,16 @@ export function PendingTasksTable() {
                       STT
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider">
-                      CHI TIẾT CÔNG VIỆC
+                      {dict.admin_dashboard.task_details}
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider w-[120px]">
-                      THỜI GIAN
+                      {dict.admin_dashboard.task_time}
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider w-[140px]">
-                      LOẠI YÊU CẦU
+                      {dict.admin_dashboard.task_type}
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider w-[120px]">
-                      TRẠNG THÁI
+                      {dict.admin_dashboard.task_status}
                     </th>
                   </tr>
                 </thead>
@@ -239,7 +268,7 @@ export function PendingTasksTable() {
                   {tasks.length === 0 ? (
                     <tr>
                       <td colSpan={5} className="py-8 text-center text-xs text-slate-400">
-                        Không có yêu cầu nào đang chờ xử lý.
+                        {dict.admin_dashboard.no_pending_tasks}
                       </td>
                     </tr>
                   ) : (
@@ -281,7 +310,7 @@ export function PendingTasksTable() {
                 onClick={() => setIsModalOpen(false)}
                 className="text-xs font-bold px-4 h-8 rounded-lg cursor-pointer bg-white border-slate-200 text-slate-600 hover:bg-slate-50"
               >
-                Đóng
+                {dict.admin_dashboard.close}
               </Button>
             </div>
           </div>

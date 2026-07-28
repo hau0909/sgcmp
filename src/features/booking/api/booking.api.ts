@@ -58,6 +58,28 @@ export async function requestUpdateBookingQuotation(
   return res as any;
 }
 
+export async function requestUpdateBookingDetails(
+  id: string,
+  updates: {
+    address?: string;
+    description?: string | null;
+    guards_per_slot?: number;
+    time_slots?: string[];
+    day_per_week?: string[];
+    start_date?: string;
+    end_date?: string;
+  }
+): Promise<{ booking: Booking }> {
+  const res = await fetcher(`/api/bookings/${id}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(updates),
+  });
+  return res as any;
+}
+
 export async function requestGetCustomerBookings(
   customerId: string,
   page: number,

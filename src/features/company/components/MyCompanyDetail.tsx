@@ -155,6 +155,7 @@ export default function MyCompanyDetail() {
   const [newServiceId, setNewServiceId] = useState("");
   const [newServiceDesc, setNewServiceDesc] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
+  const [serviceFormErrors, setServiceFormErrors] = useState<{ serviceId?: string; desc?: string; price?: string }>({});
 
   useEffect(() => {
     let active = true;
@@ -691,14 +692,22 @@ export default function MyCompanyDetail() {
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newServiceId || !newServicePrice || !company_id) return;
+    // Inline validation
+    const errors: { serviceId?: string; desc?: string; price?: string } = {};
+    if (!newServiceId) errors.serviceId = "Vui lòng chọn dịch vụ";
+    if (newServiceDesc.trim().length > 150) errors.desc = `Mô tả tối đa 150 ký tự (hiện: ${newServiceDesc.trim().length})`;
+    const numericPrice = parseInt(newServicePrice, 10);
+    if (!newServicePrice) errors.price = "Vui lòng nhập giá";
+    else if (isNaN(numericPrice) || numericPrice <= 0) errors.price = "Giá phải là số lớn hơn 0";
+    else if (numericPrice > 1000000) errors.price = "Giá tối đa là 1.000.000 VND";
 
-    const numericPrice = parseInt(newServicePrice.replace(/\D/g, ""), 10);
-
-    if (isNaN(numericPrice) || numericPrice <= 0) {
-      alert(dict.company_detail.messages.service_price_invalid);
+    if (Object.keys(errors).length > 0) {
+      setServiceFormErrors(errors);
       return;
     }
+    setServiceFormErrors({});
+
+    if (!company_id) return;
 
     try {
       await requestAddCompanyService(company_id, {
@@ -716,11 +725,13 @@ export default function MyCompanyDetail() {
       setNewServiceId("");
       setNewServiceDesc("");
       setNewServicePrice("");
+      setServiceFormErrors({});
       setIsAddServiceOpen(false);
+      showToast("success", dict.company_detail.messages.service_add_success ?? "Thêm dịch vụ thành công!");
     } catch (err) {
       console.error("Lỗi khi thêm dịch vụ:", err);
       const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.service_add_error;
-      alert(errMsg);
+      showToast("error", errMsg);
     }
   };
 
@@ -735,10 +746,11 @@ export default function MyCompanyDetail() {
       if (updatedData && updatedData.services) {
         setCompanyServices(updatedData.services);
       }
+      showToast("success", "Đã xóa dịch vụ thành công");
     } catch (err) {
       console.error("Lỗi khi xóa dịch vụ:", err);
       const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.service_delete_error;
-      alert(errMsg);
+      showToast("error", errMsg);
     }
   };
 
@@ -1153,6 +1165,7 @@ export default function MyCompanyDetail() {
               <textarea
                 rows={5}
                 value={description}
+                maxLength={500}
                 onChange={(e) => {
                   setDescription(e.target.value);
                   clearFieldError("description");
@@ -1163,8 +1176,12 @@ export default function MyCompanyDetail() {
                   "rounded-xl px-3.5 py-3 resize-none leading-relaxed",
                 )}
               />
-
-              {renderFieldError("description")}
+              <div className="flex items-center justify-between">
+                {renderFieldError("description")}
+                <span className={`text-[11px] ml-auto font-semibold ${
+                  description.length > 480 ? "text-red-500" : "text-on-surface-variant"
+                }`}>{description.length}/500</span>
+              </div>
             </div>
           ) : (
             <p className="text-sm text-on-surface leading-relaxed text-justify font-medium">
@@ -1416,43 +1433,15 @@ export default function MyCompanyDetail() {
             </div>
           </div>
         </section>
-
         {/* Section 4: Giấy phép hoạt động (Business License Card Redesign) */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
-          <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
-            {dict.company_detail.sections.license}
-          </h2>
+          <div className="flex justify-between items-center border-b border-outline-variant/60 pb-3">
+            <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
+              {dict.company_detail.sections.license}
+            </h2>
 
-          {licenseImg ? (
-            <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4 w-full">
-                {/* Thumbnail */}
-                <div
-                  onClick={() => setActiveViewerImg(licenseImg)}
-                  className="w-16 h-20 shrink-0 border border-outline-variant rounded-lg overflow-hidden bg-surface-container-lowest shadow-3xs flex items-center justify-center relative group cursor-pointer hover:opacity-90"
-                >
-                  <img
-                    src={licenseImg}
-                    alt="License Thumbnail"
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
-                    <Eye className="w-4 h-4 text-white" />
-                  </div>
-                </div>
-
-                <div className="space-y-1">
-                  <h4 className="text-sm font-bold text-on-surface">
-                    {dict.company_detail.sections.business_license}
-                  </h4>
-                  <p className="text-xs text-on-surface-variant font-medium">
-                    {dict.company_detail.sections.license_status}
-                  </p>
-                </div>
-              </div>
-
-              {/* Actions and Change Button Next To It */}
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+            {licenseImg && (
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setActiveViewerImg(licenseImg)}
@@ -1502,6 +1491,47 @@ export default function MyCompanyDetail() {
                   {dict.company_detail.tooltips.change_license}
                 </button>
               </div>
+            )}
+          </div>
+
+          {licenseImg ? (
+            <div className="space-y-4">
+              {/* File Info Row resembling the user's screenshot */}
+              <div className="bg-surface-container-low border border-outline-variant rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4 w-full">
+                  {/* Thumbnail with overlay icon */}
+                  <div
+                    onClick={() => setActiveViewerImg(licenseImg)}
+                    className="w-16 h-20 shrink-0 border border-outline-variant rounded-lg overflow-hidden bg-surface-container-lowest shadow-3xs flex items-center justify-center relative group cursor-pointer hover:opacity-90"
+                  >
+                    {licenseImg.toLowerCase().includes(".pdf") || licenseImg.includes("/pdf") || licenseImg.includes("application/pdf") ? (
+                      <div className="flex flex-col items-center justify-center bg-red-50 text-red-600 w-full h-full p-1.5">
+                        <FileText className="w-8 h-8" />
+                        <span className="text-[10px] font-bold mt-1">PDF</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={licenseImg}
+                        alt="License Thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                    )}
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-all">
+                      <Eye className="w-4 h-4 text-white" />
+                    </div>
+                  </div>
+
+                  {/* Name and format type description */}
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-bold text-on-surface truncate max-w-[200px]" title={licenseImg.split("/").pop()?.split("?")[0] || "Giay_Phep"}>
+                      {licenseImg.split("/").pop()?.split("?")[0] || "Giay_Phep"}
+                    </h4>
+                    <p className="text-xs text-on-surface-variant font-medium">
+                      {licenseImg.toLowerCase().includes(".pdf") || licenseImg.includes("/pdf") || licenseImg.includes("application/pdf") ? "Tài liệu PDF" : "Hình ảnh"}
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : (
             <div
@@ -1525,6 +1555,7 @@ export default function MyCompanyDetail() {
             </div>
           )}
         </section>
+
 
         {/* Section 5: Hình ảnh hoạt động */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
@@ -1811,9 +1842,14 @@ export default function MyCompanyDetail() {
 
             <form onSubmit={handleAddService} className="space-y-4">
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  {dict.company_detail.modals.service_name}
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    {dict.company_detail.modals.service_name}
+                  </label>
+                  {serviceFormErrors.serviceId && (
+                    <span className="text-[11px] font-semibold text-red-500">{serviceFormErrors.serviceId}</span>
+                  )}
+                </div>
 
                 <div className="relative">
                   <select
@@ -1830,7 +1866,9 @@ export default function MyCompanyDetail() {
                       {dict.company_detail.modals.select_service}
                     </option>
 
-                    {availableServices.map((s) => (
+                    {availableServices
+                      .filter((s) => s.is_active === true)
+                      .map((s) => (
                       <option
                         key={s.service_id}
                         value={s.service_id}
@@ -1861,29 +1899,58 @@ export default function MyCompanyDetail() {
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  {dict.company_detail.modals.service_desc_label}
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    {dict.company_detail.modals.service_desc_label}
+                  </label>
+                  {serviceFormErrors.desc && (
+                    <span className="text-[11px] font-semibold text-red-500">{serviceFormErrors.desc}</span>
+                  )}
+                </div>
 
                 <textarea
                   rows={3}
                   value={newServiceDesc}
-                  onChange={(e) => setNewServiceDesc(e.target.value)}
+                  maxLength={150}
+                  onChange={(e) => {
+                    setNewServiceDesc(e.target.value);
+                    if (serviceFormErrors.desc) setServiceFormErrors(prev => ({ ...prev, desc: undefined }));
+                  }}
                   placeholder={dict.company_detail.modals.service_desc_placeholder}
                   className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium resize-none"
                 />
+                <div className="flex justify-end">
+                  <span className={`text-[11px] font-semibold ${
+                    newServiceDesc.length > 140 ? "text-red-500" : "text-slate-400"
+                  }`}>{newServiceDesc.length}/150</span>
+                </div>
               </div>
 
               <div className="space-y-1.5">
-                <label className="text-xs font-bold text-slate-500 uppercase">
-                  {dict.company_detail.modals.service_price_label}
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-slate-500 uppercase">
+                    {dict.company_detail.modals.service_price_label}
+                  </label>
+                  {serviceFormErrors.price && (
+                    <span className="text-[11px] font-semibold text-red-500">{serviceFormErrors.price}</span>
+                  )}
+                </div>
 
                 <input
-                  type="text"
+                  type="number"
                   required
+                  min={1}
+                  max={1000000}
+                  step={1}
                   value={newServicePrice}
-                  onChange={(e) => setNewServicePrice(e.target.value)}
+                  onChange={(e) => {
+                    setNewServicePrice(e.target.value);
+                    if (serviceFormErrors.price) setServiceFormErrors(prev => ({ ...prev, price: undefined }));
+                  }}
+                  onKeyDown={(e) => {
+                    // Block non-numeric keys (allow: digits, backspace, delete, arrows, tab)
+                    if (["-", "e", "E", "+", "."].includes(e.key)) e.preventDefault();
+                  }}
                   placeholder={dict.company_detail.modals.service_price_placeholder}
                   className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium"
                 />
@@ -1915,17 +1982,28 @@ export default function MyCompanyDetail() {
           onClick={() => setActiveViewerImg(null)}
           className="fixed inset-0 z-[90] bg-slate-950/90 backdrop-blur-xs flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
         >
-          <div className="relative max-w-4xl max-h-[85vh] w-full flex items-center justify-center">
-            <img
-              src={activeViewerImg}
-              alt="High res preview"
-              className="max-w-full max-h-[85vh] object-contain rounded-xl border border-white/10 shadow-2xl"
-            />
+          <div 
+            onClick={(e) => e.stopPropagation()} 
+            className="relative max-w-4xl max-h-[85vh] w-full flex items-center justify-center"
+          >
+            {activeViewerImg.toLowerCase().includes(".pdf") || activeViewerImg.includes("/pdf") || activeViewerImg.includes("application/pdf") ? (
+              <iframe
+                src={activeViewerImg}
+                className="w-[90vw] max-w-4xl h-[80vh] rounded-xl border border-white/10 shadow-2xl bg-white"
+                title="License Document View"
+              />
+            ) : (
+              <img
+                src={activeViewerImg}
+                alt="High res preview"
+                className="max-w-full max-h-[85vh] object-contain rounded-xl border border-white/10 shadow-2xl"
+              />
+            )}
 
             <button
               type="button"
               onClick={() => setActiveViewerImg(null)}
-              className="absolute -top-10 right-0 text-white hover:text-neutral-300 font-bold text-sm bg-black/40 hover:bg-black/60 rounded-full p-2"
+              className="absolute -top-10 right-0 text-white hover:text-neutral-300 font-bold text-sm bg-black/40 hover:bg-black/60 rounded-full p-2 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>

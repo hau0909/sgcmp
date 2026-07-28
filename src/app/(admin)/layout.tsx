@@ -2,29 +2,26 @@
 
 import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   Shield,
   LayoutDashboard,
   Building2,
   ShieldCheck,
   Users,
-  Settings,
-  HelpCircle,
   Menu,
-  Search,
-  Bell,
-  History,
-  Grid,
   X,
   Globe,
   Landmark,
   BadgeDollarSign,
   Layers,
   Package,
+  LogOut,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { useAuthStore } from "@/store/auth.store";
+import { createClient } from "@/lib/supabase/client";
 
 export default function AdminLayout({
   children,
@@ -32,8 +29,22 @@ export default function AdminLayout({
   children: React.ReactNode;
 }>) {
   const pathname = usePathname();
+  const router = useRouter();
   const { dict } = useTranslation();
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
+  const clearAuth = useAuthStore((state) => state.clearAuth);
+
+  const handleLogout = async () => {
+    const supabase = createClient();
+    try {
+      await supabase.auth.signOut();
+    } finally {
+      clearAuth();
+      setMobileSidebarOpen(false);
+      router.replace("/login");
+      router.refresh();
+    }
+  };
 
   const sidebarLinks = [
     {
@@ -67,7 +78,7 @@ export default function AdminLayout({
         pathname.startsWith("/payment-history/"),
     },
     {
-      name: "Dịch vụ",
+      name: dict.layout_admin.services,
       href: "/services",
       icon: Layers,
       active: pathname === "/services" || pathname.startsWith("/services/"),
@@ -81,13 +92,13 @@ export default function AdminLayout({
         pathname === "/bank-accounts" || pathname.startsWith("/bank-accounts/"),
     },
     {
-      name: "Quản lý tài khoản",
+      name: dict.layout_admin.accounts,
       href: "/accounts",
       icon: Users,
       active: pathname === "/accounts" || pathname.startsWith("/accounts/"),
     },
     {
-      name: "Quản lý gói dịch vụ",
+      name: dict.layout_admin.service_packages,
       href: "/service-packages",
       icon: Package,
       active:
@@ -162,51 +173,13 @@ export default function AdminLayout({
             })}
           </nav>
 
-          {/* Footer Section */}
-          <div className="mt-auto flex flex-col gap-1 border-t border-[#c3c6d3] pt-4">
-            <Link
-              href="#"
-              className="flex items-center gap-3 px-3 py-2 text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] rounded-lg font-body text-sm font-semibold transition-all"
-            >
-              <Settings className="w-5 h-5 shrink-0" />
-              <span>{dict.layout_admin.settings}</span>
-            </Link>
-
-            <Link
-              href="#"
-              className="flex items-center gap-3 px-3 py-2 text-[#434751] hover:bg-[#dce9ff]/50 hover:text-[#0b1c30] hover:scale-[0.98] rounded-lg font-body text-sm font-semibold transition-all"
-            >
-              <HelpCircle className="w-5 h-5 shrink-0" />
-              <span>{dict.layout_admin.support}</span>
-            </Link>
-
-            {/* User Profile Info Card */}
-            <div className="mt-4 px-3 flex items-center gap-3 border-t border-[#c3c6d3]/50 pt-4">
-              <div className="w-8 h-8 rounded-full bg-[#2c5ead] flex items-center justify-center text-white text-xs font-bold overflow-hidden shrink-0">
-                <img
-                  alt="Administrator Profile"
-                  className="w-full h-full object-cover"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjI0itcdYN6Wdi_lhkZQ3f7tyQfIcYttAvisUfDlFj2cbSiN4di_5NjLyvR7svkFEmobdqztiUp9J46Jk7SC4NTrPqLSz3M9-T6VHVmaNFByA_JtCclVQrW3l9o8kzoy9LWSCtsc6Vl4qOZuq9XPSaU174tCQ7rum65ghY9HY5V_K536vq7-LaqcGTrWyt0_uu2Lt94UQoMrxscJ5dZidy6udctgmkG733AEUN-hDrMtg3mItwGc1MbNxqnVn-i8mbtxnZWdFNcgwV"
-                />
-              </div>
-
-              <div className="overflow-hidden">
-                <p className="text-[#0b1c30] text-xs font-semibold truncate">
-                  {dict.layout_admin.admin_name}
-                </p>
-                <p className="text-[#434751] text-[10px] truncate">
-                  admin@security.vn
-                </p>
-              </div>
-            </div>
-          </div>
         </aside>
 
         {/* Main Panel */}
         <div className="flex-1 flex flex-col md:ml-[280px] h-screen overflow-hidden bg-background">
           {/* Top Header */}
           <header className="bg-white border-b border-[#c3c6d3] w-full h-16 px-6 flex justify-between items-center z-40 shrink-0">
-            {/* Mobile Menu Toggle & Breadcrumbs */}
+            {/* Mobile Menu Toggle */}
             <div className="flex items-center gap-4 flex-1">
               <button
                 className="md:hidden text-[#434751] hover:text-[#024594] p-1 rounded-full hover:bg-surface-container-low transition-colors flex items-center justify-center"
@@ -214,41 +187,18 @@ export default function AdminLayout({
               >
                 <Menu className="w-6 h-6" />
               </button>
-
-              <div className="hidden sm:flex items-center bg-[#eff4ff] rounded-full px-4 py-2 border border-[#c3c6d3] focus-within:border-secondary transition-colors w-full max-w-md">
-                <Search className="text-[#434751] w-5 h-5 mr-2 shrink-0" />
-                <input
-                  type="text"
-                  placeholder="Tìm kiếm đăng ký, doanh nghiệp..."
-                  className="bg-transparent border-none outline-none text-sm text-[#0b1c30] w-full placeholder-on-surface-variant"
-                />
-              </div>
             </div>
 
             {/* Right Utilities */}
             <div className="flex items-center gap-4">
-              <button className="text-[#434751] hover:text-[#024594] transition-colors relative w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#dce9ff]/50">
-                <Bell className="w-5 h-5 shrink-0" />
-                <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-error rounded-full" />
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-[#434751] hover:text-red-600 hover:bg-red-50 transition-all duration-150 border border-transparent hover:border-red-200"
+                title={dict.common.logout}
+              >
+                <LogOut className="w-4 h-4" />
+                <span className="hidden sm:inline">{dict.common.logout}</span>
               </button>
-
-              <button className="text-[#434751] hover:text-[#024594] transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#dce9ff]/50">
-                <History className="w-5 h-5 shrink-0" />
-              </button>
-
-              <button className="text-[#434751] hover:text-[#024594] transition-colors w-10 h-10 flex items-center justify-center rounded-full hover:bg-[#dce9ff]/50">
-                <Grid className="w-5 h-5 shrink-0" />
-              </button>
-
-              <div className="h-6 w-[1px] bg-outline-variant mx-1" />
-
-              <div className="w-8 h-8 rounded-full border border-outline-variant overflow-hidden cursor-pointer hover:border-primary transition-colors shrink-0">
-                <img
-                  alt="Administrator Profile"
-                  className="w-full h-full object-cover"
-                  src="https://lh3.googleusercontent.com/aida-public/AB6AXuCjI0itcdYN6Wdi_lhkZQ3f7tyQfIcYttAvisUfDlFj2cbSiN4di_5NjLyvR7svkFEmobdqztiUp9J46Jk7SC4NTrPqLSz3M9-T6VHVmaNFByA_JtCclVQrW3l9o8kzoy9LWSCtsc6Vl4qOZuq9XPSaU174tCQ7rum65ghY9HY5V_K536vq7-LaqcGTrWyt0_uu2Lt94UQoMrxscJ5dZidy6udctgmkG733AEUN-hDrMtg3mItwGc1MbNxqnVn-i8mbtxnZWdFNcgwV"
-                />
-              </div>
             </div>
           </header>
 
