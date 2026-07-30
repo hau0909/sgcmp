@@ -17,7 +17,7 @@ export const getRedirectPathByRole = (
       return "/overview";
 
     case "coordinator":
-      return "/guard-performance";
+      return "/coor-dashboard";
 
     default:
       return "/login";

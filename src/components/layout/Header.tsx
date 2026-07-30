@@ -43,7 +43,7 @@ const getProfileUserId = (profile: UserProfile | null) => {
 
 export default function Header() {
   const { dict } = useTranslation();
-  
+
   const navLinks: NavLink[] = [
     { label: dict.nav.about, href: "/" },
     { label: dict.nav.hireGuard, href: "/companies" },

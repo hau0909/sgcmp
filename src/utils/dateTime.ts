@@ -1,8 +1,5 @@
 export const getUserTimeZone = (): string => {
-  if (typeof window !== "undefined" && typeof Intl !== "undefined" && Intl.DateTimeFormat) {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  }
-  return "UTC";
+  return "Asia/Ho_Chi_Minh";
 };
 
 /**

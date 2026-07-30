@@ -14,7 +14,8 @@ export function PendingTasksTable() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    requestGetAdminPendingTasks()
+    setLoading(true);
+    requestGetAdminPendingTasks(locale)
       .then((data) => {
         setTasks(data);
       })
@@ -24,7 +25,7 @@ export function PendingTasksTable() {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [locale]);
 
   const getCategoryText = (category: PendingTaskItem["category"], defaultText: string) => {
     switch (category) {
@@ -133,7 +134,7 @@ export function PendingTasksTable() {
                 <thead>
                   <tr className="bg-slate-50/70 border-y border-slate-100">
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider w-[50px] text-center">
-                      STT
+                      {locale === "vi" ? "STT" : "#"}
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider">
                       {dict.admin_dashboard.task_details}
@@ -248,7 +249,7 @@ export function PendingTasksTable() {
                 <thead className="sticky top-0 bg-slate-50 border-b border-slate-100 z-10">
                   <tr>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider w-[50px] text-center">
-                      STT
+                      {locale === "vi" ? "STT" : "#"}
                     </th>
                     <th className="py-3 px-5 text-[11px] font-bold text-slate-400 tracking-wider">
                       {dict.admin_dashboard.task_details}

@@ -897,6 +897,7 @@ export const getGuardPerformanceSummary = async ({
   }
 
   let totalAssignedShifts = 0;
+  let evaluableAssignedShifts = 0;
   let attendedShifts = 0;
   let lateCheckInShifts = 0;
   let onTimeCheckInShifts = 0;
@@ -904,6 +905,7 @@ export const getGuardPerformanceSummary = async ({
   let lateCheckInTimeShifts = 0;
   let replacementShifts = 0;
   const guardShiftsSet = new Set<string>();
+  const nowMs = new Date().getTime();
 
   shifts.forEach((shift: any) => {
     const shiftStartTime = shift.start_time ? new Date(shift.start_time).getTime() : null;
@@ -916,31 +918,44 @@ export const getGuardPerformanceSummary = async ({
       totalAssignedShifts += 1;
       const status = (assignment.status || "").toLowerCase();
       const checkInTime = assignment.check_in_time ? new Date(assignment.check_in_time).getTime() : null;
-      const hasCheckIn = Boolean(checkInTime);
 
       const isReplacement = Array.isArray(assignment.replacement_guard_ids) && assignment.replacement_guard_ids.length > 0;
+      const isFutureUnstarted = status === "assigned" && shiftStartTime !== null && shiftStartTime > nowMs;
 
       if (isReplacement) {
         replacementShifts += 1;
-      } else if (status === "absent" || status === "vắng mặt" || !hasCheckIn) {
-        absentShifts += 1;
+      } else if (isFutureUnstarted) {
+        // Shift scheduled in the future that hasn't started yet - exclude from attendance evaluation denominator
       } else {
-        attendedShifts += 1;
-        if (status === "late" || status === "trễ") {
-          lateCheckInShifts += 1;
-        } else if (status === "completed" || status === "present" || status === "đúng giờ" || status === "ontime") {
+        evaluableAssignedShifts += 1;
+        if (status === "absent" || status === "vắng mặt") {
+          absentShifts += 1;
+        } else if (status === "assigned") {
+          if (shiftStartTime && nowMs >= shiftStartTime) {
+            absentShifts += 1;
+          }
+        } else if (status === "late" || status === "trễ") {
+          if (checkInTime) {
+            attendedShifts += 1;
+            lateCheckInShifts += 1;
+            lateCheckInTimeShifts += 1;
+          }
+        } else if (status === "completed" || status === "checkout" || status === "present" || status === "đúng giờ" || status === "ontime") {
+          attendedShifts += 1;
           onTimeCheckInShifts += 1;
-        }
-
-        if (shiftStartTime && checkInTime && checkInTime > shiftStartTime) {
-          lateCheckInTimeShifts += 1;
+        } else {
+          if (checkInTime) {
+            attendedShifts += 1;
+          } else {
+            absentShifts += 1;
+          }
         }
       }
     });
   });
 
   const distinctShiftsCount = guard_id ? guardShiftsSet.size : shifts.length;
-  const effectiveAssignedShifts = Math.max(0, totalAssignedShifts - replacementShifts);
+  const effectiveAssignedShifts = Math.max(0, evaluableAssignedShifts);
 
   const attendancePercentage = effectiveAssignedShifts > 0
     ? Number(((attendedShifts / effectiveAssignedShifts) * 100).toFixed(1))
@@ -950,16 +965,16 @@ export const getGuardPerformanceSummary = async ({
     ? Number(((absentShifts / effectiveAssignedShifts) * 100).toFixed(1))
     : 0.0;
 
-  const latePercentage = attendedShifts > 0
-    ? Number(((lateCheckInShifts / attendedShifts) * 100).toFixed(1))
+  const latePercentage = effectiveAssignedShifts > 0
+    ? Number(((lateCheckInShifts / effectiveAssignedShifts) * 100).toFixed(1))
     : 0.0;
 
-  const onTimePercentage = attendedShifts > 0
-    ? Number(((onTimeCheckInShifts / attendedShifts) * 100).toFixed(1))
+  const onTimePercentage = effectiveAssignedShifts > 0
+    ? Number(((onTimeCheckInShifts / effectiveAssignedShifts) * 100).toFixed(1))
     : 0.0;
 
-  const lateCheckInPercentage = attendedShifts > 0
-    ? Number(((lateCheckInTimeShifts / attendedShifts) * 100).toFixed(1))
+  const lateCheckInPercentage = effectiveAssignedShifts > 0
+    ? Number(((lateCheckInTimeShifts / effectiveAssignedShifts) * 100).toFixed(1))
     : 0.0;
 
   const replacementPercentage = totalAssignedShifts > 0
@@ -989,6 +1004,10 @@ export const getGuardPerformanceSummary = async ({
       trend_percentage: 0.0,
       on_time_shift_count: onTimeCheckInShifts,
       total_shifts: attendedShifts,
+    },
+    completed_rate: {
+      percentage: onTimePercentage,
+      count: onTimeCheckInShifts,
     },
     late_check_in_rate: {
       percentage: lateCheckInPercentage,
@@ -1088,50 +1107,67 @@ export const getGuardPerformanceList = async ({
   let items: GuardPerformanceListItem[] = guardsData.map((g: any) => {
     const list = assignmentsByGuard[g.user_id] || [];
     let totalAssigned = 0;
+    let evaluableAssigned = 0;
     let attended = 0;
     let absent = 0;
     let late = 0;
     let onTime = 0;
+    const nowMs = new Date().getTime();
 
     list.forEach((assignment: any) => {
       totalAssigned += 1;
       const status = (assignment.status || "").toLowerCase();
       const shiftStartTime = assignment.shifts?.start_time ? new Date(assignment.shifts.start_time).getTime() : null;
       const checkInTime = assignment.check_in_time ? new Date(assignment.check_in_time).getTime() : null;
-      const hasCheckIn = Boolean(checkInTime);
       const isReplacement = Array.isArray(assignment.replacement_guard_ids) && assignment.replacement_guard_ids.length > 0;
+      const isFutureUnstarted = status === "assigned" && shiftStartTime !== null && shiftStartTime > nowMs;
 
       if (isReplacement) {
         // Replacement shift - no check-in, do not count as absent, late, or onTime
-      } else if (status === "absent" || status === "vắng mặt" || !hasCheckIn) {
-        absent += 1;
+      } else if (isFutureUnstarted) {
+        // Unstarted future shift - exclude from attendance evaluation denominator
       } else {
-        attended += 1;
-        const isLate = status === "late" || status === "trễ" || (shiftStartTime && checkInTime && checkInTime > shiftStartTime);
-        if (isLate) {
-          late += 1;
-        } else {
+        evaluableAssigned += 1;
+        if (status === "absent" || status === "vắng mặt") {
+          absent += 1;
+        } else if (status === "assigned") {
+          if (shiftStartTime && nowMs >= shiftStartTime) {
+            absent += 1;
+          }
+        } else if (status === "late" || status === "trễ") {
+          if (checkInTime) {
+            attended += 1;
+            late += 1;
+          }
+        } else if (status === "completed" || status === "checkout" || status === "present" || status === "đúng giờ" || status === "ontime") {
+          attended += 1;
           onTime += 1;
+        } else {
+          if (checkInTime) {
+            attended += 1;
+          } else {
+            absent += 1;
+          }
         }
       }
     });
 
     const replacementCount = list.filter((a: any) => Array.isArray(a.replacement_guard_ids) && a.replacement_guard_ids.length > 0).length;
-    const effectiveAssigned = Math.max(0, totalAssigned - replacementCount);
+    const effectiveAssigned = Math.max(0, evaluableAssigned);
 
-    // Độ chuyên cần = Số ca có check-in / Tổng ca phân công không thay ca * 100
+    // Độ chuyên cần = Số ca có check-in / Số ca phân công đã/đang diễn ra * 100
     const attendancePercentage = effectiveAssigned > 0
       ? Number(((attended / effectiveAssigned) * 100).toFixed(1))
       : (totalAssigned > 0 && absent === 0 ? 100.0 : 0.0);
 
-    // Tỷ lệ vắng mặt = Số ca vắng / Tổng ca phân công không thay ca * 100
+    // Tỷ lệ vắng mặt = Số ca vắng / Số ca phân công đã/đang diễn ra * 100
     const absentRate = effectiveAssigned > 0
       ? Number(((absent / effectiveAssigned) * 100).toFixed(1))
       : 0.0;
 
-    // Tỷ lệ đi trễ = Số ca đi trễ / Số ca đã tham gia * 100
-    const lateRate = attended > 0
-      ? Number(((late / attended) * 100).toFixed(1))
+    // Tỷ lệ đi trễ = Số ca đi trễ / Số ca phân công đã/đang diễn ra * 100
+    const lateRate = effectiveAssigned > 0
+      ? Number(((late / effectiveAssigned) * 100).toFixed(1))
       : 0.0;
 
     const performanceScore = attendancePercentage;

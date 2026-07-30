@@ -18,7 +18,7 @@ import { useAuthStore } from "@/store/auth.store";
 import type { GuardShiftDetailItem } from "@/features/shift/type";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
-import { formatDate } from "@/utils/dateTime";
+import { formatDate, getUserTimeZone } from "@/utils/dateTime";
 
 const parseDateKey = (dateKey: string | null) => {
   if (!dateKey) {
@@ -35,9 +35,15 @@ const parseDateKey = (dateKey: string | null) => {
 };
 
 const formatGuardShiftDateKey = (date: Date) => {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone: getUserTimeZone(),
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(date);
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
 
   return `${year}-${month}-${day}`;
 };
@@ -119,6 +125,7 @@ export default function GuardShiftDetailPage() {
     checkInTime: string | null | undefined,
     startTime: string
   ) => {
+    if (status === "checkout") return "Hoàn thành";
     if (status === "completed") return t.status_on_duty;
     if (status === "late") return checkInTime ? t.status_late_checked : t.status_late;
     if (status === "absent") return t.status_absent;
@@ -132,6 +139,7 @@ export default function GuardShiftDetailPage() {
     checkInTime: string | null | undefined,
     startTime: string
   ) => {
+    if (status === "checkout") return "Hoàn thành";
     if (status === "completed") return t.guard_status_on_duty;
     if (status === "late") return checkInTime ? t.guard_status_late_checked : t.guard_status_late;
     if (status === "absent") return t.guard_status_absent;

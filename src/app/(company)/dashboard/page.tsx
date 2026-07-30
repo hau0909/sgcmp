@@ -140,6 +140,16 @@ const getActivityConfig = (subType: string) => {
         icon: <Clock3 className="w-4 h-4" />,
         className: "bg-amber-50 border-amber-200 text-amber-700",
       };
+    case "attendance_checkout":
+      return {
+        icon: <UserCheck className="w-4 h-4" />,
+        className: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      };
+    case "attendance_completed":
+      return {
+        icon: <CircleCheckBig className="w-4 h-4" />,
+        className: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      };
 
     // Replacement
     case "replacement_dispatched":
@@ -272,6 +282,10 @@ const formatActivity = (act: RecentActivityItem, locale: string) => {
     normalText = " has not checked in and is late for the shift.";
   } else if (normalText.includes("bị đánh dấu vắng mặt")) {
     normalText = " was marked absent.";
+  } else if (normalText.includes("đã kết thúc ca")) {
+    normalText = " ended the shift.";
+  } else if (normalText.includes("đã điểm danh ca trực")) {
+    normalText = " checked in for the shift.";
   } else if (normalText.includes("đã điều động")) {
     const match = normalText.match(/đã điều động (.+) thay cho (.+)\./);
     if (match) {
@@ -417,6 +431,47 @@ export default function CompanyDashboardPage() {
 
   // Bộ lọc loại hoạt động trong modal
   const [activityFilter, setActivityFilter] = useState<string>("all");
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!company_id) return;
+    setIsRefreshing(true);
+    try {
+      setActiveGuardsLoading(true);
+      setActiveContractsLoading(true);
+      setPendingReportsLoading(true);
+      setRatingLoading(true);
+      setSubInfoLoading(true);
+      setWeeklyShiftDataLoading(true);
+      setShiftStatusDataLoading(true);
+      setTodayGuardsLoading(true);
+      setRecentActivitiesLoading(true);
+
+      await Promise.all([
+        requestGetActiveGuardsOnShift(company_id).then(setActiveGuards).catch((err) => console.error(err)),
+        requestGetActiveContracts(company_id).then(setActiveContracts).catch((err) => console.error(err)),
+        requestGetPendingReports(company_id).then(setPendingReports).catch((err) => console.error(err)),
+        requestGetRating(company_id).then(setRating).catch((err) => console.error(err)),
+        requestGetDashboardSubscription(company_id).then(setSubInfo).catch((err) => console.error(err)),
+        requestGetWeeklyShifts(company_id).then(setWeeklyShiftData).catch((err) => console.error(err)),
+        requestGetShiftStatusToday(company_id).then(setShiftStatusData).catch((err) => console.error(err)),
+        requestGetTodayGuards(company_id).then(setTodayGuards).catch((err) => console.error(err)),
+        requestGetRecentActivities(company_id).then(setRecentActivities).catch((err) => console.error(err)),
+      ]);
+    } finally {
+      setActiveGuardsLoading(false);
+      setActiveContractsLoading(false);
+      setPendingReportsLoading(false);
+      setRatingLoading(false);
+      setSubInfoLoading(false);
+      setWeeklyShiftDataLoading(false);
+      setShiftStatusDataLoading(false);
+      setTodayGuardsLoading(false);
+      setRecentActivitiesLoading(false);
+      setTimeout(() => setIsRefreshing(false), 300);
+    }
+  };
 
   // Trigger animation for the bars on mount
   useEffect(() => {
@@ -606,6 +661,17 @@ export default function CompanyDashboardPage() {
           </h2>
           <p className="text-sm text-slate-500 mt-1">{getFormattedDate(locale)}</p>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="gap-2 text-xs font-semibold rounded-xl border-outline-variant hover:border-primary/50 cursor-pointer disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 text-primary ${isRefreshing ? "animate-spin" : ""}`} />
+          <span>{dict.coor_dashboard?.refresh || (locale === "en" ? "Refresh" : "Làm mới")}</span>
+        </Button>
       </div>
 
       {/* Key Metrics Grid */}

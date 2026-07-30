@@ -19,13 +19,13 @@ type Profile = {
 type ApiResponse = {
   success: boolean;
   data?:
-    | {
-        user?: unknown;
-        profile?: Profile | null;
-        role?: string | null;
-      }
-    | Profile
-    | null;
+  | {
+    user?: unknown;
+    profile?: Profile | null;
+    role?: string | null;
+  }
+  | Profile
+  | null;
   message?: string;
 };
 

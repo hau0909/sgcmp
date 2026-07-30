@@ -90,7 +90,8 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
 
   const getStatusLabel = (assign: ShiftAssignment) => {
     if (assign.status === "assigned") return dict?.coor_schedules?.assigned || "Đã phân công";
-    if (assign.status === "completed") return dict?.coor_schedules?.completed || dict?.coor_schedules?.on_duty || "Hoàn thành";
+    if (assign.status === "completed") return dict?.coor_schedules?.on_duty || dict?.coor_schedules?.completed || "Đang trực";
+    if (assign.status === "checkout") return dict?.coor_schedules?.checkout || "Hoàn thành";
     if (assign.status === "late") {
       return assign.check_in_time
         ? (dict?.shift_detail_modal?.checked_in_late || "Đã điểm danh trễ")
@@ -283,9 +284,8 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   if (!open || !mounted) return null;
 
   return createPortal(
-    <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm transition-all duration-300 ${
-      isDispatchPanelOpen ? "md:justify-start md:pl-10 lg:pl-20 xl:pl-40" : "justify-center"
-    }`}>
+    <div className={`fixed inset-0 z-[9999] flex items-center justify-center bg-black/45 p-4 backdrop-blur-sm transition-all duration-300 ${isDispatchPanelOpen ? "md:justify-start md:pl-10 lg:pl-20 xl:pl-40" : "justify-center"
+      }`}>
       {/* ── Center Modal: Shift Details ── */}
       <div
         className="w-full max-w-xl bg-white rounded-xl shadow-2xl overflow-hidden flex flex-col transition-all duration-300"
@@ -372,19 +372,19 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                 <div
                   key={assign.assignment_id}
                   className={`rounded-lg border p-3 flex flex-col gap-2.5 transition-colors ${isDispatchPanelOpen && activeSlotId === assign.assignment_id
-                      ? "border-blue-300 bg-blue-50/30"
-                      : isDispatchPanelOpen &&
-                        replacementMap[assign.assignment_id]
-                        ? "border-emerald-200 bg-emerald-50/20"
-                        : "border-slate-200 bg-white"
+                    ? "border-blue-300 bg-blue-50/30"
+                    : isDispatchPanelOpen &&
+                      replacementMap[assign.assignment_id]
+                      ? "border-emerald-200 bg-emerald-50/20"
+                      : "border-slate-200 bg-white"
                     }`}
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2.5 min-w-0">
                       <div
                         className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isDispatchPanelOpen && activeSlotId === assign.assignment_id
-                            ? "bg-blue-100 text-blue-700"
-                            : "bg-slate-100 text-slate-600"
+                          ? "bg-blue-100 text-blue-700"
+                          : "bg-slate-100 text-slate-600"
                           }`}
                       >
                         <UserRound size={15} />
@@ -413,10 +413,10 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                         <button
                           onClick={() => setActiveSlotId(assign.assignment_id)}
                           className={`text-[10px] font-bold px-2 py-1 rounded transition-colors ${activeSlotId === assign.assignment_id
-                              ? "bg-blue-600 text-white"
-                              : replacementMap[assign.assignment_id]
-                                ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                            ? "bg-blue-600 text-white"
+                            : replacementMap[assign.assignment_id]
+                              ? "bg-emerald-50 text-emerald-700 border border-emerald-200"
+                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
                             }`}
                         >
                           {replacementMap[assign.assignment_id]
@@ -531,10 +531,10 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                   key={a.assignment_id}
                   onClick={() => setActiveSlotId(a.assignment_id)}
                   className={`flex items-center gap-1 text-[10px] font-bold px-2 py-1 rounded-full border transition-colors ${activeSlotId === a.assignment_id
-                      ? "bg-blue-600 text-white border-blue-600"
-                      : replacementMap[a.assignment_id]
-                        ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                        : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
+                    ? "bg-blue-600 text-white border-blue-600"
+                    : replacementMap[a.assignment_id]
+                      ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                      : "bg-white text-slate-600 border-slate-300 hover:border-slate-400"
                     }`}
                 >
                   {replacementMap[a.assignment_id] ? (
@@ -606,8 +606,8 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                             disabled={!activeSlotId || isSelectedForOther}
                             onClick={() => handleSelectGuard(g.guard_id)}
                             className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isSelectedForActive
-                                ? "border-blue-400 bg-blue-50"
-                                : "border-slate-100 bg-slate-50/50 hover:bg-slate-100/50"
+                              ? "border-blue-400 bg-blue-50"
+                              : "border-slate-100 bg-slate-50/50 hover:bg-slate-100/50"
                               }`}
                           >
                             <div className="min-w-0">
@@ -620,8 +620,8 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                             </div>
                             <div
                               className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelectedForActive
-                                  ? "bg-blue-600 border-blue-600 text-white"
-                                  : "border-slate-300 bg-white"
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "border-slate-300 bg-white"
                                 }`}
                             >
                               {isSelectedForActive && <Check size={10} strokeWidth={3} />}
@@ -661,8 +661,8 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                             disabled={!activeSlotId || isSelectedForOther}
                             onClick={() => handleSelectGuard(g.guard_id)}
                             className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isSelectedForActive
-                                ? "border-blue-400 bg-blue-50"
-                                : "border-slate-100 bg-slate-50/50 hover:bg-slate-100/50"
+                              ? "border-blue-400 bg-blue-50"
+                              : "border-slate-100 bg-slate-50/50 hover:bg-slate-100/50"
                               }`}
                           >
                             <div className="min-w-0">
@@ -675,8 +675,8 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                             </div>
                             <div
                               className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelectedForActive
-                                  ? "bg-blue-600 border-blue-600 text-white"
-                                  : "border-slate-300 bg-white"
+                                ? "bg-blue-600 border-blue-600 text-white"
+                                : "border-slate-300 bg-white"
                                 }`}
                             >
                               {isSelectedForActive && <Check size={10} strokeWidth={3} />}

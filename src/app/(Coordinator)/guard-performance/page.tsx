@@ -4,7 +4,6 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
     CheckSquare,
-    Star,
     Clock,
     Download,
     PcCase,
@@ -23,6 +22,7 @@ import {
     ChevronDown,
     X,
     ScrollText,
+    CircleCheckBig,
 } from "lucide-react";
 import {
     ResponsiveContainer,
@@ -51,7 +51,8 @@ interface GuardPerformanceData {
 }
 
 export default function GuardPerformancePage() {
-    const { dict } = useTranslation();
+    const { dict, locale } = useTranslation();
+    const isEn = locale === "en";
     const [mounted, setMounted] = useState(false);
     const [filterTab, setFilterTab] = useState<"all" | "top10">("all");
     const [currentPage, setCurrentPage] = useState(1);
@@ -160,19 +161,28 @@ export default function GuardPerformancePage() {
     }, [selectedGuardId, startDate, endDate]);
 
     const currentRadarData = [
-        { subject: dict.coor_guard_performance?.on_time || "Đúng giờ", score: summaryData?.on_time_rate.percentage ?? 0, fullMark: 100 },
-        { subject: dict.coor_guard_performance?.absent || "Vắng mặt", score: summaryData?.attendance_rate.absent_percentage ?? 0, fullMark: 100 },
-        { subject: dict.coor_guard_performance?.late || "Điểm danh trễ", score: summaryData?.late_check_in_rate.percentage ?? 0, fullMark: 100 },
-        { subject: dict.coor_guard_performance?.replacement || "Thay ca", score: summaryData?.replacement_rate.percentage ?? 0, fullMark: 100 },
+        { subject: dict.coor_guard_performance?.on_time || (isEn ? "On Time" : "Đúng giờ"), score: summaryData?.on_time_rate.percentage ?? 0, fullMark: 100 },
+        { subject: dict.coor_guard_performance?.completed || (isEn ? "Completed" : "Hoàn thành"), score: summaryData?.completed_rate?.percentage ?? (summaryData?.on_time_rate.percentage ?? 0), fullMark: 100 },
+        { subject: dict.coor_guard_performance?.absent || (isEn ? "Absent" : "Vắng mặt"), score: summaryData?.attendance_rate.absent_percentage ?? 0, fullMark: 100 },
+        { subject: dict.coor_guard_performance?.late || (isEn ? "Late Check-in" : "Điểm danh trễ"), score: summaryData?.late_check_in_rate.percentage ?? 0, fullMark: 100 },
+        { subject: dict.coor_guard_performance?.replacement || (isEn ? "Replacement" : "Thay ca"), score: summaryData?.replacement_rate.percentage ?? 0, fullMark: 100 },
     ];
 
     const currentAttendanceMetrics = [
         {
-            name: dict.coor_guard_performance?.on_time || "Đúng giờ",
+            name: dict.coor_guard_performance?.on_time || (isEn ? "On Time" : "Đúng giờ"),
             value: summaryData?.on_time_rate.percentage ?? 0,
             count: summaryData?.on_time_rate.on_time_shift_count ?? 0,
             color: "#10b981",
             icon: UserCheck,
+            badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
+        },
+        {
+            name: dict.coor_guard_performance?.completed || (isEn ? "Completed" : "Hoàn thành"),
+            value: summaryData?.completed_rate?.percentage ?? (summaryData?.on_time_rate.percentage ?? 0),
+            count: summaryData?.completed_rate?.count ?? (summaryData?.on_time_rate.on_time_shift_count ?? 0),
+            color: "#059669",
+            icon: CircleCheckBig,
             badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
         },
         {
@@ -205,6 +215,44 @@ export default function GuardPerformancePage() {
     const [totalRealGuards, setTotalRealGuards] = useState<number>(0);
     const [totalRealPages, setTotalRealPages] = useState<number>(1);
     const [loadingGuards, setLoadingGuards] = useState<boolean>(true);
+    const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
+
+    const handleRefresh = async () => {
+        setIsRefreshing(true);
+        try {
+            setLoadingSummary(true);
+            setLoadingGuards(true);
+            const [summaryRes, guardsRes] = await Promise.all([
+                requestGetGuardPerformanceSummary({
+                    guard_id: selectedGuardId || undefined,
+                    startDate: toLocalISODate(startDate),
+                    endDate: toLocalISODate(endDate, true),
+                }),
+                requestGetGuardPerformanceList({
+                    startDate: toLocalISODate(startDate),
+                    endDate: toLocalISODate(endDate, true),
+                    search: searchQuery,
+                    tab: filterTab,
+                    page: currentPage,
+                    limit: 10,
+                }),
+            ]);
+            if (summaryRes?.success && summaryRes?.data) {
+                setSummaryData(summaryRes.data);
+            }
+            if (guardsRes?.success && guardsRes?.data) {
+                setRealGuards(guardsRes.data.guards || []);
+                setTotalRealGuards(guardsRes.data.total || 0);
+                setTotalRealPages(guardsRes.data.totalPages || 1);
+            }
+        } catch (err) {
+            console.error("Failed to refresh guard performance data:", err);
+        } finally {
+            setLoadingSummary(false);
+            setLoadingGuards(false);
+            setTimeout(() => setIsRefreshing(false), 300);
+        }
+    };
 
     useEffect(() => {
         let isMounted = true;
@@ -266,6 +314,18 @@ export default function GuardPerformancePage() {
                 </div>
 
                 <div className="flex items-center gap-3 shrink-0">
+                    {/* Refresh Button */}
+                    <button
+                        type="button"
+                        onClick={handleRefresh}
+                        disabled={isRefreshing}
+                        title={dict.coor_guard_performance?.refresh || (isEn ? "Refresh data" : "Làm mới dữ liệu")}
+                        className="flex items-center gap-2 px-3.5 py-2 bg-surface-container-lowest border border-outline-variant hover:border-primary/50 rounded-xl text-xs font-medium text-on-surface shadow-xs transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                        <RefreshCw className={`w-4 h-4 text-primary ${isRefreshing ? "animate-spin" : ""}`} />
+                        <span>{dict.coor_guard_performance?.refresh || (isEn ? "Refresh" : "Làm mới")}</span>
+                    </button>
+
                     {/* Date Picker Button & Popover */}
                     <div className="relative">
                         <button
@@ -616,7 +676,7 @@ export default function GuardPerformancePage() {
                             <AlertTriangle className="w-5 h-5" />
                         </div>
                         <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
-                            {dict.coor_guard_performance?.late_rate || "TỶ LỆ ĐI TRỄ"}
+                            {dict.coor_guard_performance?.late_rate || "TỶ LỆ ĐIỂM DANH TRỄ"}
                         </span>
                     </div>
                     <div>
@@ -869,11 +929,6 @@ export default function GuardPerformancePage() {
                                                                 }`}
                                                         >
                                                             {guard.performanceScore.toFixed(1)}%
-                                                        </span>
-                                                        <span className="text-on-surface-variant/40 text-xs">|</span>
-                                                        <span className="text-xs font-semibold text-amber-500 flex items-center gap-0.5">
-                                                            {guard.rating.toFixed(1)}
-                                                            <Star className="w-3 h-3 fill-amber-400 text-amber-400 inline-block" />
                                                         </span>
                                                     </div>
 

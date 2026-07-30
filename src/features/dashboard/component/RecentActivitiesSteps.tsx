@@ -8,14 +8,19 @@ import { requestGetAdminRecentActivities, type ActivityItem } from "../api/dashb
 
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
-export function RecentActivitiesSteps() {
+interface RecentActivitiesStepsProps {
+  timeFilter: "week" | "month" | "year";
+}
+
+export function RecentActivitiesSteps({ timeFilter }: RecentActivitiesStepsProps) {
   const { dict, locale } = useTranslation();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [activities, setActivities] = useState<ActivityItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    requestGetAdminRecentActivities()
+    setLoading(true);
+    requestGetAdminRecentActivities(timeFilter, locale)
       .then((data) => {
         setActivities(data);
       })
@@ -25,11 +30,16 @@ export function RecentActivitiesSteps() {
       .finally(() => {
         setLoading(false);
       });
-  }, []);
+  }, [timeFilter, locale]);
 
   // Show max 5 items by default
   const displayedSteps = activities.slice(0, 5);
 
+  const getTimeFilterLabel = (filter: "week" | "month" | "year") => {
+    if (filter === "week") return dict.admin_dashboard?.filter_week || (locale === "vi" ? "Tuần này" : "This Week");
+    if (filter === "year") return dict.admin_dashboard?.filter_year || (locale === "vi" ? "Năm nay" : "This Year");
+    return dict.admin_dashboard?.filter_month || (locale === "vi" ? "Tháng này" : "This Month");
+  };
 
   const getActivityIcon = (iconName: ActivityItem["iconName"], iconColor: ActivityItem["iconColor"]) => {
     let colorClasses = "bg-slate-50 border-slate-200 text-slate-600";
@@ -77,10 +87,13 @@ export function RecentActivitiesSteps() {
     <>
       <Card className="border border-slate-100 bg-white rounded-xl col-span-1 flex flex-col justify-between">
         <div className="flex flex-col">
-          <CardHeader className="pb-2">
+          <CardHeader className="pb-2 flex flex-row items-center justify-between space-y-0">
             <CardTitle className="text-base font-semibold text-slate-800">
               {dict.admin_dashboard.recent_activities}
             </CardTitle>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-100">
+              {getTimeFilterLabel(timeFilter)}
+            </span>
           </CardHeader>
           <CardContent className="pt-2 flex flex-col gap-6">
             <div className="relative mt-2">
@@ -163,12 +176,17 @@ export function RecentActivitiesSteps() {
                   {dict.admin_dashboard.recent_activities_summary.replace("{count}", activities.length.toString())}
                 </p>
               </div>
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="p-1.5 rounded-lg hover:bg-slate-200/50 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
-              >
-                <X className="size-4.5" />
-              </button>
+              <div className="flex items-center gap-3">
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-600 border border-blue-100">
+                  {getTimeFilterLabel(timeFilter)}
+                </span>
+                <button 
+                  onClick={() => setIsModalOpen(false)}
+                  className="p-1.5 rounded-lg hover:bg-slate-200/50 text-slate-400 hover:text-slate-600 transition-colors cursor-pointer"
+                >
+                  <X className="size-4.5" />
+                </button>
+              </div>
             </div>
 
             {/* Modal Body */}
@@ -184,7 +202,7 @@ export function RecentActivitiesSteps() {
                     </div>
                   ) : (
                     activities.map((step) => (
-                      <tr key={step.id} className="relative flex gap-4 items-start pl-8 group">
+                      <div key={step.id} className="relative flex gap-4 items-start pl-8 group">
                         {/* Stepper Node Icon */}
                         <div className="absolute left-0 top-0">
                           {getActivityIcon(step.iconName, step.iconColor)}
@@ -207,7 +225,7 @@ export function RecentActivitiesSteps() {
                             {step.target}
                           </p>
                         </div>
-                      </tr>
+                      </div>
                     ))
                   )}
                 </div>

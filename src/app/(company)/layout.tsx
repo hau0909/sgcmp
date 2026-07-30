@@ -317,7 +317,7 @@ export default function CompanyLayout({
             <div className="flex items-center gap-4 relative">
               {isActive && (
                 <Link
-                  href="/guard-performance"
+                  href="/coor-dashboard"
                   className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-secondary text-on-secondary hover:bg-secondary/90 transition-colors mr-2 animate-fade-in"
                 >
                   <ArrowRightLeft className="w-3.5 h-3.5" />
