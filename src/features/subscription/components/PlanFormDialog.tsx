@@ -27,9 +27,7 @@ export default function PlanFormDialog({
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState<string>("");
   const [durationDays, setDurationDays] = useState<string>("30");
-  const [maxCoordinators, setMaxCoordinators] = useState<string>("");
   const [maxGuards, setMaxGuards] = useState<string>("");
-  const [featuresText, setFeaturesText] = useState("");
   
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -40,34 +38,7 @@ export default function PlanFormDialog({
       setDescription(plan.description || "");
       setPrice(plan.price !== undefined ? String(plan.price) : "");
       setDurationDays(plan.duration_days !== undefined ? String(plan.duration_days) : "30");
-      setMaxCoordinators(plan.max_coordinators !== null ? String(plan.max_coordinators) : "");
       setMaxGuards(plan.max_guards !== null ? String(plan.max_guards) : "");
-      
-      // Parse features
-      let feats: string[] = [];
-      const planFeatures = plan.features as any;
-      if (planFeatures) {
-        if (Array.isArray(planFeatures)) {
-          feats = planFeatures;
-        } else if (typeof planFeatures === "object") {
-          if (Array.isArray(planFeatures.features)) {
-            feats = planFeatures.features;
-          }
-        } else if (typeof planFeatures === "string") {
-          try {
-            const parsed = JSON.parse(planFeatures);
-            if (Array.isArray(parsed)) {
-              feats = parsed;
-            } else if (parsed && parsed.features) {
-              feats = parsed.features;
-            }
-          } catch {
-            feats = planFeatures.split(",").map((f: string) => f.trim()).filter(Boolean);
-          }
-        }
-      }
-
-      setFeaturesText(feats.join("\n"));
     }
   }, [mode, plan]);
 
@@ -101,38 +72,20 @@ export default function PlanFormDialog({
       return;
     }
 
-    if (maxCoordinators !== "" && Number(maxCoordinators) > 100000) {
-      setError(dict.admin_service_packages.error_coor_max);
-      setLoading(false);
-      return;
-    }
-
     if (maxGuards !== "" && Number(maxGuards) > 100000) {
       setError(dict.admin_service_packages.error_guard_max);
       setLoading(false);
       return;
     }
 
-    if (featuresText.length > 500) {
-      setError(dict.admin_service_packages.error_feat_len);
-      setLoading(false);
-      return;
-    }
-
-    // Parse features text
-    const features = featuresText
-      .split("\n")
-      .map((f) => f.trim())
-      .filter((f) => f.length > 0);
-
     const payload = {
       plan_name: planName.trim(),
       description: description.trim() || null,
       price: Number(price),
       duration_days: Number(durationDays),
-      max_coordinators: maxCoordinators === "" ? null : Number(maxCoordinators),
+      max_coordinators: 1,
       max_guards: maxGuards === "" ? null : Number(maxGuards),
-      features,
+      features: [],
       is_active: true,
     };
 
@@ -247,27 +200,8 @@ export default function PlanFormDialog({
             </div>
           </div>
 
-          {/* Max Coordinators & Max Guards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div className="flex flex-col gap-1.5">
-              <label className="text-xs font-semibold text-[#434751]">
-                {dict.admin_service_packages.dialog_coor}
-              </label>
-              <input
-                type="number"
-                value={maxCoordinators}
-                onChange={(e) => {
-                  const val = e.target.value;
-                  setMaxCoordinators(val === "" ? "" : String(Math.max(0, parseInt(val) || 0)));
-                }}
-                min={0}
-                max={100000}
-                placeholder={dict.admin_service_packages.unlimited}
-                className="h-10 rounded-lg border border-[#c3c6d3] px-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors"
-              />
-              <p className="text-[10px] text-[#737785]">{dict.admin_service_packages.dialog_coor_hint}</p>
-            </div>
-
+          {/* Max Guards */}
+          <div className="grid grid-cols-1 gap-4">
             <div className="flex flex-col gap-1.5">
               <label className="text-xs font-semibold text-[#434751]">
                 {dict.admin_service_packages.dialog_guard}
@@ -287,25 +221,6 @@ export default function PlanFormDialog({
               <p className="text-[10px] text-[#737785]">{dict.admin_service_packages.dialog_guard_hint}</p>
             </div>
           </div>
-
-          {/* Features list */}
-          <div className="flex flex-col gap-1.5">
-            <div className="flex justify-between items-center">
-              <label className="text-xs font-semibold text-[#434751]">
-                {dict.admin_service_packages.dialog_features}
-              </label>
-              <span className="text-[10px] text-[#737785]">{featuresText.length}/500</span>
-            </div>
-            <textarea
-              value={featuresText}
-              onChange={(e) => setFeaturesText(e.target.value)}
-              maxLength={500}
-              placeholder={dict.admin_service_packages.dialog_features_placeholder}
-              rows={4}
-              className="rounded-lg border border-[#c3c6d3] p-3 text-sm text-[#0b1c30] focus:outline-none focus:border-[#2c5ead] transition-colors resize-y font-body"
-            />
-          </div>
-
 
           {/* Error */}
           {error && (

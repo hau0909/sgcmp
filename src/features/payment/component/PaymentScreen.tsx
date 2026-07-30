@@ -23,6 +23,7 @@ import { Plan } from "@/types/Plan";
 import { Payment } from "@/types/Payment";
 import { BankAccount } from "@/types/BankAccount";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { getDurationText } from "@/utils/formatDuration";
 
 // Function to safely parse features from JSONB or string
 const parseFeatures = (featuresData: any): string[] => {
@@ -258,24 +259,16 @@ export default function PaymentScreen() {
                   {formatPrice(basePrice)} đ
                 </span>
                 <span className="text-xs font-medium text-on-surface-variant">
-                  / {dict.payment?.per_month || "tháng"}
+                  / {getDurationText(selectedPlan.duration_days, dict)}
                 </span>
               </div>
 
               {/* Feature Checklist */}
               <ul className="space-y-3 my-5">
-                {parseFeatures(selectedPlan.features).map((feature, idx) => (
-                  <li key={idx} className="flex items-start gap-2.5 text-xs text-on-surface-variant font-medium">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>{feature}</span>
-                  </li>
-                ))}
-                {selectedPlan.max_coordinators !== null && (
-                  <li className="flex items-start gap-2.5 text-xs text-on-surface-variant font-medium">
-                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
-                    <span>{dict.billing?.max_coordinators?.replace("{0}", selectedPlan.max_coordinators.toString()) || `Tối đa ${selectedPlan.max_coordinators} điều phối viên`}</span>
-                  </li>
-                )}
+                <li className="flex items-start gap-2.5 text-xs text-on-surface-variant font-medium">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />
+                  <span>{dict.billing?.all_features_included || "Bao gồm tất cả tính năng nổi bật"}</span>
+                </li>
                 {selectedPlan.max_guards !== null && (
                   <li className="flex items-start gap-2.5 text-xs text-on-surface-variant font-medium">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0 mt-0.5" />

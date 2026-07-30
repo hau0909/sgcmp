@@ -216,28 +216,9 @@ export default function AdminLayout({
               </Suspense>
             </div>
 
-            {/* Shared Admin Footer */}
-            <footer className="px-6 py-4 border-t border-outline-variant bg-surface-container-lowest flex flex-col sm:flex-row justify-between items-center gap-4 shrink-0">
-              <p className="text-on-surface-variant text-sm">
-                © 2023 Security Operations Management System. All rights
-                reserved.
-              </p>
-
-              <div className="flex gap-4">
-                <Link
-                  href="#"
-                  className="text-on-surface-variant hover:text-primary text-sm transition-colors"
-                >
-                  {dict.footer.privacy}
-                </Link>
-
-                <Link
-                  href="#"
-                  className="text-on-surface-variant hover:text-primary text-sm transition-colors"
-                >
-                  {dict.footer.terms}
-                </Link>
-              </div>
+            <footer className="py-4 text-center text-xs text-on-surface-variant/60 border-t border-outline-variant/30 bg-surface shrink-0">
+              &copy; {new Date().getFullYear()}{" "}
+              {dict.layout_company.copyright_text}
             </footer>
           </main>
         </div>

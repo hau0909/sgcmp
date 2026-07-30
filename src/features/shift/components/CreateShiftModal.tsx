@@ -62,6 +62,81 @@ const DAY_LABEL_MAP: Record<string, number> = {
   "0": 0,
 };
 
+const DAY_NAME_VN_MAP: Record<string, string> = {
+  monday: "Thứ 2",
+  tuesday: "Thứ 3",
+  wednesday: "Thứ 4",
+  thursday: "Thứ 5",
+  friday: "Thứ 6",
+  saturday: "Thứ 7",
+  sunday: "Chủ nhật",
+  mon: "Thứ 2",
+  tue: "Thứ 3",
+  wed: "Thứ 4",
+  thu: "Thứ 5",
+  fri: "Thứ 6",
+  sat: "Thứ 7",
+  sun: "Chủ nhật",
+  "thứ 2": "Thứ 2",
+  "thứ 3": "Thứ 3",
+  "thứ 4": "Thứ 4",
+  "thứ 5": "Thứ 5",
+  "thứ 6": "Thứ 6",
+  "thứ 7": "Thứ 7",
+  "chủ nhật": "Chủ nhật",
+  "1": "Thứ 2",
+  "2": "Thứ 3",
+  "3": "Thứ 4",
+  "4": "Thứ 5",
+  "5": "Thứ 6",
+  "6": "Thứ 7",
+  "7": "Chủ nhật",
+  "0": "Chủ nhật",
+};
+
+const DAY_NAME_EN_MAP: Record<string, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+  sun: "Sunday",
+  "thứ 2": "Monday",
+  "thứ 3": "Tuesday",
+  "thứ 4": "Wednesday",
+  "thứ 5": "Thursday",
+  "thứ 6": "Friday",
+  "thứ 7": "Saturday",
+  "chủ nhật": "Sunday",
+  "1": "Monday",
+  "2": "Tuesday",
+  "3": "Wednesday",
+  "4": "Thursday",
+  "5": "Friday",
+  "6": "Saturday",
+  "7": "Sunday",
+  "0": "Sunday",
+};
+
+const formatDaysPerWeek = (days?: string[] | null, isEn = false): string => {
+  if (!days || days.length === 0) return "";
+  const map = isEn ? DAY_NAME_EN_MAP : DAY_NAME_VN_MAP;
+  return days
+    .map((d) => {
+      const key = d.toLowerCase().trim();
+      return map[key] || d;
+    })
+    .join(", ");
+};
+
 type PeriodUnit = "week" | "month" | "year";
 type FilterMode = "all" | "available" | "conflict" | "unavailable";
 
@@ -348,7 +423,8 @@ const GUARD_STATUS_CFG: Record<
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalProps) {
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
+  const isEn = locale === "en";
   // ── Contract & basic info ──────────────────────────────────────────────────
   const [contractId, setContractId] = useState("");
   const [shiftName, setShiftName] = useState("");
@@ -1634,9 +1710,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                     <InfoRow
                       label={dict.create_shift_modal?.working_days_per_week || "Ngày trực / tuần"}
                       value={
-                        selectedContract.day_per_week?.length
-                          ? selectedContract.day_per_week.join(", ")
-                          : (dict.coor_guards?.unupdated || "Chưa cập nhật")
+                        formatDaysPerWeek(selectedContract.day_per_week, isEn) ||
+                        (dict.coor_guards?.unupdated || "Chưa cập nhật")
                       }
                     />
 

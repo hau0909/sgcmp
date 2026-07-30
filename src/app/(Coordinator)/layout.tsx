@@ -101,6 +101,12 @@ export default function CoordinatorLayout({
   // Sidebar Items
   const sidebarLinks = [
     {
+      name: dict.layout_coordinator.dashboard || "Bảng điều khiển",
+      href: "/coor-dashboard",
+      icon: LayoutDashboard,
+      active: pathname === "/coor-dashboard" || pathname.startsWith("/coor-dashboard"),
+    },
+    {
       name: dict.layout_coordinator.guard_performance || "Hiệu suất bảo vệ",
       href: "/guard-performance",
       icon: Gauge,

@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   const page = parseInt(searchParams.get("page") ?? "1", 10);
   const limit = parseInt(searchParams.get("limit") ?? "10", 10);
   const search = searchParams.get("search") || undefined;
+  const status = searchParams.get("status") || undefined;
 
   if (!companyId) {
     return NextResponse.json(
@@ -16,7 +17,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const result = await handleGetCoordinators(companyId, page, limit, search);
+    const result = await handleGetCoordinators(companyId, page, limit, search, status);
     return NextResponse.json({ coordinators: result.data, total: result.total }, { status: 200 });
   } catch (error: any) {
     console.error("[GET /api/coordinators] Error:", error);

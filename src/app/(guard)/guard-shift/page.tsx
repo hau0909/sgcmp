@@ -142,7 +142,8 @@ export default function GuardShiftPage() {
   const getStatusLabel = (status: ShiftItem["status"], isReplacement?: boolean) => {
     if (isReplacement) return card.status_replacement;
     if (status === "assigned") return card.status_assigned;
-    if (status === "completed") return card.status_completed;
+    if (status === "completed") return card.guard_status_on_duty || card.status_completed || "Đang trực";
+    if (status === "checkout") return card.guard_status_checkout || card.status_checkout || "Hoàn thành";
     if (status === "late") return card.status_late;
     return card.status_absent;
   };

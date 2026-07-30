@@ -11,6 +11,7 @@ export default function CoordinatorPage() {
 
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("");
+  const [totalCoordinators, setTotalCoordinators] = useState<number | null>(null);
 
   const handleCreateNew = () => {
     router.push("/coordinators/add");
@@ -18,7 +19,7 @@ export default function CoordinatorPage() {
 
   return (
     <div className="flex-1 p-6 lg:p-8 max-w-[1440px] mx-auto w-full space-y-6">
-      <CoordinatorHeader onCreateNew={handleCreateNew} />
+      <CoordinatorHeader onCreateNew={handleCreateNew} canAdd={totalCoordinators === null ? null : totalCoordinators < 1} />
 
       <CoordinatorFilters
         search={search}
@@ -27,7 +28,7 @@ export default function CoordinatorPage() {
         onStatusChange={setStatus}
       />
 
-      <CoordinatorTable searchStr={search} statusFilter={status} />
+      <CoordinatorTable searchStr={search} statusFilter={status} onTotalChange={setTotalCoordinators} />
 
       <div className="h-8" />
     </div>

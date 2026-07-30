@@ -234,10 +234,6 @@ export const signContractCompanyService = async (id: string): Promise<any> => {
     throw new Error("Không tìm thấy hợp đồng");
   }
 
-  if (!contract.guard_assigned || contract.guard_assigned.length === 0) {
-    throw new Error("Không thể ký duyệt hợp đồng khi chưa phân công nhân sự bảo vệ.");
-  }
-
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const payload: any = {
     company_agreed: true,
@@ -573,10 +569,7 @@ export const assignGuardsToContractService = async (
     throw new Error("Bạn không có quyền chỉnh sửa hợp đồng này");
   }
 
-  // Check if customer already agreed
-  if (contract.customer_agreed) {
-    throw new Error("Hợp đồng đã được khách hàng ký duyệt, không thể thay đổi danh sách bảo vệ.");
-  }
+  // Guard assignment is allowed regardless of signature status
 
   // Validate shift duration and minimum guards
   const booking = contract.bookings;

@@ -170,15 +170,6 @@ function PlanCard({
 
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-bold text-[#434751] uppercase tracking-wider">
-            {dict.admin_service_packages.coor_limit}
-          </span>
-          <span className="text-xs font-semibold text-[#0b1c30]">
-            {plan.max_coordinators !== null ? `${plan.max_coordinators} ${dict.admin_service_packages.accounts_unit}` : dict.admin_service_packages.unlimited}
-          </span>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-bold text-[#434751] uppercase tracking-wider">
             {dict.admin_service_packages.guard_limit}
           </span>
           <span className="text-xs font-semibold text-[#0b1c30]">
@@ -186,26 +177,7 @@ function PlanCard({
           </span>
         </div>
 
-        {parsedFeatures.length > 0 && (
-          <div className="mt-2 flex flex-col gap-1.5">
-            <span className="text-[10px] font-bold text-[#434751] uppercase tracking-wider">
-              {dict.admin_service_packages.featured_features}
-            </span>
-            <ul className="flex flex-col gap-1.5 pl-1">
-              {parsedFeatures.slice(0, 3).map((feat, i) => (
-                <li key={i} className="flex items-start gap-1.5 text-xs text-[#434751] font-medium leading-relaxed">
-                  <CheckCircle2 className={`w-3.5 h-3.5 shrink-0 mt-0.5 ${plan.is_active ? "text-primary" : "text-gray-400"}`} />
-                  <span className="line-clamp-1">{feat}</span>
-                </li>
-              ))}
-              {parsedFeatures.length > 3 && (
-                <li className="text-[10px] text-primary font-bold pl-5">
-                  {dict.admin_service_packages.other_features.replace("{count}", String(parsedFeatures.length - 3))}
-                </li>
-              )}
-            </ul>
-          </div>
-        )}
+
       </div>
 
       {/* Footer / Actions */}

@@ -1,3 +1,4 @@
+import { createClient } from "@/lib/supabase/server";
 import {
   countActiveGuardsOnShift,
   countActiveGuardsOnShiftYesterday,
@@ -32,6 +33,10 @@ import {
   getFirstAdminName,
   getRecentRegistrationsForActivities,
   getRecentPublishRequestsForActivities,
+  getCoordinatorReportStats,
+  getPastShiftsRepository,
+  getAvailableGuardsRepository,
+  getGuardPerformanceRadarRepository,
 } from "../repository/dashboard.repository";
 import { getRelativeTimeString } from "../utils/dashboard.utils";
 import { getCurrentActivePlan } from "@/features/subscription/repository/subscription.repository";
@@ -44,6 +49,7 @@ import { getCoordinatorCountByCompanyId } from "@/features/coordinator/repositor
 
 export type MetricWithTrend = {
   count: number;
+  addedCount?: number;
   percentChange: number | null;
   trend: "up" | "down" | "neutral";
 };
@@ -282,6 +288,7 @@ export const getShiftStatusTodayService = async (companyId: string) => {
   const shifts = await getShiftStatusTodayData(companyId, startOfToday, endOfToday);
 
   let onDuty = 0; // Đang trực
+  let completed = 0; // Hoàn thành
   let absent = 0; // Vắng mặt
   let late = 0; // Đi trễ
   let replacement = 0; // Thay ca
@@ -301,9 +308,21 @@ export const getShiftStatusTodayService = async (companyId: string) => {
       const origStatus = hasRep ? "absent" : sa.status;
       const origCheckIn = hasRep ? null : sa.check_in_time;
 
-      if (origStatus === "completed") {
+      if (origStatus === "checkout") {
+        completed++;
+      } else if (origStatus === "completed") {
         if (isShiftActive) {
           onDuty++;
+        } else {
+          completed++;
+        }
+      } else if (origStatus === "assigned") {
+        if (origCheckIn) {
+          if (isShiftActive) {
+            onDuty++;
+          } else {
+            completed++;
+          }
         }
       } else if (origStatus === "late") {
         if (origCheckIn !== null) {
@@ -323,7 +342,8 @@ export const getShiftStatusTodayService = async (companyId: string) => {
   }
 
   return [
-    { status: "Hoàn thành", count: onDuty },
+    { status: "Đang trực", count: onDuty },
+    { status: "Hoàn thành", count: completed },
     { status: "Vắng mặt", count: absent },
     { status: "Đi trễ", count: late },
     { status: "Thay ca", count: replacement },
@@ -383,14 +403,20 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
       
       // Determine original guard status label
       let origLabel = "Phân công";
-      if (origStatus === "completed") {
+      if (origStatus === "checkout") {
         origLabel = "Hoàn thành";
+      } else if (origStatus === "completed") {
+        origLabel = isShiftActive ? "Đang trực" : "Hoàn thành";
       } else if (origStatus === "late") {
         origLabel = origCheckIn ? "Điểm danh trễ" : "Đi trễ";
       } else if (origStatus === "absent") {
         origLabel = "Vắng mặt";
       } else if (origStatus === "assigned") {
-        origLabel = now >= shiftStart ? "Vắng mặt" : "Phân công";
+        if (origCheckIn) {
+          origLabel = isShiftActive ? "Đang trực" : "Hoàn thành";
+        } else {
+          origLabel = "Phân công";
+        }
       }
 
       list.push({
@@ -501,31 +527,35 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
       const guardName = getProfileName(sa.guard_id);
 
       // Attendance
-      if (sa.status === "completed") {
-        activities.push({
-          id: `act-att-${sa.guard_id}-${shift.shift_id}-on-time`,
-          type: "attendance",
-          subType: "attendance_on_time",
-          boldText: guardName,
-          normalText: " đã điểm danh ca trực đúng giờ.",
-          timestamp: sa.check_in_time || sa.updated_at || shift.start_time,
-          timeLabel: formatFriendlyTime(sa.check_in_time || sa.updated_at || shift.start_time),
-          metaLabel: shiftName
-        });
-      } else if (sa.status === "late") {
-        if (sa.check_in_time) {
-          const minutesLate = Math.max(0, Math.round((new Date(sa.check_in_time).getTime() - new Date(shift.start_time).getTime()) / 60000));
+      if (sa.check_in_time) {
+        if (sa.status === "late") {
+          const checkInDate = new Date(sa.check_in_time);
+          const shiftStartDate = new Date(shift.start_time);
+          const minutesLate = Math.max(0, Math.round((checkInDate.getTime() - shiftStartDate.getTime()) / 60000));
           activities.push({
-            id: `act-att-${sa.guard_id}-${shift.shift_id}-late`,
+            id: `act-att-${sa.guard_id}-${shift.shift_id}-checkin-late`,
             type: "attendance",
             subType: "attendance_late",
             boldText: guardName,
-            normalText: ` đã điểm danh trễ ${minutesLate} phút.`,
+            normalText: ` đã điểm danh trễ ${minutesLate > 0 ? `${minutesLate} phút.` : "."}`,
             timestamp: sa.check_in_time,
             timeLabel: formatFriendlyTime(sa.check_in_time),
             metaLabel: shiftName
           });
         } else {
+          activities.push({
+            id: `act-att-${sa.guard_id}-${shift.shift_id}-checkin`,
+            type: "attendance",
+            subType: "attendance_completed",
+            boldText: guardName,
+            normalText: " đã điểm danh ca trực.",
+            timestamp: sa.check_in_time,
+            timeLabel: formatFriendlyTime(sa.check_in_time),
+            metaLabel: shiftName
+          });
+        }
+      } else {
+        if (sa.status === "late") {
           activities.push({
             id: `act-att-${sa.guard_id}-${shift.shift_id}-not-checked-in`,
             type: "attendance",
@@ -536,16 +566,40 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
             timeLabel: formatFriendlyTime(shift.start_time),
             metaLabel: shiftName
           });
+        } else if (sa.status === "absent") {
+          activities.push({
+            id: `act-att-${sa.guard_id}-${shift.shift_id}-absent`,
+            type: "attendance",
+            subType: "attendance_absent",
+            boldText: guardName,
+            normalText: " bị đánh dấu vắng mặt.",
+            timestamp: sa.updated_at || shift.start_time,
+            timeLabel: formatFriendlyTime(sa.updated_at || shift.start_time),
+            metaLabel: shiftName
+          });
         }
-      } else if (sa.status === "absent" || (sa.status === "assigned" && new Date() >= new Date(shift.start_time))) {
+      }
+
+      if (sa.status === "checkout") {
         activities.push({
-          id: `act-att-${sa.guard_id}-${shift.shift_id}-absent`,
+          id: `act-att-${sa.guard_id}-${shift.shift_id}-checkout`,
           type: "attendance",
-          subType: "attendance_absent",
+          subType: "attendance_checkout",
           boldText: guardName,
-          normalText: " bị đánh dấu vắng mặt.",
-          timestamp: shift.start_time,
-          timeLabel: formatFriendlyTime(shift.start_time),
+          normalText: " đã kết thúc ca trực.",
+          timestamp: sa.updated_at || shift.start_time,
+          timeLabel: formatFriendlyTime(sa.updated_at || shift.start_time),
+          metaLabel: shiftName
+        });
+      } else if (sa.status === "completed" && !sa.check_in_time) {
+        activities.push({
+          id: `act-att-${sa.guard_id}-${shift.shift_id}-completed`,
+          type: "attendance",
+          subType: "attendance_completed",
+          boldText: guardName,
+          normalText: " đã điểm danh ca trực.",
+          timestamp: sa.updated_at || shift.start_time,
+          timeLabel: formatFriendlyTime(sa.updated_at || shift.start_time),
           metaLabel: shiftName
         });
       }
@@ -702,107 +756,218 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
   return activities;
 };
 
-export const getAdminRevenueService = async (): Promise<MetricWithTrend> => {
+const getTimeFilterDates = (filter: string = "month") => {
   const now = new Date();
-  const currentMonthStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-  ).toISOString();
+  let startDate: Date;
+  const endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
 
+  if (filter === "week") {
+    const d = new Date(now);
+    d.setDate(now.getDate() - 7);
+    startDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  } else if (filter === "year") {
+    const d = new Date(now);
+    d.setDate(now.getDate() - 365);
+    startDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  } else {
+    // "month" / default
+    const d = new Date(now);
+    d.setDate(now.getDate() - 30);
+    startDate = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+  }
+
+  return { startDate, endDate };
+};
+
+export const getAdminRevenueService = async (filter: string = "month"): Promise<MetricWithTrend> => {
+  const { startDate, endDate } = getTimeFilterDates(filter);
   const payments = await getCompletedPayments();
 
-  // Current month revenue
-  const current = payments
-    .filter((p) => p.created_at >= currentMonthStart)
+  const total = payments.reduce((sum, p) => sum + (p.amount || 0), 0);
+  const added = payments
+    .filter((p) => {
+      const d = new Date(p.created_at);
+      return d >= startDate && d <= endDate;
+    })
     .reduce((sum, p) => sum + (p.amount || 0), 0);
 
-  // Revenue before current month (this month's start)
-  const prev = payments
-    .filter((p) => p.created_at < currentMonthStart)
-    .reduce((sum, p) => sum + (p.amount || 0), 0);
-
-  return calcTrend(current, prev);
+  return {
+    count: total,
+    addedCount: added,
+    percentChange: null,
+    trend: added > 0 ? "up" : "neutral",
+  };
 };
 
 export const getAdminTotalCompaniesService = async (): Promise<MetricWithTrend> => {
-  const now = new Date();
-  const currentMonthStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-  ).toISOString();
-
   const statuses = ["active", "pending_publish", "published"];
-
-  const [current, prev] = await Promise.all([
-    countTotalCompaniesByStatus(statuses),
-    countTotalCompaniesByStatusLastMonth(statuses, currentMonthStart),
-  ]);
-
-  return calcTrend(current, prev);
+  const current = await countTotalCompaniesByStatus(statuses);
+  return {
+    count: current,
+    addedCount: 0,
+    percentChange: null,
+    trend: "neutral",
+  };
 };
 
 export const getAdminPublishedCompaniesService = async (): Promise<MetricWithTrend> => {
-  const now = new Date();
-  const currentMonthStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-  ).toISOString();
-
   const statuses = ["published"];
-
-  const [current, prev] = await Promise.all([
-    countTotalCompaniesByStatus(statuses),
-    countTotalCompaniesByStatusLastMonth(statuses, currentMonthStart),
-  ]);
-
-  return calcTrend(current, prev);
+  const current = await countTotalCompaniesByStatus(statuses);
+  return {
+    count: current,
+    addedCount: 0,
+    percentChange: null,
+    trend: "neutral",
+  };
 };
 
-export const getAdminTotalUsersService = async (): Promise<MetricWithTrend> => {
-  const now = new Date();
-  const currentMonthStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-  ).toISOString();
+export const getAdminUserByRoleService = async (
+  role: "company-admin" | "customer",
+  filter: string = "month"
+): Promise<MetricWithTrend> => {
+  const { startDate, endDate } = getTimeFilterDates(filter);
+  const supabase = await createClient();
 
-  const roles = ["customer", "company-admin"];
-  const status = "active";
+  if (role === "company-admin") {
+    // DOANH NGHIỆP BẢO VỆ: Lấy từ bảng `companies` với status = 'active' hoặc 'published'
+    const targetStatuses = ["active", "published"];
+    const [totalRes, addedRes] = await Promise.all([
+      supabase
+        .from("companies")
+        .select("company_id", { count: "exact", head: true })
+        .in("status", targetStatuses),
+      supabase
+        .from("companies")
+        .select("company_id", { count: "exact", head: true })
+        .in("status", targetStatuses)
+        .gte("created_at", startDate.toISOString())
+        .lte("created_at", endDate.toISOString()),
+    ]);
 
-  const [current, prev] = await Promise.all([
-    countTotalUsersByRoleAndStatus(roles, status),
-    countTotalUsersByRoleAndStatusLastMonth(roles, status, currentMonthStart),
+    const count = totalRes.count || 0;
+    const added = addedRes.count || 0;
+
+    return {
+      count,
+      addedCount: added,
+      percentChange: null,
+      trend: added > 0 ? "up" : "neutral",
+    };
+  }
+
+  // KHÁCH HÀNG: Lấy từ bảng `profiles` với role = 'customer'
+  const [totalRes, addedRes] = await Promise.all([
+    supabase
+      .from("profiles")
+      .select("user_id", { count: "exact", head: true })
+      .eq("role", "customer"),
+    supabase
+      .from("profiles")
+      .select("user_id", { count: "exact", head: true })
+      .eq("role", "customer")
+      .gte("created_at", startDate.toISOString())
+      .lte("created_at", endDate.toISOString()),
   ]);
 
-  return calcTrend(current, prev);
+  const count = totalRes.count || 0;
+  const added = addedRes.count || 0;
+
+  return {
+    count,
+    addedCount: added,
+    percentChange: null,
+    trend: added > 0 ? "up" : "neutral",
+  };
 };
 
-export const getAdminPendingApprovalCompaniesService = async (): Promise<MetricWithTrend> => {
-  const now = new Date();
-  const currentMonthStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-  ).toISOString();
+export const getAdminTotalUsersService = async (filter: string = "month"): Promise<MetricWithTrend> => {
+  return getAdminUserByRoleService("customer", filter);
+};
 
-  const statuses = ["pending_register"];
+export const getAdminPendingApprovalCompaniesService = async (filter: string = "month"): Promise<MetricWithTrend> => {
+  const { startDate, endDate } = getTimeFilterDates(filter);
+  const supabase = await createClient();
 
-  const [current, prev] = await Promise.all([
-    countTotalCompaniesByStatus(statuses),
-    countTotalCompaniesByStatusLastMonth(statuses, currentMonthStart),
+  const [totalRes, addedRes] = await Promise.all([
+    supabase
+      .from("companies")
+      .select("company_id", { count: "exact", head: true })
+      .eq("status", "pending_register"),
+    supabase
+      .from("companies")
+      .select("company_id", { count: "exact", head: true })
+      .eq("status", "pending_register")
+      .gte("created_at", startDate.toISOString())
+      .lte("created_at", endDate.toISOString()),
   ]);
 
-  return calcTrend(current, prev);
+  const count = totalRes.count || 0;
+  const added = addedRes.count || 0;
+
+  return {
+    count,
+    addedCount: added,
+    percentChange: null,
+    trend: added > 0 ? "up" : "neutral",
+  };
 };
 
-export const getAdminPendingPublicationRequestsService = async (): Promise<MetricWithTrend> => {
-  const now = new Date();
-  const currentMonthStart = new Date(
-    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)
-  ).toISOString();
+export const getAdminPendingPublicationRequestsService = async (filter: string = "month"): Promise<MetricWithTrend> => {
+  const { startDate, endDate } = getTimeFilterDates(filter);
+  const supabase = await createClient();
 
-  const status = "PENDING";
-
-  const [current, prev] = await Promise.all([
-    countCompanyPublishRequestsByStatus(status),
-    countCompanyPublishRequestsByStatusLastMonth(status, currentMonthStart),
+  const [totalRes, addedRes] = await Promise.all([
+    supabase
+      .from("company_publish_requests")
+      .select("request_id", { count: "exact", head: true })
+      .eq("status", "PENDING"),
+    supabase
+      .from("company_publish_requests")
+      .select("request_id", { count: "exact", head: true })
+      .eq("status", "PENDING")
+      .gte("requested_at", startDate.toISOString())
+      .lte("requested_at", endDate.toISOString()),
   ]);
 
-  return calcTrend(current, prev);
+  const count = totalRes.count || 0;
+  const added = addedRes.count || 0;
+
+  return {
+    count,
+    addedCount: added,
+    percentChange: null,
+    trend: added > 0 ? "up" : "neutral",
+  };
 };
+
+export interface PendingPublicationListItem {
+  request_id: string;
+  company_name: string;
+  requested_at: string;
+  notes: string | null;
+}
+
+export const getAdminPendingPublicationListService = async (): Promise<PendingPublicationListItem[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("company_publish_requests")
+    .select("request_id, requested_at, notes, companies(company_name)")
+    .eq("status", "PENDING")
+    .order("requested_at", { ascending: false });
+
+  if (error) {
+    throw new Error(`Không thể lấy danh sách yêu cầu công khai: ${error.message}`);
+  }
+
+  return ((data as any) || []).map((row: any) => ({
+    request_id: row.request_id,
+    company_name: row.companies?.company_name || "Doanh nghiệp không tên",
+    requested_at: row.requested_at,
+    notes: row.notes || null,
+  }));
+};
+
 
 export interface GrowthDataPoint {
   name: string;
@@ -811,55 +976,53 @@ export interface GrowthDataPoint {
   fill: string;
 }
 
-export const getAdminGrowthService = async (range: "6m" | "1y"): Promise<GrowthDataPoint[]> => {
-  const N = range === "1y" ? 12 : 6;
+export const getAdminGrowthService = async (timeFilter: string = "month"): Promise<GrowthDataPoint[]> => {
   const now = new Date();
-  const months: { year: number; month: number; label: string; start: Date; end: Date }[] = [];
+  const points: { label: string; start: Date; end: Date }[] = [];
 
-  for (let i = N - 1; i >= 0; i--) {
-    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
-    const year = d.getUTCFullYear();
-    const month = d.getUTCMonth();
-
-    const label = N <= 6
-      ? `THÁNG ${month + 1}`
-      : `T${month + 1}/${String(year).slice(-2)}`;
-
-    const start = new Date(Date.UTC(year, month, 1));
-    const end = new Date(Date.UTC(year, month + 1, 1));
-
-    months.push({ year, month, label, start, end });
+  if (timeFilter === "week") {
+    const dayNames = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i, 0, 0, 0, 0);
+      const nextD = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+      const label = dayNames[d.getDay()];
+      points.push({ label: `${label} (${d.getDate()}/${d.getMonth() + 1})`, start: d, end: nextD });
+    }
+  } else if (timeFilter === "year") {
+    for (let i = 11; i >= 0; i--) {
+      const start = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+      const end = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i + 1, 1));
+      const label = `Th.${start.getUTCMonth() + 1}`;
+      points.push({ label, start, end });
+    }
+  } else {
+    // "month" - 4 weeks
+    for (let i = 3; i >= 0; i--) {
+      const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (i + 1) * 7 + 1, 0, 0, 0, 0);
+      const end = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i * 7, 23, 59, 59, 999);
+      const label = `Tuần ${4 - i}`;
+      points.push({ label, start, end });
+    }
   }
 
-  const startDate = months[0].start.toISOString();
+  const startDate = points[0].start.toISOString();
+  const payments = await getCompletedPaymentsAfter(startDate);
 
-  const [baseline, approvedCompanies, payments] = await Promise.all([
-    getApprovedCompaniesBaselineCount(startDate),
-    getApprovedCompaniesAfter(startDate),
-    getCompletedPaymentsAfter(startDate),
-  ]);
-
-  return months.map((m, idx) => {
-    const monthRevenue = payments
-      .filter(p => {
-        const date = new Date(p.created_at);
-        return date >= m.start && date < m.end;
+  return points.map((p, idx) => {
+    const revenue = payments
+      .filter((pm) => {
+        const d = new Date(pm.created_at);
+        return d >= p.start && d <= p.end;
       })
-      .reduce((sum, p) => sum + (p.amount || 0), 0);
+      .reduce((sum, pm) => sum + (pm.amount || 0), 0);
 
-    const monthCompaniesCount = baseline + approvedCompanies.filter(c => {
-      const date = new Date(c.updated_at);
-      return date < m.end;
-    }).length;
-
-    // Use requested colors: #8ec5ff for regular months, #4ba3ff for highlighted current month
-    const isLastMonth = idx === months.length - 1;
-    const fill = isLastMonth ? "#4ba3ff" : "#8ec5ff";
+    const isLast = idx === points.length - 1;
+    const fill = isLast ? "#4ba3ff" : "#8ec5ff";
 
     return {
-      name: m.label,
-      revenue: monthRevenue,
-      companies: monthCompaniesCount,
+      name: p.label,
+      revenue,
+      companies: 0,
       fill,
     };
   });
@@ -913,57 +1076,64 @@ export interface PendingTaskItem {
   statusText: string;
 }
 
-export const getAdminPendingTasksService = async (): Promise<PendingTaskItem[]> => {
+export const getAdminPendingTasksService = async (locale: string = "vi"): Promise<PendingTaskItem[]> => {
   const [registrations, publishRequests] = await Promise.all([
     getPendingRegistrations(),
     getPendingPublishRequests(),
   ]);
 
+  const isVi = locale !== "en";
+  const now = new Date();
+  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+
   const tasks: { date: Date; item: PendingTaskItem }[] = [];
 
   // Map registrations (Doanh nghiệp đợi phê duyệt)
   registrations.forEach((reg) => {
-    const companyName = reg.companies?.company_name || "Doanh nghiệp không tên";
+    const companyName = reg.companies?.company_name || (isVi ? "Doanh nghiệp không tên" : "Unnamed Company");
     tasks.push({
       date: new Date(reg.created_at),
       item: {
         id: `reg-${reg.registration_id}`,
         stt: 0,
         category: "register",
-        categoryText: "ĐĂNG KÝ MỚI",
+        categoryText: isVi ? "ĐĂNG KÝ MỚI" : "NEW REGISTRATION",
         time: getRelativeTimeString(reg.created_at),
         title: companyName,
-        description: reg.companies?.description || "Hồ sơ đăng ký doanh nghiệp cần xét duyệt điều khoản.",
+        description: reg.companies?.description || (isVi ? "Hồ sơ đăng ký doanh nghiệp cần xét duyệt điều khoản." : "Company registration profile awaiting review."),
         status: "pending_approval",
-        statusText: "Chờ duyệt",
+        statusText: isVi ? "Chờ duyệt" : "Awaiting Approval",
       },
     });
   });
 
   // Map company_publish_requests (Yêu cầu công khai doanh nghiệp)
   publishRequests.forEach((req) => {
-    const companyName = req.companies?.company_name || "Doanh nghiệp không tên";
+    const companyName = req.companies?.company_name || (isVi ? "Doanh nghiệp không tên" : "Unnamed Company");
     tasks.push({
       date: new Date(req.requested_at),
       item: {
         id: `pub-${req.request_id}`,
         stt: 0,
         category: "compliance",
-        categoryText: "CÔNG KHAI",
+        categoryText: isVi ? "CÔNG KHAI" : "PUBLICATION",
         time: getRelativeTimeString(req.requested_at),
         title: companyName,
-        description: req.notes || "Yêu cầu kích hoạt chế độ công khai cho doanh nghiệp.",
+        description: req.notes || (isVi ? "Yêu cầu kích hoạt chế độ công khai cho doanh nghiệp." : "Publication request for the company."),
         status: "pending_approval",
-        statusText: "Chờ duyệt",
+        statusText: isVi ? "Chờ duyệt" : "Awaiting Approval",
       },
     });
   });
 
+  // Strictly filter tasks for today only (no fallback to past tasks or time filter)
+  const todayTasks = tasks.filter((t) => t.date >= startOfToday);
+
   // Sort by date descending
-  tasks.sort((a, b) => b.date.getTime() - a.date.getTime());
+  todayTasks.sort((a, b) => b.date.getTime() - a.date.getTime());
 
   // Assign STT
-  return tasks.map((t, index) => ({
+  return todayTasks.map((t, index) => ({
     ...t.item,
     stt: index + 1,
   }));
@@ -980,7 +1150,11 @@ export interface ActivityItem {
   iconColor: "blue" | "purple" | "green" | "red";
 }
 
-export const getAdminRecentActivitiesService = async (): Promise<ActivityItem[]> => {
+export const getAdminRecentActivitiesService = async (
+  filter: string = "month",
+  locale: string = "vi"
+): Promise<ActivityItem[]> => {
+  const { startDate, endDate } = getTimeFilterDates(filter);
   const [registrations, publishRequests, defaultAdminName] = await Promise.all([
     getRecentRegistrationsForActivities(),
     getRecentPublishRequestsForActivities(),
@@ -1004,15 +1178,7 @@ export const getAdminRecentActivitiesService = async (): Promise<ActivityItem[]>
     });
   }
 
-  const activities: { date: Date; item: ActivityItem }[] = [];
-
-  // Helper formats
-  const pad = (num: number) => String(num).padStart(2, "0");
-  
-  const formatTimeOnly = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
-  };
+  const isVi = locale !== "en";
 
   const getRelativeTime = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -1022,10 +1188,17 @@ export const getAdminRecentActivitiesService = async (): Promise<ActivityItem[]>
     const diffHours = Math.floor(diffMins / 60);
     const diffDays = Math.floor(diffHours / 24);
 
-    if (diffMins < 1) return "Vừa xong";
-    if (diffMins < 60) return `${diffMins} phút trước`;
-    if (diffHours < 24) return `${diffHours} giờ trước`;
-    return `${diffDays} ngày trước`;
+    if (isVi) {
+      if (diffMins < 1) return "Vừa xong";
+      if (diffMins < 60) return `${diffMins} phút trước`;
+      if (diffHours < 24) return `${diffHours} giờ trước`;
+      return `${diffDays} ngày trước`;
+    } else {
+      if (diffMins < 1) return "Just now";
+      if (diffMins < 60) return `${diffMins} min ago`;
+      if (diffHours < 24) return `${diffHours} hr ago`;
+      return `${diffDays} day${diffDays > 1 ? "s" : ""} ago`;
+    }
   };
 
   const formatDateTimeLabel = (dateStr: string) => {
@@ -1036,48 +1209,89 @@ export const getAdminRecentActivitiesService = async (): Promise<ActivityItem[]>
     const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
 
     if (d.getTime() >= today.getTime()) {
-      return `Hôm nay, ${timeStr}`;
+      return isVi ? `Hôm nay, ${timeStr}` : `Today, ${timeStr}`;
     } else if (d.getTime() >= yesterday.getTime()) {
-      return `Hôm qua, ${timeStr}`;
+      return isVi ? `Hôm qua, ${timeStr}` : `Yesterday, ${timeStr}`;
     } else {
       return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${timeStr}`;
     }
   };
 
+  const formatCompanyName = (name: string, isVi: boolean) => {
+    if (isVi) {
+      return name.startsWith("Công ty") || name.startsWith("CÔNG TY") ? name : `Công ty ${name}`;
+    }
+    return name.startsWith("Company") || name.startsWith("Công ty") || name.startsWith("CÔNG TY")
+      ? name
+      : `Company ${name}`;
+  };
+
+  // i18n text helpers
+  const t = {
+    company: isVi ? "Doanh nghiệp" : "Company",
+    // registration
+    regAction: isVi ? "Đăng ký doanh nghiệp" : "Company Registration",
+    regUpdatedTimeAgo: (ago: string) => isVi ? `${ago} • Đã gửi lại để xét duyệt` : `${ago} • Resubmitted for review`,
+    regUpdatedTarget: (name: string) => isVi ? `${formatCompanyName(name, true)} đã cập nhật lại hồ sơ đăng ký.` : `${formatCompanyName(name, false)} has resubmitted their registration.`,
+    regPendingTimeAgo: (ago: string) => isVi ? `${ago} • Chờ phê duyệt` : `${ago} • Awaiting approval`,
+    regPendingTarget: (name: string) => isVi ? `${formatCompanyName(name, true)} đã gửi hồ sơ đăng ký.` : `${formatCompanyName(name, false)} has submitted a registration.`,
+    // approval result
+    approvalAction: isVi ? "Kết quả phê duyệt" : "Approval Result",
+    approvedTimeAgo: (label: string, admin: string) => isVi ? `${label} • Thực hiện bởi Admin ${admin}` : `${label} • Approved by Admin ${admin}`,
+    approvedTarget: (name: string) => isVi ? `${formatCompanyName(name, true)} đã được phê duyệt đăng ký.` : `${formatCompanyName(name, false)} has been approved.`,
+    rejectedTimeAgo: (label: string) => isVi ? `${label} • Giấy phép kinh doanh không hợp lệ` : `${label} • Invalid business license`,
+    rejectedTarget: (name: string) => isVi ? `Hồ sơ ${formatCompanyName(name, true)} đã bị từ chối.` : `Registration for ${formatCompanyName(name, false)} has been rejected.`,
+    // publish request
+    pubAction: isVi ? "Yêu cầu công khai doanh nghiệp" : "Company Publication Request",
+    pubPendingTimeAgo: (ago: string) => isVi ? `${ago} • Chờ xét duyệt` : `${ago} • Awaiting review`,
+    pubPendingTarget: (name: string) => isVi ? `${formatCompanyName(name, true)} đã gửi yêu cầu công khai.` : `${formatCompanyName(name, false)} has submitted a publication request.`,
+    pubApprovedTimeAgo: (ago: string, admin: string) => isVi ? `${ago} • Khách hàng có thể xem và đặt dịch vụ (Phê duyệt bởi: ${admin})` : `${ago} • Customers can now view & book services (Approved by: ${admin})`,
+    pubApprovedTarget: (name: string) => isVi ? `${formatCompanyName(name, true)} đã được công khai trên nền tảng.` : `${formatCompanyName(name, false)} is now published on the platform.`,
+    pubRejectedTarget: (name: string) => isVi ? `Yêu cầu công khai của ${formatCompanyName(name, true)} đã bị từ chối.` : `Publication request for ${formatCompanyName(name, false)} has been rejected.`,
+  };
+
+  const activities: { date: Date; item: ActivityItem }[] = [];
+
+  // Helper formats
+  const pad = (num: number) => String(num).padStart(2, "0");
+
+  const formatTimeOnly = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
   // Process registrations
   registrations.forEach((reg) => {
-    const companyName = reg.companies?.company_name || "Doanh nghiệp";
+    const companyName = reg.companies?.company_name || t.company;
 
     if (reg.status === "pending") {
       const created = new Date(reg.created_at);
       const updated = new Date(reg.updated_at);
-      const isUpdated = updated.getTime() - created.getTime() > 10000; // > 10s difference
+      const isUpdated = updated.getTime() - created.getTime() > 10000;
 
       if (isUpdated) {
-        // SafeGuard updated registration
         activities.push({
           date: updated,
           item: {
             id: `reg-pending-upd-${reg.registration_id}`,
             time: formatTimeOnly(reg.updated_at),
-            timeAgo: `${getRelativeTime(reg.updated_at)} • Đã gửi lại để xét duyệt`,
-            action: "Đăng ký doanh nghiệp",
-            target: `Công ty ${companyName} đã cập nhật lại hồ sơ đăng ký.`,
+            timeAgo: t.regUpdatedTimeAgo(getRelativeTime(reg.updated_at)),
+            action: t.regAction,
+            target: t.regUpdatedTarget(companyName),
             status: "pending",
             iconName: "FilePlus2",
             iconColor: "blue",
           },
         });
       } else {
-        // An Tam Security sent registration
         activities.push({
           date: created,
           item: {
             id: `reg-pending-new-${reg.registration_id}`,
             time: formatTimeOnly(reg.created_at),
-            timeAgo: `${getRelativeTime(reg.created_at)} • Chờ phê duyệt`,
-            action: "Đăng ký doanh nghiệp",
-            target: `Công ty ${companyName} đã gửi hồ sơ đăng ký.`,
+            timeAgo: t.regPendingTimeAgo(getRelativeTime(reg.created_at)),
+            action: t.regAction,
+            target: t.regPendingTarget(companyName),
             status: "pending",
             iconName: "Building2",
             iconColor: "blue",
@@ -1085,30 +1299,28 @@ export const getAdminRecentActivitiesService = async (): Promise<ActivityItem[]>
         });
       }
     } else if (reg.status === "approved") {
-      // ABC Security approved registration
       activities.push({
         date: new Date(reg.updated_at),
         item: {
           id: `reg-approved-${reg.registration_id}`,
           time: formatTimeOnly(reg.updated_at),
-          timeAgo: `${formatDateTimeLabel(reg.updated_at)} • Thực hiện bởi Admin ${defaultAdminName}`,
-          action: "Kết quả phê duyệt",
-          target: `Công ty ${companyName} đã được phê duyệt đăng ký.`,
+          timeAgo: t.approvedTimeAgo(formatDateTimeLabel(reg.updated_at), defaultAdminName),
+          action: t.approvalAction,
+          target: t.approvedTarget(companyName),
           status: "success",
           iconName: "BadgeCheck",
           iconColor: "green",
         },
       });
     } else if (reg.status === "rejected") {
-      // Secure Pro rejected registration
       activities.push({
         date: new Date(reg.updated_at),
         item: {
           id: `reg-rejected-${reg.registration_id}`,
           time: formatTimeOnly(reg.updated_at),
-          timeAgo: `${formatDateTimeLabel(reg.updated_at)} • Giấy phép kinh doanh không hợp lệ`,
-          action: "Kết quả phê duyệt",
-          target: `Hồ sơ Công ty ${companyName} đã bị từ chối.`,
+          timeAgo: t.rejectedTimeAgo(formatDateTimeLabel(reg.updated_at)),
+          action: t.approvalAction,
+          target: t.rejectedTarget(companyName),
           status: "failed",
           iconName: "CircleX",
           iconColor: "red",
@@ -1119,25 +1331,23 @@ export const getAdminRecentActivitiesService = async (): Promise<ActivityItem[]>
 
   // Process publish requests
   publishRequests.forEach((req) => {
-    const companyName = req.companies?.company_name || "Doanh nghiệp";
+    const companyName = req.companies?.company_name || t.company;
 
     if (req.status === "PENDING") {
-      // Secure One sent publish request
       activities.push({
         date: new Date(req.requested_at),
         item: {
           id: `pub-pending-${req.request_id}`,
           time: formatTimeOnly(req.requested_at),
-          timeAgo: `${getRelativeTime(req.requested_at)} • Chờ xét duyệt`,
-          action: "Yêu cầu công khai doanh nghiệp",
-          target: `Công ty ${companyName} đã gửi yêu cầu công khai.`,
+          timeAgo: t.pubPendingTimeAgo(getRelativeTime(req.requested_at)),
+          action: t.pubAction,
+          target: t.pubPendingTarget(companyName),
           status: "pending",
           iconName: "Globe",
           iconColor: "purple",
         },
       });
     } else if (req.status === "APPROVED") {
-      // An Phat published on platform
       const processedTime = req.processed_at || req.requested_at;
       const adminName = req.approved_by ? (profilesMap[req.approved_by] || defaultAdminName) : defaultAdminName;
       activities.push({
@@ -1145,9 +1355,9 @@ export const getAdminRecentActivitiesService = async (): Promise<ActivityItem[]>
         item: {
           id: `pub-approved-${req.request_id}`,
           time: formatTimeOnly(processedTime),
-          timeAgo: `${getRelativeTime(processedTime)} • Khách hàng có thể xem và đặt dịch vụ (Phê duyệt bởi: ${adminName})`,
-          action: "Yêu cầu công khai doanh nghiệp",
-          target: `Công ty ${companyName} đã được công khai trên nền tảng.`,
+          timeAgo: t.pubApprovedTimeAgo(getRelativeTime(processedTime), adminName),
+          action: t.pubAction,
+          target: t.pubApprovedTarget(companyName),
           status: "success",
           iconName: "Globe",
           iconColor: "green",
@@ -1155,15 +1365,15 @@ export const getAdminRecentActivitiesService = async (): Promise<ActivityItem[]>
       });
     } else if (req.status === "REJECTED") {
       const processedTime = req.processed_at || req.requested_at;
-      const rejectReason = req.reject_reason || "Yêu cầu công khai bị từ chối.";
+      const rejectReason = req.reject_reason || (isVi ? "Yêu cầu công khai bị từ chối." : "Publication request rejected.");
       activities.push({
         date: new Date(processedTime),
         item: {
           id: `pub-rejected-${req.request_id}`,
           time: formatTimeOnly(processedTime),
           timeAgo: `${getRelativeTime(processedTime)} • ${rejectReason}`,
-          action: "Yêu cầu công khai doanh nghiệp",
-          target: `Yêu cầu công khai của Công ty ${companyName} đã bị từ chối.`,
+          action: t.pubAction,
+          target: t.pubRejectedTarget(companyName),
           status: "failed",
           iconName: "CircleX",
           iconColor: "red",
@@ -1172,11 +1382,305 @@ export const getAdminRecentActivitiesService = async (): Promise<ActivityItem[]>
     }
   });
 
+  // Filter activities by date range according to filter
+  const filteredActivities = activities.filter(
+    (act) => act.date >= startDate && act.date <= endDate
+  );
+
   // Sort activities by date descending
-  activities.sort((a, b) => b.date.getTime() - a.date.getTime());
+  filteredActivities.sort((a, b) => b.date.getTime() - a.date.getTime());
 
   // Return all activities
-  return activities.map((act) => act.item);
+  return filteredActivities.map((act) => act.item);
+};
+
+export interface CurrentUpcomingShiftItem {
+  id: string;
+  name: string;
+  avatar: string;
+  phone?: string;
+  type: "ONGOING" | "UPCOMING" | "LATE" | "REPLACEMENT" | "ABSENT" | "CHECKOUT";
+  timeText: string;
+  location: string;
+  statusText: string;
+}
+
+export const getCurrentUpcomingShiftsTodayService = async (
+  companyId?: string,
+  timeFilter?: string
+): Promise<CurrentUpcomingShiftItem[]> => {
+  if (!companyId) {
+    return [];
+  }
+  const now = new Date();
+  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
+
+  // Always query shifts active right now or starting from current time 'now' until end of today
+  const rawShifts = await getTodayGuardsStatusList(companyId, now.toISOString(), endOfToday);
+
+  // Collect all guard IDs
+  const guardIds = new Set<string>();
+  for (const s of rawShifts) {
+    for (const sa of s.shift_assignments || []) {
+      if (sa.guard_id) guardIds.add(sa.guard_id);
+      if (sa.replacement_guard_ids) {
+        sa.replacement_guard_ids.forEach((id: string) => guardIds.add(id));
+      }
+    }
+  }
+
+  let profiles: any[] = [];
+  if (guardIds.size > 0) {
+    profiles = await getProfilesByIds(Array.from(guardIds));
+  }
+
+  const getProfile = (id: string) => {
+    return profiles.find((p) => p.user_id === id) || { full_name: "Bảo vệ", avatar_url: null };
+  };
+
+  const pad = (num: number) => num.toString().padStart(2, "0");
+  const formatHHMM = (dateStr: string) => {
+    const d = new Date(dateStr);
+    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const list: CurrentUpcomingShiftItem[] = [];
+
+  for (const s of rawShifts) {
+    const shiftStart = new Date(s.start_time);
+    const shiftEnd = new Date(s.end_time);
+    const locationName = (s.contracts as any)?.bookings?.services?.name || s.shift_name || "Địa điểm trực";
+
+    // Exclude shifts that have already ended before now
+    if (shiftEnd < now) {
+      continue;
+    }
+
+    for (const sa of s.shift_assignments || []) {
+      const st = sa.status;
+
+      // Exclude assignments that have checked out / finished
+      if (st === "checkout") {
+        continue;
+      }
+
+      const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
+      const profile = getProfile(sa.guard_id);
+      const assignmentId = `#C-${sa.guard_id.slice(0, 4).toUpperCase()}`;
+
+      let type: "ONGOING" | "UPCOMING" | "LATE" | "REPLACEMENT" | "ABSENT" | "CHECKOUT" = "UPCOMING";
+      let statusText = "PHÂN CÔNG";
+      let timeText = `Bắt đầu: ${formatHHMM(s.start_time)}`;
+
+      if (hasRep) {
+        type = "REPLACEMENT";
+        statusText = "THAY CA";
+        timeText = `Thay ca (${formatHHMM(s.start_time)})`;
+      } else if (st === "completed") {
+        type = "ONGOING";
+        statusText = "ĐANG TRỰC";
+        timeText = `Kết thúc lúc: ${formatHHMM(s.end_time)}`;
+      } else if (st === "late") {
+        type = "LATE";
+        statusText = "ĐI TRỄ";
+        timeText = `Trễ ca (Bắt đầu ${formatHHMM(s.start_time)})`;
+      } else if (st === "absent") {
+        type = "ABSENT";
+        statusText = "VẮNG MẶT";
+        timeText = `Vắng mặt ca ${formatHHMM(s.start_time)}`;
+      } else {
+        type = "UPCOMING";
+        statusText = "PHÂN CÔNG";
+        timeText = `Bắt đầu: ${formatHHMM(s.start_time)}`;
+      }
+
+      list.push({
+        id: assignmentId,
+        name: profile.full_name,
+        avatar: profile.avatar_url || "",
+        phone: profile.phone_number || "",
+        type,
+        timeText,
+        location: locationName,
+        statusText,
+      });
+
+      if (hasRep) {
+        sa.replacement_guard_ids.forEach((repId: string) => {
+          const repProf = getProfile(repId);
+          list.push({
+            id: `#C-${repId.slice(0, 4).toUpperCase()}`,
+            name: repProf.full_name,
+            avatar: repProf.avatar_url || "",
+            phone: repProf.phone_number || "",
+            type: "REPLACEMENT",
+            timeText: `Thay ca cho ${profile.full_name} (${formatHHMM(s.start_time)})`,
+            location: locationName,
+            statusText: "THAY CA",
+          });
+        });
+      }
+    }
+  }
+
+  return list;
+};
+
+export const getCoordinatorReportStatsService = async (
+  companyId?: string,
+  filter: string = "hientai"
+): Promise<{ totalReports: number; unresolvedReports: number; currentUpcomingShifts: CurrentUpcomingShiftItem[]; filter: string }> => {
+  const stats = await getCoordinatorReportStats(companyId, filter);
+  const currentUpcomingShifts = await getCurrentUpcomingShiftsTodayService(companyId, filter);
+  return {
+    ...stats,
+    currentUpcomingShifts,
+    filter,
+  };
+};
+
+export interface PastShiftItem {
+  id: string;
+  name: string;
+  avatar?: string;
+  phone?: string;
+  time: string;
+  location: string;
+  contractName: string;
+  status: string;
+}
+
+export interface AvailableGuardItem {
+  id: string;
+  name: string;
+  certs: string;
+  phone: string;
+  avatar: string;
+}
+
+export interface GuardPerformanceRadarItem {
+  subject: string;
+  score: number;
+  count: string;
+  badgeBg: string;
+}
+
+export const getPastShiftsService = async (
+  companyId?: string,
+  filter: string = "hientai"
+): Promise<PastShiftItem[]> => {
+  if (!companyId) return [];
+  const data = await getPastShiftsRepository(companyId, filter);
+  if (!data || data.length === 0) return [];
+
+  const guardIds = Array.from(
+    new Set(
+      data
+        .flatMap((s: any) => (s.shift_assignments || []).map((sa: any) => sa.guard_id))
+        .filter((id): id is string => Boolean(id))
+    )
+  );
+
+  let profiles: any[] = [];
+  if (guardIds.length > 0) {
+    profiles = await getProfilesByIds(guardIds);
+  }
+  const getProfile = (id: string) => profiles.find((p) => p.user_id === id) || { full_name: "Bảo vệ" };
+
+  const pad = (num: number) => num.toString().padStart(2, "0");
+  const formatTimeRange = (start: string, end: string) => {
+    const s = new Date(start);
+    const e = new Date(end);
+    const dateStr = `${pad(s.getDate())}/${pad(s.getMonth() + 1)}/${s.getFullYear()}`;
+    return `${pad(s.getHours())}:${pad(s.getMinutes())} - ${pad(e.getHours())}:${pad(e.getMinutes())} · ${dateStr}`;
+  };
+
+  const list: PastShiftItem[] = [];
+  for (const s of data as any[]) {
+    const serviceName = s.contracts?.bookings?.services?.name;
+    const locationName = serviceName || (s.shift_name && s.shift_name !== "a" ? s.shift_name : "Mục tiêu trực");
+    const contractName = s.contracts?.contract_name || s.contracts?.contract_code || (s.contracts?.contract_id ? `Hợp đồng #${s.contracts.contract_id.slice(0, 6)}` : "Hợp đồng bảo vệ");
+
+    for (const sa of s.shift_assignments || []) {
+      const p = getProfile(sa.guard_id);
+      let statusLabel = "ĐÃ KẾT THÚC";
+      if (sa.status === "late") statusLabel = "ĐI TRỄ";
+      else if (sa.status === "absent") statusLabel = "VẮNG MẶT";
+      else if (sa.status === "assigned" || sa.status === "upcoming") statusLabel = "PHÂN CÔNG";
+      else if (sa.status === "completed" || sa.status === "ongoing") statusLabel = "ĐANG TRỰC";
+
+      list.push({
+        id: `#G-${sa.guard_id ? sa.guard_id.slice(0, 4).toUpperCase() : "0000"}`,
+        name: p.full_name,
+        avatar: p.avatar_url || "",
+        phone: p.phone_number || "",
+        time: formatTimeRange(s.start_time, s.end_time),
+        location: locationName,
+        contractName: contractName,
+        status: statusLabel,
+      });
+    }
+  }
+  return list;
+};
+
+export const getAvailableGuardsService = async (
+  companyId?: string
+): Promise<AvailableGuardItem[]> => {
+  if (!companyId) return [];
+  const data = await getAvailableGuardsRepository(companyId);
+  if (!data || data.length === 0) return [];
+
+  return data.map((g: any) => ({
+    id: `#B-${g.user_id.slice(0, 4).toUpperCase()}`,
+    name: g.profiles?.full_name || "Bảo vệ",
+    certs: "CN: Tuần tra, Sơ cứu",
+    phone: g.profiles?.phone_number || "",
+    avatar: g.profiles?.avatar_url || "",
+  }));
+};
+
+export const getGuardPerformanceRadarService = async (
+  companyId?: string,
+  filter: string = "hientai"
+): Promise<GuardPerformanceRadarItem[]> => {
+  const counts = await getGuardPerformanceRadarRepository(companyId, filter);
+
+  const maxVal = Math.max(counts.onDutyCount, counts.completedCount, counts.lateCount, counts.absentCount, counts.replacementCount, 1);
+  const calcScore = (val: number) => Math.min(100, Math.round((val / maxVal) * 90) + 10);
+
+  return [
+    {
+      subject: "Đang trực",
+      score: counts.onDutyCount > 0 ? calcScore(counts.onDutyCount) : 0,
+      count: `${counts.onDutyCount}`,
+      badgeBg: "bg-blue-50 text-blue-700 border-blue-200/80",
+    },
+    {
+      subject: "Hoàn thành",
+      score: counts.completedCount > 0 ? calcScore(counts.completedCount) : 0,
+      count: `${counts.completedCount}`,
+      badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+    },
+    {
+      subject: "Đi trễ",
+      score: counts.lateCount > 0 ? calcScore(counts.lateCount) : 0,
+      count: `${counts.lateCount}`,
+      badgeBg: "bg-amber-50 text-amber-700 border-amber-200/80",
+    },
+    {
+      subject: "Vắng mặt",
+      score: counts.absentCount > 0 ? calcScore(counts.absentCount) : 0,
+      count: `${counts.absentCount}`,
+      badgeBg: "bg-rose-50 text-rose-700 border-rose-200/80",
+    },
+    {
+      subject: "Thay ca",
+      score: counts.replacementCount > 0 ? calcScore(counts.replacementCount) : 0,
+      count: `${counts.replacementCount}`,
+      badgeBg: "bg-purple-50 text-purple-700 border-purple-200/80",
+    },
+  ];
 };
 
 
