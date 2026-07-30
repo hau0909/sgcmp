@@ -26,13 +26,14 @@ export const handleGetCoordinators = async (
   companyId: string,
   page = 1,
   limit = 10,
-  search?: string
+  search?: string,
+  status?: string
 ): Promise<{ data: CoordinatorWithUser[]; total: number }> => {
   const subCheck = await checkCompanySubscriptionService(companyId);
   if (!subCheck.isActive) {
     throw new Error("Tài khoản doanh nghiệp chưa đăng ký gói dịch vụ hoặc gói đã hết hạn.");
   }
-  return await getCoordinatorsService(companyId, page, limit, search);
+  return await getCoordinatorsService(companyId, page, limit, search, status);
 };
 
 export const handleCreateCoordinator = async (

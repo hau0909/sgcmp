@@ -6,7 +6,8 @@ export const getCoordinators = async (
   companyId: string,
   page = 1,
   limit = 10,
-  search?: string
+  search?: string,
+  status?: string
 ): Promise<{ data: CoordinatorWithUser[]; total: number }> => {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
@@ -18,6 +19,14 @@ export const getCoordinators = async (
 
   if (search) {
     query = query.or(`full_name.ilike.%${search}%,email.ilike.%${search}%,phone_number.ilike.%${search}%`, { foreignTable: "profiles" });
+  }
+
+  if (status) {
+    if (status.toLowerCase() === 'active' || status.toLowerCase() === 'hoạt động') {
+      query = query.eq("profiles.status", "active");
+    } else {
+      query = query.neq("profiles.status", "active");
+    }
   }
 
   const { data, error, count } = await query.range(from, to);

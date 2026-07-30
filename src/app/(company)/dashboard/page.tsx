@@ -1135,29 +1135,6 @@ export default function CompanyDashboardPage() {
                 </div>
               </div>
 
-              {/* Coordinator Resource */}
-              <div className="mb-2 flex justify-between text-xs text-on-surface-variant font-semibold">
-                <span>{dict.company_dashboard.subscription.resource_coordinators}</span>
-                <span className="font-mono">
-                  {subInfo.usage.coordinators}/{subInfo.plan.max_coordinators ?? "∞"}
-                </span>
-              </div>
-              <div className="w-full bg-surface-container rounded-full h-2.5 mb-1 overflow-hidden border border-outline-variant/20">
-                <div
-                  className="bg-primary h-full rounded-full transition-all duration-1000 ease-out"
-                  style={{
-                    width: subInfo.plan.max_coordinators
-                      ? `${Math.min(100, (subInfo.usage.coordinators / subInfo.plan.max_coordinators) * 100)}%`
-                      : "0%",
-                  }}
-                />
-              </div>
-              <p className="text-[11px] text-on-surface-variant/80 text-right mb-6">
-                {subInfo.plan.max_coordinators
-                  ? dict.company_dashboard.subscription.remaining_coordinators.replace("{0}", Math.max(0, subInfo.plan.max_coordinators - subInfo.usage.coordinators).toString())
-                  : dict.company_dashboard.subscription.unlimited}
-              </p>
-
               {/* Guard Resource */}
               <div className="mb-2 flex justify-between text-xs text-on-surface-variant font-semibold">
                 <span>{dict.company_dashboard.subscription.resource_guards}</span>
