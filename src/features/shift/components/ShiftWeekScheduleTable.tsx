@@ -270,7 +270,11 @@ const getStatusLabel = (status: ShiftAssignmentStatus, dict?: any) => {
   }
 
   if (status === "completed") {
-    return dict?.coor_schedules?.completed || dict?.coor_schedules?.on_duty || "Hoàn thành";
+    return dict?.coor_schedules?.on_duty || "Đang trực";
+  }
+
+  if (status === "checkout") {
+    return dict?.coor_schedules?.checkout || "Hoàn thành";
   }
 
   if (status === "late") {
@@ -287,6 +291,10 @@ const getStatusStyle = (status: ShiftAssignmentStatus) => {
 
   if (status === "completed") {
     return "bg-emerald-100 text-emerald-700 border-emerald-300";
+  }
+
+  if (status === "checkout") {
+    return "bg-slate-100 text-slate-700 border-slate-300";
   }
 
   if (status === "late") {

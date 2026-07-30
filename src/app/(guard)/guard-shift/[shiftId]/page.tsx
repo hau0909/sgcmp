@@ -125,6 +125,7 @@ export default function GuardShiftDetailPage() {
     checkInTime: string | null | undefined,
     startTime: string
   ) => {
+    if (status === "checkout") return "Hoàn thành";
     if (status === "completed") return t.status_on_duty;
     if (status === "late") return checkInTime ? t.status_late_checked : t.status_late;
     if (status === "absent") return t.status_absent;
@@ -138,6 +139,7 @@ export default function GuardShiftDetailPage() {
     checkInTime: string | null | undefined,
     startTime: string
   ) => {
+    if (status === "checkout") return "Hoàn thành";
     if (status === "completed") return t.guard_status_on_duty;
     if (status === "late") return checkInTime ? t.guard_status_late_checked : t.guard_status_late;
     if (status === "absent") return t.guard_status_absent;

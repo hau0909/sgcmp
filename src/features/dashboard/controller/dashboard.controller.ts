@@ -12,12 +12,20 @@ import {
   getAdminTotalCompaniesService,
   getAdminPublishedCompaniesService,
   getAdminTotalUsersService,
+  getAdminUserByRoleService,
   getAdminPendingApprovalCompaniesService,
   getAdminPendingPublicationRequestsService,
+  getAdminPendingPublicationListService,
+  type PendingPublicationListItem,
   getAdminGrowthService,
   getAdminPlanDistributionService,
   getAdminPendingTasksService,
   getAdminRecentActivitiesService,
+  getCoordinatorReportStatsService,
+  getCurrentUpcomingShiftsTodayService,
+  getPastShiftsService,
+  getAvailableGuardsService,
+  getGuardPerformanceRadarService,
   type GrowthDataPoint,
   type PlanDistributionItem,
   type MetricWithTrend,
@@ -80,8 +88,8 @@ export const handleGetRecentActivities = async (
   return await getRecentActivitiesService(companyId);
 };
 
-export const handleGetAdminRevenue = async (): Promise<MetricWithTrend> => {
-  return await getAdminRevenueService();
+export const handleGetAdminRevenue = async (filter: string = "month"): Promise<MetricWithTrend> => {
+  return await getAdminRevenueService(filter);
 };
 
 export const handleGetAdminTotalCompanies = async (): Promise<MetricWithTrend> => {
@@ -92,34 +100,78 @@ export const handleGetAdminPublishedCompanies = async (): Promise<MetricWithTren
   return await getAdminPublishedCompaniesService();
 };
 
-export const handleGetAdminTotalUsers = async (): Promise<MetricWithTrend> => {
-  return await getAdminTotalUsersService();
+export const handleGetAdminTotalUsers = async (filter: string = "month"): Promise<MetricWithTrend> => {
+  return await getAdminTotalUsersService(filter);
 };
 
-export const handleGetAdminPendingApprovalCompanies = async (): Promise<MetricWithTrend> => {
-  return await getAdminPendingApprovalCompaniesService();
+export const handleGetAdminUserByRole = async (
+  role: "company-admin" | "customer",
+  filter: string = "month"
+): Promise<MetricWithTrend> => {
+  return await getAdminUserByRoleService(role, filter);
 };
 
-export const handleGetAdminPendingPublicationRequests = async (): Promise<MetricWithTrend> => {
-  return await getAdminPendingPublicationRequestsService();
+export const handleGetAdminPendingApprovalCompanies = async (filter: string = "month"): Promise<MetricWithTrend> => {
+  return await getAdminPendingApprovalCompaniesService(filter);
 };
 
-export const handleGetAdminGrowth = async (range: "6m" | "1y"): Promise<GrowthDataPoint[]> => {
-  return await getAdminGrowthService(range);
+export const handleGetAdminPendingPublicationRequests = async (filter: string = "month"): Promise<MetricWithTrend> => {
+  return await getAdminPendingPublicationRequestsService(filter);
+};
+
+export const handleGetAdminGrowth = async (timeFilter: string = "month"): Promise<GrowthDataPoint[]> => {
+  return await getAdminGrowthService(timeFilter);
 };
 
 export const handleGetAdminPlanDistribution = async (): Promise<PlanDistributionItem[]> => {
   return await getAdminPlanDistributionService();
 };
 
-export const handleGetAdminPendingTasks = async (): Promise<PendingTaskItem[]> => {
-  return await getAdminPendingTasksService();
+export const handleGetAdminPendingTasks = async (locale: string = "vi"): Promise<PendingTaskItem[]> => {
+  return await getAdminPendingTasksService(locale);
 };
 
-export const handleGetAdminRecentActivities = async (): Promise<ActivityItem[]> => {
-  return await getAdminRecentActivitiesService();
+export const handleGetAdminRecentActivities = async (timeFilter: string = "month", locale: string = "vi"): Promise<ActivityItem[]> => {
+  return await getAdminRecentActivitiesService(timeFilter, locale);
+};
+
+export const handleGetCoordinatorReportStats = async (
+  companyId?: string,
+  filter: string = "hientai"
+) => {
+  return await getCoordinatorReportStatsService(companyId, filter);
+};
+
+export const handleGetCurrentUpcomingShiftsToday = async (
+  companyId?: string
+) => {
+  return await getCurrentUpcomingShiftsTodayService(companyId);
+};
+
+export const handleGetPastShifts = async (
+  companyId?: string,
+  filter: string = "hientai"
+) => {
+  return await getPastShiftsService(companyId, filter);
+};
+
+export const handleGetAvailableGuards = async (
+  companyId?: string
+) => {
+  return await getAvailableGuardsService(companyId);
+};
+
+export const handleGetGuardPerformanceRadar = async (
+  companyId?: string,
+  filter: string = "hientai"
+) => {
+  return await getGuardPerformanceRadarService(companyId, filter);
 };
 
 
+
+export const handleGetAdminPendingPublicationList = async (): Promise<PendingPublicationListItem[]> => {
+  return await getAdminPendingPublicationListService();
+};
 
 

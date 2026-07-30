@@ -288,6 +288,10 @@ export type GuardPerformanceSummaryData = {
     on_time_shift_count: number;
     total_shifts: number;
   };
+  completed_rate?: {
+    percentage: number;
+    count: number;
+  };
   late_check_in_rate: {
     percentage: number;
     count: number;

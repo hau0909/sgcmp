@@ -3,6 +3,7 @@ import { fetcher } from "@/lib/fetcher";
 /** Kiểu trả về chung cho tất cả metric dashboard */
 export type MetricWithTrend = {
   count: number;
+  addedCount?: number;
   /** % thay đổi so với tháng trước, null nếu không có dữ liệu tháng trước */
   percentChange: number | null;
   trend: "up" | "down" | "neutral";
@@ -191,9 +192,9 @@ export const requestGetRecentActivities = (
   ) as Promise<RecentActivityItem[]>;
 };
 
-export const requestGetAdminRevenue = (): Promise<MetricWithTrend> => {
+export const requestGetAdminRevenue = (timeFilter: string = "month"): Promise<MetricWithTrend> => {
   return fetcher(
-    "/api/dashboard/admin/revenue",
+    `/api/dashboard/admin/revenue?timeFilter=${timeFilter}`,
     { method: "GET" }
   ) as Promise<MetricWithTrend>;
 };
@@ -212,25 +213,49 @@ export const requestGetAdminPublishedCompanies = (): Promise<MetricWithTrend> =>
   ) as Promise<MetricWithTrend>;
 };
 
-export const requestGetAdminTotalUsers = (): Promise<MetricWithTrend> => {
+export const requestGetAdminTotalUsers = (timeFilter: string = "month"): Promise<MetricWithTrend> => {
   return fetcher(
-    "/api/dashboard/admin/user",
+    `/api/dashboard/admin/user?timeFilter=${timeFilter}`,
     { method: "GET" }
   ) as Promise<MetricWithTrend>;
 };
 
-export const requestGetAdminPendingApprovalCompanies = (): Promise<MetricWithTrend> => {
+export const requestGetAdminUserByRole = (
+  role: "company-admin" | "customer",
+  timeFilter: string = "month"
+): Promise<MetricWithTrend> => {
   return fetcher(
-    "/api/dashboard/admin/companies/pending-approval",
+    `/api/dashboard/admin/user?role=${role}&timeFilter=${timeFilter}`,
     { method: "GET" }
   ) as Promise<MetricWithTrend>;
 };
 
-export const requestGetAdminPendingPublicationRequests = (): Promise<MetricWithTrend> => {
+export const requestGetAdminPendingApprovalCompanies = (timeFilter: string = "month"): Promise<MetricWithTrend> => {
   return fetcher(
-    "/api/dashboard/admin/companies/pending-publication",
+    `/api/dashboard/admin/companies/pending-approval?timeFilter=${timeFilter}`,
     { method: "GET" }
   ) as Promise<MetricWithTrend>;
+};
+
+export const requestGetAdminPendingPublicationRequests = (timeFilter: string = "month"): Promise<MetricWithTrend> => {
+  return fetcher(
+    `/api/dashboard/admin/companies/pending-publication?timeFilter=${timeFilter}`,
+    { method: "GET" }
+  ) as Promise<MetricWithTrend>;
+};
+
+export type PendingPublicationListItem = {
+  request_id: string;
+  company_name: string;
+  requested_at: string;
+  notes: string | null;
+};
+
+export const requestGetAdminPendingPublicationList = (): Promise<PendingPublicationListItem[]> => {
+  return fetcher(
+    "/api/dashboard/admin/companies/pending-publication-list",
+    { method: "GET" }
+  ) as Promise<PendingPublicationListItem[]>;
 };
 
 export interface GrowthDataPoint {
@@ -240,9 +265,9 @@ export interface GrowthDataPoint {
   fill: string;
 }
 
-export const requestGetAdminGrowth = (range: "6m" | "1y"): Promise<GrowthDataPoint[]> => {
+export const requestGetAdminGrowth = (timeFilter: string = "month"): Promise<GrowthDataPoint[]> => {
   return fetcher(
-    `/api/dashboard/admin/growth?range=${range}`,
+    `/api/dashboard/admin/growth?timeFilter=${timeFilter}`,
     { method: "GET" }
   ) as Promise<GrowthDataPoint[]>;
 };
@@ -273,9 +298,9 @@ export type PendingTaskItem = {
   statusText: string;
 };
 
-export const requestGetAdminPendingTasks = (): Promise<PendingTaskItem[]> => {
+export const requestGetAdminPendingTasks = (locale: string = "vi"): Promise<PendingTaskItem[]> => {
   return fetcher(
-    "/api/dashboard/admin/pending-task",
+    `/api/dashboard/admin/pending-task?locale=${locale}`,
     { method: "GET" }
   ) as Promise<PendingTaskItem[]>;
 };
@@ -291,11 +316,136 @@ export type ActivityItem = {
   iconColor: "blue" | "purple" | "green" | "red";
 };
 
-export const requestGetAdminRecentActivities = (): Promise<ActivityItem[]> => {
+export const requestGetAdminRecentActivities = (
+  timeFilter: string = "month",
+  locale: string = "vi"
+): Promise<ActivityItem[]> => {
   return fetcher(
-    "/api/dashboard/admin/recent-activities",
+    `/api/dashboard/admin/recent-activities?timeFilter=${timeFilter}&locale=${locale}`,
     { method: "GET" }
   ) as Promise<ActivityItem[]>;
+};
+
+export type CurrentUpcomingShiftItem = {
+  id: string;
+  name: string;
+  avatar: string;
+  type: "ONGOING" | "UPCOMING" | "LATE" | "REPLACEMENT" | "ABSENT" | "CHECKOUT";
+  timeText: string;
+  location: string;
+  statusText: string;
+};
+
+/**
+ * Lấy số liệu báo cáo tổng số & chưa giải quyết cho Coordinator Dashboard.
+ * GET /api/dashboard/coordinator?timeFilter=...
+ */
+export const requestGetCoordinatorReportStats = (
+  companyId?: string,
+  timeFilter: string = "hientai"
+): Promise<{ totalReports: number; unresolvedReports: number; currentUpcomingShifts: CurrentUpcomingShiftItem[]; filter: string }> => {
+  const params = new URLSearchParams();
+  if (companyId) params.append("companyId", companyId);
+  if (timeFilter) params.append("timeFilter", timeFilter);
+
+  return fetcher(
+    `/api/dashboard/coordinator?${params.toString()}`,
+    { method: "GET" }
+  ) as Promise<{ totalReports: number; unresolvedReports: number; currentUpcomingShifts: CurrentUpcomingShiftItem[]; filter: string }>;
+};
+
+/**
+ * Lấy danh sách ca trực Hiện tại & Sắp tới trong ngày cho Coordinator.
+ * GET /api/dashboard/coordinator/current-upcoming-shifts?companyId=...
+ */
+export const requestGetCurrentUpcomingShiftsToday = (
+  companyId?: string,
+  timeFilter: string = "hientai"
+): Promise<CurrentUpcomingShiftItem[]> => {
+  const params = new URLSearchParams();
+  if (companyId) params.append("companyId", companyId);
+  if (timeFilter) params.append("timeFilter", timeFilter);
+
+  return fetcher(
+    `/api/dashboard/coordinator/current-upcoming-shifts?${params.toString()}`,
+    { method: "GET" }
+  ) as Promise<CurrentUpcomingShiftItem[]>;
+};
+
+export type PastShiftItem = {
+  id: string;
+  name: string;
+  time: string;
+  location: string;
+  contractName?: string;
+  status: string;
+};
+
+export type AvailableGuardItem = {
+  id: string;
+  name: string;
+  certs: string;
+  phone: string;
+  avatar: string;
+};
+
+export type GuardPerformanceRadarItem = {
+  subject: string;
+  score: number;
+  count: string;
+  badgeBg: string;
+};
+
+/**
+ * Lấy danh sách ca trực đã qua / hiện tại cho Coordinator.
+ * GET /api/dashboard/coordinator/past-shifts?companyId=...&timeFilter=...
+ */
+export const requestGetPastShifts = (
+  companyId?: string,
+  timeFilter: string = "hientai"
+): Promise<PastShiftItem[]> => {
+  const params = new URLSearchParams();
+  if (companyId) params.append("companyId", companyId);
+  if (timeFilter) params.append("timeFilter", timeFilter);
+
+  return fetcher(
+    `/api/dashboard/coordinator/past-shifts?${params.toString()}`,
+    { method: "GET" }
+  ) as Promise<PastShiftItem[]>;
+};
+
+/**
+ * Lấy danh sách bảo vệ đang rảnh cho Coordinator.
+ * GET /api/dashboard/coordinator/available-guards?companyId=...
+ */
+export const requestGetAvailableGuards = (
+  companyId?: string
+): Promise<AvailableGuardItem[]> => {
+  const params = new URLSearchParams();
+  if (companyId) params.append("companyId", companyId);
+
+  return fetcher(
+    `/api/dashboard/coordinator/available-guards?${params.toString()}`,
+    { method: "GET" }
+  ) as Promise<AvailableGuardItem[]>;
+};
+
+/**
+ * Lấy dữ liệu biểu đồ Radar Hiệu suất Bảo vệ cho Coordinator.
+ * GET /api/dashboard/coordinator/performance?companyId=...&timeFilter=...
+ */
+export const requestGetGuardPerformanceRadar = (
+  companyId?: string,
+  timeFilter: string = "hientai"
+): Promise<GuardPerformanceRadarItem[]> => {
+  const params = new URLSearchParams();
+  if (companyId) params.append("companyId", companyId);
+  if (timeFilter) params.append("timeFilter", timeFilter);
+
+  return fetcher(
+    `/api/dashboard/coordinator/performance?${params.toString()}`,
+    { method: "GET" }
+  ) as Promise<GuardPerformanceRadarItem[]>;
 };
 
 

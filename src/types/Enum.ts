@@ -39,6 +39,7 @@ export type ImageType = "logo" | "banner" | "other";
 export type ShiftAssignmentStatus =
   | "assigned"
   | "completed"
+  | "checkout"
   | "absent"
   | "late";
 
