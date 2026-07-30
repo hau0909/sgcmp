@@ -28,6 +28,9 @@ export const getBookingsService = async (
       start_date: item.start_date,
       end_date: item.end_date,
       quoted_price: item.quoted_price !== null ? Number(item.quoted_price) : null,
+      quotation_type: item.quotation_type || null,
+      hourly_rate: item.hourly_rate !== null && item.hourly_rate !== undefined ? Number(item.hourly_rate) : null,
+      monthly_rate: item.monthly_rate !== null && item.monthly_rate !== undefined ? Number(item.monthly_rate) : null,
       status: item.status,
       created_at: item.created_at,
       updated_at: item.updated_at,
@@ -70,6 +73,26 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
     }
   }
 
+  let servicePrice: number | null = null;
+  if (item.company_id && item.service_id) {
+    try {
+      const { createClient } = await import("@/lib/supabase/server");
+      const supabase = await createClient();
+      const { data: compService } = await supabase
+        .from("company_services")
+        .select("price")
+        .eq("company_id", item.company_id)
+        .eq("service_id", item.service_id)
+        .maybeSingle();
+
+      if (compService && compService.price) {
+        servicePrice = Number(compService.price);
+      }
+    } catch (e) {
+      console.error("Lỗi khi lấy giá dịch vụ từ company_services:", e);
+    }
+  }
+
   return {
     booking_id: item.booking_id,
     customer_id: item.customer_id,
@@ -82,6 +105,10 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
     start_date: item.start_date,
     end_date: item.end_date,
     quoted_price: item.quoted_price !== null ? Number(item.quoted_price) : null,
+    quotation_type: item.quotation_type || null,
+    hourly_rate: item.hourly_rate !== null && item.hourly_rate !== undefined ? Number(item.hourly_rate) : null,
+    monthly_rate: item.monthly_rate !== null && item.monthly_rate !== undefined ? Number(item.monthly_rate) : null,
+    service_price: servicePrice,
     status: item.status,
     created_at: item.created_at,
     updated_at: item.updated_at,
@@ -201,7 +228,13 @@ export const updateBookingDetailsService = async (
 
 export const updateBookingStatusAndPriceService = async (
   bookingId: string,
-  updates: { status: BookingStatus; quoted_price?: number }
+  updates: {
+    status: BookingStatus;
+    quoted_price?: number;
+    quotation_type?: any;
+    hourly_rate?: number;
+    monthly_rate?: number;
+  }
 ): Promise<{ booking: Booking; contract_id?: string }> => {
   validateBookingUpdateStatusData(updates.status, updates.quoted_price);
   return await updateBookingStatusAndPrice(bookingId, updates);
@@ -228,6 +261,9 @@ export const getCustomerBookingsService = async (
       start_date: item.start_date,
       end_date: item.end_date,
       quoted_price: item.quoted_price !== null ? Number(item.quoted_price) : null,
+      quotation_type: item.quotation_type || null,
+      hourly_rate: item.hourly_rate !== null && item.hourly_rate !== undefined ? Number(item.hourly_rate) : null,
+      monthly_rate: item.monthly_rate !== null && item.monthly_rate !== undefined ? Number(item.monthly_rate) : null,
       status: item.status,
       created_at: item.created_at,
       updated_at: item.updated_at,

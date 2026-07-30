@@ -209,7 +209,11 @@ export default function CoordinatorLayout({
             })}
           </nav>
 
-          {/* Footer Section - Removed */}
+          {/* Sidebar Footer (Copyright inside left sidebar) */}
+          <div className="pt-3 mt-auto border-t border-outline-variant/30 text-center text-[11px] text-on-surface-variant/60 shrink-0">
+            &copy; {new Date().getFullYear()}{" "}
+            {dict.layout_company.copyright_text}
+          </div>
         </aside>
 
         {/* Main Panel */}

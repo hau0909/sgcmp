@@ -282,6 +282,12 @@ export default function CompanyLayout({
               );
             })}
           </nav>
+
+          {/* Sidebar Footer (Copyright moved inside left sidebar) */}
+          <div className="pt-3 mt-auto border-t border-outline-variant/30 text-center text-[11px] text-on-surface-variant/60 shrink-0">
+            &copy; {new Date().getFullYear()}{" "}
+            {dict.layout_company.copyright_text}
+          </div>
         </aside>
 
         {/* Main Panel */}
@@ -386,11 +392,6 @@ export default function CompanyLayout({
 
           {/* Page Content Viewport */}
           <main className="flex-1 overflow-y-auto bg-surface">{children}</main>
-
-          <footer className="py-4 text-center text-xs text-on-surface-variant/60 border-t border-outline-variant/30 bg-surface shrink-0">
-            &copy; {new Date().getFullYear()}{" "}
-            {dict.layout_company.copyright_text}
-          </footer>
         </div>
       </div>
     </RoleGuard>
