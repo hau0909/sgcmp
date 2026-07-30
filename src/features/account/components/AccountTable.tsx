@@ -14,6 +14,7 @@ import {
   Crosshair,
   ExternalLink,
   Search,
+  RefreshCw,
 } from "lucide-react";
 import { requestGetAllAccounts } from "../api/account.api";
 import type { Profile } from "@/types/Profile";
@@ -191,21 +192,22 @@ export default function AccountTable() {
     };
   }, [accounts]);
 
+  const fetchAccounts = React.useCallback(async () => {
+    try {
+      setLoading(true);
+      const res = await requestGetAllAccounts();
+      setAccounts(res.accounts || []);
+    } catch (err: any) {
+      console.error("Error fetching accounts:", err);
+      setError(err.message || dict.admin_accounts.error_load_list);
+    } finally {
+      setLoading(false);
+    }
+  }, [dict]);
+
   React.useEffect(() => {
-    const fetchAccounts = async () => {
-      try {
-        setLoading(true);
-        const res = await requestGetAllAccounts();
-        setAccounts(res.accounts || []);
-      } catch (err: any) {
-        console.error("Error fetching accounts:", err);
-        setError(err.message || dict.admin_accounts.error_load_list);
-      } finally {
-        setLoading(false);
-      }
-    };
     fetchAccounts();
-  }, []);
+  }, [fetchAccounts]);
 
   if (loading) {
     return (
@@ -250,19 +252,31 @@ export default function AccountTable() {
           </p>
         </div>
 
-        {/* Search */}
-        <div className="flex items-center bg-surface-container-lowest rounded-xl px-4 py-2.5 border border-outline-variant focus-within:border-primary transition-colors w-full md:w-80 shadow-sm">
-          <Search className="text-on-surface-variant w-4 h-4 mr-2 shrink-0" />
-          <input
-            type="text"
-            placeholder={dict.admin_accounts.search_placeholder}
-            value={searchQuery}
-            onChange={(e) => {
-              setSearchQuery(e.target.value);
-              setCurrentPage(1);
-            }}
-            className="bg-transparent border-none outline-none text-sm text-on-surface w-full placeholder-on-surface-variant"
-          />
+        <div className="flex items-center gap-3 w-full md:w-auto">
+          {/* Search */}
+          <div className="flex items-center bg-surface-container-lowest rounded-full px-4 py-2.5 border border-outline-variant focus-within:border-primary transition-colors w-full md:w-80 shadow-sm">
+            <Search className="text-on-surface-variant w-4 h-4 mr-2 shrink-0" />
+            <input
+              type="text"
+              placeholder={dict.admin_accounts.search_placeholder}
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setCurrentPage(1);
+              }}
+              className="bg-transparent border-none outline-none text-sm text-on-surface w-full placeholder-on-surface-variant"
+            />
+          </div>
+
+          {/* Refresh Button */}
+          <button
+            onClick={fetchAccounts}
+            className="flex items-center gap-1.5 px-3 py-2.5 bg-surface-container-lowest border border-outline-variant rounded-lg text-xs font-semibold hover:bg-surface-container-low transition-all text-on-surface cursor-pointer shadow-sm shrink-0"
+            title={dict.admin_accounts.refresh_btn || "Làm mới"}
+          >
+            <RefreshCw className="text-on-surface-variant w-3.5 h-3.5" />
+            <span className="hidden sm:inline">{dict.admin_accounts.refresh_btn || "Làm mới"}</span>
+          </button>
         </div>
       </div>
 

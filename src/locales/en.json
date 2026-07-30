@@ -483,6 +483,7 @@
   },
   "layout_admin": {
     "dashboard": "Dashboard",
+    "companies": "Company Management",
     "approvals": "Approval Requests",
     "publish_requests": "Publish Requests",
     "payment_history": "Payment History",
@@ -2545,6 +2546,7 @@
     "month_word": "month"
   },
   "admin_accounts": {
+    "refresh_btn": "Refresh",
     "loading_list": "Loading accounts list...",
     "loading_detail": "Loading account details...",
     "error_load_list": "Failed to load accounts list",
@@ -2594,6 +2596,31 @@
     "cancel": "Cancel",
     "confirm": "Confirm",
     "processing": "Processing..."
+  },
+  "admin_companies": {
+    "loading_list": "Loading companies list...",
+    "error_load_list": "Failed to load companies list",
+    "admin": "Administration",
+    "title_list": "Company Management",
+    "desc_list": "View and manage all companies in the system.",
+    "search_placeholder": "Search by name, email, phone...",
+    "refresh_btn": "Refresh",
+    "all": "All",
+    "published": "Published",
+    "active": "Active",
+    "pending_publish": "Pending",
+    "suspended": "Suspended",
+    "tbl_company": "COMPANY",
+    "tbl_tax_code": "TAX CODE / LICENSE",
+    "tbl_representative": "REPRESENTATIVE",
+    "tbl_status": "STATUS",
+    "tbl_created": "CREATED DATE",
+    "tbl_actions": "ACTIONS",
+    "view_detail": "View details",
+    "no_companies": "No companies found",
+    "no_companies_hint": "Try changing filters or search keyword.",
+    "modal_title": "Company Details",
+    "close": "Close"
   },
   "admin_registrations": {
     "loading_list": "Loading registrations list...",

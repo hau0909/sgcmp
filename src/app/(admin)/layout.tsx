@@ -54,9 +54,17 @@ export default function AdminLayout({
       active: pathname === "/admin",
     },
     {
+      name: dict.layout_admin.companies || "Quản lý doanh nghiệp",
+      href: "/admin/companies",
+      icon: Building2,
+      active:
+        pathname === "/admin/companies" ||
+        pathname.startsWith("/admin/companies/"),
+    },
+    {
       name: dict.layout_admin.approvals,
       href: "/registrations",
-      icon: Building2,
+      icon: ShieldCheck,
       active:
         pathname === "/registrations" || pathname.startsWith("/registrations/"),
     },
