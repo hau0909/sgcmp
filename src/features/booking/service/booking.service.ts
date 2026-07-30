@@ -113,6 +113,9 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
     created_at: item.created_at,
     updated_at: item.updated_at,
     day_per_week: (item.day_per_week as string[]) || [],
+    client_company_name: item.company_name || null,
+    company_scope: item.company_scope || null,
+    company_position: item.company_position || null,
 
     // Virtual/mapped fields for UI rendering
     customer_name: Array.isArray(profile)

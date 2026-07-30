@@ -1,12 +1,13 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Clock, Check, FileText } from "lucide-react";
 import { ContractStatus } from "@/types/Enum";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { exportContractDocx } from "../utils/exportDocx";
+import { ExportContractModal, ContractExportFormData } from "./ExportContractModal";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface ContractDetailHeaderProps {
@@ -31,6 +32,7 @@ export function ContractDetailHeader({
   contract,
 }: ContractDetailHeaderProps) {
   const { dict } = useTranslation();
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   // Map statuses to appropriate styles and labels
   const getStatusDisplay = (status: ContractStatus) => {
@@ -65,77 +67,82 @@ export function ContractDetailHeader({
 
   const statusInfo = getStatusDisplay(status);
 
+  const handleExport = (formData: ContractExportFormData) => {
+    exportContractDocx(contract, formData);
+  };
+
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-6 border-b border-outline-variant/60">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <Link
-          href="/contracts"
-          className="flex items-center gap-1.5 text-secondary hover:text-primary transition-colors text-sm font-semibold w-fit"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>{dict.contract_detail?.back || "Quay lại"}</span>
-        </Link>
-        <h2 className="text-xl md:text-2xl font-bold text-on-background flex flex-wrap items-center gap-2 font-headline">
-          {dict.contract_detail?.title || "Chi tiết Hợp đồng"}{" "}
-          <span className="font-mono text-primary font-bold">#{contractCode}</span>
-        </h2>
-      </div>
-      <div className="flex flex-wrap items-center gap-3">
-        {/* Customer signature status */}
-        <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs transition-colors duration-200 ${
-          customerAgreed 
-            ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/20 dark:border-emerald-900/50" 
-            : "bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-900/50"
-        }`}>
-          <span className="text-on-surface-variant font-medium">{dict.contract_detail?.customer_agreed || "Khách hàng:"}</span>
-          <span className={`font-bold flex items-center gap-1 ${customerAgreed ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-            {customerAgreed ? (
-              <span className="flex items-center gap-1">
-                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                {dict.contract_detail?.signed || "Đã ký"}
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                {dict.contract_detail?.pending_sign || "Chờ ký"}
-              </span>
-            )}
-          </span>
-        </div>
-
-        {/* Company signature status */}
-        <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs transition-colors duration-200 ${
-          companyAgreed 
-            ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/20 dark:border-emerald-900/50" 
-            : "bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-900/50"
-        }`}>
-          <span className="text-on-surface-variant font-medium">{dict.contract_detail?.company_agreed || "Công ty:"}</span>
-          <span className={`font-bold flex items-center gap-1 ${companyAgreed ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
-            {companyAgreed ? (
-              <span className="flex items-center gap-1">
-                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-                {dict.contract_detail?.signed || "Đã ký"}
-              </span>
-            ) : (
-              <span className="flex items-center gap-1">
-                <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                {dict.contract_detail?.pending_sign || "Chờ ký"}
-              </span>
-            )}
-          </span>
-        </div>
-
-        {/* Tải file Word */}
-        {contract && (
-          <Button
-            onClick={() => exportContractDocx(contract)}
-            variant="outline"
-            className="font-bold border-primary text-primary hover:bg-primary/5 px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+    <>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-6 border-b border-outline-variant/60">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <Link
+            href="/contracts"
+            className="flex items-center gap-1.5 text-secondary hover:text-primary transition-colors text-sm font-semibold w-fit"
           >
-            <FileText className="w-4 h-4" />
-            <span>{dict.contract_detail?.download_word || "Tải file Word"}</span>
-          </Button>
-        )}
+            <ArrowLeft className="w-4 h-4" />
+            <span>{dict.contract_detail?.back || "Quay lại"}</span>
+          </Link>
+          <h2 className="text-xl md:text-2xl font-bold text-on-background flex flex-wrap items-center gap-2 font-headline">
+            {dict.contract_detail?.title || "Chi tiết Hợp đồng"}{" "}
+            <span className="font-mono text-primary font-bold">#{contractCode}</span>
+          </h2>
+        </div>
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Customer signature status */}
+          <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs transition-colors duration-200 ${
+            customerAgreed 
+              ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/20 dark:border-emerald-900/50" 
+              : "bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-900/50"
+          }`}>
+            <span className="text-on-surface-variant font-medium">{dict.contract_detail?.customer_agreed || "Khách hàng:"}</span>
+            <span className={`font-bold flex items-center gap-1 ${customerAgreed ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+              {customerAgreed ? (
+                <span className="flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  {dict.contract_detail?.signed || "Đã ký"}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  {dict.contract_detail?.pending_sign || "Chờ ký"}
+                </span>
+              )}
+            </span>
+          </div>
+
+          {/* Company signature status */}
+          <div className={`flex items-center gap-1.5 border rounded-lg px-2.5 py-1 text-xs transition-colors duration-200 ${
+            companyAgreed 
+              ? "bg-emerald-50 border-emerald-300 dark:bg-emerald-950/20 dark:border-emerald-900/50" 
+              : "bg-amber-50 border-amber-300 dark:bg-amber-950/20 dark:border-amber-900/50"
+          }`}>
+            <span className="text-on-surface-variant font-medium">{dict.contract_detail?.company_agreed || "Công ty:"}</span>
+            <span className={`font-bold flex items-center gap-1 ${companyAgreed ? "text-emerald-600 dark:text-emerald-400" : "text-amber-600 dark:text-amber-400"}`}>
+              {companyAgreed ? (
+                <span className="flex items-center gap-1">
+                  <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  {dict.contract_detail?.signed || "Đã ký"}
+                </span>
+              ) : (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                  {dict.contract_detail?.pending_sign || "Chờ ký"}
+                </span>
+              )}
+            </span>
+          </div>
+
+          {/* Tải file Word */}
+          {contract && (
+            <Button
+              onClick={() => setIsExportModalOpen(true)}
+              variant="outline"
+              className="font-bold border-primary text-primary hover:bg-primary/5 px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+            >
+              <FileText className="w-4 h-4" />
+              <span>{dict.contract_detail?.download_word || "Tải file Word"}</span>
+            </Button>
+          )}
 
         {status !== "pending_signatures" && (
           <Badge
@@ -150,29 +157,31 @@ export function ContractDetailHeader({
           <div className="relative group/tooltip flex items-center">
             <Button
               onClick={onSignCompany}
-              disabled={!hasContractFile || !hasGuards}
+              disabled={!hasContractFile}
               className={`font-bold shadow-md px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 ${
-                (!hasContractFile || !hasGuards)
+                !hasContractFile
                   ? "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed hover:bg-slate-200"
                   : "cursor-pointer bg-primary hover:bg-primary/90 text-on-primary active:scale-95"
               }`}
             >
               <span>{dict.contract_detail?.sign_company || "Ký duyệt (Công ty)"}</span>
             </Button>
-            
-            {(!hasContractFile || !hasGuards) && (
+
+            {!hasContractFile && (
               <div className="absolute top-full mt-2 right-0 pointer-events-none opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded shadow-lg whitespace-nowrap z-50">
-                {!hasContractFile && !hasGuards
-                  ? dict.contract_detail?.tooltip_both || "Vui lòng tải lên tệp hợp đồng PDF và phân công bảo vệ trước khi ký duyệt"
-                  : !hasContractFile
-                  ? dict.contract_detail?.tooltip_file || "Vui lòng tải lên tệp hợp đồng PDF trước khi ký duyệt"
-                  : dict.contract_detail?.tooltip_guards || "Vui lòng phân công bảo vệ trước khi ký duyệt"}
+                {dict.contract_detail?.tooltip_file || "Vui lòng tải lên tệp hợp đồng PDF trước khi ký duyệt"}
                 <div className="absolute bottom-full right-16 border-4 border-transparent border-b-slate-900" />
               </div>
             )}
           </div>
-        )}
-      </div>
+        )}      </div>
     </div>
+      <ExportContractModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        contract={contract}
+        onExport={handleExport}
+      />
+    </>
   );
 }

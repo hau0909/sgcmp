@@ -1,11 +1,12 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, Clock, CheckCircle2, PenLine, Star, FileText } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { exportContractDocx } from "../utils/exportDocx";
+import { ExportContractModal, ContractExportFormData } from "./ExportContractModal";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type ContractStatus = "pending_signatures" | "active" | "completed" | "cancelled";
@@ -78,6 +79,7 @@ export function CustomerContractDetailHeader({
   contract,
 }: CustomerContractDetailHeaderProps) {
   const { dict } = useTranslation();
+  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const STATUS_MAP: Record<ContractStatus, { label: string; className: string }> = {
     pending_signatures: {
@@ -103,39 +105,44 @@ export function CustomerContractDetailHeader({
     className: "bg-muted text-muted-foreground",
   };
 
+  const handleExport = (formData: ContractExportFormData) => {
+    exportContractDocx(contract, formData);
+  };
+
   return (
-    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-6 border-b border-outline-variant/60">
-      {/* Left: back + title */}
-      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-        <Link
-          href="/my-contracts"
-          className="flex items-center gap-1.5 text-secondary hover:text-primary transition-colors text-sm font-semibold w-fit"
-        >
-          <ArrowLeft className="w-4 h-4" />
-          <span>{dict.contract.detail.back_btn}</span>
-        </Link>
-        <h2 className="text-xl md:text-2xl font-bold text-on-background flex flex-wrap items-center gap-2 font-headline">
-          {dict.contract.detail.title}{" "}
-          <span className="font-mono text-primary">#{contractCode}</span>
-        </h2>
-      </div>
-
-      {/* Right: chips + cta */}
-      <div className="flex flex-wrap items-center gap-3">
-        <SignatureChip label={dict.contract.detail.you} agreed={customerAgreed} dict={dict} />
-        <SignatureChip label={dict.contract.detail.company} agreed={companyAgreed} dict={dict} />
-
-        {/* Tải file Word */}
-        {contract && (
-          <Button
-            onClick={() => exportContractDocx(contract)}
-            variant="outline"
-            className="font-bold border-primary text-primary hover:bg-primary/5 px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+    <>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-6 border-b border-outline-variant/60">
+        {/* Left: back + title */}
+        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+          <Link
+            href="/my-contracts"
+            className="flex items-center gap-1.5 text-secondary hover:text-primary transition-colors text-sm font-semibold w-fit"
           >
-            <FileText className="w-4 h-4" />
-            <span>{dict.contract.detail.download_docx}</span>
-          </Button>
-        )}
+            <ArrowLeft className="w-4 h-4" />
+            <span>{dict.contract.detail.back_btn}</span>
+          </Link>
+          <h2 className="text-xl md:text-2xl font-bold text-on-background flex flex-wrap items-center gap-2 font-headline">
+            {dict.contract.detail.title}{" "}
+            <span className="font-mono text-primary">#{contractCode}</span>
+          </h2>
+        </div>
+
+        {/* Right: chips + cta */}
+        <div className="flex flex-wrap items-center gap-3">
+          <SignatureChip label={dict.contract.detail.you} agreed={customerAgreed} dict={dict} />
+          <SignatureChip label={dict.contract.detail.company} agreed={companyAgreed} dict={dict} />
+
+          {/* Tải file Word */}
+          {contract && (
+            <Button
+              onClick={() => setIsExportModalOpen(true)}
+              variant="outline"
+              className="font-bold border-primary text-primary hover:bg-primary/5 px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
+            >
+              <FileText className="w-4 h-4" />
+              <span>{dict.contract.detail.download_docx}</span>
+            </Button>
+          )}
 
         {status !== "pending_signatures" && (
           <Badge
@@ -151,9 +158,9 @@ export function CustomerContractDetailHeader({
           <div className="relative group/tip flex items-center">
             <Button
               onClick={onSignCustomer}
-              disabled={!contractFileUrl || !hasGuards}
+              disabled={!contractFileUrl}
               className={`font-bold shadow-md px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 ${
-                (!contractFileUrl || !hasGuards)
+                !contractFileUrl
                   ? "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed hover:bg-slate-200"
                   : "cursor-pointer bg-primary hover:bg-primary/90 text-on-primary active:scale-95"
               }`}
@@ -161,13 +168,9 @@ export function CustomerContractDetailHeader({
               <PenLine className="w-4 h-4" />
               {dict.contract.detail.sign_btn}
             </Button>
-            {(!contractFileUrl || !hasGuards) && (
+            {!contractFileUrl && (
               <div className="absolute top-full mt-2 right-0 pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity duration-200 bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded shadow-lg whitespace-nowrap z-50">
-                {!contractFileUrl && !hasGuards
-                  ? "Công ty chưa tải lên tệp hợp đồng PDF và chưa phân công bảo vệ"
-                  : !contractFileUrl
-                  ? "Công ty chưa tải lên tệp hợp đồng PDF"
-                  : "Công ty chưa phân công bảo vệ cho hợp đồng này"}
+                {"Công ty chưa tải lên tệp hợp đồng PDF"}
                 <div className="absolute bottom-full right-10 border-4 border-transparent border-b-slate-900" />
               </div>
             )}
@@ -201,5 +204,12 @@ export function CustomerContractDetailHeader({
         )}
       </div>
     </div>
+      <ExportContractModal
+        isOpen={isExportModalOpen}
+        onClose={() => setIsExportModalOpen(false)}
+        contract={contract}
+        onExport={handleExport}
+      />
+    </>
   );
 }

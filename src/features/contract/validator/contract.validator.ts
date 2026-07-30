@@ -34,7 +34,5 @@ export const validateCustomerSignatureEligibility = (customerAgreed?: boolean, g
   if (customerAgreed) {
     throw new Error("Bạn đã ký xác nhận hợp đồng này rồi");
   }
-  if (!guardAssigned || guardAssigned.length === 0) {
-    throw new Error("Hợp đồng này chưa được phân công nhân sự bảo vệ. Vui lòng liên hệ công ty để được phân công trước khi ký.");
-  }
+  // Guard assignment is optional — customer can sign even if no guards assigned yet
 };

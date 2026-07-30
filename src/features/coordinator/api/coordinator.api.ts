@@ -5,7 +5,8 @@ export async function requestGetCoordinators(
   companyId: string,
   page = 1,
   limit = 10,
-  search?: string
+  search?: string,
+  status?: string
 ): Promise<{ coordinators: CoordinatorWithUser[]; total: number }> {
   const params = new URLSearchParams({
     companyId,
@@ -15,6 +16,9 @@ export async function requestGetCoordinators(
 
   if (search) {
     params.append("search", search);
+  }
+  if (status) {
+    params.append("status", status);
   }
 
   const result = await fetcher(`/api/coordinators?${params.toString()}`, {

@@ -4,7 +4,7 @@ import React from "react";
 import { Building2, Clock3, MapPin } from "lucide-react";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
-export type ShiftStatus = "assigned" | "completed" | "absent" | "late";
+export type ShiftStatus = "assigned" | "completed" | "checkout" | "absent" | "late";
 
 export type ShiftItem = {
   id: string;
@@ -24,6 +24,7 @@ const getStatusStyle = (status: ShiftStatus, isReplacement?: boolean) => {
   if (isReplacement) return "bg-purple-100 text-purple-700";
   if (status === "assigned") return "bg-blue-100 text-blue-700";
   if (status === "completed") return "bg-emerald-100 text-emerald-700";
+  if (status === "checkout") return "bg-slate-100 text-slate-700";
   if (status === "late") return "bg-amber-100 text-amber-700";
   return "bg-red-100 text-red-700";
 };
@@ -36,7 +37,8 @@ export function ShiftCard({ shift }: ShiftCardProps) {
   const getStatusLabel = () => {
     if (shift.is_replacement) return card.status_replacement;
     if (shift.status === "assigned") return card.status_assigned;
-    if (shift.status === "completed") return card.status_completed;
+    if (shift.status === "completed") return card.guard_status_on_duty || card.status_completed || "Đang trực";
+    if (shift.status === "checkout") return card.guard_status_checkout || card.status_checkout || "Hoàn thành";
     if (shift.status === "late") return card.status_late;
     return card.status_absent;
   };
