@@ -1192,6 +1192,7 @@ export const getGuardPerformanceList = async ({
       id: g.user_id,
       name: profile.full_name || "Nhân viên bảo vệ",
       guardId: g.guard_code || `SG-${(g.guard_id || g.user_id).substring(0, 5)}`,
+      phone: profile.phone_number || null,
       avatar: profile.avatar_url ?? null,
       location: "Trụ sở chính",
       role: "Bảo vệ",
@@ -1206,6 +1207,7 @@ export const getGuardPerformanceList = async ({
       (item) =>
         item.name.toLowerCase().includes(keyword) ||
         item.guardId.toLowerCase().includes(keyword) ||
+        (item.phone && item.phone.toLowerCase().includes(keyword)) ||
         item.location.toLowerCase().includes(keyword)
     );
   }

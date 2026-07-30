@@ -23,6 +23,7 @@ import {
     X,
     ScrollText,
     CircleCheckBig,
+    Phone,
 } from "lucide-react";
 import {
     ResponsiveContainer,
@@ -42,6 +43,7 @@ interface GuardPerformanceData {
     id: string;
     name: string;
     guardId: string;
+    phone?: string | null;
     avatar: string;
     location: string;
     role: string;
@@ -897,8 +899,9 @@ export default function GuardPerformancePage() {
                                                         <span className="font-bold text-on-surface group-hover:text-primary transition-colors">
                                                             {guard.name}
                                                         </span>
-                                                        <span className="text-[11px] text-on-surface-variant font-medium mt-0.5">
-                                                            ID: {guard.guardId}
+                                                        <span className="text-[11px] text-on-surface-variant font-medium mt-0.5 flex items-center gap-1">
+                                                            <Phone className="w-3 h-3 text-on-surface-variant/70 shrink-0" />
+                                                            <span>{guard.phone || (dict.coor_guard_performance?.no_phone || (isEn ? "No phone" : "Chưa có SĐT"))}</span>
                                                         </span>
                                                     </div>
                                                 </div>

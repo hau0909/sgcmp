@@ -319,6 +319,7 @@ export type GuardPerformanceListItem = {
   id: string;
   name: string;
   guardId: string;
+  phone?: string | null;
   avatar: string | null;
   location: string;
   role: string;

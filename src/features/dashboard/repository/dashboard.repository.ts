@@ -456,7 +456,7 @@ export const getProfilesByIds = async (ids: string[]) => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("profiles")
-    .select("user_id, full_name, avatar_url")
+    .select("user_id, full_name, avatar_url, phone_number")
     .in("user_id", ids);
 
   if (error) {
@@ -1115,7 +1115,38 @@ export const getAvailableGuardsRepository = async (
 ) => {
   if (!companyId) return [];
   const supabase = await createClient();
+  const nowIso = new Date().toISOString();
 
+  // 1. Lấy danh sách guard_id đang có ca trực diễn ra ở thời điểm hiện tại (start_time <= now <= end_time)
+  const { data: activeShifts } = await supabase
+    .from("shifts")
+    .select(`
+      shift_id,
+      contracts!inner (
+        bookings!inner (
+          company_id
+        )
+      ),
+      shift_assignments (
+        guard_id
+      )
+    `)
+    .eq("contracts.bookings.company_id", companyId)
+    .lte("start_time", nowIso)
+    .gte("end_time", nowIso);
+
+  const busyGuardIds = new Set<string>();
+  if (activeShifts) {
+    for (const shift of activeShifts) {
+      for (const sa of (shift.shift_assignments || [])) {
+        if (sa.guard_id) {
+          busyGuardIds.add(sa.guard_id);
+        }
+      }
+    }
+  }
+
+  // 2. Lấy danh sách toàn bộ bảo vệ đang hoạt động của công ty
   const { data, error } = await supabase
     .from("guards")
     .select(`
@@ -1129,11 +1160,17 @@ export const getAvailableGuardsRepository = async (
       )
     `)
     .eq("company_id", companyId)
-    .eq("profiles.status", "active")
-    .limit(20);
+    .eq("profiles.status", "active");
 
   if (error || !data) return [];
-  return data;
+
+  // 3. Chỉ giữ lại những bảo vệ KHÔNG có ca trực ở thời điểm hiện tại
+  const availableGuards = data.filter((g: any) => {
+    const isBusy = (g.guard_id && busyGuardIds.has(g.guard_id)) || (g.user_id && busyGuardIds.has(g.user_id));
+    return !isBusy;
+  });
+
+  return availableGuards;
 };
 
 /**

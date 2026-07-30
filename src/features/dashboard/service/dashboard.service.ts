@@ -1398,6 +1398,7 @@ export interface CurrentUpcomingShiftItem {
   id: string;
   name: string;
   avatar: string;
+  phone?: string;
   type: "ONGOING" | "UPCOMING" | "LATE" | "REPLACEMENT" | "ABSENT" | "CHECKOUT";
   timeText: string;
   location: string;
@@ -1497,6 +1498,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
         id: assignmentId,
         name: profile.full_name,
         avatar: profile.avatar_url || "",
+        phone: profile.phone_number || "",
         type,
         timeText,
         location: locationName,
@@ -1510,6 +1512,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
             id: `#C-${repId.slice(0, 4).toUpperCase()}`,
             name: repProf.full_name,
             avatar: repProf.avatar_url || "",
+            phone: repProf.phone_number || "",
             type: "REPLACEMENT",
             timeText: `Thay ca cho ${profile.full_name} (${formatHHMM(s.start_time)})`,
             location: locationName,
@@ -1539,6 +1542,8 @@ export const getCoordinatorReportStatsService = async (
 export interface PastShiftItem {
   id: string;
   name: string;
+  avatar?: string;
+  phone?: string;
   time: string;
   location: string;
   contractName: string;
@@ -1607,6 +1612,8 @@ export const getPastShiftsService = async (
       list.push({
         id: `#G-${sa.guard_id ? sa.guard_id.slice(0, 4).toUpperCase() : "0000"}`,
         name: p.full_name,
+        avatar: p.avatar_url || "",
+        phone: p.phone_number || "",
         time: formatTimeRange(s.start_time, s.end_time),
         location: locationName,
         contractName: contractName,
@@ -1628,7 +1635,7 @@ export const getAvailableGuardsService = async (
     id: `#B-${g.user_id.slice(0, 4).toUpperCase()}`,
     name: g.profiles?.full_name || "Bảo vệ",
     certs: "CN: Tuần tra, Sơ cứu",
-    phone: g.profiles?.phone_number || "090x xxx xxx",
+    phone: g.profiles?.phone_number || "",
     avatar: g.profiles?.avatar_url || "",
   }));
 };

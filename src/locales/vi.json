@@ -1658,7 +1658,9 @@
     "selected": "Đã chọn:",
     "guards_count": "nhân sự",
     "save_changes": "Lưu thay đổi",
-    "cancel": "Hủy bỏ"
+    "cancel": "Hủy bỏ",
+    "info_optional_title": "Phân công bảo vệ không bắt buộc",
+    "info_optional_desc": "Bạn có thể ký hợp đồng ngay cả khi chưa phân công. Việc điều phối bảo vệ có thể thực hiện sau khi hợp đồng có hiệu lực."
   },
   "chat": {
     "title": "Tin nhắn",
