@@ -25,9 +25,7 @@ export interface Booking {
   company_name?: string | null;
   company_scope?: string | null;
   company_position?: string | null;
-  quotation_type?: string | null;
-  hourly_rate?: number | null;
-  monthly_rate?: number | null;
+
 
   // Virtual fields for UI rendering
   customer_name?: string;

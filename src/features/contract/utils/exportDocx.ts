@@ -1,4 +1,5 @@
 import { ContractExportFormData } from "../components/ExportContractModal";
+import { DAYS_OF_WEEK_SHORT, isDayActive } from "../components/ContractServiceInfo";
 
 /**
  * Helper to convert number to Vietnamese text (Price in words)
@@ -60,9 +61,23 @@ export function numberToVietnameseWords(num: number): string {
   return resultWords;
 }
 
+function formatDateDisplay(rawDate?: string): string {
+  if (!rawDate) return "";
+  const s = String(rawDate).trim();
+  const parts = s.split(/[\/\.-]/);
+  if (parts.length === 3) {
+    if (parts[0].length === 4) {
+      // YYYY-MM-DD -> DD/MM/YYYY
+      return `${parts[2].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[0]}`;
+    }
+    return `${parts[0].padStart(2, "0")}/${parts[1].padStart(2, "0")}/${parts[2]}`;
+  }
+  return s;
+}
+
 /**
  * Utility to export contract details to a Microsoft Word (.doc) file client-side
- * with EXACT 100% compliance with Master Template & Sample format.
+ * strictly in Vietnamese without English terms and respecting empty fields.
  */
 export function exportContractDocx(contract: any, customFormData?: ContractExportFormData) {
   if (!contract) return;
@@ -74,16 +89,27 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
   // Formatted signing date split
   const rawSigningDate = customFormData?.signing_date || "01/08/2026";
   const dateParts = rawSigningDate.split(/[\/\.-]/);
-  const day = dateParts[0] || "01";
-  const month = dateParts[1] || "08";
-  const year = dateParts[2] || "2026";
+  let day = "01";
+  let month = "08";
+  let year = "2026";
+  if (dateParts.length === 3) {
+    if (dateParts[0].length === 4) {
+      year = dateParts[0];
+      month = dateParts[1].padStart(2, "0");
+      day = dateParts[2].padStart(2, "0");
+    } else {
+      day = dateParts[0].padStart(2, "0");
+      month = dateParts[1].padStart(2, "0");
+      year = dateParts[2];
+    }
+  }
 
   const signingLocation = customFormData?.signing_location || (company.address ? `Trụ sở ${company.name}` : "Trụ sở Bên B");
   const contractCode = customFormData?.contract_code || contract.contract_code || `88/2026/HĐDV-VTL`;
 
   // Dates
-  const startDateStr = customFormData?.start_date || "01/08/2026";
-  const endDateStr = customFormData?.end_date || "31/07/2027";
+  const startDateStr = formatDateDisplay(customFormData?.start_date) || "01/08/2026";
+  const endDateStr = formatDateDisplay(customFormData?.end_date) || "31/07/2027";
 
   // Resolved Customer Info (Party A)
   const partyA = {
@@ -113,21 +139,39 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
   const serviceScopeReq = customFormData?.service_scope_req || "Bảo vệ an ninh, giữ xe khách hàng, bảo vệ tài sản và duy trì trật tự cho cửa hàng thời trang bán lẻ.";
 
   // Job Description List
-  const scopeList = customFormData?.service_scope_list || [
-    "Quản lý bãi xe khách hàng, cấp phát thẻ giữ xe, hỗ trợ dắt xe và mở cửa đón/tiễn khách hàng lịch sự.",
-    "Quan sát hỗ trợ ngăn ngừa trộm cắp, tráo tem nhãn quần áo trong giờ mở cửa.",
-    "Bảo vệ an toàn cửa ngõ, PCCC và tuần tra chống đột nhập ban đêm.",
-  ];
+  const scopeList = (customFormData?.service_scope_list || [])
+    .filter((item: string) => Boolean(item && item.trim()));
+  
+  const scopeListHtml = scopeList.length > 0
+    ? scopeList.map((item: string) => `<p style="margin-bottom: 4px; text-align: justify;">- ${item}</p>`).join("")
+    : `<p style="margin-bottom: 4px; text-align: justify;">- Quản lý bãi xe khách hàng, cấp phát thẻ giữ xe, hỗ trợ dắt xe và mở cửa đón/tiễn khách hàng lịch sự.</p>`;
 
-  const scopeListHtml = scopeList
-    .map((item: string) => `<p style="margin-bottom: 4px; text-align: justify;">- ${item}</p>`)
-    .join("");
-
-  // Table 2.4 Parameters
+  // Table 2.4 Parameters (Pure Vietnamese labels, no English in parens!)
   const timeSlotsStr = customFormData?.time_slots_str || "08:00 - 22:00, 22:00 - 08:00";
   const guardsPerSlotStr = customFormData?.guards_per_slot_str || "01";
-  const daysPerWeekStr = customFormData?.days_per_week_str || "7 ngày / tuần (Thứ Hai đến Chủ Nhật)";
-  const quotationTypeStr = customFormData?.quotation_type === "monthly" ? "Theo tháng (Monthly)" : customFormData?.quotation_type === "hourly" ? "Theo giờ (Hourly)" : "Trọn gói (Package)";
+
+  // Days per week formatting for Word table
+  let daysPerWeekStr = customFormData?.days_per_week_str || "7 ngày / tuần (Thứ Hai đến Chủ Nhật)";
+  if (customFormData?.days_per_week_list && customFormData.days_per_week_list.length > 0) {
+    const activeDaysList = customFormData.days_per_week_list;
+    if (activeDaysList.length === 7) {
+      daysPerWeekStr = "7 ngày / tuần (Thứ Hai đến Chủ Nhật)";
+    } else {
+      const activeLabels = DAYS_OF_WEEK_SHORT
+        .filter((d) => isDayActive(activeDaysList, d.value, d.label))
+        .map((d) => d.label);
+      if (activeLabels.length > 0) {
+        daysPerWeekStr = `${activeLabels.length} ngày / tuần (${activeLabels.join(", ")})`;
+      }
+    }
+  }
+
+  // Pure Vietnamese quotation type string without English
+  const quotationTypeStr = customFormData?.quotation_type === "monthly"
+    ? "Theo tháng"
+    : customFormData?.quotation_type === "hourly"
+    ? "Theo giờ"
+    : "Trọn gói";
   
   const totalPriceFormatted = customFormData?.total_price_formatted || "21.000.000 VNĐ / tháng";
   const unitPriceDetail = customFormData?.unit_price_detail || "21.000.000 VNĐ / tháng";
@@ -135,18 +179,57 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
   // Price In Words
   const rawPriceNum = typeof customFormData?.total_price === "number" ? customFormData.total_price : (booking.quoted_price || 21000000);
   const priceInWords = rawPriceNum ? numberToVietnameseWords(rawPriceNum) : "Hai mươi mốt triệu đồng chẵn";
-  const vatStatus = customFormData?.vat_status || "chưa bao gồm Thuế VAT (8%)";
 
-  // Section 6 Overtime & Payment
-  const otNormal = customFormData?.overtime_normal || "30.000";
-  const otSunday = customFormData?.overtime_sunday || "45.000";
-  const otHoliday = customFormData?.overtime_holiday || "70.000";
+  // Tax handling: Only display if explicitly entered by user!
+  const vatStatusInput = customFormData?.vat_status?.trim() || "";
+  const vatSentence = vatStatusInput ? `. Mức giá trên ${vatStatusInput}.` : ".";
 
-  const paymentTerm = customFormData?.payment_term || "Bên A thanh toán từ ngày 01 đến ngày 05 của tháng tiếp theo.";
-  const bankAccHolder = customFormData?.bank_account_holder || partyB.name;
-  const bankAccNo = customFormData?.bank_account_no || "1029384756";
-  const bankName = customFormData?.bank_name || "Vietcombank";
-  const bankBranch = customFormData?.bank_branch || "Cần Thơ";
+  // Section 6 Overtime: Only display if user entered rates!
+  const otNormal = customFormData?.overtime_normal?.trim() || "";
+  const otSunday = customFormData?.overtime_sunday?.trim() || "";
+  const otHoliday = customFormData?.overtime_holiday?.trim() || "";
+  const hasOvertime = Boolean(otNormal || otSunday || otHoliday);
+
+  let overtimeBlock = "";
+  if (hasOvertime) {
+    overtimeBlock = `<p class="bold" style="margin-top: 6px;">Phí dịch vụ tăng cường / Ngoài giờ (nếu có phát sinh):</p>`;
+    if (otNormal) overtimeBlock += `<p>- Ngày thường: <b>${otNormal}</b></p>`;
+    if (otSunday) overtimeBlock += `<p>- Ngày Chủ nhật: <b>${otSunday}</b></p>`;
+    if (otHoliday) overtimeBlock += `<p>- Ngày Lễ, Tết: <b>${otHoliday}</b></p>`;
+  }
+
+  let defaultPaymentTerm = "Bên A thanh toán cho Bên B định kỳ hàng tháng, từ ngày 01 đến ngày 05 của tháng tiếp theo.";
+  if (customFormData?.quotation_type === "hourly") {
+    defaultPaymentTerm = "Bên A thanh toán cho Bên B theo tổng số giờ dịch vụ thực tế sau khi hoàn tất đợt dịch vụ hoặc vào cuối đợt.";
+  } else if (customFormData?.quotation_type === "package") {
+    defaultPaymentTerm = "Bên A thanh toán cho Bên B 50% ngay sau khi ký hợp đồng và 50% còn lại sau khi hoàn tất gói dịch vụ.";
+  }
+  const paymentTerm = customFormData?.payment_term?.trim() || defaultPaymentTerm;
+
+  const isCashPayment = customFormData?.payment_method === "Tiền mặt";
+  let paymentBlock = "";
+  if (isCashPayment) {
+    paymentBlock = `
+      <p class="bold">Phương thức thanh toán:</p>
+      <p>- Hình thức: <b>Thanh toán bằng Tiền mặt</b> (trực tiếp tại trụ sở Bên B hoặc địa điểm do hai bên thỏa thuận).</p>
+      <p>- <b>Thời hạn thanh toán:</b> ${paymentTerm}</p>
+    `;
+  } else {
+    const bankAccHolder = customFormData?.bank_account_holder?.trim() || partyB.name;
+    const bankAccNo = customFormData?.bank_account_no?.trim() || "";
+    const bankName = customFormData?.bank_name?.trim() || "";
+    const bankBranch = customFormData?.bank_branch?.trim() || "";
+
+    paymentBlock = `
+      <p class="bold">Phương thức thanh toán:</p>
+      <p>- Hình thức: <b>Chuyển khoản ngân hàng</b>.</p>
+      <p>- <b>Thời hạn thanh toán:</b> ${paymentTerm}</p>
+      <p class="bold" style="margin-top: 6px;">Thông tin tài khoản nhận thanh toán của Bên B:</p>
+      <p style="margin-left: 20px;">Tên tài khoản: <b>${bankAccHolder}</b></p>
+      ${bankAccNo ? `<p style="margin-left: 20px;">Số tài khoản: <b>${bankAccNo}</b></p>` : ""}
+      ${bankName ? `<p style="margin-left: 20px;">Ngân hàng: <b>${bankName}</b>${bankBranch ? ` - Chi nhánh: <b>${bankBranch}</b>` : ""}</p>` : ""}
+    `;
+  }
 
   // Build complete HTML string styled for Word export matching Master Template EXACTLY
   const htmlContent = `
@@ -315,6 +398,7 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
   <p class="bold">2.3. Thời gian thực hiện hợp đồng:</p>
   <p>Từ ngày <b>${startDateStr}</b> đến hết ngày <b>${endDateStr}</b>.</p>
 
+  <!-- Table 2.4 in Pure Vietnamese (No English text in parens) -->
   <p class="bold">2.4. Khung giờ trực, Nhân sự và Phí dịch vụ:</p>
   <table class="data-table">
     <thead>
@@ -329,19 +413,19 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
         <td style="border: 1px solid #000000; padding: 6px 8px; font-weight: bold;">${serviceName}</td>
       </tr>
       <tr>
-        <td style="border: 1px solid #000000; padding: 6px 8px;">Khung giờ trực (Time Slots)</td>
+        <td style="border: 1px solid #000000; padding: 6px 8px;">Khung giờ trực</td>
         <td style="border: 1px solid #000000; padding: 6px 8px;">${timeSlotsStr}</td>
       </tr>
       <tr>
-        <td style="border: 1px solid #000000; padding: 6px 8px;">Số lượng bảo vệ / Ca (Guards per slot)</td>
+        <td style="border: 1px solid #000000; padding: 6px 8px;">Số lượng bảo vệ / Ca</td>
         <td style="border: 1px solid #000000; padding: 6px 8px;">${guardsPerSlotStr} nhân sự / ca</td>
       </tr>
       <tr>
-        <td style="border: 1px solid #000000; padding: 6px 8px;">Lịch hoạt động tuần (Days per week)</td>
+        <td style="border: 1px solid #000000; padding: 6px 8px;">Lịch hoạt động tuần</td>
         <td style="border: 1px solid #000000; padding: 6px 8px;">${daysPerWeekStr}</td>
       </tr>
       <tr>
-        <td style="border: 1px solid #000000; padding: 6px 8px;">Hình thức báo giá (Quotation Type)</td>
+        <td style="border: 1px solid #000000; padding: 6px 8px;">Hình thức báo giá</td>
         <td style="border: 1px solid #000000; padding: 6px 8px;">${quotationTypeStr}</td>
       </tr>
       <tr>
@@ -402,19 +486,15 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
 
   <!-- ĐIỀU 6 -->
   <div class="subsection-title">ĐIỀU 6. CHI PHÍ DỊCH VỤ VÀ PHƯƠNG THỨC THANH TOÁN</div>
-  <p>- <b>Tổng giá trị hợp đồng:</b> <b>${totalPriceFormatted}</b> (Bằng chữ: <i>${priceInWords}</i>). Mức giá trên <b>${vatStatus}</b>.</p>
-  <p class="bold">Phí dịch vụ tăng cường / Ngoài giờ (nếu có phát sinh):</p>
-  <p>- Ngày thường: <b>${otNormal} VNĐ/giờ/nhân sự.</b></p>
-  <p>- Ngày Chủ nhật: <b>${otSunday} VNĐ/giờ/nhân sự.</b></p>
-  <p>- Ngày Lễ, Tết: <b>${otHoliday} VNĐ/giờ/nhân sự.</b></p>
-  <p class="bold">Quy trình lập chứng từ & Thời hạn thanh toán:</p>
-  <p>- Bên B gửi Bảng kê chi tiết dịch vụ và Đề nghị thanh toán kèm Hóa đơn VAT điện tử cho Bên A vào cuối tháng hoặc sau khi kết thúc đợt dịch vụ.</p>
-  <p>- <b>Thời hạn thanh toán:</b> ${paymentTerm}</p>
-  <p>- <b>Phạt chậm thanh toán:</b> Nếu Bên A chậm thanh toán quá thời hạn quy định, Bên A phải chịu tiền lãi chậm trả tính theo mức lãi suất 150% lãi suất cơ bản do Ngân hàng Nhà nước công bố tại thời điểm thanh toán tính trên số tiền chậm trả cho mỗi ngày chậm thanh toán.</p>
-  <p class="bold">Thông tin tài khoản nhận thanh toán của Bên B:</p>
-  <p style="margin-left: 20px;">Tên tài khoản: <b>${bankAccHolder}</b></p>
-  <p style="margin-left: 20px;">Số tài khoản: <b>${bankAccNo}</b></p>
-  <p style="margin-left: 20px;">Ngân hàng: <b>${bankName}</b> - Chi nhánh: <b>${bankBranch}</b></p>
+  <p>- <b>Hình thức báo giá:</b> ${quotationTypeStr}</p>
+  <p>- <b>Đơn giá áp dụng:</b> <b>${unitPriceDetail}</b></p>
+  <p>- <b>Tổng giá trị hợp đồng:</b> <b>${totalPriceFormatted}</b> (Bằng chữ: <i>${priceInWords}</i>)${vatSentence}</p>
+  
+  <!-- Overtime pricing block (Only printed if user entered values!) -->
+  ${overtimeBlock}
+
+  <!-- Payment Method & Bank Block (Cash vs Bank Transfer handled cleanly!) -->
+  ${paymentBlock}
 
   <!-- ĐIỀU 7 -->
   <div class="subsection-title">ĐIỀU 7. QUYỀN VÀ NGHĨA VỤ CỦA BÊN A</div>

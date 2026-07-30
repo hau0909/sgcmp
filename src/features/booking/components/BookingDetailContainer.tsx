@@ -14,7 +14,6 @@ import {
 import { BookingDetailHeader } from "./BookingDetailHeader";
 import { BookingCustomerInfo } from "./BookingCustomerInfo";
 import { BookingServiceSpec } from "./BookingServiceSpec";
-import { EditBookingModal } from "./EditBookingModal";
 import { BookingQuotationPanel } from "./BookingQuotationPanel";
 import { BookingStatus } from "../types";
 import {
@@ -24,6 +23,7 @@ import {
 import { requestGetVerification } from "@/features/verification/api/verification.api";
 import { VerificationStatus } from "@/features/verification/types";
 import { BookingProgress } from "./BookingProgress";
+import { EditBookingModal } from "./EditBookingModal";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface BookingDetailContainerProps {
