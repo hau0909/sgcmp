@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Building2, Phone, Mail, MapPin, User } from "lucide-react";
+import { Building2, Phone, Mail, MapPin, User, Briefcase, UserCheck } from "lucide-react";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface BookingCustomerInfoProps {
@@ -13,6 +13,9 @@ interface BookingCustomerInfoProps {
   title?: string;
   nameLabel?: string;
   addressLabel?: string;
+  clientCompanyName?: string | null;
+  companyScope?: string | null;
+  companyPosition?: string | null;
 }
 
 export function BookingCustomerInfo({
@@ -24,6 +27,9 @@ export function BookingCustomerInfo({
   title = "Thông tin khách hàng",
   nameLabel,
   addressLabel,
+  clientCompanyName,
+  companyScope,
+  companyPosition,
 }: BookingCustomerInfoProps) {
   const { dict } = useTranslation();
   const isCompanyTitle = title === "Thông tin doanh nghiệp" || title === dict.booking.detail.info.company_info_title;
@@ -52,13 +58,41 @@ export function BookingCustomerInfo({
         {/* Contact Representative */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            {dict.booking.detail.info.contact_person || "Người liên hệ"}
+            {isCompanyTitle
+              ? dict.booking?.detail?.info?.company_rep || "Người đại diện"
+              : dict.booking.detail.info.contact_person || "Người liên hệ"}
           </span>
           <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
             <User className="w-3.5 h-3.5 text-outline-variant" />
             {contactPerson}
           </span>
         </div>
+
+        {/* Company Position - chỉ hiển thị ở view khách hàng */}
+        {!isCompanyTitle && companyPosition && (
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+              {dict?.booking?.detail?.info?.company_position || "Chức danh / Vị trí"}
+            </span>
+            <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+              <UserCheck className="w-3.5 h-3.5 text-outline-variant" />
+              {companyPosition}
+            </span>
+          </div>
+        )}
+
+        {/* Client Company Name - chỉ hiển thị ở view khách hàng */}
+        {!isCompanyTitle && clientCompanyName && (
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+              {dict?.booking?.detail?.info?.client_company_name || "Tên công ty / Cơ sở"}
+            </span>
+            <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-outline-variant" />
+              {clientCompanyName}
+            </span>
+          </div>
+        )}
 
         {/* Telephone Number */}
         <div className="flex flex-col">
@@ -74,7 +108,7 @@ export function BookingCustomerInfo({
         {/* Email */}
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            {dict.booking.detail.info.email || "Email"}
+            {dict.booking.detail.info.email || "E-mail"}
           </span>
           <a
             href={`mailto:${email}`}
@@ -84,6 +118,19 @@ export function BookingCustomerInfo({
             {email}
           </a>
         </div>
+
+        {/* Field of Activity / Company Scope - chỉ hiển thị ở view khách hàng */}
+        {!isCompanyTitle && companyScope && (
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+              {dict?.booking?.detail?.info?.company_scope || "Lĩnh vực hoạt động"}
+            </span>
+            <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+              <Briefcase className="w-3.5 h-3.5 text-outline-variant" />
+              {companyScope}
+            </span>
+          </div>
+        )}
 
         {/* Address / Location */}
         <div className="flex flex-col md:col-span-2">

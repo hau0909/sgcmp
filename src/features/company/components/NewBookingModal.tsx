@@ -606,39 +606,39 @@ export default function NewBookingModal({
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-2">
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <Building2 className="w-3.5 h-3.5 text-primary" /> Tên công ty / Cơ sở
+                        <Building2 className="w-3.5 h-3.5 text-primary" /> {dict?.booking?.form?.client_company_name || "Tên công ty / Cơ sở"}
                       </label>
                       <input
                         type="text"
                         value={clientCompanyName}
                         onChange={(e) => setClientCompanyName(e.target.value)}
-                        placeholder="VD: Shop quần áo A, Công ty X..."
+                        placeholder={dict?.booking?.form?.client_company_placeholder || "VD: Shop quần áo A, Công ty X..."}
                         className="w-full bg-surface-bright border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                       />
                     </div>
 
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <Briefcase className="w-3.5 h-3.5 text-primary" /> Lĩnh vực hoạt động
+                        <Briefcase className="w-3.5 h-3.5 text-primary" /> {dict?.booking?.form?.company_scope || "Lĩnh vực hoạt động"}
                       </label>
                       <input
                         type="text"
                         value={companyScope}
                         onChange={(e) => setCompanyScope(e.target.value)}
-                        placeholder="VD: Bán lẻ thời trang, Nhà hàng..."
+                        placeholder={dict?.booking?.form?.company_scope_placeholder || "VD: Bán lẻ thời trang, Nhà hàng..."}
                         className="w-full bg-surface-bright border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                       />
                     </div>
 
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
-                        <UserCheck className="w-3.5 h-3.5 text-primary" /> Chức danh của bạn
+                        <UserCheck className="w-3.5 h-3.5 text-primary" /> {dict?.booking?.form?.company_position || "Chức danh của bạn"}
                       </label>
                       <input
                         type="text"
                         value={companyPosition}
                         onChange={(e) => setCompanyPosition(e.target.value)}
-                        placeholder="VD: Chủ cửa hàng, Giám đốc..."
+                        placeholder={dict?.booking?.form?.company_position_placeholder || "VD: Chủ cửa hàng, Giám đốc..."}
                         className="w-full bg-surface-bright border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
                       />
                     </div>
