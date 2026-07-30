@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Users } from 'lucide-react';
 import { requestGetCoordinators } from '../api/coordinator.api';
 import { CoordinatorWithUser } from '../types';
 import { useAuthStore } from '@/store/auth.store';
@@ -31,9 +31,10 @@ function getAvatarBg(name: string) {
 interface CoordinatorTableProps {
   searchStr?: string;
   statusFilter?: string;
+  onTotalChange?: (total: number) => void;
 }
 
-export function CoordinatorTable({ searchStr = "", statusFilter = "" }: CoordinatorTableProps) {
+export function CoordinatorTable({ searchStr = "", statusFilter = "", onTotalChange }: CoordinatorTableProps) {
   const { dict, locale } = useTranslation();
   const dateLocale = locale === "en" ? "en-US" : "vi-VN";
 
@@ -75,13 +76,17 @@ export function CoordinatorTable({ searchStr = "", statusFilter = "" }: Coordina
     const timer = setTimeout(async () => {
       setLoading(true);
       try {
-        const response = await requestGetCoordinators(companyId, page, limit, searchStr);
-        let results = response.coordinators || [];
-        if (statusFilter) {
-          results = results.filter(item => getStatusConfig(item.profiles?.status).key === statusFilter.toLowerCase());
-        }
+        const response = await requestGetCoordinators(companyId, page, limit, searchStr, statusFilter);
+        const results = response.coordinators || [];
+        
         setData(results);
-        setTotal(statusFilter ? results.length : response.total);
+        setTotal(response.total);
+
+        // Only update total for 'canAdd' if no search or filter is applied. 
+        // This gives the absolute total count of coordinators for the company.
+        if (!searchStr && !statusFilter && onTotalChange) {
+          onTotalChange(response.total);
+        }
       } catch (error) {
         console.error("Lỗi lấy danh sách ĐPV:", error);
       } finally {
@@ -119,8 +124,31 @@ export function CoordinatorTable({ searchStr = "", statusFilter = "" }: Coordina
             <tbody className="font-data-tabular text-data-tabular text-on-surface">
               {data.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="text-center py-8 text-on-surface-variant">
-                    {dict.coordinator?.no_data || "Không tìm thấy dữ liệu."}
+                  <td colSpan={8} className="text-center py-16">
+                    {(searchStr || statusFilter) ? (
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <p className="text-base font-medium text-on-surface">
+                          {dict.coordinator?.no_data_filtered_title || "Không tìm thấy dữ liệu phù hợp"}
+                        </p>
+                        <p className="text-sm text-on-surface-variant max-w-sm mx-auto">
+                          {dict.coordinator?.no_data_filtered_desc || "Vui lòng thử thay đổi từ khóa tìm kiếm hoặc bộ lọc trạng thái."}
+                        </p>
+                      </div>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center space-y-3">
+                        <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary mb-2">
+                          <Users className="w-6 h-6" />
+                        </div>
+                        <p className="text-base font-semibold text-on-surface">
+                          {dict.coordinator?.no_data_empty_title || "Bạn chưa có tài khoản Điều phối viên nào"}
+                        </p>
+                        <p className="text-sm text-on-surface-variant max-w-md mx-auto leading-relaxed">
+                          {(dict.coordinator?.no_data_empty_desc || "Hệ thống hiện tại cho phép bạn tạo tối đa {0} tài khoản Điều phối viên. Hãy tạo mới để bắt đầu cấp quyền quản lý.").split("{0}")[0]}
+                          <span className="font-semibold text-on-surface">1</span>
+                          {(dict.coordinator?.no_data_empty_desc || "Hệ thống hiện tại cho phép bạn tạo tối đa {0} tài khoản Điều phối viên. Hãy tạo mới để bắt đầu cấp quyền quản lý.").split("{0}")[1]}
+                        </p>
+                      </div>
+                    )}
                   </td>
                 </tr>
               ) : (
