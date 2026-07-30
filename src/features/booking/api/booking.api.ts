@@ -46,7 +46,13 @@ export async function requestCreateBooking(
 
 export async function requestUpdateBookingQuotation(
   id: string,
-  updates: { status: BookingStatus; quoted_price?: number }
+  updates: {
+    status: BookingStatus;
+    quoted_price?: number;
+    quotation_type?: string;
+    hourly_rate?: number;
+    monthly_rate?: number;
+  }
 ): Promise<{ booking: Booking; contract_id?: string }> {
   const res = await fetcher(`/api/bookings/${id}`, {
     method: "PATCH",
