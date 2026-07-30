@@ -1,4 +1,5 @@
-import { BookingStatus } from "./Enum";
+import type { BookingStatus, QuotationType } from "./Enum";
+export type { BookingStatus, QuotationType };
 
 export interface Booking {
   booking_id: string;
@@ -13,6 +14,9 @@ export interface Booking {
   start_date: string;
   end_date: string;
   quoted_price: number | null;
+  quotation_type?: QuotationType | null;
+  hourly_rate?: number | null;
+  monthly_rate?: number | null;
   status: BookingStatus;
   created_at: string;
   updated_at: string;
@@ -24,3 +28,4 @@ export interface Booking {
   service_name?: string;
   contract_status?: string;
 }
+

@@ -96,14 +96,14 @@ export function BookingDetailHeader({
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-red-55/10 text-red-700 dark:bg-red-900/20 dark:text-red-400 border border-red-200 dark:border-red-900/40 transition-all duration-300">
             <span className="w-2 h-2 rounded-full bg-red-500 mr-2"></span>
-            {dict.booking.detail.header.status_rejected || "Từ chối"}
+            Từ chối báo giá
           </span>
         );
       case "canceled":
         return (
           <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold uppercase tracking-wider bg-slate-55/10 text-slate-700 dark:bg-slate-900/20 dark:text-slate-400 border border-slate-200 dark:border-slate-900/40 transition-all duration-300">
             <span className="w-2 h-2 rounded-full bg-slate-500 mr-2"></span>
-            {dict.booking.detail.header.status_canceled || "Đã hủy"}
+            Yêu cầu đã bị hủy
           </span>
         );
       default:

@@ -60,3 +60,6 @@ export type ReportType =
   | "OTHER";
 
 export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
+
+export type QuotationType = "hourly" | "monthly" | "package";
+

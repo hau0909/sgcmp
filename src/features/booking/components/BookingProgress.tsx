@@ -72,8 +72,8 @@ export function BookingProgress({
     description: step2Desc,
     state: step2State,
     icon: FileSearch,
-    onClick: onViewVerification,
-    isClickable: !!onViewVerification && verificationStatus !== null,
+    onClick: isCustomer ? undefined : onViewVerification,
+    isClickable: !isCustomer && !!onViewVerification && verificationStatus !== null,
   };
 
   // Step 3: Quotation

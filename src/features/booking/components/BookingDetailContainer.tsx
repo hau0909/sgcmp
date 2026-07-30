@@ -62,6 +62,10 @@ export function BookingDetailContainer({
     time_slots: string[];
     special_instructions: string | string[] | null;
     quoted_price: number | null;
+    quotation_type?: any;
+    hourly_rate?: number | null;
+    monthly_rate?: number | null;
+    service_price?: number | null;
     status: BookingStatus;
     created_at: string;
     day_per_week: string[];
@@ -111,6 +115,10 @@ export function BookingDetailContainer({
             time_slots: b.time_slots || [],
             special_instructions: b.description || null,
             quoted_price: b.quoted_price,
+            quotation_type: b.quotation_type,
+            hourly_rate: b.hourly_rate,
+            monthly_rate: b.monthly_rate,
+            service_price: b.services?.price || b.service_price || null,
             status: b.status,
             created_at: b.created_at,
             day_per_week: b.day_per_week || [],
@@ -164,14 +172,21 @@ export function BookingDetailContainer({
   }, [bookingId, fetchDetail]);
 
   // Send a quote to the customer using API
-  const handleQuote = async (price: number) => {
+  const handleQuote = async (quoteParams: {
+    quoted_price: number;
+    quotation_type: any;
+    hourly_rate?: number;
+    monthly_rate?: number;
+  }) => {
     try {
       setIsSimulating(true);
 
-
       const updated = await requestUpdateBookingQuotation(bookingId, {
         status: "quoted",
-        quoted_price: price,
+        quoted_price: quoteParams.quoted_price,
+        quotation_type: quoteParams.quotation_type,
+        hourly_rate: quoteParams.hourly_rate,
+        monthly_rate: quoteParams.monthly_rate,
       });
 
       if (updated && updated.booking) {
@@ -181,15 +196,18 @@ export function BookingDetailContainer({
             ...prev,
             status: updated.booking.status,
             quoted_price: updated.booking.quoted_price,
+            quotation_type: updated.booking.quotation_type,
+            hourly_rate: updated.booking.hourly_rate,
+            monthly_rate: updated.booking.monthly_rate,
           };
         });
         setToastType("success");
         setToastMessage(
           dict.booking.detail.toasts.quote_updated_success?.replace(
             "{price}",
-            price.toLocaleString("vi-VN"),
+            quoteParams.quoted_price.toLocaleString("vi-VN"),
           ) ||
-            `Đã cập nhật báo giá ${price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`,
+            `Đã cập nhật báo giá ${quoteParams.quoted_price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`,
         );
       }
     } catch (err: any) {
@@ -438,11 +456,20 @@ export function BookingDetailContainer({
           hasContract={!!contractId}
           contractStatus={contractStatus}
           onViewVerification={
-            verificationStatus !== null ? () => router.push(`${verificationBasePath}/${bookingId}`) : undefined
+            !isCustomer && verificationStatus !== null
+              ? () => router.push(`${verificationBasePath}/${bookingId}`)
+              : undefined
           }
-          onViewContract={() => {
-            // TODO: Navigate to contract page if needed
-          }}
+          onViewContract={
+            contractId
+              ? () =>
+                  router.push(
+                    isCustomer
+                      ? `/my-contracts/${contractId}`
+                      : `/contracts/${contractId}`,
+                  )
+              : undefined
+          }
           isCustomer={isCustomer}
         />
       )}
@@ -524,8 +551,17 @@ export function BookingDetailContainer({
         {!isCoordinator && (
           <div className="xl:col-span-1">
             <BookingQuotationPanel
+              serviceName={booking.service_name}
               initialPrice={booking.quoted_price}
+              initialQuotationType={booking.quotation_type}
+              initialHourlyRate={booking.hourly_rate}
+              initialMonthlyRate={booking.monthly_rate}
               guardsCount={booking.guards_count}
+              timeSlots={booking.time_slots}
+              daysPerWeek={booking.day_per_week}
+              startDate={booking.start_date}
+              endDate={booking.end_date}
+              basePricePerHour={booking.service_price}
               status={booking.status}
               onQuote={handleQuote}
               onReject={handleReject}
