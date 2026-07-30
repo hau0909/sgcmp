@@ -17,10 +17,18 @@ export interface Booking {
   created_at: string;
   updated_at: string;
 
+  // DB Columns
+  company_name?: string | null;
+  company_scope?: string | null;
+  company_position?: string | null;
+  quotation_type?: string | null;
+  hourly_rate?: number | null;
+  monthly_rate?: number | null;
+
   // Virtual fields for UI rendering
   customer_name?: string;
-  company_name?: string;
   company_contact_person?: string;
   service_name?: string;
   contract_status?: string;
 }
+

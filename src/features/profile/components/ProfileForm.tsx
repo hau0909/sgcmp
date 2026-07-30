@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import Image from "next/image";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   UserCircle,
@@ -399,13 +398,6 @@ export default function ProfileForm() {
                   <h3 className="font-semibold text-lg text-on-surface">
                     {profile?.full_name || dict.pages.profile_form.not_updated}
                   </h3>
-                  {/* Link Xem Hồ Sơ */}
-                  <Link
-                    href="/profile"
-                    className="text-sm font-medium text-primary hover:underline"
-                  >
-                    {dict.pages.profile_form.view_profile}
-                  </Link>
                 </div>
               </div>
 

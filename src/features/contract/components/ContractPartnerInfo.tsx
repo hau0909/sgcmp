@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Building2, Phone, Mail, MapPin } from "lucide-react";
+import { Building2, Phone, Mail, MapPin, Briefcase, UserCheck } from "lucide-react";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface ContractPartnerInfoProps {
@@ -9,6 +9,9 @@ interface ContractPartnerInfoProps {
   phone: string;
   email: string;
   address: string;
+  companyName?: string | null;
+  companyScope?: string | null;
+  companyPosition?: string | null;
 }
 
 export function ContractPartnerInfo({
@@ -16,6 +19,9 @@ export function ContractPartnerInfo({
   phone,
   email,
   address,
+  companyName,
+  companyScope,
+  companyPosition,
 }: ContractPartnerInfoProps) {
   const { dict } = useTranslation();
   return (
@@ -67,6 +73,45 @@ export function ContractPartnerInfo({
             <span>{address}</span>
           </span>
         </div>
+
+        {/* Client Company Name */}
+        {companyName && (
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+              Tên công ty / Cơ sở
+            </span>
+            <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+              <Building2 className="w-3.5 h-3.5 text-outline-variant" />
+              {companyName}
+            </span>
+          </div>
+        )}
+
+        {/* Company Scope */}
+        {companyScope && (
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+              Lĩnh vực hoạt động
+            </span>
+            <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+              <Briefcase className="w-3.5 h-3.5 text-outline-variant" />
+              {companyScope}
+            </span>
+          </div>
+        )}
+
+        {/* Company Position */}
+        {companyPosition && (
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
+              Chức danh
+            </span>
+            <span className="text-sm font-semibold text-on-surface flex items-center gap-1.5">
+              <UserCheck className="w-3.5 h-3.5 text-outline-variant" />
+              {companyPosition}
+            </span>
+          </div>
+        )}
       </div>
     </div>
   );

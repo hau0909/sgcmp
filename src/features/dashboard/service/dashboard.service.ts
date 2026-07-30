@@ -191,7 +191,7 @@ export const getDashboardSubscriptionService = async (
 export const getWeeklyShiftsService = async (companyId: string) => {
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
-  
+
   const sixDaysLater = new Date(today.getTime() + 6 * 24 * 60 * 60 * 1000);
   const endOfSixDaysLater = new Date(sixDaysLater.getFullYear(), sixDaysLater.getMonth(), sixDaysLater.getDate(), 23, 59, 59, 999).toISOString();
 
@@ -245,7 +245,7 @@ export const getWeeklyShiftsService = async (companyId: string) => {
       // Original guard
       const origStatus = hasRep ? "absent" : sa.status;
       dayItem.totalAssignments++;
-      
+
       if (origStatus === "completed") {
         dayItem.onTimeCheckins++;
       } else if (origStatus === "late") {
@@ -258,7 +258,7 @@ export const getWeeklyShiftsService = async (companyId: string) => {
       if (hasRep) {
         sa.replacement_guard_ids.forEach(() => {
           dayItem.totalAssignments++;
-          
+
           if (sa.status === "completed") {
             dayItem.onTimeCheckins++;
           } else if (sa.status === "late") {
@@ -400,7 +400,7 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
       const origProfile = getProfile(sa.guard_id);
       const origStatus = hasRep ? "absent" : sa.status;
       const origCheckIn = hasRep ? null : sa.check_in_time;
-      
+
       // Determine original guard status label
       let origLabel = "Phân công";
       if (origStatus === "checkout") {
@@ -427,8 +427,8 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
         contractCode: `HD-${(shift.contracts as any).contract_id.slice(0, 8).toUpperCase()}`,
         contractName: (shift.contracts as any).bookings?.services?.name || "Dịch vụ bảo vệ",
         status: origLabel,
-        timeRange: origCheckIn 
-          ? `Check-in lúc ${formatTime(origCheckIn)}` 
+        timeRange: origCheckIn
+          ? `Check-in lúc ${formatTime(origCheckIn)}`
           : formatTime(shift.start_time)
       });
 
@@ -472,7 +472,7 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
 
   // 1. Attendance & Replacements
   const shifts = await getRecentShiftsAndAssignments(companyId);
-  
+
   const guardIds = new Set<string>();
   for (const s of shifts) {
     for (const sa of s.shift_assignments || []) {
@@ -498,7 +498,7 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
     const isToday = date.toDateString() === now.toDateString();
     const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const isYesterday = date.toDateString() === yesterdayDate.toDateString();
-    
+
     const pad = (num: number) => num.toString().padStart(2, "0");
     const hours = pad(date.getHours());
     const minutes = pad(date.getMinutes());
@@ -1682,6 +1682,8 @@ export const getGuardPerformanceRadarService = async (
     },
   ];
 };
+
+
 
 
 

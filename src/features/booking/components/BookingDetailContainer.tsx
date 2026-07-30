@@ -70,6 +70,9 @@ export function BookingDetailContainer({
     company_phone?: string;
     company_email?: string;
     company_address?: string;
+    client_company_name?: string;
+    company_scope?: string;
+    company_position?: string;
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -119,6 +122,9 @@ export function BookingDetailContainer({
             company_phone: b.company_phone,
             company_email: b.company_email,
             company_address: b.company_address,
+            client_company_name: b.client_company_name,
+            company_scope: b.company_scope,
+            company_position: b.company_position,
           });
           if (b.contract_id) {
             setContractId(b.contract_id);
@@ -139,7 +145,7 @@ export function BookingDetailContainer({
         } else {
           setError(
             dict.booking.detail.toasts.not_found_error ||
-              "Không tìm thấy thông tin yêu cầu đặt lịch.",
+            "Không tìm thấy thông tin yêu cầu đặt lịch.",
           );
         }
       } catch (err) {
@@ -147,8 +153,8 @@ export function BookingDetailContainer({
         console.error("Lỗi khi tải chi tiết yêu cầu đặt lịch:", errorObj);
         setError(
           errorObj?.message ||
-            dict.booking.detail.toasts.network_error ||
-            "Lỗi kết nối máy chủ",
+          dict.booking.detail.toasts.network_error ||
+          "Lỗi kết nối máy chủ",
         );
       } finally {
         setIsLoading(false);
@@ -189,7 +195,7 @@ export function BookingDetailContainer({
             "{price}",
             price.toLocaleString("vi-VN"),
           ) ||
-            `Đã cập nhật báo giá ${price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`,
+          `Đã cập nhật báo giá ${price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`,
         );
       }
     } catch (err: any) {
@@ -223,9 +229,9 @@ export function BookingDetailContainer({
         setToastMessage(
           isCustomer
             ? dict.booking.detail.toasts.reject_quote_success_customer ||
-                "Bạn đã từ chối báo giá thành công."
+            "Bạn đã từ chối báo giá thành công."
             : dict.booking.detail.toasts.reject_quote_success_company ||
-                "Yêu cầu đặt lịch đã bị từ chối thành công.",
+            "Yêu cầu đặt lịch đã bị từ chối thành công.",
         );
       }
     } catch (err: any) {
@@ -233,8 +239,8 @@ export function BookingDetailContainer({
       setToastType("error");
       setToastMessage(
         err?.message ||
-          dict.booking.detail.toasts.reject_quote_error ||
-          "Lỗi khi từ chối yêu cầu.",
+        dict.booking.detail.toasts.reject_quote_error ||
+        "Lỗi khi từ chối yêu cầu.",
       );
     } finally {
       setIsSimulating(false);
@@ -261,7 +267,7 @@ export function BookingDetailContainer({
         setToastType("success");
         setToastMessage(
           dict.booking.detail.toasts.cancel_success ||
-            "Bạn đã hủy yêu cầu thành công.",
+          "Bạn đã hủy yêu cầu thành công.",
         );
       }
     } catch (err: any) {
@@ -269,8 +275,8 @@ export function BookingDetailContainer({
       setToastType("error");
       setToastMessage(
         err?.message ||
-          dict.booking.detail.toasts.cancel_error ||
-          "Lỗi khi hủy yêu cầu.",
+        dict.booking.detail.toasts.cancel_error ||
+        "Lỗi khi hủy yêu cầu.",
       );
     } finally {
       setIsSimulating(false);
@@ -301,7 +307,7 @@ export function BookingDetailContainer({
         setToastType("success");
         setToastMessage(
           dict.booking.detail.toasts.accept_quote_success ||
-            "Bạn đã đồng ý báo giá thành công! Hợp đồng đã được tạo tự động.",
+          "Bạn đã đồng ý báo giá thành công! Hợp đồng đã được tạo tự động.",
         );
       }
     } catch (err: any) {
@@ -309,8 +315,8 @@ export function BookingDetailContainer({
       setToastType("error");
       setToastMessage(
         err?.message ||
-          dict.booking.detail.toasts.accept_quote_error ||
-          "Lỗi khi đồng ý báo giá.",
+        dict.booking.detail.toasts.accept_quote_error ||
+        "Lỗi khi đồng ý báo giá.",
       );
     } finally {
       setIsSimulating(false);
@@ -458,8 +464,8 @@ export function BookingDetailContainer({
             customerName={
               isCustomer
                 ? booking.company_name ||
-                  dict.booking.detail.info.default_company ||
-                  "Doanh nghiệp bảo vệ"
+                dict.booking.detail.info.default_company ||
+                "Doanh nghiệp bảo vệ"
                 : booking.customer_name
             }
             contactPerson={
@@ -470,38 +476,41 @@ export function BookingDetailContainer({
             phone={
               isCustomer
                 ? booking.company_phone ||
-                  dict.booking.detail.info.not_updated ||
-                  "Chưa cập nhật"
+                dict.booking.detail.info.not_updated ||
+                "Chưa cập nhật"
                 : booking.phone
             }
             email={
               isCustomer
                 ? booking.company_email ||
-                  dict.booking.detail.info.not_updated ||
-                  "Chưa cập nhật"
+                dict.booking.detail.info.not_updated ||
+                "Chưa cập nhật"
                 : booking.email
             }
             address={
               isCustomer
                 ? booking.company_address ||
-                  dict.booking.detail.info.not_updated ||
-                  "Chưa cập nhật"
+                dict.booking.detail.info.not_updated ||
+                "Chưa cập nhật"
                 : booking.address
             }
             title={
               isCustomer
                 ? dict.booking.detail.info.company_info_title ||
-                  "Thông tin doanh nghiệp"
+                "Thông tin doanh nghiệp"
                 : dict.booking.detail.info.customer_info_title ||
-                  "Thông tin khách hàng"
+                "Thông tin khách hàng"
             }
             nameLabel={
               isCustomer
                 ? dict.booking.detail.info.company_name ||
-                  "Tên doanh nghiệp bảo vệ"
+                "Tên doanh nghiệp bảo vệ"
                 : dict.booking.detail.info.customer_name ||
-                  "Tên khách hàng / Công ty"
+                "Tên khách hàng"
             }
+            clientCompanyName={booking.client_company_name}
+            companyScope={booking.company_scope}
+            companyPosition={booking.company_position}
           />
 
           {/* Service specifications card */}

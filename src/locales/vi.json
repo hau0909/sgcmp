@@ -100,7 +100,8 @@
     "need_attention": "Cần chú ý xử lý ngay",
     "no_pending_reports": "Không có báo cáo sự cố nào chờ xử lý",
     "employee_status": {
-      "on_duty": "Hoàn thành",
+      "on_duty": "Đang trực",
+      "completed": "Hoàn thành",
       "absent": "Vắng mặt",
       "late": "Đi trễ",
       "shift_change": "Thay ca",
@@ -980,6 +981,12 @@
         "ward_placeholder": "Chọn Quận/Huyện/Phường/Xã...",
         "specific_address": "Địa chỉ cụ thể",
         "specific_address_placeholder": "Số nhà, tên đường...",
+        "client_company_name": "Tên công ty / Cơ sở",
+        "client_company_placeholder": "VD: Shop quần áo A, Công ty X...",
+        "company_scope": "Lĩnh vực hoạt động",
+        "company_scope_placeholder": "VD: Bán lẻ thời trang, Nhà hàng...",
+        "company_position": "Chức danh của bạn",
+        "company_position_placeholder": "VD: Chủ cửa hàng, Giám đốc...",
         "section2_title": "2. Kế hoạch & Lịch trình làm việc",
         "start_date": "Ngày bắt đầu",
         "start_date_desc": "Ngày bắt đầu triển khai.",
@@ -1069,7 +1076,10 @@
           "contact_person": "Người liên hệ",
           "phone_number": "Số điện thoại",
           "email": "Email",
-          "implementation_location": "Địa chỉ triển khai"
+          "implementation_location": "Địa chỉ triển khai",
+          "client_company_name": "Tên công ty / Cơ sở",
+          "company_scope": "Lĩnh vực hoạt động",
+          "company_position": "Chức danh / Vị trí"
         },
         "spec": {
           "service_requirements": "Yêu cầu dịch vụ",

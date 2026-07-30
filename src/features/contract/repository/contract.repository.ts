@@ -117,6 +117,9 @@ export const getContractDetail = async (id: string): Promise<any | null> => {
         status,
         created_at,
         updated_at,
+        company_name,
+        company_scope,
+        company_position,
         profiles!inner (
           user_id,
           full_name,
@@ -265,6 +268,9 @@ export const getCustomerContractDetail = async (id: string, customerId: string):
         status,
         created_at,
         updated_at,
+        company_name,
+        company_scope,
+        company_position,
         companies!inner (
           company_id,
           company_name,

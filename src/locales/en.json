@@ -101,6 +101,7 @@
     "no_pending_reports": "No pending incident reports",
     "employee_status": {
       "on_duty": "On Duty",
+      "completed": "Completed",
       "absent": "Absent",
       "late": "Late",
       "shift_change": "Shift Change",
@@ -977,6 +978,12 @@
         "ward_placeholder": "Select District/Ward...",
         "specific_address": "Specific Address",
         "specific_address_placeholder": "House number, street name...",
+        "client_company_name": "Company / Facility Name",
+        "client_company_placeholder": "e.g. Clothing Shop A, Company X...",
+        "company_scope": "Field of Activity",
+        "company_scope_placeholder": "e.g. Fashion Retail, Restaurant...",
+        "company_position": "Your Job Title",
+        "company_position_placeholder": "e.g. Store Owner, Director...",
         "section2_title": "2. Working Plan & Schedule",
         "start_date": "Start Date",
         "start_date_desc": "Deployment start date.",
@@ -1066,7 +1073,10 @@
           "contact_person": "Contact Person",
           "phone_number": "Phone Number",
           "email": "Email",
-          "implementation_location": "Implementation Location"
+          "implementation_location": "Implementation Location",
+          "client_company_name": "Company / Facility Name",
+          "company_scope": "Field of Activity",
+          "company_position": "Job Title / Position"
         },
         "spec": {
           "service_requirements": "Service Requirements",

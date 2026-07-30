@@ -68,6 +68,9 @@ export async function requestUpdateBookingDetails(
     day_per_week?: string[];
     start_date?: string;
     end_date?: string;
+    company_name?: string | null;
+    company_scope?: string | null;
+    company_position?: string | null;
   }
 ): Promise<{ booking: Booking }> {
   const res = await fetcher(`/api/bookings/${id}`, {

@@ -246,6 +246,9 @@ export function VerificationDetail({
             phone={booking.phone || "—"}
             email={booking.email || "—"}
             address={booking.address || "—"}
+            clientCompanyName={booking.client_company_name}
+            companyScope={booking.company_scope}
+            companyPosition={booking.company_position}
           />
           <BookingServiceSpec
             serviceName={booking.service_name || "—"}

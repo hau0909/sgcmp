@@ -29,6 +29,9 @@ export const getBookings = async (
     created_at,
     updated_at,
     day_per_week,
+    company_name,
+    company_scope,
+    company_position,
     profiles (
       full_name
     ),
@@ -91,6 +94,9 @@ export const getBookingDetail = async (id: string): Promise<any | null> => {
       created_at,
       updated_at,
       day_per_week,
+      company_name,
+      company_scope,
+      company_position,
       profiles (
         user_id,
         full_name,
@@ -179,6 +185,9 @@ export const createBooking = async (
         start_date: booking.start_date,
         end_date: booking.end_date,
         status: "pending",
+        company_name: booking.company_name || null,
+        company_scope: booking.company_scope || null,
+        company_position: booking.company_position || null,
       },
     ])
     .select()
@@ -201,6 +210,9 @@ export const updateBookingDetails = async (
     day_per_week?: string[];
     start_date?: string;
     end_date?: string;
+    company_name?: string | null;
+    company_scope?: string | null;
+    company_position?: string | null;
   }
 ): Promise<Booking> => {
   const supabase = await createClient();
@@ -360,6 +372,9 @@ export const getCustomerBookings = async (
       created_at,
       updated_at,
       day_per_week,
+      company_name,
+      company_scope,
+      company_position,
       companies (
         company_name
       ),
