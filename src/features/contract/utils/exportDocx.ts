@@ -215,6 +215,10 @@ export function exportContractDocx(contract: any) {
       <td style="width: 75%; padding: 3px 0; font-weight: bold;">${customer.company_name}</td>
     </tr>
     <tr>
+      <td style="padding: 3px 0; vertical-align: top;">Lĩnh vực hoạt động:</td>
+      <td style="padding: 3px 0;">${customer.company_scope || "........................"}</td>
+    </tr>
+    <tr>
       <td style="padding: 3px 0; vertical-align: top;">Địa chỉ:</td>
       <td style="padding: 3px 0;">${customer.address}</td>
     </tr>

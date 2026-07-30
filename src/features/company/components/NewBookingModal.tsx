@@ -16,6 +16,8 @@ import {
   Briefcase,
   Trash2,
   ChevronDown,
+  Building2,
+  UserCheck,
 } from "lucide-react";
 import { CompanyServiceData } from "../types";
 import { requestCreateBooking } from "@/features/booking/api/booking.api";
@@ -66,6 +68,9 @@ export default function NewBookingModal({
   const [selectedCity, setSelectedCity] = useState("");
   const [selectedWard, setSelectedWard] = useState("");
   const [specificAddress, setSpecificAddress] = useState("");
+  const [clientCompanyName, setClientCompanyName] = useState("");
+  const [companyScope, setCompanyScope] = useState("");
+  const [companyPosition, setCompanyPosition] = useState("");
 
   const [showOverlapWarning, setShowOverlapWarning] = useState(false);
   const [overlappingBookings, setOverlappingBookings] = useState<any[]>([]);
@@ -107,6 +112,9 @@ export default function NewBookingModal({
       setSelectedCity("");
       setSelectedWard("");
       setSpecificAddress("");
+      setClientCompanyName("");
+      setCompanyScope("");
+      setCompanyPosition("");
       setShowOverlapWarning(false);
       setOverlappingBookings([]);
     }
@@ -328,6 +336,9 @@ export default function NewBookingModal({
         day_per_week: selectedDays,
         start_date: startDate,
         end_date: endDate,
+        company_name: clientCompanyName || null,
+        company_scope: companyScope || null,
+        company_position: companyPosition || null,
       }, forceCreate);
 
       setIsSubmitting(false);
@@ -564,7 +575,6 @@ export default function NewBookingModal({
                       )}
                     </div>
                   </div>
-
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-5 mt-2">
                     <div className="flex flex-col gap-1">
                       <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
@@ -590,8 +600,48 @@ export default function NewBookingModal({
                         </p>
                       )}
                     </div>
+                  </div>
 
+                  {/* Customer Company / Organization Info */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-5 mt-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
+                        <Building2 className="w-3.5 h-3.5 text-primary" /> Tên công ty / Cơ sở
+                      </label>
+                      <input
+                        type="text"
+                        value={clientCompanyName}
+                        onChange={(e) => setClientCompanyName(e.target.value)}
+                        placeholder="VD: Shop quần áo A, Công ty X..."
+                        className="w-full bg-surface-bright border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                    </div>
 
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
+                        <Briefcase className="w-3.5 h-3.5 text-primary" /> Lĩnh vực hoạt động
+                      </label>
+                      <input
+                        type="text"
+                        value={companyScope}
+                        onChange={(e) => setCompanyScope(e.target.value)}
+                        placeholder="VD: Bán lẻ thời trang, Nhà hàng..."
+                        className="w-full bg-surface-bright border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] font-bold text-on-surface flex items-center gap-1.5 uppercase tracking-wider">
+                        <UserCheck className="w-3.5 h-3.5 text-primary" /> Chức danh của bạn
+                      </label>
+                      <input
+                        type="text"
+                        value={companyPosition}
+                        onChange={(e) => setCompanyPosition(e.target.value)}
+                        placeholder="VD: Chủ cửa hàng, Giám đốc..."
+                        className="w-full bg-surface-bright border border-outline-variant rounded-xl px-3 py-2 text-sm text-on-surface placeholder:text-on-surface-variant/40 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent transition-all"
+                      />
+                    </div>
                   </div>
                 </div>
 

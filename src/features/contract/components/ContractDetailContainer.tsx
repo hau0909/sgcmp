@@ -169,6 +169,9 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
       description,
       contractFileUrl,
       historyList,
+      clientCompanyName: booking?.company_name || null,
+      companyScope: booking?.company_scope || null,
+      companyPosition: booking?.company_position || null,
     };
   };
 
@@ -241,6 +244,9 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
             phone={detailedData.phone}
             email={detailedData.email}
             address={detailedData.address}
+            companyName={detailedData.clientCompanyName}
+            companyScope={detailedData.companyScope}
+            companyPosition={detailedData.companyPosition}
           />
 
           {/* Service & Payment & Guards Info Grid */}

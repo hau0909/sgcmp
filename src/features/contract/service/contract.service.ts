@@ -190,13 +190,14 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
       position: "Đại diện pháp luật",
     },
     customer: {
-      company_name: "........................",
+      company_name: booking?.company_name || "........................",
       address: profile?.address || "Chưa cập nhật",
       tax_code: "........................",
       phone: profile?.phone_number || "Chưa cập nhật",
       email: profile?.email || "Chưa cập nhật",
       representative: profile?.full_name || "Khách hàng không tên",
-      position: "........................",
+      position: booking?.company_position || "........................",
+      company_scope: booking?.company_scope || "........................",
     },
     assigned_guards_list: assignedGuards,
   };
@@ -511,13 +512,14 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
       position: "Đại diện pháp luật",
     },
     customer: {
-      company_name: "........................",
+      company_name: booking?.company_name || "........................",
       address: profile?.address || "Chưa cập nhật",
       tax_code: "........................",
       phone: profile?.phone_number || "Chưa cập nhật",
       email: profile?.email || "Chưa cập nhật",
       representative: profile?.full_name || "Khách hàng không tên",
-      position: "........................",
+      position: booking?.company_position || "........................",
+      company_scope: booking?.company_scope || "........................",
     },
     assigned_guards_list: assignedGuards,
   };

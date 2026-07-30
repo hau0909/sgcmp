@@ -27,7 +27,7 @@ export function BookingCustomerInfo({
 }: BookingCustomerInfoProps) {
   const { dict } = useTranslation();
   const isCompanyTitle = title === "Thông tin doanh nghiệp" || title === dict.booking.detail.info.company_info_title;
-  
+
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative overflow-hidden transition-all hover:shadow-[0_4px_12px_rgba(0,0,0,0.03)] duration-300 animate-in fade-in slide-in-from-top-3 duration-300">
       {/* Decorative top-right curved gradient block */}
