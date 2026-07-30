@@ -25,6 +25,9 @@ export const getBookings = async (
     start_date,
     end_date,
     quoted_price,
+    quotation_type,
+    hourly_rate,
+    monthly_rate,
     status,
     created_at,
     updated_at,
@@ -90,6 +93,9 @@ export const getBookingDetail = async (id: string): Promise<any | null> => {
       start_date,
       end_date,
       quoted_price,
+      quotation_type,
+      hourly_rate,
+      monthly_rate,
       status,
       created_at,
       updated_at,
@@ -252,7 +258,13 @@ export const updateBookingDetails = async (
 
 export const updateBookingStatusAndPrice = async (
   bookingId: string,
-  updates: { status: BookingStatus; quoted_price?: number }
+  updates: {
+    status: BookingStatus;
+    quoted_price?: number;
+    quotation_type?: string;
+    hourly_rate?: number;
+    monthly_rate?: number;
+  }
 ): Promise<{ booking: Booking; contract_id?: string }> => {
   const supabase = await createClient();
 
@@ -302,6 +314,15 @@ export const updateBookingStatusAndPrice = async (
 
   if (updates.quoted_price !== undefined) {
     updatePayload.quoted_price = updates.quoted_price;
+  }
+  if (updates.quotation_type !== undefined) {
+    updatePayload.quotation_type = updates.quotation_type;
+  }
+  if (updates.hourly_rate !== undefined) {
+    updatePayload.hourly_rate = updates.hourly_rate;
+  }
+  if (updates.monthly_rate !== undefined) {
+    updatePayload.monthly_rate = updates.monthly_rate;
   }
 
   const { data, error } = await supabase
@@ -368,6 +389,9 @@ export const getCustomerBookings = async (
       start_date,
       end_date,
       quoted_price,
+      quotation_type,
+      hourly_rate,
+      monthly_rate,
       status,
       created_at,
       updated_at,

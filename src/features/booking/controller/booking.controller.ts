@@ -30,7 +30,13 @@ export const handleCreateBooking = async (
 
 export const handleUpdateBookingStatusAndPrice = async (
   bookingId: string,
-  updates: { status: BookingStatus; quoted_price?: number }
+  updates: {
+    status: BookingStatus;
+    quoted_price?: number;
+    quotation_type?: any;
+    hourly_rate?: number;
+    monthly_rate?: number;
+  }
 ): Promise<{ booking: Booking; contract_id?: string }> => {
   return await updateBookingStatusAndPriceService(bookingId, updates);
 };

@@ -14,7 +14,6 @@ import {
 import { BookingDetailHeader } from "./BookingDetailHeader";
 import { BookingCustomerInfo } from "./BookingCustomerInfo";
 import { BookingServiceSpec } from "./BookingServiceSpec";
-import { EditBookingModal } from "./EditBookingModal";
 import { BookingQuotationPanel } from "./BookingQuotationPanel";
 import { BookingStatus } from "../types";
 import {
@@ -24,8 +23,8 @@ import {
 import { requestGetVerification } from "@/features/verification/api/verification.api";
 import { VerificationStatus } from "@/features/verification/types";
 import { BookingProgress } from "./BookingProgress";
+import { EditBookingModal } from "./EditBookingModal";
 import { useTranslation } from "@/components/providers/LanguageProvider";
-
 
 interface BookingDetailContainerProps {
   bookingId: string;
@@ -62,6 +61,10 @@ export function BookingDetailContainer({
     time_slots: string[];
     special_instructions: string | string[] | null;
     quoted_price: number | null;
+    quotation_type?: any;
+    hourly_rate?: number | null;
+    monthly_rate?: number | null;
+    service_price?: number | null;
     status: BookingStatus;
     created_at: string;
     day_per_week: string[];
@@ -95,8 +98,6 @@ export function BookingDetailContainer({
         }
         setError(null);
 
-
-
         const res = await requestGetBookingDetail(bookingId);
         if (res && res.booking) {
           const b = res.booking;
@@ -114,6 +115,10 @@ export function BookingDetailContainer({
             time_slots: b.time_slots || [],
             special_instructions: b.description || null,
             quoted_price: b.quoted_price,
+            quotation_type: b.quotation_type,
+            hourly_rate: b.hourly_rate,
+            monthly_rate: b.monthly_rate,
+            service_price: b.services?.price || b.service_price || null,
             status: b.status,
             created_at: b.created_at,
             day_per_week: b.day_per_week || [],
@@ -145,7 +150,7 @@ export function BookingDetailContainer({
         } else {
           setError(
             dict.booking.detail.toasts.not_found_error ||
-            "Không tìm thấy thông tin yêu cầu đặt lịch.",
+              "Không tìm thấy thông tin yêu cầu đặt lịch.",
           );
         }
       } catch (err) {
@@ -153,8 +158,8 @@ export function BookingDetailContainer({
         console.error("Lỗi khi tải chi tiết yêu cầu đặt lịch:", errorObj);
         setError(
           errorObj?.message ||
-          dict.booking.detail.toasts.network_error ||
-          "Lỗi kết nối máy chủ",
+            dict.booking.detail.toasts.network_error ||
+            "Lỗi kết nối máy chủ",
         );
       } finally {
         setIsLoading(false);
@@ -170,14 +175,21 @@ export function BookingDetailContainer({
   }, [bookingId, fetchDetail]);
 
   // Send a quote to the customer using API
-  const handleQuote = async (price: number) => {
+  const handleQuote = async (quoteParams: {
+    quoted_price: number;
+    quotation_type: any;
+    hourly_rate?: number;
+    monthly_rate?: number;
+  }) => {
     try {
       setIsSimulating(true);
 
-
       const updated = await requestUpdateBookingQuotation(bookingId, {
         status: "quoted",
-        quoted_price: price,
+        quoted_price: quoteParams.quoted_price,
+        quotation_type: quoteParams.quotation_type,
+        hourly_rate: quoteParams.hourly_rate,
+        monthly_rate: quoteParams.monthly_rate,
       });
 
       if (updated && updated.booking) {
@@ -187,15 +199,18 @@ export function BookingDetailContainer({
             ...prev,
             status: updated.booking.status,
             quoted_price: updated.booking.quoted_price,
+            quotation_type: updated.booking.quotation_type,
+            hourly_rate: updated.booking.hourly_rate,
+            monthly_rate: updated.booking.monthly_rate,
           };
         });
         setToastType("success");
         setToastMessage(
           dict.booking.detail.toasts.quote_updated_success?.replace(
             "{price}",
-            price.toLocaleString("vi-VN"),
+            quoteParams.quoted_price.toLocaleString("vi-VN"),
           ) ||
-          `Đã cập nhật báo giá ${price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`,
+            `Đã cập nhật báo giá ${quoteParams.quoted_price.toLocaleString("vi-VN")} VND & gửi phản hồi cho khách hàng thành công!`,
         );
       }
     } catch (err: any) {
@@ -229,9 +244,9 @@ export function BookingDetailContainer({
         setToastMessage(
           isCustomer
             ? dict.booking.detail.toasts.reject_quote_success_customer ||
-            "Bạn đã từ chối báo giá thành công."
+                "Bạn đã từ chối báo giá thành công."
             : dict.booking.detail.toasts.reject_quote_success_company ||
-            "Yêu cầu đặt lịch đã bị từ chối thành công.",
+                "Yêu cầu đặt lịch đã bị từ chối thành công.",
         );
       }
     } catch (err: any) {
@@ -239,8 +254,8 @@ export function BookingDetailContainer({
       setToastType("error");
       setToastMessage(
         err?.message ||
-        dict.booking.detail.toasts.reject_quote_error ||
-        "Lỗi khi từ chối yêu cầu.",
+          dict.booking.detail.toasts.reject_quote_error ||
+          "Lỗi khi từ chối yêu cầu.",
       );
     } finally {
       setIsSimulating(false);
@@ -250,7 +265,6 @@ export function BookingDetailContainer({
   const handleCancelBooking = async () => {
     try {
       setIsSimulating(true);
-
 
       const updated = await requestUpdateBookingQuotation(bookingId, {
         status: "canceled",
@@ -267,7 +281,7 @@ export function BookingDetailContainer({
         setToastType("success");
         setToastMessage(
           dict.booking.detail.toasts.cancel_success ||
-          "Bạn đã hủy yêu cầu thành công.",
+            "Bạn đã hủy yêu cầu thành công.",
         );
       }
     } catch (err: any) {
@@ -275,8 +289,8 @@ export function BookingDetailContainer({
       setToastType("error");
       setToastMessage(
         err?.message ||
-        dict.booking.detail.toasts.cancel_error ||
-        "Lỗi khi hủy yêu cầu.",
+          dict.booking.detail.toasts.cancel_error ||
+          "Lỗi khi hủy yêu cầu.",
       );
     } finally {
       setIsSimulating(false);
@@ -287,7 +301,6 @@ export function BookingDetailContainer({
   const handleAcceptQuote = async () => {
     try {
       setIsSimulating(true);
-
 
       const res = await requestUpdateBookingQuotation(bookingId, {
         status: "accepted",
@@ -307,7 +320,7 @@ export function BookingDetailContainer({
         setToastType("success");
         setToastMessage(
           dict.booking.detail.toasts.accept_quote_success ||
-          "Bạn đã đồng ý báo giá thành công! Hợp đồng đã được tạo tự động.",
+            "Bạn đã đồng ý báo giá thành công! Hợp đồng đã được tạo tự động.",
         );
       }
     } catch (err: any) {
@@ -315,8 +328,8 @@ export function BookingDetailContainer({
       setToastType("error");
       setToastMessage(
         err?.message ||
-        dict.booking.detail.toasts.accept_quote_error ||
-        "Lỗi khi đồng ý báo giá.",
+          dict.booking.detail.toasts.accept_quote_error ||
+          "Lỗi khi đồng ý báo giá.",
       );
     } finally {
       setIsSimulating(false);
@@ -444,11 +457,20 @@ export function BookingDetailContainer({
           hasContract={!!contractId}
           contractStatus={contractStatus}
           onViewVerification={
-            verificationStatus !== null ? () => router.push(`${verificationBasePath}/${bookingId}`) : undefined
+            !isCustomer && verificationStatus !== null
+              ? () => router.push(`${verificationBasePath}/${bookingId}`)
+              : undefined
           }
-          onViewContract={() => {
-            // TODO: Navigate to contract page if needed
-          }}
+          onViewContract={
+            contractId
+              ? () =>
+                  router.push(
+                    isCustomer
+                      ? `/my-contracts/${contractId}`
+                      : `/contracts/${contractId}`,
+                  )
+              : undefined
+          }
           isCustomer={isCustomer}
         />
       )}
@@ -464,49 +486,50 @@ export function BookingDetailContainer({
             customerName={
               isCustomer
                 ? booking.company_name ||
-                dict.booking.detail.info.default_company ||
-                "Doanh nghiệp bảo vệ"
+                  dict.booking.detail.info.default_company ||
+                  "Doanh nghiệp bảo vệ"
                 : booking.customer_name
             }
             contactPerson={
               isCustomer
-                ? booking.company_contact_person || dict.booking.detail.info.company_rep || "Đại diện doanh nghiệp"
+                ? booking.company_contact_person ||
+                  dict.booking.detail.info.company_rep ||
+                  "Đại diện doanh nghiệp"
                 : booking.contact_person
             }
             phone={
               isCustomer
                 ? booking.company_phone ||
-                dict.booking.detail.info.not_updated ||
-                "Chưa cập nhật"
+                  dict.booking.detail.info.not_updated ||
+                  "Chưa cập nhật"
                 : booking.phone
             }
             email={
               isCustomer
                 ? booking.company_email ||
-                dict.booking.detail.info.not_updated ||
-                "Chưa cập nhật"
+                  dict.booking.detail.info.not_updated ||
+                  "Chưa cập nhật"
                 : booking.email
             }
             address={
               isCustomer
                 ? booking.company_address ||
-                dict.booking.detail.info.not_updated ||
-                "Chưa cập nhật"
+                  dict.booking.detail.info.not_updated ||
+                  "Chưa cập nhật"
                 : booking.address
             }
             title={
               isCustomer
                 ? dict.booking.detail.info.company_info_title ||
-                "Thông tin doanh nghiệp"
+                  "Thông tin doanh nghiệp"
                 : dict.booking.detail.info.customer_info_title ||
-                "Thông tin khách hàng"
+                  "Thông tin khách hàng"
             }
             nameLabel={
               isCustomer
                 ? dict.booking.detail.info.company_name ||
-                "Tên doanh nghiệp bảo vệ"
-                : dict.booking.detail.info.customer_name ||
-                "Tên khách hàng"
+                  "Tên doanh nghiệp bảo vệ"
+                : dict.booking.detail.info.customer_name || "Tên khách hàng"
             }
             clientCompanyName={booking.client_company_name}
             companyScope={booking.company_scope}
@@ -533,8 +556,17 @@ export function BookingDetailContainer({
         {!isCoordinator && (
           <div className="xl:col-span-1">
             <BookingQuotationPanel
+              serviceName={booking.service_name}
               initialPrice={booking.quoted_price}
+              initialQuotationType={booking.quotation_type}
+              initialHourlyRate={booking.hourly_rate}
+              initialMonthlyRate={booking.monthly_rate}
               guardsCount={booking.guards_count}
+              timeSlots={booking.time_slots}
+              daysPerWeek={booking.day_per_week}
+              startDate={booking.start_date}
+              endDate={booking.end_date}
+              basePricePerHour={booking.service_price}
               status={booking.status}
               onQuote={handleQuote}
               onReject={handleReject}

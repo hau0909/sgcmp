@@ -276,16 +276,15 @@ export default function NewBookingModal({
     if (selectedDays.length === 0) {
       newErrors.day_per_week = "Vui lòng chọn ít nhất một ngày làm việc";
     } else if (startDate && endDate && (!newErrors.startDate && !newErrors.endDate)) {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const diffTime = Math.abs(end.getTime() - start.getTime());
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      const start = new Date(`${startDate}T00:00:00`);
+      const end = new Date(`${endDate}T00:00:00`);
+      const diffTime = end.getTime() - start.getTime();
+      const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
 
-      if (diffDays < 7) {
+      if (diffDays >= 0 && diffDays < 7) {
         const validDays = new Set<string>();
         for (let i = 0; i <= diffDays; i++) {
-          const d = new Date(start);
-          d.setDate(start.getDate() + i);
+          const d = new Date(start.getTime() + i * 24 * 60 * 60 * 1000);
           const dayName = d.toLocaleDateString('en-US', { weekday: 'long' });
           validDays.add(dayName);
         }
@@ -666,6 +665,7 @@ export default function NewBookingModal({
                       </p>
                       <input
                         type="date"
+                        lang="vi-VN"
                         value={startDate}
                         onChange={(e) => {
                           setStartDate(e.target.value);
@@ -695,6 +695,7 @@ export default function NewBookingModal({
                       </p>
                       <input
                         type="date"
+                        lang="vi-VN"
                         value={endDate}
                         onChange={(e) => {
                           setEndDate(e.target.value);

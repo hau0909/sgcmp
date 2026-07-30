@@ -1,4 +1,5 @@
-import { BookingStatus } from "./Enum";
+import type { BookingStatus, QuotationType } from "./Enum";
+export type { BookingStatus, QuotationType };
 
 export interface Booking {
   booking_id: string;
@@ -13,6 +14,9 @@ export interface Booking {
   start_date: string;
   end_date: string;
   quoted_price: number | null;
+  quotation_type?: QuotationType | null;
+  hourly_rate?: number | null;
+  monthly_rate?: number | null;
   status: BookingStatus;
   created_at: string;
   updated_at: string;
@@ -21,9 +25,7 @@ export interface Booking {
   company_name?: string | null;
   company_scope?: string | null;
   company_position?: string | null;
-  quotation_type?: string | null;
-  hourly_rate?: number | null;
-  monthly_rate?: number | null;
+
 
   // Virtual fields for UI rendering
   customer_name?: string;

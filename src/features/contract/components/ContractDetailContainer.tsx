@@ -2,7 +2,14 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import { ArrowLeft, FileQuestion, CheckCircle, X, AlertTriangle, PenTool } from "lucide-react";
+import {
+  ArrowLeft,
+  FileQuestion,
+  CheckCircle,
+  X,
+  AlertTriangle,
+  PenTool,
+} from "lucide-react";
 import { ContractDetailHeader } from "./ContractDetailHeader";
 import { ContractPartnerInfo } from "./ContractPartnerInfo";
 import { ContractServiceInfo } from "./ContractServiceInfo";
@@ -18,12 +25,15 @@ import {
   requestUploadContractFile,
   requestDeleteContractFile,
 } from "../api/contract.api";
+import { formatPrice } from "@/utils/formatPrice";
 
 interface ContractDetailContainerProps {
   contractId: string;
 }
 
-export function ContractDetailContainer({ contractId }: ContractDetailContainerProps) {
+export function ContractDetailContainer({
+  contractId,
+}: ContractDetailContainerProps) {
   const { dict, locale } = useTranslation();
   const dateLocale = locale === "en" ? "en-US" : "vi-VN";
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -33,27 +43,37 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  const fetchDetail = React.useCallback(async (showLoading = true) => {
-    try {
-      await Promise.resolve(); // Yield control to the microtask queue to avoid synchronous state updates inside useEffect
-      if (showLoading) {
-        setIsLoading(true);
+  const fetchDetail = React.useCallback(
+    async (showLoading = true) => {
+      try {
+        await Promise.resolve(); // Yield control to the microtask queue to avoid synchronous state updates inside useEffect
+        if (showLoading) {
+          setIsLoading(true);
+        }
+        setError(null);
+        const res = await requestGetContractDetail(contractId);
+        if (res && res.contract) {
+          setContract(res.contract);
+        } else {
+          setError(
+            dict.contract_detail?.error_fetch ||
+              "Không tìm thấy thông tin hợp đồng.",
+          );
+        }
+      } catch (err) {
+        const errorObj = err as Error & { message?: string };
+        console.error("Lỗi khi tải chi tiết hợp đồng:", errorObj);
+        setError(
+          errorObj?.message ||
+            dict.contract_detail?.error_fetch ||
+            "Lỗi kết nối máy chủ",
+        );
+      } finally {
+        setIsLoading(false);
       }
-      setError(null);
-      const res = await requestGetContractDetail(contractId);
-      if (res && res.contract) {
-        setContract(res.contract);
-      } else {
-        setError(dict.contract_detail?.error_fetch || "Không tìm thấy thông tin hợp đồng.");
-      }
-    } catch (err) {
-      const errorObj = err as Error & { message?: string };
-      console.error("Lỗi khi tải chi tiết hợp đồng:", errorObj);
-      setError(errorObj?.message || dict.contract_detail?.error_fetch || "Lỗi kết nối máy chủ");
-    } finally {
-      setIsLoading(false);
-    }
-  }, [contractId, dict]);
+    },
+    [contractId, dict],
+  );
 
   useEffect(() => {
     if (contractId) {
@@ -70,15 +90,24 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
       setIsSignModalOpen(false);
       const res = await requestSignContractCompany(contractId);
       if (res && res.success) {
-        setToastMessage(dict.contract_detail?.success_update || "Ký duyệt hợp đồng với tư cách Công ty thành công!");
+        setToastMessage(
+          dict.contract_detail?.success_update ||
+            "Ký duyệt hợp đồng với tư cách Công ty thành công!",
+        );
         await fetchDetail();
       } else {
-        setToastMessage(dict.contract_detail?.error_update || "Ký duyệt hợp đồng thất bại.");
+        setToastMessage(
+          dict.contract_detail?.error_update || "Ký duyệt hợp đồng thất bại.",
+        );
       }
     } catch (err) {
       const errorObj = err as Error & { message?: string };
       console.error(errorObj);
-      setToastMessage(errorObj?.message || dict.contract_detail?.error_sign || "Có lỗi xảy ra khi ký hợp đồng.");
+      setToastMessage(
+        errorObj?.message ||
+          dict.contract_detail?.error_sign ||
+          "Có lỗi xảy ra khi ký hợp đồng.",
+      );
     } finally {
       setTimeout(() => {
         setToastMessage(null);
@@ -101,16 +130,58 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     // Format duration
     const formattedStartDate = currentContract.start_date
       ? new Date(currentContract.start_date).toLocaleDateString(dateLocale)
-      : (booking?.start_date ? new Date(booking.start_date).toLocaleDateString(dateLocale) : "");
+      : booking?.start_date
+        ? new Date(booking.start_date).toLocaleDateString(dateLocale)
+        : "";
     const formattedEndDate = currentContract.end_date
       ? new Date(currentContract.end_date).toLocaleDateString(dateLocale)
-      : (booking?.end_date ? new Date(booking.end_date).toLocaleDateString(dateLocale) : "");
+      : booking?.end_date
+        ? new Date(booking.end_date).toLocaleDateString(dateLocale)
+        : "";
     const duration = `${formattedStartDate} - ${formattedEndDate}`;
 
     const location = booking?.address || notUpdatedText;
-    const totalValue = booking?.formatted_price || dict.contract_detail?.not_quoted || "Chưa báo giá";
-    const paymentMethod = dict.contract_detail?.bank_transfer || "Chuyển khoản ngân hàng";
+    const rawPrice =
+      booking?.quoted_price ||
+      booking?.total_price ||
+      currentContract.total_price ||
+      0;
+    const quotationType =
+      booking?.quotation_type || currentContract.quotation_type || "monthly";
+    const totalHours = booking?.total_hours || null;
+
+    let unitPriceDetail: string | null = null;
+    if (rawPrice) {
+      if (quotationType === "hourly") {
+        const hourlyRate =
+          booking?.negotiated_price ||
+          booking?.unit_price ||
+          booking?.hourly_rate ||
+          (quantity ? Math.round(rawPrice / (quantity * 54)) : 20000);
+        unitPriceDetail = `${formatPrice(hourlyRate)} VNĐ / giờ / nhân sự`;
+      } else if (quotationType === "monthly") {
+        unitPriceDetail = `${booking?.formatted_price || formatPrice(rawPrice) + " VNĐ"} / tháng`;
+      } else {
+        unitPriceDetail = `${booking?.formatted_price || formatPrice(rawPrice) + " VNĐ"} / trọn gói`;
+      }
+    }
+
+    const totalValue =
+      booking?.formatted_price ||
+      (rawPrice
+        ? `${formatPrice(rawPrice)} VNĐ`
+        : dict.contract_detail?.not_quoted || "Chưa báo giá");
+    const paymentMethod =
+      dict.contract_detail?.bank_transfer || "Chuyển khoản ngân hàng";
     const timeSlots = booking?.time_slots || [];
+    const workingDays =
+      booking?.day_per_week ||
+      booking?.days_per_week ||
+      booking?.working_days ||
+      booking?.days_of_week ||
+      booking?.days ||
+      currentContract?.day_per_week ||
+      [];
     const description = booking?.description || null;
     const contractFileUrl = currentContract.contract_file_url;
 
@@ -119,18 +190,29 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
 
     if (currentContract.status === "active") {
       historyList.push({
-        time: currentContract.updated_at ? new Date(currentContract.updated_at).toLocaleString(dateLocale) : (dict.contract_detail?.just_now || "Vừa xong"),
-        title: dict.contract_detail?.history_active_title || "Hợp đồng kích hoạt",
-        description: dict.contract_detail?.history_active_desc || "Hợp đồng chuyển sang trạng thái Đang hoạt động sau khi hoàn tất ký kết.",
+        time: currentContract.updated_at
+          ? new Date(currentContract.updated_at).toLocaleString(dateLocale)
+          : dict.contract_detail?.just_now || "Vừa xong",
+        title:
+          dict.contract_detail?.history_active_title || "Hợp đồng kích hoạt",
+        description:
+          dict.contract_detail?.history_active_desc ||
+          "Hợp đồng chuyển sang trạng thái Đang hoạt động sau khi hoàn tất ký kết.",
         isLatest: true,
       });
     }
 
     if (currentContract.company_agreed) {
       historyList.push({
-        time: currentContract.updated_at ? new Date(currentContract.updated_at).toLocaleString(dateLocale) : (dict.contract_detail?.just_now || "Vừa xong"),
-        title: dict.contract_detail?.history_company_signed_title || "Công ty đã ký duyệt",
-        description: dict.contract_detail?.history_company_signed_desc || "Người thực hiện: Quản lý doanh nghiệp (Company Admin)",
+        time: currentContract.updated_at
+          ? new Date(currentContract.updated_at).toLocaleString(dateLocale)
+          : dict.contract_detail?.just_now || "Vừa xong",
+        title:
+          dict.contract_detail?.history_company_signed_title ||
+          "Công ty đã ký duyệt",
+        description:
+          dict.contract_detail?.history_company_signed_desc ||
+          "Người thực hiện: Quản lý doanh nghiệp (Company Admin)",
         isLatest: currentContract.status !== "active",
       });
     }
@@ -138,7 +220,9 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     if (currentContract.customer_agreed) {
       historyList.push({
         time: dict.contract_detail?.history_earlier || "Trước đó",
-        title: dict.contract_detail?.history_customer_signed_title || "Khách hàng đã ký duyệt",
+        title:
+          dict.contract_detail?.history_customer_signed_title ||
+          "Khách hàng đã ký duyệt",
         description: `${dict.contract_detail?.history_performer || "Người thực hiện:"} ${dict.contract_detail?.customer_agreed || "Khách hàng"} (${currentContract.customer_name})`,
       });
     }
@@ -146,14 +230,22 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     historyList.push(
       {
         time: new Date(currentContract.created_at).toLocaleString(dateLocale),
-        title: dict.contract_detail?.history_pending_signatures_title || "Chờ chữ ký",
-        description: dict.contract_detail?.history_pending_signatures_desc || "Báo giá được chấp nhận, hệ thống chuyển sang trạng thái chờ ký kết",
+        title:
+          dict.contract_detail?.history_pending_signatures_title ||
+          "Chờ chữ ký",
+        description:
+          dict.contract_detail?.history_pending_signatures_desc ||
+          "Báo giá được chấp nhận, hệ thống chuyển sang trạng thái chờ ký kết",
       },
       {
         time: new Date(currentContract.created_at).toLocaleString(dateLocale),
-        title: dict.contract_detail?.history_created_title || "Dự thảo hợp đồng được tạo",
-        description: dict.contract_detail?.history_created_desc || "Tài liệu hợp đồng nháp được tạo tự động bởi hệ thống",
-      }
+        title:
+          dict.contract_detail?.history_created_title ||
+          "Dự thảo hợp đồng được tạo",
+        description:
+          dict.contract_detail?.history_created_desc ||
+          "Tài liệu hợp đồng nháp được tạo tự động bởi hệ thống",
+      },
     );
 
     return {
@@ -164,14 +256,23 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
       duration,
       location,
       totalValue,
+      unitPriceDetail,
+      quotationType,
+      totalHours,
       paymentMethod,
       timeSlots,
+      workingDays,
       description,
       contractFileUrl,
       historyList,
-      clientCompanyName: booking?.company_name || null,
-      companyScope: booking?.company_scope || null,
-      companyPosition: booking?.company_position || null,
+      clientCompanyName:
+        booking?.company_name || currentContract.customer?.company_name || null,
+      companyScope:
+        booking?.company_scope ||
+        currentContract.customer?.company_scope ||
+        null,
+      companyPosition:
+        booking?.company_position || currentContract.customer?.position || null,
     };
   };
 
@@ -179,7 +280,9 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     return (
       <div className="flex-1 flex flex-col items-center justify-center p-12 text-center h-[70vh]">
         <div className="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary mb-3"></div>
-        <p className="text-sm text-on-surface-variant font-medium">{dict.contract_detail?.loading || "Đang tải chi tiết hợp đồng..."}</p>
+        <p className="text-sm text-on-surface-variant font-medium">
+          {dict.contract_detail?.loading || "Đang tải chi tiết hợp đồng..."}
+        </p>
       </div>
     );
   }
@@ -194,14 +297,18 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
           {dict.contract_detail?.error_load_title || "Lỗi tải hợp đồng"}
         </h3>
         <p className="text-sm text-on-surface-variant max-w-xs mb-6 font-body">
-          {error || dict.contract_detail?.error_load_desc || "Rất tiếc, chúng tôi không tìm thấy thông tin hợp đồng được yêu cầu."}
+          {error ||
+            dict.contract_detail?.error_load_desc ||
+            "Rất tiếc, chúng tôi không tìm thấy thông tin hợp đồng được yêu cầu."}
         </p>
         <Link
           href="/contracts"
           className="bg-primary hover:bg-primary/95 text-on-primary font-semibold px-4 py-2 rounded-lg text-sm transition-transform active:scale-95 duration-100 flex items-center gap-1.5 shadow-sm"
         >
           <ArrowLeft className="w-4 h-4" />
-          <span>{dict.contract_detail?.back_to_list || "Quay lại danh sách"}</span>
+          <span>
+            {dict.contract_detail?.back_to_list || "Quay lại danh sách"}
+          </span>
         </Link>
       </div>
     );
@@ -216,7 +323,10 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
         <div className="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-50 animate-in fade-in slide-in-from-bottom-5">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-sm font-medium">{toastMessage}</span>
-          <button onClick={() => setToastMessage(null)} className="text-white/60 hover:text-white ml-2">
+          <button
+            onClick={() => setToastMessage(null)}
+            className="text-white/60 hover:text-white ml-2"
+          >
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -229,7 +339,9 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
         customerAgreed={contract.customer_agreed}
         companyAgreed={contract.company_agreed}
         hasContractFile={!!detailedData.contractFileUrl}
-        hasGuards={!!contract.guard_assigned && contract.guard_assigned.length > 0}
+        hasGuards={
+          !!contract.guard_assigned && contract.guard_assigned.length > 0
+        }
         onSignCompany={() => setIsSignModalOpen(true)}
         contract={contract}
       />
@@ -244,6 +356,7 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
             phone={detailedData.phone}
             email={detailedData.email}
             address={detailedData.address}
+            deploymentAddress={detailedData.location}
             companyName={detailedData.clientCompanyName}
             companyScope={detailedData.companyScope}
             companyPosition={detailedData.companyPosition}
@@ -258,11 +371,15 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
                 duration={detailedData.duration}
                 location={detailedData.location}
                 timeSlots={detailedData.timeSlots}
+                workingDays={detailedData.workingDays}
                 description={detailedData.description}
               />
 
               <ContractPaymentInfo
                 totalValue={detailedData.totalValue}
+                unitPriceDetail={detailedData.unitPriceDetail}
+                quotationType={detailedData.quotationType}
+                totalHours={detailedData.totalHours}
               />
             </div>
 
@@ -291,15 +408,25 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
               try {
                 const res = await requestUploadContractFile(contractId, file);
                 if (res && res.success) {
-                  setToastMessage(dict.contract_detail?.upload_success || "Tải lên tệp hợp đồng thành công!");
+                  setToastMessage(
+                    dict.contract_detail?.upload_success ||
+                      "Tải lên tệp hợp đồng thành công!",
+                  );
                   await fetchDetail();
                 } else {
-                  setToastMessage(dict.contract_detail?.upload_fail || "Tải lên tệp hợp đồng thất bại.");
+                  setToastMessage(
+                    dict.contract_detail?.upload_fail ||
+                      "Tải lên tệp hợp đồng thất bại.",
+                  );
                 }
               } catch (err) {
                 const errorObj = err as Error & { message?: string };
                 console.error(errorObj);
-                setToastMessage(errorObj?.message || dict.contract_detail?.error_upload || "Có lỗi xảy ra khi tải lên.");
+                setToastMessage(
+                  errorObj?.message ||
+                    dict.contract_detail?.error_upload ||
+                    "Có lỗi xảy ra khi tải lên.",
+                );
               } finally {
                 setTimeout(() => {
                   setToastMessage(null);
@@ -310,15 +437,25 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
               try {
                 const res = await requestDeleteContractFile(contractId);
                 if (res && res.success) {
-                  setToastMessage(dict.contract_detail?.delete_success || "Đã xóa tệp hợp đồng đính kèm!");
+                  setToastMessage(
+                    dict.contract_detail?.delete_success ||
+                      "Đã xóa tệp hợp đồng đính kèm!",
+                  );
                   await fetchDetail();
                 } else {
-                  setToastMessage(dict.contract_detail?.delete_fail || "Xóa tệp hợp đồng thất bại.");
+                  setToastMessage(
+                    dict.contract_detail?.delete_fail ||
+                      "Xóa tệp hợp đồng thất bại.",
+                  );
                 }
               } catch (err) {
                 const errorObj = err as Error & { message?: string };
                 console.error(errorObj);
-                setToastMessage(errorObj?.message || dict.contract_detail?.error_delete || "Có lỗi xảy ra khi xóa tệp.");
+                setToastMessage(
+                  errorObj?.message ||
+                    dict.contract_detail?.error_delete ||
+                    "Có lỗi xảy ra khi xóa tệp.",
+                );
               } finally {
                 setTimeout(() => {
                   setToastMessage(null);
@@ -341,15 +478,22 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
             <div className="bg-[#eff4ff] border-b border-[#acc7ff] px-6 py-4 flex items-center justify-between">
               <div className="flex items-center gap-2 text-[#024594]">
                 <PenTool className="w-5 h-5 shrink-0" />
-                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">{dict.contract_detail?.confirm_sign_title || "Ký duyệt Hợp đồng"}</h3>
+                <h3 className="font-bold text-[#0b1c30] text-lg font-headline">
+                  {dict.contract_detail?.confirm_sign_title ||
+                    "Ký duyệt Hợp đồng"}
+                </h3>
               </div>
-              <button onClick={() => setIsSignModalOpen(false)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
+              <button
+                onClick={() => setIsSignModalOpen(false)}
+                className="text-slate-400 hover:text-slate-600 cursor-pointer"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
             <div className="p-6 space-y-3 font-body">
               <p className="text-sm text-on-surface-variant leading-relaxed">
-                {dict.contract_detail?.confirm_sign_desc || "Bạn có chắc chắn muốn đại diện Công ty ký duyệt hợp đồng này?"}
+                {dict.contract_detail?.confirm_sign_desc ||
+                  "Bạn có chắc chắn muốn đại diện Công ty ký duyệt hợp đồng này?"}
               </p>
             </div>
             <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
@@ -372,4 +516,3 @@ export function ContractDetailContainer({ contractId }: ContractDetailContainerP
     </div>
   );
 }
-
