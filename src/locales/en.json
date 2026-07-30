@@ -1655,7 +1655,9 @@
     "selected": "Selected:",
     "guards_count": "guards",
     "save_changes": "Save Changes",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "info_optional_title": "Guard Assignment is Optional",
+    "info_optional_desc": "You can sign the contract even without assigning guards. Guard coordination can be done after the contract takes effect."
   },
   "chat": {
     "title": "Messages",

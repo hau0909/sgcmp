@@ -150,29 +150,24 @@ export function ContractDetailHeader({
           <div className="relative group/tooltip flex items-center">
             <Button
               onClick={onSignCompany}
-              disabled={!hasContractFile || !hasGuards}
+              disabled={!hasContractFile}
               className={`font-bold shadow-md px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 ${
-                (!hasContractFile || !hasGuards)
+                !hasContractFile
                   ? "bg-slate-200 text-slate-400 border border-slate-300 cursor-not-allowed hover:bg-slate-200"
                   : "cursor-pointer bg-primary hover:bg-primary/90 text-on-primary active:scale-95"
               }`}
             >
               <span>{dict.contract_detail?.sign_company || "Ký duyệt (Công ty)"}</span>
             </Button>
-            
-            {(!hasContractFile || !hasGuards) && (
+
+            {!hasContractFile && (
               <div className="absolute top-full mt-2 right-0 pointer-events-none opacity-0 group-hover/tooltip:opacity-100 transition-opacity duration-200 bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded shadow-lg whitespace-nowrap z-50">
-                {!hasContractFile && !hasGuards
-                  ? dict.contract_detail?.tooltip_both || "Vui lòng tải lên tệp hợp đồng PDF và phân công bảo vệ trước khi ký duyệt"
-                  : !hasContractFile
-                  ? dict.contract_detail?.tooltip_file || "Vui lòng tải lên tệp hợp đồng PDF trước khi ký duyệt"
-                  : dict.contract_detail?.tooltip_guards || "Vui lòng phân công bảo vệ trước khi ký duyệt"}
+                {dict.contract_detail?.tooltip_file || "Vui lòng tải lên tệp hợp đồng PDF trước khi ký duyệt"}
                 <div className="absolute bottom-full right-16 border-4 border-transparent border-b-slate-900" />
               </div>
             )}
           </div>
-        )}
-      </div>
+        )}      </div>
     </div>
   );
 }

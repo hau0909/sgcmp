@@ -330,6 +330,7 @@ export type CurrentUpcomingShiftItem = {
   id: string;
   name: string;
   avatar: string;
+  phone?: string;
   type: "ONGOING" | "UPCOMING" | "LATE" | "REPLACEMENT" | "ABSENT" | "CHECKOUT";
   timeText: string;
   location: string;
@@ -375,6 +376,8 @@ export const requestGetCurrentUpcomingShiftsToday = (
 export type PastShiftItem = {
   id: string;
   name: string;
+  avatar?: string;
+  phone?: string;
   time: string;
   location: string;
   contractName?: string;

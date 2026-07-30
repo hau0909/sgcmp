@@ -15,6 +15,7 @@ import {
     X,
     Search,
     CheckCircle2,
+    Phone,
 } from "lucide-react";
 import {
     Radar,
@@ -258,6 +259,7 @@ export default function CoordinatorDashboardPage() {
             shift.name.toLowerCase().includes(query) ||
             shift.location.toLowerCase().includes(query) ||
             (shift.contractName && shift.contractName.toLowerCase().includes(query)) ||
+            (shift.phone && shift.phone.toLowerCase().includes(query)) ||
             shift.id.toLowerCase().includes(query) ||
             shift.status.toLowerCase().includes(query)
         );
@@ -268,6 +270,7 @@ export default function CoordinatorDashboardPage() {
         if (!query) return true;
         return (
             guard.name.toLowerCase().includes(query) ||
+            (guard.phone && guard.phone.toLowerCase().includes(query)) ||
             guard.certs.toLowerCase().includes(query) ||
             guard.id.toLowerCase().includes(query)
         );
@@ -279,6 +282,7 @@ export default function CoordinatorDashboardPage() {
         return (
             shift.name.toLowerCase().includes(query) ||
             shift.location.toLowerCase().includes(query) ||
+            (shift.phone && shift.phone.toLowerCase().includes(query)) ||
             shift.id.toLowerCase().includes(query) ||
             shift.statusText.toLowerCase().includes(query)
         );
@@ -496,7 +500,18 @@ export default function CoordinatorDashboardPage() {
                                                     </span>
                                                 </div>
 
-                                                <p className="text-xs text-slate-600 mt-1">{shift.location}</p>
+                                                <p className="text-xs text-slate-600 mt-1 flex items-center gap-1.5 flex-wrap">
+                                                    <span>{shift.location}</span>
+                                                    {shift.phone && (
+                                                        <>
+                                                            <span className="text-slate-300">•</span>
+                                                            <span className="flex items-center gap-1 text-slate-500 font-medium">
+                                                                <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                                <span>{shift.phone}</span>
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </p>
                                                 <div className="flex items-center justify-between mt-3">
                                                     <span
                                                         className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.statusText)}`}
@@ -569,8 +584,21 @@ export default function CoordinatorDashboardPage() {
                                             key={idx}
                                             className="bg-slate-50/70 hover:bg-slate-100/80 rounded-xl p-3.5 border border-slate-100 transition-colors flex items-start gap-3"
                                         >
-                                            <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 mt-0.5">
-                                                <User className="w-5 h-5" />
+                                            <div className="w-9 h-9 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0 mt-0.5 overflow-hidden border border-slate-200">
+                                                {shift.avatar ? (
+                                                    <img
+                                                        src={shift.avatar}
+                                                        alt={shift.name}
+                                                        className="w-full h-full object-cover"
+                                                        onError={(e) => {
+                                                            (e.target as HTMLElement).style.display = "none";
+                                                            if ((e.target as HTMLElement).nextElementSibling) {
+                                                                ((e.target as HTMLElement).nextElementSibling as HTMLElement).classList.remove("hidden");
+                                                            }
+                                                        }}
+                                                    />
+                                                ) : null}
+                                                <User className={`w-5 h-5 text-slate-500 ${shift.avatar ? "hidden" : ""}`} />
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-center justify-between">
@@ -588,6 +616,15 @@ export default function CoordinatorDashboardPage() {
                                                         <>
                                                             <span className="text-slate-300">•</span>
                                                             <span className="text-slate-600 font-semibold">{shift.contractName}</span>
+                                                        </>
+                                                    )}
+                                                    {shift.phone && (
+                                                        <>
+                                                            <span className="text-slate-300">•</span>
+                                                            <span className="flex items-center gap-1 text-slate-500 font-medium">
+                                                                <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                                <span>{shift.phone}</span>
+                                                            </span>
                                                         </>
                                                     )}
                                                 </p>
@@ -676,8 +713,9 @@ export default function CoordinatorDashboardPage() {
                                                 <h3 className="text-sm font-bold text-slate-900 leading-snug">
                                                     {guard.name}
                                                 </h3>
-                                                <p className="text-[11px] text-slate-500 font-medium">
-                                                    {getTranslatedCerts(guard.certs)}
+                                                <p className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
+                                                    <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                    <span>{guard.phone || (isEn ? "No phone" : "Chưa có SĐT")}</span>
                                                 </p>
                                             </div>
                                         </div>
@@ -862,8 +900,19 @@ export default function CoordinatorDashboardPage() {
                                             <h4 className="text-sm font-bold text-slate-900 leading-snug">
                                                 {shift.name}
                                             </h4>
-                                            <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                                {shift.location} • <span className="font-mono text-slate-400">{shift.id}</span>
+                                            <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
+                                                <span>{shift.location}</span>
+                                                {shift.phone && (
+                                                    <>
+                                                        <span className="text-slate-300">•</span>
+                                                        <span className="flex items-center gap-1 text-slate-500 font-medium">
+                                                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                            <span>{shift.phone}</span>
+                                                        </span>
+                                                    </>
+                                                )}
+                                                <span className="text-slate-300">•</span>
+                                                <span className="font-mono text-slate-400">{shift.id}</span>
                                             </p>
                                         </div>
                                     </div>
@@ -950,8 +999,21 @@ export default function CoordinatorDashboardPage() {
                                     className="bg-slate-50/80 hover:bg-slate-100/90 rounded-xl p-3.5 border border-slate-100 transition-all flex items-center justify-between"
                                 >
                                     <div className="flex items-center gap-3">
-                                        <div className="w-10 h-10 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center shrink-0">
-                                            <User className="w-5 h-5" />
+                                        <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300 flex items-center justify-center text-slate-600">
+                                            {shift.avatar ? (
+                                                <img
+                                                    src={shift.avatar}
+                                                    alt={shift.name}
+                                                    className="w-full h-full object-cover"
+                                                    onError={(e) => {
+                                                        (e.target as HTMLElement).style.display = "none";
+                                                        if ((e.target as HTMLElement).nextElementSibling) {
+                                                            ((e.target as HTMLElement).nextElementSibling as HTMLElement).classList.remove("hidden");
+                                                        }
+                                                    }}
+                                                />
+                                            ) : null}
+                                            <User className={`w-5 h-5 text-slate-500 ${shift.avatar ? "hidden" : ""}`} />
                                         </div>
                                         <div>
                                             <h4 className="text-sm font-bold text-slate-900 leading-snug">
@@ -963,6 +1025,15 @@ export default function CoordinatorDashboardPage() {
                                                     <>
                                                         <span className="text-slate-300">•</span>
                                                         <span className="text-slate-600 font-semibold">{shift.contractName}</span>
+                                                    </>
+                                                )}
+                                                {shift.phone && (
+                                                    <>
+                                                        <span className="text-slate-300">•</span>
+                                                        <span className="flex items-center gap-1 text-slate-500 font-medium">
+                                                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                            <span>{shift.phone}</span>
+                                                        </span>
                                                     </>
                                                 )}
                                                 <span className="text-slate-300">•</span>
@@ -1074,8 +1145,9 @@ export default function CoordinatorDashboardPage() {
                                                     {guard.id}
                                                 </span>
                                             </div>
-                                            <p className="text-xs text-slate-500 font-medium mt-0.5">
-                                                {getTranslatedCerts(guard.certs)}
+                                            <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1">
+                                                <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                <span>{guard.phone || (isEn ? "No phone" : "Chưa có SĐT")}</span>
                                             </p>
                                         </div>
                                     </div>
