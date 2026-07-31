@@ -78,8 +78,6 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   // ─── Computed helpers ────────────────────────────────────────────────────────
 
   const canDispatchReplacement = (assign: ShiftAssignment) => {
-    const isShiftEnded = new Date(shift.end_time).getTime() < new Date().getTime();
-    if (isShiftEnded) return false;
     return (
       assign.status === "absent" ||
       (assign.status === "late" && assign.check_in_time === null)
@@ -87,6 +85,17 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   };
 
   const eligibleAssignments = shift.assignments.filter(canDispatchReplacement);
+
+  const isShiftEnded =
+    new Date(shift.end_time).getTime() < new Date().getTime() ||
+    (shift as any).status === "completed" ||
+    (shift as any).status === "checkout";
+
+  const isAllDispatched =
+    eligibleAssignments.length > 0 &&
+    eligibleAssignments.every(
+      (a) => a.replacement_guard_ids && a.replacement_guard_ids.length > 0
+    );
 
   const getStatusLabel = (assign: ShiftAssignment) => {
     if (assign.status === "assigned") return dict?.coor_schedules?.assigned || "Đã phân công";
@@ -483,12 +492,23 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
         {eligibleAssignments.length > 0 && !isDispatchPanelOpen && (
           <div className="border-t border-slate-200 p-4 bg-slate-50 shrink-0">
             <button
+              disabled={isShiftEnded}
               onClick={handleOpenDispatchPanel}
-              className="w-full py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold uppercase rounded-lg shadow-sm hover:shadow transition-all flex items-center justify-center gap-2"
+              className={`w-full py-2.5 text-xs font-bold uppercase rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 ${
+                isShiftEnded
+                  ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                  : isAllDispatched
+                  ? "bg-purple-600 hover:bg-purple-700 text-white hover:shadow"
+                  : "bg-blue-600 hover:bg-blue-700 text-white hover:shadow"
+              }`}
             >
               <UserCheck size={14} />
-              {(dict?.shift_detail_modal?.dispatch_replacement_btn || "Điều phối thay thế ({0} vị trí)").replace("{0}", String(eligibleAssignments.length))}
-              <ChevronRight size={14} />
+              {isShiftEnded
+                ? (dict?.shift_detail_modal?.shift_ended || "Ca trực đã kết thúc")
+                : isAllDispatched
+                ? (dict?.shift_detail_modal?.update_replacement_btn || "Đổi bảo vệ thay thế ({0} vị trí)").replace("{0}", String(eligibleAssignments.length))
+                : (dict?.shift_detail_modal?.dispatch_replacement_btn || "Điều phối thay thế ({0} vị trí)").replace("{0}", String(eligibleAssignments.length))}
+              {!isShiftEnded && <ChevronRight size={14} />}
             </button>
           </div>
         )}

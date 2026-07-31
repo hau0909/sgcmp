@@ -243,7 +243,7 @@ export const getWeeklyShiftsService = async (companyId: string) => {
       const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
 
       // Original guard
-      const origStatus = hasRep ? "absent" : sa.status;
+      const origStatus = sa.status;
       dayItem.totalAssignments++;
 
       if (origStatus === "completed") {
@@ -305,8 +305,8 @@ export const getShiftStatusTodayService = async (companyId: string) => {
       const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
 
       // Original guard status
-      const origStatus = hasRep ? "absent" : sa.status;
-      const origCheckIn = hasRep ? null : sa.check_in_time;
+      const origStatus = sa.status;
+      const origCheckIn = sa.check_in_time;
 
       if (origStatus === "checkout") {
         completed++;
@@ -398,8 +398,8 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
 
       // 1. Original guard
       const origProfile = getProfile(sa.guard_id);
-      const origStatus = hasRep ? "absent" : sa.status;
-      const origCheckIn = hasRep ? null : sa.check_in_time;
+      const origStatus = sa.status;
+      const origCheckIn = sa.check_in_time;
 
       // Determine original guard status label
       let origLabel = "Phân công";
@@ -419,18 +419,51 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
         }
       }
 
-      list.push({
-        id: `GV-${sa.guard_id.slice(0, 4).toUpperCase()}`,
-        name: origProfile.full_name,
-        avatar: origProfile.avatar_url,
-        branch: shift.shift_name,
-        contractCode: `HD-${(shift.contracts as any).contract_id.slice(0, 8).toUpperCase()}`,
-        contractName: (shift.contracts as any).bookings?.services?.name || "Dịch vụ bảo vệ",
-        status: origLabel,
-        timeRange: origCheckIn
-          ? `Check-in lúc ${formatTime(origCheckIn)}`
-          : formatTime(shift.start_time)
-      });
+      const contractCode = `HD-${(shift.contracts as any).contract_id.slice(0, 8).toUpperCase()}`;
+      const contractName = (shift.contracts as any).bookings?.services?.name || "Dịch vụ bảo vệ";
+
+      if (origStatus === "checkout" && origCheckIn) {
+        // Dòng 1: Check-in (Đang trực)
+        list.push({
+          id: `GV-${sa.guard_id.slice(0, 4).toUpperCase()}-in`,
+          name: origProfile.full_name,
+          avatar: origProfile.avatar_url,
+          branch: shift.shift_name,
+          contractCode,
+          contractName,
+          status: "Đang trực",
+          timeRange: `Điểm danh lúc ${formatTime(origCheckIn)}`,
+          _sortTime: origCheckIn,
+        });
+        // Dòng 2: Kết thúc ca (Hoàn thành)
+        const checkoutIso = sa.updated_at || shift.end_time;
+        const checkoutTime = formatTime(checkoutIso);
+        list.push({
+          id: `GV-${sa.guard_id.slice(0, 4).toUpperCase()}-out`,
+          name: origProfile.full_name,
+          avatar: origProfile.avatar_url,
+          branch: shift.shift_name,
+          contractCode,
+          contractName,
+          status: "Hoàn thành",
+          timeRange: `Kết thúc lúc ${checkoutTime}`,
+          _sortTime: checkoutIso,
+        });
+      } else {
+        list.push({
+          id: `GV-${sa.guard_id.slice(0, 4).toUpperCase()}`,
+          name: origProfile.full_name,
+          avatar: origProfile.avatar_url,
+          branch: shift.shift_name,
+          contractCode,
+          contractName,
+          status: origLabel,
+          timeRange: origCheckIn
+            ? `Check-in lúc ${formatTime(origCheckIn)}`
+            : formatTime(shift.start_time),
+          _sortTime: origCheckIn || shift.start_time,
+        });
+      }
 
       // 2. Replacement guards
       if (hasRep) {
@@ -440,18 +473,27 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
             id: `GV-${repGuardId.slice(0, 4).toUpperCase()}`,
             name: repProfile.full_name,
             avatar: repProfile.avatar_url,
-            branch: `${shift.shift_name} (Thay thế)`,
+            branch: `${shift.shift_name} (Thay ca)`,
             contractCode: `HD-${(shift.contracts as any).contract_id.slice(0, 8).toUpperCase()}`,
             contractName: (shift.contracts as any).bookings?.services?.name || "Dịch vụ bảo vệ",
             status: "Thay ca",
-            timeRange: formatTime(shift.start_time)
+            timeRange: formatTime(shift.start_time),
+            _sortTime: shift.start_time,
           });
         });
       }
     }
   }
 
-  return list;
+  // Sắp xếp theo thời gian tăng dần (09:00 lên đầu)
+  list.sort((a: any, b: any) => {
+    const ta = a._sortTime ? new Date(a._sortTime).getTime() : 0;
+    const tb = b._sortTime ? new Date(b._sortTime).getTime() : 0;
+    return ta - tb;
+  });
+
+  // Xóa field nội bộ trước trả về
+  return list.map(({ _sortTime, ...item }: any) => item);
 };
 
 export interface RecentActivityItem {
@@ -1403,6 +1445,7 @@ export interface CurrentUpcomingShiftItem {
   timeText: string;
   location: string;
   statusText: string;
+  startTime?: string;
 }
 
 export const getCurrentUpcomingShiftsTodayService = async (
@@ -1435,7 +1478,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
   }
 
   const getProfile = (id: string) => {
-    return profiles.find((p) => p.user_id === id) || { full_name: "Bảo vệ", avatar_url: null };
+    return profiles.find((p) => p.id === id || p.user_id === id || p.guard_id === id) || { full_name: "Bảo vệ", avatar_url: null, phone_number: "" };
   };
 
   const pad = (num: number) => num.toString().padStart(2, "0");
@@ -1449,7 +1492,14 @@ export const getCurrentUpcomingShiftsTodayService = async (
   for (const s of rawShifts) {
     const shiftStart = new Date(s.start_time);
     const shiftEnd = new Date(s.end_time);
-    const locationName = (s.contracts as any)?.bookings?.services?.name || s.shift_name || "Địa điểm trực";
+    const address = (s.contracts as any)?.bookings?.address;
+    const serviceName = (s.contracts as any)?.bookings?.services?.name;
+    const shiftName = s.shift_name && s.shift_name !== "a" ? s.shift_name : null;
+    let locationName = address
+      ? serviceName
+        ? `${serviceName} • ${address}`
+        : address
+      : serviceName || shiftName || "Địa điểm trực";
 
     // Exclude shifts that have already ended before now
     if (shiftEnd < now) {
@@ -1472,11 +1522,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
       let statusText = "PHÂN CÔNG";
       let timeText = `Bắt đầu: ${formatHHMM(s.start_time)}`;
 
-      if (hasRep) {
-        type = "REPLACEMENT";
-        statusText = "THAY CA";
-        timeText = `Thay ca (${formatHHMM(s.start_time)})`;
-      } else if (st === "completed") {
+      if (st === "completed") {
         type = "ONGOING";
         statusText = "ĐANG TRỰC";
         timeText = `Kết thúc lúc: ${formatHHMM(s.end_time)}`;
@@ -1491,7 +1537,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
       } else {
         type = "UPCOMING";
         statusText = "PHÂN CÔNG";
-        timeText = `Bắt đầu: ${formatHHMM(s.start_time)}`;
+        timeText = hasRep ? `Thay ca (${formatHHMM(s.start_time)})` : `Bắt đầu: ${formatHHMM(s.start_time)}`;
       }
 
       list.push({
@@ -1503,6 +1549,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
         timeText,
         location: locationName,
         statusText,
+        startTime: s.start_time,
       });
 
       if (hasRep) {
@@ -1517,11 +1564,19 @@ export const getCurrentUpcomingShiftsTodayService = async (
             timeText: `Thay ca cho ${profile.full_name} (${formatHHMM(s.start_time)})`,
             location: locationName,
             statusText: "THAY CA",
+            startTime: s.start_time,
           });
         });
       }
     }
   }
+
+  // Sort list by start_time ascending (earliest start time first, e.g. 09:00 on top)
+  list.sort((a, b) => {
+    const tA = a.startTime ? new Date(a.startTime).getTime() : 0;
+    const tB = b.startTime ? new Date(b.startTime).getTime() : 0;
+    return tA - tB;
+  });
 
   return list;
 };
@@ -1548,6 +1603,7 @@ export interface PastShiftItem {
   location: string;
   contractName: string;
   status: string;
+  startTime?: string;
 }
 
 export interface AvailableGuardItem {
@@ -1576,7 +1632,10 @@ export const getPastShiftsService = async (
   const guardIds = Array.from(
     new Set(
       data
-        .flatMap((s: any) => (s.shift_assignments || []).map((sa: any) => sa.guard_id))
+        .flatMap((s: any) => (s.shift_assignments || []).flatMap((sa: any) => [
+          sa.guard_id,
+          ...(sa.replacement_guard_ids || []),
+        ]))
         .filter((id): id is string => Boolean(id))
     )
   );
@@ -1585,7 +1644,7 @@ export const getPastShiftsService = async (
   if (guardIds.length > 0) {
     profiles = await getProfilesByIds(guardIds);
   }
-  const getProfile = (id: string) => profiles.find((p) => p.user_id === id) || { full_name: "Bảo vệ" };
+  const getProfile = (id: string) => profiles.find((p) => p.id === id || p.user_id === id || p.guard_id === id) || { full_name: "Bảo vệ", avatar_url: null, phone_number: "" };
 
   const pad = (num: number) => num.toString().padStart(2, "0");
   const formatTimeRange = (start: string, end: string) => {
@@ -1597,13 +1656,20 @@ export const getPastShiftsService = async (
 
   const list: PastShiftItem[] = [];
   for (const s of data as any[]) {
+    const address = s.contracts?.bookings?.address;
     const serviceName = s.contracts?.bookings?.services?.name;
-    const locationName = serviceName || (s.shift_name && s.shift_name !== "a" ? s.shift_name : "Mục tiêu trực");
+    const shiftName = s.shift_name && s.shift_name !== "a" ? s.shift_name : null;
+    let locationName = address
+      ? serviceName
+        ? `${serviceName} • ${address}`
+        : address
+      : serviceName || shiftName || "Mục tiêu trực";
     const contractName = s.contracts?.contract_name || s.contracts?.contract_code || (s.contracts?.contract_id ? `Hợp đồng #${s.contracts.contract_id.slice(0, 6)}` : "Hợp đồng bảo vệ");
 
     for (const sa of s.shift_assignments || []) {
+      const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
       const p = getProfile(sa.guard_id);
-      let statusLabel = "ĐÃ KẾT THÚC";
+      let statusLabel = "HOÀN THÀNH";
       if (sa.status === "late") statusLabel = "ĐI TRỄ";
       else if (sa.status === "absent") statusLabel = "VẮNG MẶT";
       else if (sa.status === "assigned" || sa.status === "upcoming") statusLabel = "PHÂN CÔNG";
@@ -1618,9 +1684,35 @@ export const getPastShiftsService = async (
         location: locationName,
         contractName: contractName,
         status: statusLabel,
+        startTime: s.start_time,
       });
+
+      if (hasRep) {
+        sa.replacement_guard_ids.forEach((repId: string) => {
+          const repProf = getProfile(repId);
+          list.push({
+            id: `#G-${repId ? repId.slice(0, 4).toUpperCase() : "0000"}`,
+            name: repProf.full_name,
+            avatar: repProf.avatar_url || "",
+            phone: repProf.phone_number || "",
+            time: formatTimeRange(s.start_time, s.end_time),
+            location: locationName,
+            contractName: contractName,
+            status: "THAY CA",
+            startTime: s.start_time,
+          });
+        });
+      }
     }
   }
+
+  // Sort list by start_time descending (newest time first)
+  list.sort((a, b) => {
+    const tA = a.startTime ? new Date(a.startTime).getTime() : 0;
+    const tB = b.startTime ? new Date(b.startTime).getTime() : 0;
+    return tB - tA;
+  });
+
   return list;
 };
 

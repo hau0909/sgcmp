@@ -229,15 +229,18 @@ const getActivityConfig = (subType: string) => {
 
 const getEmployeeStatusLabel = (status: string, dict: any) => {
   const statusKeyMap: Record<string, string> = {
-    "Hoàn thành": dict?.company_dashboard?.employee_status?.on_duty || "Hoàn thành",
-    "Đang trực": dict?.company_dashboard?.employee_status?.on_duty || "Hoàn thành",
-    "On Duty": dict?.company_dashboard?.employee_status?.on_duty || "Hoàn thành",
+    "Hoàn thành": dict?.company_dashboard?.employee_status?.completed || "Hoàn thành",
+    "Đang trực": dict?.company_dashboard?.employee_status?.on_duty || "Đang trực",
+    "On Duty": dict?.company_dashboard?.employee_status?.on_duty || "Đang trực",
     "Vắng mặt": dict?.company_dashboard?.employee_status?.absent || "Vắng mặt",
     "Absent": dict?.company_dashboard?.employee_status?.absent || "Vắng mặt",
     "Đi trễ": dict?.company_dashboard?.employee_status?.late || "Đi trễ",
     "Late": dict?.company_dashboard?.employee_status?.late || "Đi trễ",
     "Thay ca": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
     "Shift Change": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
+    "Thay thế": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
+    "Replace": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
+    "Replacement": dict?.company_dashboard?.employee_status?.shift_change || "Replacement",
     "Điểm danh trễ": dict?.company_dashboard?.employee_status?.late_checkin || "Điểm danh trễ",
     "Late Check-in": dict?.company_dashboard?.employee_status?.late_checkin || "Điểm danh trễ",
     "Phân công": dict?.company_dashboard?.employee_status?.assigned || "Phân công",
@@ -251,9 +254,22 @@ const getEmployeeStatusLabel = (status: string, dict: any) => {
 const formatTimeRange = (timeRange: string | undefined | null, locale: string, dict: any) => {
   if (!timeRange) return dict?.company_dashboard?.guards_table?.unknown || "Chưa rõ";
   if (locale === "en") {
-    return timeRange.replace("Check-in lúc ", "Checked in at ");
+    return timeRange
+      .replace("Check-in lúc ", "Checked in at ")
+      .replace("Điểm danh lúc ", "Checked in at ")
+      .replace("Kết thúc lúc ", "Ended at ");
   }
   return timeRange;
+};
+
+const formatBranchName = (branchName: string | undefined | null, locale: string) => {
+  if (!branchName) return "";
+  if (locale === "en") {
+    return branchName
+      .replace("(Thay ca)", "(Replacement)")
+      .replace("(Thay thế)", "(Replacement)");
+  }
+  return branchName.replace("(Thay thế)", "(Thay ca)");
 };
 
 const formatActivity = (act: RecentActivityItem, locale: string) => {
@@ -652,8 +668,8 @@ export default function CompanyDashboardPage() {
     }
   > = {
     "Hoàn thành": {
-      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      dotClass: "bg-emerald-600",
+      badgeClass: "bg-slate-100 text-slate-600 border-slate-200",
+      dotClass: "bg-slate-400",
     },
 
     "Đang trực": {
@@ -689,13 +705,28 @@ export default function CompanyDashboardPage() {
     },
 
     "Thay ca": {
-      badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
-      dotClass: "bg-blue-600",
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
     },
 
     "Shift Change": {
-      badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
-      dotClass: "bg-blue-600",
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
+    },
+
+    "Thay thế": {
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
+    },
+
+    "Replace": {
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
+    },
+
+    "Replacement": {
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
     },
 
     "Điểm danh trễ": {
@@ -1272,7 +1303,7 @@ export default function CompanyDashboardPage() {
             <h3 className="text-base font-bold text-on-surface">
               {dict.company_dashboard.guards_table.title}
             </h3>
-            <div className="flex items-center gap-2 border border-outline-variant rounded px-3 py-1.5 bg-surface-container-lowest w-full sm:w-64 focus-within:border-secondary transition-all">
+            <div className="flex items-center gap-2 border border-outline-variant rounded px-3 py-1.5 bg-surface-container-lowest w-full sm:w-80 focus-within:border-secondary transition-all">
               <Search className="w-4 h-4 text-on-surface-variant" />
               <input
                 type="text"
@@ -1380,7 +1411,7 @@ export default function CompanyDashboardPage() {
                         </td>
 
                         <td className="px-6 py-4 text-on-surface-variant text-xs font-medium">
-                          {emp.branch}
+                          {formatBranchName(emp.branch, locale)}
                         </td>
 
                         <td className="px-6 py-4 text-on-surface-variant text-xs font-semibold whitespace-nowrap">
@@ -1614,7 +1645,7 @@ export default function CompanyDashboardPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-on-surface-variant text-xs font-medium">
-                            {emp.branch}
+                            {formatBranchName(emp.branch, locale)}
                           </td>
                           <td className="px-6 py-4 text-on-surface-variant text-xs font-semibold whitespace-nowrap">
                             {formatTimeRange(emp.timeRange, locale, dict)}

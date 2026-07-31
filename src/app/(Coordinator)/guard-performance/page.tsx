@@ -5,7 +5,6 @@ import Link from "next/link";
 import {
     CheckSquare,
     Clock,
-    Download,
     PcCase,
     MoreHorizontal,
     ChevronLeft,
@@ -98,8 +97,8 @@ export default function GuardPerformancePage() {
     };
 
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-    const [startDate, setStartDate] = useState(() => getPresetDates("thisMonth").start);
-    const [endDate, setEndDate] = useState(() => getPresetDates("thisMonth").end);
+    const [startDate, setStartDate] = useState(() => getPresetDates("today").start);
+    const [endDate, setEndDate] = useState(() => getPresetDates("today").end);
 
     const [tempStartDate, setTempStartDate] = useState(startDate);
     const [tempEndDate, setTempEndDate] = useState(endDate);
@@ -521,14 +520,7 @@ export default function GuardPerformancePage() {
                         )}
                     </div>
 
-                    {/* Export Data Button */}
-                    <button
-                        type="button"
-                        className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-on-primary text-xs font-semibold rounded-xl shadow-xs transition-colors cursor-pointer"
-                    >
-                        <Download className="w-4 h-4" />
-                        <span>{dict.coor_guard_performance?.export_data || "Xuất dữ liệu"}</span>
-                    </button>
+
                 </div>
             </div>
 
