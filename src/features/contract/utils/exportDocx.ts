@@ -1,4 +1,4 @@
-import { ContractExportFormData } from "../components/ExportContractModal";
+import { ContractExportFormData, POPULAR_BANKS } from "../components/ExportContractModal";
 import { DAYS_OF_WEEK_SHORT, isDayActive } from "../components/ContractServiceInfo";
 
 /**
@@ -206,6 +206,7 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
   }
   const paymentTerm = customFormData?.payment_term?.trim() || defaultPaymentTerm;
 
+  // Section 6.3 Payment Method & Bank details: Strictly handle Cash vs Bank Transfer!
   const isCashPayment = customFormData?.payment_method === "Tiền mặt";
   let paymentBlock = "";
   if (isCashPayment) {
@@ -217,8 +218,22 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
   } else {
     const bankAccHolder = customFormData?.bank_account_holder?.trim() || partyB.name;
     const bankAccNo = customFormData?.bank_account_no?.trim() || "";
-    const bankName = customFormData?.bank_name?.trim() || "";
+    const rawBankName = customFormData?.bank_name?.trim() || "";
     const bankBranch = customFormData?.bank_branch?.trim() || "";
+
+    // Full bank name lookup
+    let fullBankName = rawBankName;
+    if (rawBankName) {
+      const foundBank = POPULAR_BANKS.find(
+        (b) =>
+          b.shortName.toLowerCase() === rawBankName.toLowerCase() ||
+          b.code.toLowerCase() === rawBankName.toLowerCase() ||
+          b.name.toLowerCase() === rawBankName.toLowerCase()
+      );
+      if (foundBank) {
+        fullBankName = foundBank.name;
+      }
+    }
 
     paymentBlock = `
       <p class="bold">Phương thức thanh toán:</p>
@@ -227,7 +242,7 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
       <p class="bold" style="margin-top: 6px;">Thông tin tài khoản nhận thanh toán của Bên B:</p>
       <p style="margin-left: 20px;">Tên tài khoản: <b>${bankAccHolder}</b></p>
       ${bankAccNo ? `<p style="margin-left: 20px;">Số tài khoản: <b>${bankAccNo}</b></p>` : ""}
-      ${bankName ? `<p style="margin-left: 20px;">Ngân hàng: <b>${bankName}</b>${bankBranch ? ` - Chi nhánh: <b>${bankBranch}</b>` : ""}</p>` : ""}
+      ${fullBankName ? `<p style="margin-left: 20px;">Ngân hàng: <b>${fullBankName}</b>${bankBranch ? ` - Chi nhánh: <b>${bankBranch}</b>` : ""}</p>` : ""}
     `;
   }
 
@@ -398,7 +413,7 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
   <p class="bold">2.3. Thời gian thực hiện hợp đồng:</p>
   <p>Từ ngày <b>${startDateStr}</b> đến hết ngày <b>${endDateStr}</b>.</p>
 
-  <!-- Table 2.4 in Pure Vietnamese (No English text in parens) -->
+  <!-- Table 2.4 in Pure Vietnamese -->
   <p class="bold">2.4. Khung giờ trực, Nhân sự và Phí dịch vụ:</p>
   <table class="data-table">
     <thead>
@@ -425,7 +440,7 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
         <td style="border: 1px solid #000000; padding: 6px 8px;">${daysPerWeekStr}</td>
       </tr>
       <tr>
-        <td style="border: 1px solid #000000; padding: 6px 8px;">Hình thức báo giá</td>
+        <td style="border: 1px solid #000000; padding: 6px 8px;">Hình thức</td>
         <td style="border: 1px solid #000000; padding: 6px 8px;">${quotationTypeStr}</td>
       </tr>
       <tr>
@@ -486,7 +501,7 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
 
   <!-- ĐIỀU 6 -->
   <div class="subsection-title">ĐIỀU 6. CHI PHÍ DỊCH VỤ VÀ PHƯƠNG THỨC THANH TOÁN</div>
-  <p>- <b>Hình thức báo giá:</b> ${quotationTypeStr}</p>
+  <p>- <b>Hình thức:</b> ${quotationTypeStr}</p>
   <p>- <b>Đơn giá áp dụng:</b> <b>${unitPriceDetail}</b></p>
   <p>- <b>Tổng giá trị hợp đồng:</b> <b>${totalPriceFormatted}</b> (Bằng chữ: <i>${priceInWords}</i>)${vatSentence}</p>
   

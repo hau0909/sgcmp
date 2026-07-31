@@ -8,7 +8,6 @@ import {
   Building2,
   User,
   DollarSign,
-  Shield,
   MapPin,
   Calendar,
   Plus,
@@ -23,12 +22,6 @@ import { Button } from "@/components/ui/button";
 import { formatPrice } from "@/utils/formatPrice";
 import { DAYS_OF_WEEK_SHORT, isDayActive } from "./ContractServiceInfo";
 import { useTranslation } from "@/components/providers/LanguageProvider";
-
-export interface GuardExportItem {
-  full_name: string;
-  cccd: string;
-  phone_number: string;
-}
 
 export interface BankOption {
   code: string;
@@ -111,9 +104,6 @@ export interface ContractExportFormData {
   bank_account_holder: string;
   bank_info: string;
   payment_term: string;
-
-  // Optional Guards
-  guards: GuardExportItem[];
 }
 
 interface ExportContractModalProps {
@@ -123,8 +113,8 @@ interface ExportContractModalProps {
   onExport: (formData: ContractExportFormData) => void;
 }
 
-type TabType = "general" | "parties" | "pricing" | "guards";
-const TABS_ORDER: TabType[] = ["general", "parties", "pricing", "guards"];
+type TabType = "general" | "parties" | "pricing";
+const TABS_ORDER: TabType[] = ["general", "parties", "pricing"];
 
 // Date formatting helpers
 function toInputDateFormat(dateStr: any): string {
@@ -172,11 +162,10 @@ export function ExportContractModal({
     warningBanner: isEn ? "Your entered data is only saved temporarily in the current session and will be reset upon page refresh. System data remains untouched." : "Dữ liệu nhập của bạn chỉ được lưu tạm thời trong phiên làm việc hiện tại và sẽ bị mất nếu tải lại trang. Tuy nhiên, các dữ liệu cố định lấy từ hệ thống vẫn sẽ được giữ nguyên.",
     restoreData: isEn ? "Reset to original data" : "Khôi phục dữ liệu gốc",
 
-    // Tab Titles
+    // Tab Titles (Clean 3 steps only)
     tabGeneral: isEn ? "1. General Info & Contract Code" : "1. Thông tin chung & Số HĐ",
     tabParties: isEn ? "2. Parties Information" : "2. Thông tin Các Bên",
     tabPricing: isEn ? "3. Pricing & Payment" : "3. Giá & Thanh toán (Điều 2.4 & 6)",
-    tabGuards: isEn ? "4. Personnel (Optional)" : "4. Nhân sự bảo vệ (Tùy chọn)",
 
     // Tab 1 Fields
     contractCodeLabel: isEn ? "Contract Code" : "Số hợp đồng",
@@ -234,12 +223,6 @@ export function ExportContractModal({
     bankBranchLabel: isEn ? "Branch" : "Chi nhánh",
     bankAccountNoLabel: isEn ? "Account Number (STK)" : "Số tài khoản (STK)",
     bankAccountHolderLabel: isEn ? "Account Holder Name" : "Tên tài khoản",
-
-    // Tab 4 Fields
-    guardsTitle: isEn ? "Assigned Security Personnel (Optional)" : "Danh sách nhân viên bảo vệ (Tùy chọn bổ sung)",
-    guardsSub: isEn ? "Optional addition if guards have already been assigned." : "Phần này là tùy chọn thêm nếu đã phân công bảo vệ. Không bắt buộc điền khi xuất hợp đồng.",
-    addGuardBtn: isEn ? "Add Guard" : "Thêm nhân sự",
-    noGuardsText: isEn ? "No specific security guards assigned yet." : "Chưa có danh sách nhân viên bảo vệ cụ thể.",
 
     // Buttons
     backBtn: isEn ? "Back" : "Quay lại",
@@ -303,15 +286,6 @@ export function ExportContractModal({
       formattedPrice = contract.formatted_price || "";
       unitPriceDetail = contract.formatted_price || "";
     }
-
-    // Guards from DB only
-    const existingGuards: GuardExportItem[] = (contract.assigned_guards_list || [])
-      .filter((g: any) => g && (g.full_name || g.phone_number))
-      .map((g: any) => ({
-        full_name: g.full_name || "",
-        cccd: g.cccd || "",
-        phone_number: g.phone_number || "",
-      }));
 
     // Scope list initialized with ONLY 1 sample item row (#1)
     const defaultScopeList = [""];
@@ -396,8 +370,6 @@ export function ExportContractModal({
       bank_account_holder: companyNameStr,
       bank_info: "",
       payment_term: defaultPaymentTerm,
-
-      guards: existingGuards,
     };
 
     setFormData(initialData);
@@ -481,39 +453,6 @@ export function ExportContractModal({
       if (!prev) return null;
       const list = prev.service_scope_list.filter((_, i) => i !== index);
       return { ...prev, service_scope_list: list.length > 0 ? list : [""] };
-    });
-  };
-
-  // Optional Guard Handlers
-  const handleAddGuardRow = () => {
-    updateFormData((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        guards: [
-          ...prev.guards,
-          { full_name: "", cccd: "", phone_number: "" },
-        ],
-      };
-    });
-  };
-
-  const handleGuardChange = (index: number, field: keyof GuardExportItem, value: string) => {
-    updateFormData((prev) => {
-      if (!prev) return null;
-      const updated = [...prev.guards];
-      updated[index] = { ...updated[index], [field]: value };
-      return { ...prev, guards: updated };
-    });
-  };
-
-  const handleRemoveGuardRow = (index: number) => {
-    updateFormData((prev) => {
-      if (!prev) return null;
-      return {
-        ...prev,
-        guards: prev.guards.filter((_, i) => i !== index),
-      };
     });
   };
 
@@ -606,10 +545,6 @@ export function ExportContractModal({
       const nextTab = TABS_ORDER[currentIndex + 1];
       setActiveTab(nextTab);
       setMaxReachedStepIndex((prev) => Math.max(prev, currentIndex + 1));
-    } else if (activeTab === "pricing" && validateTab("pricing")) {
-      const nextTab = TABS_ORDER[currentIndex + 1];
-      setActiveTab(nextTab);
-      setMaxReachedStepIndex((prev) => Math.max(prev, currentIndex + 1));
     }
   };
 
@@ -686,7 +621,7 @@ export function ExportContractModal({
           </button>
         </div>
 
-        {/* Sequential Step Header Bar (No Step Skipping!) */}
+        {/* Sequential Step Header Bar (3 Steps Only) */}
         <div className="flex items-center gap-1 border-b border-outline-variant/40 bg-surface-container-lowest px-6 pt-2 shrink-0 overflow-x-auto">
           {TABS_ORDER.map((tabKey, idx) => {
             const isCurrent = activeTab === tabKey;
@@ -697,14 +632,12 @@ export function ExportContractModal({
               general: tUI.tabGeneral,
               parties: tUI.tabParties,
               pricing: tUI.tabPricing,
-              guards: tUI.tabGuards,
             };
 
             const iconMap: Record<TabType, React.ReactNode> = {
               general: <Calendar className="w-4 h-4" />,
               parties: <Building2 className="w-4 h-4" />,
               pricing: <DollarSign className="w-4 h-4" />,
-              guards: <Shield className="w-4 h-4" />,
             };
 
             return (
@@ -1417,96 +1350,6 @@ export function ExportContractModal({
               </div>
             </div>
           )}
-
-          {/* TAB 4: Optional Guards Info */}
-          {activeTab === "guards" && (
-            <div className="space-y-4 animate-in fade-in duration-150">
-              <div className="flex items-center justify-between border-b border-outline-variant/30 pb-3">
-                <div>
-                  <h3 className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
-                    <Shield className="w-4 h-4 text-primary" />
-                    {tUI.guardsTitle}
-                  </h3>
-                  <p className="text-[11px] text-on-surface-variant/80">
-                    {tUI.guardsSub}
-                  </p>
-                </div>
-
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={handleAddGuardRow}
-                  className="text-xs font-semibold flex items-center gap-1 border-primary text-primary hover:bg-primary/5 py-1 px-3 rounded-lg cursor-pointer shrink-0"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>{tUI.addGuardBtn}</span>
-                </Button>
-              </div>
-
-              {formData.guards.length === 0 ? (
-                <div className="p-8 text-center border border-dashed border-outline-variant/60 rounded-xl bg-surface-container-low/40">
-                  <Shield className="w-8 h-8 text-on-surface-variant/40 mx-auto mb-2" />
-                  <p className="text-xs font-semibold text-on-surface-variant">
-                    {tUI.noGuardsText}
-                  </p>
-                  <p className="text-[11px] text-on-surface-variant/70 mt-0.5">
-                    {isEn ? "The Word document will automatically record guards dispatched by Party B per shift. Click 'Add Guard' if you want to add specific guard names." : "File Word sẽ tự động ghi nhận lực lượng bảo vệ do Bên B điều động theo ca trực. Nhấn nút \"Thêm nhân sự\" nếu muốn bổ sung tên bảo vệ cụ thể."}
-                  </p>
-                </div>
-              ) : (
-                formData.guards.map((guard, idx) => (
-                  <div key={idx} className="p-3.5 bg-surface-container-low/60 rounded-xl border border-outline-variant/60 space-y-2 relative">
-                    <div className="flex items-center justify-between">
-                      <div className="text-xs font-bold text-primary font-headline">
-                        {isEn ? `Guard Position #${idx + 1}` : `Bảo vệ vị trí #${idx + 1}`}
-                      </div>
-                      <button
-                        type="button"
-                        onClick={() => handleRemoveGuardRow(idx)}
-                        className="text-red-500 hover:bg-red-50 p-1 rounded transition-colors text-xs flex items-center gap-1 cursor-pointer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                        <span>{isEn ? "Remove" : "Xóa"}</span>
-                      </button>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
-                      <div>
-                        <label className="block font-medium text-on-surface mb-0.5">{isEn ? "Full Name" : "Họ và tên"}</label>
-                        <input
-                          type="text"
-                          value={guard.full_name}
-                          onChange={(e) => handleGuardChange(idx, "full_name", e.target.value)}
-                          placeholder={isEn ? "Guard full name" : "Họ tên nhân sự"}
-                          className="w-full px-3 py-1.5 border border-outline-variant rounded-lg bg-surface-bright font-bold"
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-medium text-on-surface mb-0.5">{isEn ? "ID Number (CCCD)" : "Số CCCD / CMND"}</label>
-                        <input
-                          type="text"
-                          value={guard.cccd}
-                          onChange={(e) => handleGuardChange(idx, "cccd", e.target.value)}
-                          placeholder={isEn ? "ID Card No." : "Số căn cước"}
-                          className="w-full px-3 py-1.5 border border-outline-variant rounded-lg bg-surface-bright font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block font-medium text-on-surface mb-0.5">{isEn ? "Phone Number" : "Số điện thoại"}</label>
-                        <input
-                          type="text"
-                          value={guard.phone_number}
-                          onChange={(e) => handleGuardChange(idx, "phone_number", e.target.value)}
-                          placeholder={isEn ? "Contact phone" : "SĐT liên hệ"}
-                          className="w-full px-3 py-1.5 border border-outline-variant rounded-lg bg-surface-bright font-mono"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
         </div>
 
         {/* Action Footer Navigation Buttons */}
@@ -1534,7 +1377,7 @@ export function ExportContractModal({
           </div>
 
           <div className="flex items-center gap-3">
-            {activeTab !== "guards" ? (
+            {activeTab !== "pricing" ? (
               <Button
                 type="button"
                 onClick={handleNextTab}
