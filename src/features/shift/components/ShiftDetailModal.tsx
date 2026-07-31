@@ -88,8 +88,8 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
 
   const isShiftEnded =
     new Date(shift.end_time).getTime() < new Date().getTime() ||
-    shift.status === "completed" ||
-    shift.status === "checkout";
+    (shift as any).status === "completed" ||
+    (shift as any).status === "checkout";
 
   const isAllDispatched =
     eligibleAssignments.length > 0 &&
