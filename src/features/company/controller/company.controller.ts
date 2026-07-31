@@ -13,6 +13,8 @@ import {
   getCompanyPublishRequestsService,
   getCompanyPublishRequestByIdService,
   updateCompanyPublishRequestStatusService,
+  getAdminCompaniesListService,
+  updateCompanyStatusByAdminService,
 } from "../service/company.service";
 import {
   CompanyDetailData,
@@ -204,3 +206,15 @@ export const handleUpdateCompanyPublishRequestStatus = async (
 
   await updateCompanyPublishRequestStatusService(requestId, status, adminId, note);
 };
+
+export const handleGetAdminCompanies = async (): Promise<any[]> => {
+  return await getAdminCompaniesListService();
+};
+
+export const handleUpdateCompanyStatusByAdmin = async (
+  companyId: string,
+  status: string,
+): Promise<void> => {
+  await updateCompanyStatusByAdminService(companyId, status);
+};
+

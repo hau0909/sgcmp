@@ -486,6 +486,7 @@
   },
   "layout_admin": {
     "dashboard": "Bảng điều khiển",
+    "companies": "Quản lý doanh nghiệp",
     "approvals": "Yêu cầu phê duyệt",
     "publish_requests": "Yêu cầu công khai",
     "payment_history": "Lịch sử thanh toán",
@@ -2585,6 +2586,7 @@
     "month_word": "tháng"
   },
   "admin_accounts": {
+    "refresh_btn": "Làm mới",
     "loading_list": "Đang tải danh sách tài khoản...",
     "loading_detail": "Đang tải thông tin tài khoản...",
     "error_load_list": "Không thể tải danh sách tài khoản",
@@ -2634,6 +2636,31 @@
     "cancel": "Hủy",
     "confirm": "Đồng ý",
     "processing": "Đang xử lý..."
+  },
+  "admin_companies": {
+    "loading_list": "Đang tải danh sách doanh nghiệp...",
+    "error_load_list": "Không thể tải danh sách doanh nghiệp",
+    "admin": "Quản trị",
+    "title_list": "Quản lý doanh nghiệp",
+    "desc_list": "Xem và quản lý tất cả doanh nghiệp trong hệ thống.",
+    "search_placeholder": "Tìm theo tên, email, SĐT...",
+    "refresh_btn": "Làm mới",
+    "all": "Tất cả",
+    "published": "Đang công khai",
+    "active": "Đã kích hoạt",
+    "pending_publish": "Chờ duyệt",
+    "suspended": "Tạm ngưng",
+    "tbl_company": "DOANH NGHIỆP",
+    "tbl_tax_code": "MÃ SỐ THUẾ / GP",
+    "tbl_representative": "NGƯỜI ĐẠI DIỆN",
+    "tbl_status": "TRẠNG THÁI",
+    "tbl_created": "NGÀY TẠO",
+    "tbl_actions": "THAO TÁC",
+    "view_detail": "Xem chi tiết",
+    "no_companies": "Không tìm thấy doanh nghiệp nào",
+    "no_companies_hint": "Thử thay đổi bộ lọc hoặc từ khóa tìm kiếm.",
+    "modal_title": "Chi tiết doanh nghiệp",
+    "close": "Đóng"
   },
   "admin_registrations": {
     "loading_list": "Đang tải danh sách đăng ký...",

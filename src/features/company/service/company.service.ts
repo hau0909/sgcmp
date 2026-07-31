@@ -12,6 +12,8 @@ import {
   getCompanyPublishRequests,
   getCompanyPublishRequestById,
   updateCompanyPublishRequestStatus,
+  getAdminCompaniesList,
+  updateCompanyStatusByAdmin,
 } from "../repository/company.repository";
 import {
   getCitiesService as getCities,
@@ -528,3 +530,15 @@ export const updateCompanyPublishRequestStatusService = async (
 ): Promise<void> => {
   await updateCompanyPublishRequestStatus(requestId, status, approvedBy, note);
 };
+
+export const getAdminCompaniesListService = async (): Promise<any[]> => {
+  return await getAdminCompaniesList();
+};
+
+export const updateCompanyStatusByAdminService = async (
+  companyId: string,
+  status: string,
+): Promise<void> => {
+  await updateCompanyStatusByAdmin(companyId, status);
+};
+
