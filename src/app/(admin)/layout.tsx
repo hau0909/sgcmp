@@ -17,6 +17,7 @@ import {
   Layers,
   Package,
   LogOut,
+  Loader2,
 } from "lucide-react";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useTranslation } from "@/components/providers/LanguageProvider";
@@ -34,7 +35,11 @@ export default function AdminLayout({
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const clearAuth = useAuthStore((state) => state.clearAuth);
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    if (loggingOut) return;
+    setLoggingOut(true);
     const supabase = createClient();
     try {
       await supabase.auth.signOut();
@@ -43,6 +48,7 @@ export default function AdminLayout({
       setMobileSidebarOpen(false);
       router.replace("/login");
       router.refresh();
+      setLoggingOut(false);
     }
   };
 
@@ -54,9 +60,17 @@ export default function AdminLayout({
       active: pathname === "/admin",
     },
     {
+      name: dict.layout_admin.companies || "Quản lý doanh nghiệp",
+      href: "/admin/companies",
+      icon: Building2,
+      active:
+        pathname === "/admin/companies" ||
+        pathname.startsWith("/admin/companies/"),
+    },
+    {
       name: dict.layout_admin.approvals,
       href: "/registrations",
-      icon: Building2,
+      icon: ShieldCheck,
       active:
         pathname === "/registrations" || pathname.startsWith("/registrations/"),
     },
@@ -193,10 +207,15 @@ export default function AdminLayout({
             <div className="flex items-center gap-4">
               <button
                 onClick={handleLogout}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-[#434751] hover:text-red-600 hover:bg-red-50 transition-all duration-150 border border-transparent hover:border-red-200"
+                disabled={loggingOut}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-semibold text-[#434751] hover:text-red-600 hover:bg-red-50 transition-all duration-150 border border-transparent hover:border-red-200 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 title={dict.common.logout}
               >
-                <LogOut className="w-4 h-4" />
+                {loggingOut ? (
+                  <Loader2 className="w-4 h-4 animate-spin text-red-600 shrink-0" />
+                ) : (
+                  <LogOut className="w-4 h-4 shrink-0" />
+                )}
                 <span className="hidden sm:inline">{dict.common.logout}</span>
               </button>
             </div>

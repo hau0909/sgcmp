@@ -499,7 +499,7 @@ export const updateCompanyPublishRequestStatus = async (
   }
 
   // 3. Update the company status
-  const companyStatus = status === "APPROVED" ? "published" : "active";
+  const companyStatus = status === "APPROVED" ? "published" : "rejected";
   const { error: companyError } = await supabaseServer
     .from("companies")
     .update({
@@ -511,3 +511,126 @@ export const updateCompanyPublishRequestStatus = async (
     throw new Error(companyError.message);
   }
 };
+
+export const getAdminCompaniesList = async (): Promise<any[]> => {
+  const supabaseServer = await createClient();
+  const { data: companies, error } = await supabaseServer
+    .from("companies")
+    .select(`
+      company_id,
+      owner_id,
+      company_name,
+      business_license_no,
+      license_file_url,
+      address,
+      description,
+      rating_average,
+      status,
+      created_at,
+      company_imgs (
+        image_url,
+        image_type
+      ),
+      company_services (
+        service_id
+      )
+    `)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    throw error;
+  }
+
+  if (!companies || companies.length === 0) return [];
+
+  const ownerIds = Array.from(
+    new Set(companies.map((c) => c.owner_id).filter(Boolean)),
+  );
+  let ownerMap: Record<string, any> = {};
+
+  if (ownerIds.length > 0) {
+    const { data: profiles } = await supabaseServer
+      .from("profiles")
+      .select("user_id, full_name, email, phone_number, avatar_url")
+      .in("user_id", ownerIds);
+
+    if (profiles) {
+      profiles.forEach((p) => {
+        ownerMap[p.user_id] = p;
+      });
+    }
+  }
+
+  let guardsCountMap: Record<string, number> = {};
+  try {
+    const { data: guards } = await supabaseServer
+      .from("guards")
+      .select("company_id");
+
+    if (guards) {
+      guards.forEach((g) => {
+        if (g.company_id) {
+          guardsCountMap[g.company_id] =
+            (guardsCountMap[g.company_id] || 0) + 1;
+        }
+      });
+    }
+  } catch (err) {
+    console.error("Guards count error:", err);
+  }
+
+  return companies.map((c: any) => {
+    const logoObj = c.company_imgs?.find(
+      (img: any) => img.image_type === "logo",
+    );
+    const bannerObj = c.company_imgs?.find(
+      (img: any) => img.image_type === "banner",
+    );
+
+    let formattedAddress = "";
+    if (typeof c.address === "string") {
+      formattedAddress = c.address;
+    } else if (c.address && typeof c.address === "object") {
+      formattedAddress =
+        c.address.full ||
+        c.address.address ||
+        [c.address.street, c.address.ward, c.address.city]
+          .filter(Boolean)
+          .join(", ");
+    }
+
+    return {
+      company_id: c.company_id,
+      company_name: c.company_name,
+      business_license_no: c.business_license_no,
+      license_file_url: c.license_file_url,
+      address: formattedAddress,
+      description: c.description,
+      rating_average: c.rating_average,
+      status: c.status || "active",
+      created_at: c.created_at,
+      owner_id: c.owner_id,
+      owner: ownerMap[c.owner_id] || null,
+      logo_url: logoObj?.image_url || null,
+      banner_url: bannerObj?.image_url || null,
+      services_count: c.company_services?.length || 0,
+      guards_count: guardsCountMap[c.company_id] || 0,
+    };
+  });
+};
+
+export const updateCompanyStatusByAdmin = async (
+  companyId: string,
+  status: string,
+): Promise<void> => {
+  const supabaseServer = await createClient();
+  const { error } = await supabaseServer
+    .from("companies")
+    .update({ status })
+    .eq("company_id", companyId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+};
+

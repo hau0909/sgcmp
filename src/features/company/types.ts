@@ -102,6 +102,8 @@ export interface CompanyDetailData {
   completedContracts?: number;
   activeGoals?: number;
   createdYear?: number;
+  rejectReason?: string | null;
+  latestPublishRequest?: any;
 }
 
 export type UpdateCompanyProfileInput = {

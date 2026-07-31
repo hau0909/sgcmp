@@ -236,7 +236,7 @@ export default function SearchCompanies() {
   return (
     <div className="min-h-screen pt-20 pb-20 bg-surface text-on-surface antialiased">
       {/* ── Hero Search Bar ─────────────────────────────────────── */}
-      <div className="max-w-4xl mx-auto px-4 pt-8 pb-8">
+      <div className="max-w-4xl mx-auto px-4 pt-8 pb-8 relative z-40">
         <Suspense fallback={<div className="h-14 w-full bg-slate-100 rounded-2xl animate-pulse" />}>
           <CompanySearchBar variant="large" />
         </Suspense>

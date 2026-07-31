@@ -17,6 +17,7 @@ import { CompanyStatus } from "@/types/Enum";
 import { Service, CompanyServiceData } from "@/features/company/types";
 import { useAuthStore } from "@/store/auth.store";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { formatPrice } from "@/utils/formatPrice";
 import { requestGetCities, requestGetWards } from "@/features/address";
 import { City, Ward } from "@/features/address/types";
 import {
@@ -37,6 +38,8 @@ import {
   Trash,
   ChevronDown,
   Download,
+  Loader2,
+  AlertOctagon,
 } from "lucide-react";
 
 type EditSnapshot = {
@@ -78,7 +81,7 @@ type UploadedCompanyImage = {
 };
 
 export default function MyCompanyDetail() {
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
   const { company_id } = useAuthStore();
 
   const [loading, setLoading] = useState(true);
@@ -86,6 +89,8 @@ export default function MyCompanyDetail() {
   const [isEditing, setIsEditing] = useState(false);
 
   const [status, setStatus] = useState<CompanyStatus | "">("");
+  const [rejectReason, setRejectReason] = useState<string | null>(null);
+  const [latestPublishRequest, setLatestPublishRequest] = useState<any | null>(null);
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [publishNote, setPublishNote] = useState("");
   const [submittingPublish, setSubmittingPublish] = useState(false);
@@ -126,15 +131,9 @@ export default function MyCompanyDetail() {
   const [editWardId, setEditWardId] = useState<number | "">("");
   const [editStreet, setEditStreet] = useState("");
 
-  const [logoUrl, setLogoUrl] = useState(
-    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300",
-  );
-  const [bannerUrl, setBannerUrl] = useState(
-    "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200",
-  );
-  const [licenseImg, setLicenseImg] = useState(
-    "https://images.unsplash.com/photo-1589330694653-ded6dfc7f6bb?q=80&w=600",
-  );
+  const [logoUrl, setLogoUrl] = useState("");
+  const [bannerUrl, setBannerUrl] = useState("");
+  const [licenseImg, setLicenseImg] = useState("");
   const [companyImgs, setCompanyImgs] = useState<string[]>([]);
 
   const [editSnapshot, setEditSnapshot] = useState<EditSnapshot | null>(null);
@@ -152,10 +151,17 @@ export default function MyCompanyDetail() {
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
 
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
+  const [addingService, setAddingService] = useState(false);
+  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
   const [newServiceId, setNewServiceId] = useState("");
   const [newServiceDesc, setNewServiceDesc] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
   const [serviceFormErrors, setServiceFormErrors] = useState<{ serviceId?: string; desc?: string; price?: string }>({});
+
+  const unaddedAvailableServices = React.useMemo(() => {
+    const addedSet = new Set(companyServices.map((cs) => cs.serviceId));
+    return availableServices.filter((s) => s.is_active === true && !addedSet.has(s.service_id));
+  }, [availableServices, companyServices]);
 
   useEffect(() => {
     let active = true;
@@ -352,6 +358,9 @@ export default function MyCompanyDetail() {
 
   const handleServiceSelect = (serviceId: string) => {
     setNewServiceId(serviceId);
+    if (serviceFormErrors.serviceId) {
+      setServiceFormErrors((prev) => ({ ...prev, serviceId: undefined }));
+    }
   };
 
   const handleStartEdit = () => {
@@ -689,6 +698,22 @@ export default function MyCompanyDetail() {
     }
   };
 
+  const handlePriceChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const rawDigits = e.target.value.replace(/\D/g, "");
+    if (!rawDigits) {
+      setNewServicePrice("");
+      if (serviceFormErrors.price) setServiceFormErrors((prev) => ({ ...prev, price: undefined }));
+      return;
+    }
+    const num = parseInt(rawDigits, 10);
+    if (num > 1000000) {
+      setNewServicePrice((1000000).toLocaleString("vi-VN"));
+    } else {
+      setNewServicePrice(num.toLocaleString("vi-VN"));
+    }
+    if (serviceFormErrors.price) setServiceFormErrors((prev) => ({ ...prev, price: undefined }));
+  };
+
   const handleAddService = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -696,8 +721,9 @@ export default function MyCompanyDetail() {
     const errors: { serviceId?: string; desc?: string; price?: string } = {};
     if (!newServiceId) errors.serviceId = "Vui lòng chọn dịch vụ";
     if (newServiceDesc.trim().length > 150) errors.desc = `Mô tả tối đa 150 ký tự (hiện: ${newServiceDesc.trim().length})`;
-    const numericPrice = parseInt(newServicePrice, 10);
-    if (!newServicePrice) errors.price = "Vui lòng nhập giá";
+    const rawPriceDigits = newServicePrice.replace(/\D/g, "");
+    const numericPrice = parseInt(rawPriceDigits, 10);
+    if (!rawPriceDigits) errors.price = "Vui lòng nhập giá";
     else if (isNaN(numericPrice) || numericPrice <= 0) errors.price = "Giá phải là số lớn hơn 0";
     else if (numericPrice > 1000000) errors.price = "Giá tối đa là 1.000.000 VND";
 
@@ -710,9 +736,10 @@ export default function MyCompanyDetail() {
     if (!company_id) return;
 
     try {
+      setAddingService(true);
       await requestAddCompanyService(company_id, {
         serviceId: newServiceId,
-        description: newServiceDesc,
+        description: newServiceDesc.trim(),
         price: numericPrice,
       });
 
@@ -732,6 +759,8 @@ export default function MyCompanyDetail() {
       console.error("Lỗi khi thêm dịch vụ:", err);
       const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.service_add_error;
       showToast("error", errMsg);
+    } finally {
+      setAddingService(false);
     }
   };
 
@@ -739,6 +768,7 @@ export default function MyCompanyDetail() {
     if (!company_id || !serviceId) return;
 
     try {
+      setDeletingServiceId(serviceId);
       await requestDeleteCompanyService(company_id, serviceId);
 
       const updatedData = await requestGetCompanyById(company_id);
@@ -751,6 +781,8 @@ export default function MyCompanyDetail() {
       console.error("Lỗi khi xóa dịch vụ:", err);
       const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.service_delete_error;
       showToast("error", errMsg);
+    } finally {
+      setDeletingServiceId(null);
     }
   };
 
@@ -800,6 +832,8 @@ export default function MyCompanyDetail() {
           if (data.activityImgs) setCompanyImgs(data.activityImgs);
           if (data.services) setCompanyServices(data.services);
           if (data.status) setStatus(data.status);
+          if (data.rejectReason) setRejectReason(data.rejectReason);
+          if (data.latestPublishRequest) setLatestPublishRequest(data.latestPublishRequest);
         }
 
         if (servs) {
@@ -819,13 +853,8 @@ export default function MyCompanyDetail() {
     fetchCompanyData();
   }, [company_id]);
 
-  const DEFAULT_LOGO =
-    "https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?q=80&w=300";
-  const DEFAULT_BANNER =
-    "https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=1200";
-
-  const hasLogo = logoUrl && logoUrl !== DEFAULT_LOGO;
-  const hasBanner = bannerUrl && bannerUrl !== DEFAULT_BANNER;
+  const hasLogo = Boolean(logoUrl);
+  const hasBanner = Boolean(bannerUrl);
   const hasOtherImages = companyImgs && companyImgs.length >= 2;
   const hasServices = companyServices && companyServices.length >= 1;
 
@@ -916,157 +945,217 @@ export default function MyCompanyDetail() {
         </div>
       </div>
 
-      {status && (
-        <div
-          className={`p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs ${status === "published"
-            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-            : status === "pending_publish"
-              ? "bg-amber-50 border-amber-200 text-amber-800"
-              : status === "active"
-                ? "bg-blue-50 border-blue-200 text-blue-800"
-                : status === "pending_register"
-                  ? "bg-purple-50 border-purple-200 text-purple-800"
-                  : status === "rejected"
-                    ? "bg-rose-50 border-rose-200 text-rose-800"
-                    : "bg-slate-50 border-slate-200 text-slate-800"
-            }`}
-        >
-          <div className="flex items-start gap-3">
+      {status && (() => {
+        const isRejected = status === "rejected" || latestPublishRequest?.status === "REJECTED";
+        const isPendingPublish = status === "pending_publish";
+        const isPublished = status === "published";
+        const isActiveOrRejected = status === "active" || isRejected;
+
+        return (
+          <>
             <div
-              className={`p-2 rounded-xl mt-0.5 ${status === "published"
-                ? "bg-emerald-100 text-emerald-600"
-                : status === "pending_publish"
-                  ? "bg-amber-100 text-amber-600"
-                  : status === "active"
-                    ? "bg-blue-100 text-blue-600"
-                    : status === "pending_register"
-                      ? "bg-purple-100 text-purple-600"
-                      : status === "rejected"
-                        ? "bg-rose-100 text-rose-600"
-                        : "bg-slate-100 text-slate-600"
+              className={`p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs ${isPublished
+                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+                : isPendingPublish
+                  ? "bg-amber-50 border-amber-200 text-amber-800"
+                  : isRejected
+                    ? "bg-red-50 border-red-200 text-red-900"
+                    : status === "active"
+                      ? "bg-blue-50 border-blue-200 text-blue-800"
+                      : status === "pending_register"
+                        ? "bg-purple-50 border-purple-200 text-purple-800"
+                        : "bg-slate-50 border-slate-200 text-slate-800"
                 }`}
             >
-              <ShieldCheck className="w-5 h-5" />
-            </div>
-            <div className="space-y-2">
-              <h3 className="text-sm font-bold">
-                {dict.company_detail.status.title}{" "}
-                {status === "published"
-                  ? dict.company_detail.status.published
-                  : status === "pending_publish"
-                    ? dict.company_detail.status.pending_publish
-                    : status === "active"
-                      ? dict.company_detail.status.active
-                      : status === "pending_register"
-                        ? dict.company_detail.status.pending_register
-                        : status === "rejected"
-                          ? dict.company_detail.status.rejected
-                          : dict.company_detail.status.draft}
-              </h3>
-              <p className="text-xs opacity-90 leading-relaxed">
-                {status === "published"
-                  ? dict.company_detail.status.published_desc
-                  : status === "pending_publish"
-                    ? dict.company_detail.status.pending_publish_desc
-                    : status === "active"
-                      ? dict.company_detail.status.active_desc
-                      : status === "pending_register"
-                        ? dict.company_detail.status.pending_register_desc
-                        : status === "rejected"
-                          ? dict.company_detail.status.rejected_desc
-                          : dict.company_detail.status.draft_desc}
-              </p>
-
-              {status === "active" && (
-                <div className="bg-blue-100/50 border border-blue-200/60 rounded-xl p-3 mt-2 space-y-2 text-xs font-semibold text-blue-900 max-w-xl">
-                  <h4 className="font-bold text-[13px] text-blue-950">
-                    {dict.company_detail.status.checklist_title}
-                  </h4>
-                  <ul className="space-y-1.5">
-                    <li className="flex items-center gap-2">
-                      <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasLogo ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
-                      >
-                        {hasLogo ? "✓" : "○"}
-                      </span>
-                      <span>
-                        {hasLogo ? dict.company_detail.status.logo_done : dict.company_detail.status.logo_pending}
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasBanner ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
-                      >
-                        {hasBanner ? "✓" : "○"}
-                      </span>
-                      <span>
-                        {hasBanner ? dict.company_detail.status.banner_done : dict.company_detail.status.banner_pending}
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasOtherImages ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
-                      >
-                        {hasOtherImages ? "✓" : "○"}
-                      </span>
-                      <span>
-                        {hasOtherImages
-                          ? dict.company_detail.status.activities_done.replace("{0}", companyImgs.length.toString())
-                          : dict.company_detail.status.activities_pending.replace("{0}", companyImgs.length.toString())}
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasServices ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
-                      >
-                        {hasServices ? "✓" : "○"}
-                      </span>
-                      <span>
-                        {hasServices
-                          ? dict.company_detail.status.services_done.replace("{0}", companyServices.length.toString())
-                          : dict.company_detail.status.services_pending}
-                      </span>
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <span
-                        className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${hasActiveSubscription ? "bg-emerald-500 text-white" : "bg-blue-200 text-blue-800"}`}
-                      >
-                        {hasActiveSubscription ? "✓" : "○"}
-                      </span>
-                      <span>
-                        {hasActiveSubscription ? (
-                          dict.company_detail.status.sub_done
-                        ) : (
-                          <span>
-                            {dict.company_detail.status.sub_pending}
-                            <Link href="/billing" className="text-blue-600 hover:underline font-bold">
-                              {dict.company_detail.status.sub_link}
-                            </Link>
-                            )
-                          </span>
-                        )}
-                      </span>
-                    </li>
-                  </ul>
+              <div className="flex items-start gap-3">
+                <div
+                  className={`p-2 rounded-xl mt-0.5 ${isPublished
+                    ? "bg-emerald-100 text-emerald-600"
+                    : isPendingPublish
+                      ? "bg-amber-100 text-amber-600"
+                      : isRejected
+                        ? "bg-red-100 text-red-600"
+                        : status === "active"
+                          ? "bg-blue-100 text-blue-600"
+                          : status === "pending_register"
+                            ? "bg-purple-100 text-purple-600"
+                            : "bg-slate-100 text-slate-600"
+                    }`}
+                >
+                  {isRejected ? <AlertOctagon className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
                 </div>
+                <div className="space-y-2">
+                  <h3 className="text-sm font-bold">
+                    {dict.company_detail.status.title}{" "}
+                    {isPublished
+                      ? dict.company_detail.status.published
+                      : isPendingPublish
+                        ? dict.company_detail.status.pending_publish
+                        : isRejected
+                          ? dict.company_detail.status.rejected
+                          : status === "active"
+                            ? dict.company_detail.status.active
+                            : status === "pending_register"
+                              ? dict.company_detail.status.pending_register
+                              : dict.company_detail.status.draft}
+                  </h3>
+                  <p className="text-xs opacity-90 leading-relaxed">
+                    {isPublished
+                      ? dict.company_detail.status.published_desc
+                      : isPendingPublish
+                        ? dict.company_detail.status.pending_publish_desc
+                        : isRejected
+                          ? dict.company_detail.status.rejected_desc
+                          : status === "active"
+                            ? dict.company_detail.status.active_desc
+                            : status === "pending_register"
+                              ? dict.company_detail.status.pending_register_desc
+                              : dict.company_detail.status.draft_desc}
+                  </p>
+
+                  {isActiveOrRejected && (
+                    <div className={`border rounded-xl p-3 mt-2 space-y-2 text-xs font-semibold max-w-xl ${
+                      isRejected
+                        ? "bg-red-100/60 border-red-200/80 text-red-950"
+                        : "bg-blue-100/50 border-blue-200/60 text-blue-900"
+                    }`}>
+                      <h4 className={`font-bold text-[13px] ${isRejected ? "text-red-950" : "text-blue-950"}`}>
+                        {dict.company_detail.status.checklist_title}
+                      </h4>
+                      <ul className="space-y-1.5">
+                        <li className="flex items-center gap-2">
+                          <span
+                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                              hasLogo ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
+                            }`}
+                          >
+                            {hasLogo ? "✓" : "○"}
+                          </span>
+                          <span>
+                            {hasLogo ? dict.company_detail.status.logo_done : dict.company_detail.status.logo_pending}
+                          </span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span
+                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                              hasBanner ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
+                            }`}
+                          >
+                            {hasBanner ? "✓" : "○"}
+                          </span>
+                          <span>
+                            {hasBanner ? dict.company_detail.status.banner_done : dict.company_detail.status.banner_pending}
+                          </span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span
+                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                              hasOtherImages ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
+                            }`}
+                          >
+                            {hasOtherImages ? "✓" : "○"}
+                          </span>
+                          <span>
+                            {hasOtherImages
+                              ? dict.company_detail.status.activities_done.replace("{0}", companyImgs.length.toString())
+                              : dict.company_detail.status.activities_pending.replace("{0}", companyImgs.length.toString())}
+                          </span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span
+                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                              hasServices ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
+                            }`}
+                          >
+                            {hasServices ? "✓" : "○"}
+                          </span>
+                          <span>
+                            {hasServices
+                              ? dict.company_detail.status.services_done.replace("{0}", companyServices.length.toString())
+                              : dict.company_detail.status.services_pending}
+                          </span>
+                        </li>
+                        <li className="flex items-center gap-2">
+                          <span
+                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                              hasActiveSubscription ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
+                            }`}
+                          >
+                            {hasActiveSubscription ? "✓" : "○"}
+                          </span>
+                          <span>
+                            {hasActiveSubscription ? (
+                              dict.company_detail.status.sub_done
+                            ) : (
+                              <span>
+                                {dict.company_detail.status.sub_pending}
+                                <Link href="/billing" className={`${isRejected ? "text-red-700" : "text-blue-600"} hover:underline font-bold`}>
+                                  {dict.company_detail.status.sub_link}
+                                </Link>
+                              </span>
+                            )}
+                          </span>
+                        </li>
+                      </ul>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {isActiveOrRejected && (
+                <button
+                  type="button"
+                  disabled={!isProfileComplete}
+                  onClick={() => setIsConfirmModalOpen(true)}
+                  className={`lg:self-center px-4 py-2 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap self-start cursor-pointer ${
+                    isProfileComplete
+                      ? isRejected
+                        ? "bg-red-600 hover:bg-red-700 text-white"
+                        : "bg-blue-600 hover:bg-blue-700 text-white"
+                      : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
+                  }`}
+                >
+                  <Upload className="w-3.5 h-3.5" />{" "}
+                  {isRejected
+                    ? dict.company_detail?.status?.resubmit_publish || "Gửi lại yêu cầu công khai"
+                    : dict.company_detail.status.submit_publish}
+                </button>
               )}
             </div>
-          </div>
-          {status === "active" && (
-            <button
-              type="button"
-              disabled={!isProfileComplete}
-              onClick={() => setIsConfirmModalOpen(true)}
-              className={`lg:self-center px-4 py-2 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap self-start cursor-pointer ${isProfileComplete
-                ? "bg-blue-600 hover:bg-blue-700 text-white"
-                : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
-                }`}
-            >
-              <Upload className="w-3.5 h-3.5" /> {dict.company_detail.status.submit_publish}
-            </button>
-          )}
-        </div>
-      )}
+
+            {/* Rejection Reason Card displayed when request is rejected */}
+            {isRejected && (
+              <div className="p-4 md:p-5 rounded-2xl border border-red-200 bg-red-50 text-red-900 shadow-xs space-y-3 font-sans">
+                <div className="flex items-start gap-3">
+                  <div className="p-2 rounded-xl bg-red-100 text-red-600 shrink-0 mt-0.5">
+                    <AlertOctagon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 space-y-1">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <h4 className="text-sm font-extrabold text-red-950 uppercase tracking-wide">
+                        {dict.company_detail?.status?.reject_reason_box_title || "Thông báo lý do từ chối yêu cầu công khai"}
+                      </h4>
+                      {latestPublishRequest?.processed_at && (
+                        <span className="text-[11px] font-medium text-red-700 font-mono">
+                          {dict.company_detail?.status?.processed_at || "Thời gian xử lý: "}
+                          {new Date(latestPublishRequest.processed_at).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}
+                        </span>
+                      )}
+                    </div>
+
+                    <p className="text-xs text-red-800 font-medium">
+                      {dict.company_detail?.status?.reject_reason_box_subtitle || "Ban quản trị hệ thống đã từ chối yêu cầu công khai doanh nghiệp của bạn với nội dung lý do sau:"}
+                    </p>
+
+                    <div className="mt-2.5 p-3.5 bg-white border border-red-200/90 rounded-xl text-sm font-semibold text-red-900 font-sans leading-relaxed whitespace-pre-wrap shadow-2xs">
+                      {rejectReason || latestPublishRequest?.reject_reason || dict.company_detail?.status?.no_reject_reason || "Không có nội dung lý do từ chối chi tiết."}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </>
+        );
+      })()}
 
       <div className="flex flex-col space-y-6">
         {/* Section 1: Branding Images (Ảnh đại diện & Ảnh bìa) */}
@@ -1078,12 +1167,18 @@ export default function MyCompanyDetail() {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             {/* Ảnh đại diện (Avatar) */}
             <div className="md:col-span-1 flex flex-col items-center justify-between border border-outline-variant rounded-xl p-4 bg-surface-container-low/50 relative group">
-              <div className="relative w-28 h-28 rounded-2xl overflow-hidden border-2 border-surface shadow-sm bg-surface">
-                <img
-                  src={logoUrl}
-                  alt="Company Logo"
-                  className="w-full h-full object-cover"
-                />
+              <div className="relative w-28 h-28 rounded-2xl overflow-hidden border-2 border-surface shadow-sm bg-surface flex items-center justify-center">
+                {logoUrl ? (
+                  <img
+                    src={logoUrl}
+                    alt="Company Logo"
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-surface-container-high flex flex-col items-center justify-center text-outline">
+                    <Building2 className="w-10 h-10" />
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -1112,12 +1207,19 @@ export default function MyCompanyDetail() {
             {/* Ảnh bìa (Banner) */}
             <div className="md:col-span-2 flex flex-col justify-between border border-outline-variant rounded-xl p-4 bg-surface-container-low/50 relative group">
               <div className="relative h-28 w-full rounded-2xl overflow-hidden shadow-sm bg-slate-900">
-                <div
-                  className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-102"
-                  style={{ backgroundImage: `url(${bannerUrl})` }}
-                />
-
-                <div className="absolute inset-0 bg-slate-950/20" />
+                {bannerUrl ? (
+                  <>
+                    <div
+                      className="absolute inset-0 bg-cover bg-center transition-transform duration-700 group-hover:scale-102"
+                      style={{ backgroundImage: `url(${bannerUrl})` }}
+                    />
+                    <div className="absolute inset-0 bg-slate-950/20" />
+                  </>
+                ) : (
+                  <div className="absolute inset-0 bg-gradient-to-r from-slate-800 via-slate-900 to-indigo-950 flex items-center justify-center">
+                    <span className="text-xs font-semibold text-slate-400">Chưa có ảnh bìa</span>
+                  </div>
+                )}
 
                 <button
                   type="button"
@@ -1691,11 +1793,18 @@ export default function MyCompanyDetail() {
 
                         <button
                           type="button"
+                          disabled={deletingServiceId === service.serviceId}
                           onClick={() => handleRemoveService(service.serviceId)}
-                          className="p-1 text-on-surface-variant/40 hover:text-error rounded-md transition-colors opacity-0 group-hover:opacity-100 cursor-pointer"
+                          className={`p-1 text-on-surface-variant/40 hover:text-error rounded-md transition-colors cursor-pointer ${
+                            deletingServiceId === service.serviceId ? "opacity-100 text-error" : "opacity-0 group-hover:opacity-100"
+                          }`}
                           title="Xóa dịch vụ"
                         >
-                          <Trash className="w-3.5 h-3.5" />
+                          {deletingServiceId === service.serviceId ? (
+                            <Loader2 className="w-3.5 h-3.5 animate-spin text-error" />
+                          ) : (
+                            <Trash className="w-3.5 h-3.5" />
+                          )}
                         </button>
                       </div>
                     </td>
@@ -1856,19 +1965,20 @@ export default function MyCompanyDetail() {
                     required
                     value={newServiceId}
                     onChange={(e) => handleServiceSelect(e.target.value)}
-                    className="w-full text-sm border border-slate-200 bg-white rounded-xl pl-3.5 pr-10 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-semibold text-slate-800 appearance-none cursor-pointer"
+                    disabled={unaddedAvailableServices.length === 0}
+                    className="w-full text-sm border border-slate-200 bg-white rounded-xl pl-3.5 pr-10 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-semibold text-slate-800 appearance-none cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
                     <option
                       value=""
                       disabled
                       className="text-slate-400 font-medium"
                     >
-                      {dict.company_detail.modals.select_service}
+                      {unaddedAvailableServices.length === 0
+                        ? dict.company_detail?.modals?.all_services_added || "Tất cả dịch vụ đã được thêm"
+                        : dict.company_detail.modals.select_service}
                     </option>
 
-                    {availableServices
-                      .filter((s) => s.is_active === true)
-                      .map((s) => (
+                    {unaddedAvailableServices.map((s) => (
                       <option
                         key={s.service_id}
                         value={s.service_id}
@@ -1931,45 +2041,57 @@ export default function MyCompanyDetail() {
                   <label className="text-xs font-bold text-slate-500 uppercase">
                     {dict.company_detail.modals.service_price_label}
                   </label>
-                  {serviceFormErrors.price && (
-                    <span className="text-[11px] font-semibold text-red-500">{serviceFormErrors.price}</span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {serviceFormErrors.price && (
+                      <span className="text-[11px] font-semibold text-red-500">{serviceFormErrors.price}</span>
+                    )}
+                    {newServicePrice && (
+                      <span className="text-xs font-bold text-blue-600">
+                        {formatPrice(newServicePrice.replace(/\D/g, ""))} VNĐ
+                      </span>
+                    )}
+                  </div>
                 </div>
 
-                <input
-                  type="number"
-                  required
-                  min={1}
-                  max={1000000}
-                  step={1}
-                  value={newServicePrice}
-                  onChange={(e) => {
-                    setNewServicePrice(e.target.value);
-                    if (serviceFormErrors.price) setServiceFormErrors(prev => ({ ...prev, price: undefined }));
-                  }}
-                  onKeyDown={(e) => {
-                    // Block non-numeric keys (allow: digits, backspace, delete, arrows, tab)
-                    if (["-", "e", "E", "+", "."].includes(e.key)) e.preventDefault();
-                  }}
-                  placeholder={dict.company_detail.modals.service_price_placeholder}
-                  className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium"
-                />
+                <div className="relative">
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    required
+                    value={newServicePrice}
+                    onChange={handlePriceChange}
+                    placeholder={dict.company_detail.modals.service_price_placeholder}
+                    className="w-full text-sm border border-slate-200 rounded-xl pl-3.5 pr-14 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium"
+                  />
+                  <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none select-none">
+                    VNĐ
+                  </div>
+                </div>
               </div>
 
               <div className="flex justify-end gap-2 pt-2">
                 <button
                   type="button"
                   onClick={() => setIsAddServiceOpen(false)}
-                  className="px-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl transition-all cursor-pointer"
+                  disabled={addingService}
+                  className="px-4 py-2 border border-slate-200 text-slate-700 hover:bg-slate-50 font-bold text-xs rounded-xl transition-all cursor-pointer disabled:opacity-60"
                 >
                   {dict.company_detail.sections.cancel}
                 </button>
 
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer"
+                  disabled={addingService || unaddedAvailableServices.length === 0}
+                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  {dict.company_detail.modals.add_service_btn}
+                  {addingService ? (
+                    <>
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      <span>{dict.company_detail?.modals?.adding_service || "Đang thêm..."}</span>
+                    </>
+                  ) : (
+                    dict.company_detail.modals.add_service_btn
+                  )}
                 </button>
               </div>
             </form>
