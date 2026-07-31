@@ -578,14 +578,14 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
   // Variant: Large (Hero search bar)
   return (
     <div
-      className={`flex items-center h-14 bg-white border rounded-full text-on-surface pl-2 pr-2 transition-all duration-300 divide-x divide-outline-variant/30 ${
+      className={`flex items-center h-14 bg-white/85 backdrop-blur-xl border border-white/90 rounded-full text-on-surface p-1.5 transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.08)] ${
         isAnyDropdownOpen
-          ? "border-primary ring-4 ring-primary/10 shadow-[0_4px_20px_rgba(59,130,246,0.12)]"
-          : "border-outline-variant/40 hover:border-primary/50 hover:ring-4 hover:ring-primary/[0.04] shadow-sm hover:shadow-md"
+          ? "border-primary ring-4 ring-primary/10 shadow-2xl"
+          : "hover:border-primary/50 hover:shadow-xl"
       }`}
     >
       {/* City field & Dropdown */}
-      <div ref={cityRef} className="relative flex-1 h-full flex items-center gap-2 px-4 rounded-l-full">
+      <div ref={cityRef} className="relative flex-1 h-full flex items-center gap-2 px-3 border-r border-slate-200/70">
         <MapPin className="w-4.5 h-4.5 text-primary shrink-0" />
         <input
           value={cityInput}
@@ -611,7 +611,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
           }}
           placeholder={isLocating ? dict.customer.search.bar_placeholder_locating_general : dict.customer.search.bar_placeholder_city}
           disabled={isLocating}
-          className="flex-1 text-sm bg-transparent outline-none placeholder:text-outline font-medium text-on-surface"
+          className="flex-1 text-sm bg-transparent outline-none placeholder:text-slate-400 font-medium text-on-surface"
         />
         {cityDropdownOpen && (
           <div className="absolute top-full left-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-xl z-[9999] overflow-hidden py-1.5 max-h-80 overflow-y-auto">
@@ -643,7 +643,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
       </div>
 
       {/* Ward select field & Dropdown */}
-      <div ref={wardRef} className="relative flex-1 h-full flex items-center gap-2 px-4">
+      <div ref={wardRef} className="relative flex-1 h-full flex items-center gap-2 px-3 border-r border-slate-200/70">
         <MapPin className="w-4.5 h-4.5 text-primary shrink-0" />
         <button
           onClick={() => {
@@ -656,10 +656,10 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
           {selectedWard ? (
             <span className="text-on-surface font-medium">{selectedWard.ward_name}</span>
           ) : (
-            <span className="text-outline">{dict.customer.search.bar_ward}</span>
+            <span className="text-slate-400">{dict.customer.search.bar_ward}</span>
           )}
         </button>
-        <ChevronDown className={`w-3.5 h-3.5 text-outline shrink-0 ml-auto transition-transform duration-200 ${wardDropdownOpen ? "rotate-180" : ""}`} />
+        <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 ml-auto transition-transform duration-200 ${wardDropdownOpen ? "rotate-180" : ""}`} />
         
         {wardDropdownOpen && (
           <div className="absolute top-full left-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-xl z-[9999] overflow-hidden py-1.5 max-h-80 overflow-y-auto">
@@ -711,7 +711,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
             setCityDropdownOpen(false);
             setWardDropdownOpen(false);
           }}
-          className="w-full h-full flex items-center justify-between px-4 text-sm font-medium text-left hover:bg-surface-container-low/10 transition-all rounded-r-full"
+          className="w-full h-full flex items-center justify-between px-3 text-sm font-medium text-left bg-transparent transition-colors rounded-r-full"
         >
           <span className="truncate flex items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-primary shrink-0" />
@@ -720,10 +720,10 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                 {selectedServices.length <= 2 ? selectedServices.join(", ") : `${selectedServices.slice(0, 2).join(", ")}, ...`}
               </span>
             ) : (
-              <span className="text-outline">{dict.customer.search.bar_filter}</span>
+              <span className="text-slate-400">{dict.customer.search.bar_filter}</span>
             )}
           </span>
-          <ChevronDown className="w-3.5 h-3.5 text-outline shrink-0 ml-2" />
+          <ChevronDown className="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1" />
         </button>
         {filterDropdownOpen && (
           <div className="absolute top-full right-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-2xl z-[9999] p-5 flex flex-col gap-4">
@@ -784,10 +784,10 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
         )}
       </div>
 
-      {/* Search submit button */}
+      {/* Search submit button inside pill */}
       <button
         onClick={() => handleSearchSubmit()}
-        className="bg-primary hover:bg-primary/95 hover:scale-105 active:scale-95 text-on-primary w-10 h-10 rounded-full transition-all flex items-center justify-center shrink-0 shadow-sm ml-2"
+        className="bg-primary hover:bg-primary/95 hover:scale-105 active:scale-95 text-white w-10 h-10 rounded-full transition-all flex items-center justify-center shrink-0 shadow-md ml-1"
       >
         <Search className="w-4.5 h-4.5" />
       </button>

@@ -12,7 +12,22 @@ function hoist(dict: any) {
     ...dict,
     booking: dict.booking || pages.booking,
     contract: dict.contract || pages.contract,
-    report: dict.report || pages.report,
+    report: {
+      ...(pages.report || {}),
+      ...(dict.report || {}),
+      container: {
+        ...(pages.report?.container || {}),
+        ...(dict.report?.container || {}),
+      },
+      filters: {
+        ...(pages.report?.filters || {}),
+        ...(dict.report?.filters || {}),
+      },
+      table: {
+        ...(pages.report?.table || {}),
+        ...(dict.report?.table || {}),
+      },
+    },
     company_contracts: dict.company_contracts || pages.company_contracts,
     contract_detail: dict.contract_detail || pages.contract_detail,
     contract_guards: dict.contract_guards || pages.contract_guards,

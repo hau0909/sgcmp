@@ -146,27 +146,27 @@ export default function StepReview({
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div>
-                <span className="text-xs text-on-surface-variant block">Họ và tên:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_fullname}</span>
                 <span className="font-semibold text-on-surface">{formData.fullName || "-"}</span>
               </div>
               <div>
-                <span className="text-xs text-on-surface-variant block">Số điện thoại:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_phone}</span>
                 <span className="font-semibold text-on-surface">{formData.phoneNumber || "-"}</span>
               </div>
               <div>
-                <span className="text-xs text-on-surface-variant block">Email tài khoản:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_email}</span>
                 <span className="font-semibold text-on-surface">{formData.email || "-"}</span>
               </div>
               <div>
-                <span className="text-xs text-on-surface-variant block">Mã định danh CCCD:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_id}</span>
                 <span className="font-mono font-semibold text-on-surface">{formData.identityId || "-"}</span>
               </div>
               <div>
-                <span className="text-xs text-on-surface-variant block">Ngày cấp:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_issue_date}</span>
                 <span className="font-semibold text-on-surface">{formData.issueDate || "-"}</span>
               </div>
               <div>
-                <span className="text-xs text-on-surface-variant block">Nơi cấp:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_issue_place}</span>
                 <span className="font-semibold text-on-surface">{formData.issuePlace || "-"}</span>
               </div>
             </div>
@@ -181,23 +181,23 @@ export default function StepReview({
             
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div className="sm:col-span-2">
-                <span className="text-xs text-on-surface-variant block">Tên công ty:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_company_name}</span>
                 <span className="font-bold text-on-surface text-base">{formData.companyName || "-"}</span>
               </div>
               <div>
-                <span className="text-xs text-on-surface-variant block">Mã số thuế / MST:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_tax_code}</span>
                 <span className="font-mono font-semibold text-on-surface">{formData.businessLicenseNo || "-"}</span>
               </div>
               <div>
-                <span className="text-xs text-on-surface-variant block">Điện thoại công ty:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_company_phone}</span>
                 <span className="font-semibold text-on-surface">{formData.companyPhone || "-"}</span>
               </div>
               <div>
-                <span className="text-xs text-on-surface-variant block">Email công ty:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_company_email}</span>
                 <span className="font-semibold text-on-surface">{formData.companyEmail || "-"}</span>
               </div>
               <div className="sm:col-span-2">
-                <span className="text-xs text-on-surface-variant block">Địa chỉ trụ sở:</span>
+                <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_address}</span>
                 <span className="font-semibold text-on-surface flex items-center gap-1">
                   <MapPin className="w-4 h-4 text-primary shrink-0" />
                   {resolvedAddress}
@@ -205,7 +205,7 @@ export default function StepReview({
               </div>
               {formData.description && (
                 <div className="sm:col-span-2">
-                  <span className="text-xs text-on-surface-variant block">Mô tả hoạt động:</span>
+                  <span className="text-xs text-on-surface-variant block">{dict.pages.registration.review_description}</span>
                   <p className="text-xs text-on-surface mt-1 whitespace-pre-line leading-relaxed bg-surface-container-low p-3 rounded-lg border border-outline-variant/30">
                     {formData.description}
                   </p>
@@ -227,14 +227,14 @@ export default function StepReview({
             <div className="space-y-4">
               {/* CCCD Documents */}
               <div className="space-y-2">
-                <span className="text-xs font-semibold text-on-surface block">Hình ảnh CCCD</span>
+                <span className="text-xs font-semibold text-on-surface block">{dict.pages.registration.review_id_images}</span>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-[10px] text-on-surface-variant block mb-1">Mặt trước:</span>
+                    <span className="text-[10px] text-on-surface-variant block mb-1">{dict.pages.registration.review_id_front}</span>
                     {renderFilePreview(formData.frontFile, formData.frontUrl)}
                   </div>
                   <div>
-                    <span className="text-[10px] text-on-surface-variant block mb-1">Mặt sau:</span>
+                    <span className="text-[10px] text-on-surface-variant block mb-1">{dict.pages.registration.review_id_back}</span>
                     {renderFilePreview(formData.backFile, formData.backUrl)}
                   </div>
                 </div>
@@ -242,14 +242,14 @@ export default function StepReview({
 
               {/* Logo & License Documents */}
               <div className="space-y-2 pt-2 border-t border-outline-variant/20">
-                <span className="text-xs font-semibold text-on-surface block">Logo & Giấy phép</span>
+                <span className="text-xs font-semibold text-on-surface block">{dict.pages.registration.review_logo_license}</span>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <span className="text-[10px] text-on-surface-variant block mb-1">Logo công ty:</span>
+                    <span className="text-[10px] text-on-surface-variant block mb-1">{dict.pages.registration.review_logo}</span>
                     {renderFilePreview(formData.logoFile, formData.logoUrl)}
                   </div>
                   <div>
-                    <span className="text-[10px] text-on-surface-variant block mb-1">Giấy chứng nhận ĐKKD:</span>
+                    <span className="text-[10px] text-on-surface-variant block mb-1">{dict.pages.registration.review_license}</span>
                     {renderFilePreview(formData.licenseFile, formData.licenseUrl)}
                   </div>
                 </div>
@@ -259,7 +259,7 @@ export default function StepReview({
               {formData.galleryFiles.length > 0 && (
                 <div className="space-y-2 pt-2 border-t border-outline-variant/20">
                   <span className="text-xs font-semibold text-on-surface block">
-                    Hình ảnh công ty ({formData.galleryFiles.length} ảnh)
+                    {dict.pages.registration.review_gallery} ({formData.galleryFiles.length} {dict.pages.registration.review_gallery_count})
                   </span>
                   <div className="grid grid-cols-3 gap-2">
                     {formData.galleryFiles.slice(0, 3).map((file, idx) => (

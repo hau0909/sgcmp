@@ -2,6 +2,7 @@
 
 import React, { useRef, useState, useEffect } from "react";
 import { Upload, X, FileText, Image as ImageIcon } from "lucide-react";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface UploadZoneProps {
   label: string;
@@ -14,15 +15,18 @@ interface UploadZoneProps {
 
 export default function UploadZone({
   label,
-  placeholder = "Kéo thả file vào đây hoặc nhấp để chọn",
+  placeholder,
   accept = "image/*",
   defaultValue,
   onChange,
   className = "",
 }: UploadZoneProps) {
+  const { locale, dict } = useTranslation();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [dragActive, setDragActive] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+
+  const finalPlaceholder = placeholder || (locale === "vi" ? "Kéo thả file vào đây hoặc nhấp để chọn" : "Drag and drop file here or click to select");
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
 
   useEffect(() => {
@@ -130,7 +134,7 @@ export default function UploadZone({
               <div className="flex flex-col items-center gap-2 p-2">
                 <FileText className="w-12 h-12 text-primary" />
                 <span className="text-sm font-medium text-on-surface truncate max-w-[250px]">
-                  {selectedFile ? selectedFile.name : "Giấy phép đăng ký kinh doanh.pdf"}
+                  {selectedFile ? selectedFile.name : previewUrl?.split("/").pop()?.split("?")[0] || "Document.pdf"}
                 </span>
               </div>
             ) : (
@@ -171,10 +175,12 @@ export default function UploadZone({
             </div>
             <div className="space-y-1">
               <p className="text-sm font-medium text-on-surface">
-                {placeholder}
+                {finalPlaceholder}
               </p>
-              <p className="text-xs text-on-surface-variant">
-                Hỗ trợ định dạng {accept.replace("/*", "").toUpperCase()}
+              <p className="text-xs text-on-surface-variant font-medium mt-1">
+                {accept === "image/*" 
+                  ? (locale === "vi" ? "Hỗ trợ định dạng hình ảnh" : "Supports image formats") 
+                  : (locale === "vi" ? `Hỗ trợ định dạng ${accept.replace("/*", "").toUpperCase()}` : `Supports ${accept.replace("/*", "").toUpperCase()}`)}
               </p>
             </div>
           </div>

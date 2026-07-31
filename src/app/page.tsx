@@ -123,57 +123,56 @@ export default function Home() {
       {/* Main Content Layout */}
       <main className="flex-1 mt-18 overflow-x-hidden">
         {/* ================= HERO SECTION ================= */}
-        <section className="relative pt-12 pb-16 md:pt-20 md:pb-24 bg-gradient-to-r from-blue-50/50 via-white to-white flex items-center min-h-[600px] lg:min-h-[640px]">
-          {/* Background image on the right with fading mask */}
-          <div className="absolute inset-y-0 right-0 w-full lg:w-[55%] z-0 pointer-events-none select-none overflow-hidden">
+        <section className="relative z-30 min-h-[440px] md:min-h-[480px] lg:min-h-[500px] flex items-center py-10 lg:py-14 bg-white">
+          {/* Full-bleed Background Image with Right-aligned focus */}
+          <div className="absolute inset-0 z-0 pointer-events-none select-none overflow-hidden">
             <img
               src="/images/hero-bg.jpg"
-              alt="SGCMP Security Guards"
-              className="w-full h-full object-cover object-center brightness-[1.01] contrast-[1.01]"
+              alt="SGCMP Campus Security"
+              className="w-full h-full object-cover object-[85%_center] brightness-[1.01] contrast-[1.02]"
               style={{ imageRendering: "-webkit-optimize-contrast" }}
             />
-            {/* Smooth Left-to-Right fading gradient */}
-            <div className="hidden lg:block absolute inset-y-0 left-0 w-72 lg:w-96 bg-gradient-to-r from-white via-white/90 to-transparent z-10" />
-            {/* Smooth Bottom-to-Top fading gradient */}
-            <div className="absolute bottom-0 inset-x-0 h-40 md:h-64 bg-gradient-to-t from-white via-white/80 to-transparent z-10" />
-            {/* Smooth Top-to-Bottom fading gradient */}
-            <div className="absolute top-0 inset-x-0 h-24 bg-gradient-to-b from-white/90 to-transparent z-10" />
-            {/* Mobile overlay for readability */}
+            {/* Left-to-Right white gradient fade for 100% crisp text readability across all words */}
+            <div className="hidden lg:block absolute inset-y-0 left-0 w-[48%] xl:w-[45%] bg-gradient-to-r from-white via-white/95 via-white/85 to-transparent z-10" />
+            {/* Bottom-to-Top subtle white fade */}
+            <div className="absolute bottom-0 inset-x-0 h-14 bg-gradient-to-t from-white via-white/40 to-transparent z-10" />
+            {/* Mobile background overlay for readability */}
             <div className="block lg:hidden absolute inset-0 bg-white/85 z-10" />
           </div>
 
-          <div className="max-w-7xl mx-auto px-6 md:px-8 w-full relative z-20">
+          <div className="max-w-7xl mx-auto px-6 md:px-10 w-full relative z-20">
             <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center w-full">
-              {/* Left Column: Content (Title, Description, Search) */}
-              <div className="lg:col-span-7 flex flex-col items-start text-left gap-6 py-6 lg:py-12">
-                {/* Title */}
-                <h1 className="font-sans text-[36px] leading-[1.2] md:text-[50px] md:leading-[1.15] font-black text-slate-900 tracking-tight">
+              {/* Left Column (55%): Content (Two-line Title & Compact Floating Search Bar) */}
+              <div className="lg:col-span-7 flex flex-col items-start text-left gap-6 py-4">
+                {/* Title styled with harmonious deep navy, royal blue gradient & white drop-shadow for 100% legibility */}
+                <h1 className="font-sans text-[30px] sm:text-[36px] lg:text-[42px] font-black text-[#0A1D37] tracking-tight leading-[1.2] drop-shadow-[0_2px_12px_rgba(255,255,255,1)]">
                   {dict.hero.title}{" "}
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-500">
+                  <span className="block mt-0.5 text-transparent bg-clip-text bg-gradient-to-r from-[#0B5ED7] via-[#024594] to-[#0D6EFD]">
                     {dict.hero.titleAccent}
-                  </span>{" "}
-                  {dict.hero.titleSuffix}
+                  </span>
                 </h1>
 
-                {/* Description */}
-                <p className="font-sans text-[14px] md:text-[15px] text-slate-500 max-w-xl leading-relaxed font-normal">
-                  {dict.hero.description}
-                </p>
+                {/* Description if present */}
+                {dict.hero.description && (
+                  <p className="font-sans text-[14px] md:text-[15px] text-slate-600 max-w-xl leading-relaxed font-normal">
+                    {dict.hero.description}
+                  </p>
+                )}
 
-                {/* Search Bar */}
-                <div className="w-full max-w-2xl shadow-lg hover:shadow-xl transition-shadow duration-300 rounded-full bg-white relative z-[999]">
+                {/* Compact Floating Glassmorphic Search Bar (Adjusted width to touch right up against the character) */}
+                <div className="w-full max-w-[590px] relative z-[999]">
                   <CompanySearchBar variant="large" />
                 </div>
               </div>
 
-              {/* Right Column: Empty space so background image shows fully */}
-              <div className="lg:col-span-5 hidden lg:block h-[450px]" />
+              {/* Right Column (45%): Spacer so the security team & campus background show clearly */}
+              <div className="lg:col-span-5 hidden lg:block h-[340px]" />
             </div>
           </div>
         </section>
 
         {/* ================= FEATURED COMPANIES SECTION ================= */}
-        <section className="bg-surface py-8 relative border-b border-outline-variant/30">
+        <section className="bg-surface py-8 relative z-10 border-b border-outline-variant/30">
           <div className="max-w-6xl mx-auto px-6 w-full">
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 w-full">
               {topCompanies.length > 0 ? (
@@ -338,193 +337,81 @@ export default function Home() {
           </div>
         </section>
 
-        {/* ================= CORE FEATURES SECTION ================= */}
-        <section className="py-12 md:py-14 bg-surface-container-lowest" id="tinh-nang">
-          <div className="max-w-6xl mx-auto px-6">
-            {/* Section Header */}
-            <div className="mb-8 text-center md:text-left max-w-2xl">
-              <h2 className="font-sans text-[24px] md:text-[28px] font-bold text-on-surface mb-2 tracking-tight">
-                {dict.landing.features_title}
-              </h2>
-              <p className="font-sans text-[13px] md:text-[14px] text-on-surface-variant">
-                {dict.landing.features_desc}
-              </p>
-            </div>
-
-            {/* Grid Features layout */}
-            <div className="grid grid-cols-1 md:grid-cols-12 gap-5">
-              {/* Feature 1: Large Span Calendar Schedule */}
-              <div className="md:col-span-8 bg-surface-container-low border border-outline-variant/30 rounded-2xl p-6 md:p-7 flex flex-col justify-between overflow-hidden group hover:shadow-lg hover:border-primary/40 hover:ring-2 hover:ring-primary/15 hover:ring-offset-1 transition-all duration-300 relative min-h-72 cursor-pointer">
-                <div className="absolute right-0 top-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -z-10 group-hover:bg-primary/10 transition-colors duration-500" />
-                <div className="z-10 text-left">
-                  <div className="w-11 h-11 bg-white rounded-xl shadow-sm flex items-center justify-center mb-5 border border-outline-variant/20 text-primary group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
-                    <FileSliders size={24} />
-                  </div>
-                  <h3 className="font-sans text-[18px] md:text-[20px] font-bold text-on-surface mb-2 group-hover:text-primary transition-colors">
-                    {dict.landing.feat1_title}
-                  </h3>
-                  <p className="font-sans text-[13px] md:text-[14px] text-on-surface-variant mb-6 max-w-xl leading-relaxed">
-                    {dict.landing.feat1_desc}
-                  </p>
-                </div>
-
-                {/* Interactive schedule preview block */}
-                <div className="mt-auto bg-white rounded-xl border border-outline-variant/20 p-4 flex flex-col gap-2.5 shadow-xs z-10 transition-all duration-300 group-hover:-translate-y-1 group-hover:shadow-md">
-                  <div className="flex gap-3 items-center">
-                    <div className="text-[11px] font-semibold text-primary w-24 bg-primary/10 py-1 px-2 rounded-md text-center">
-                      {dict.landing.feat1_ui1}
-                    </div>
-                    <div className="h-6 flex-1 bg-surface-container rounded-md flex items-center px-3 text-[11px] text-outline">
-                      {dict.landing.feat1_ui2}
-                    </div>
-                  </div>
-                  <div className="flex gap-3 items-center">
-                    <div className="text-[11px] font-semibold text-secondary w-24 bg-secondary/10 py-1 px-2 rounded-md text-center">
-                      {dict.landing.feat1_ui3}
-                    </div>
-                    <div className="h-6 w-45 bg-secondary/15 rounded-md flex items-center px-3 text-[11px] text-secondary font-medium">
-                      {dict.landing.feat1_ui4}
-                    </div>
-                    <div className="h-6 flex-1 bg-surface-container rounded-md flex items-center px-3 text-[11px] text-outline">
-                      {dict.landing.feat1_ui5}
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Feature 2: GPS Check-in */}
-              <div className="md:col-span-4 bg-surface border border-outline-variant/30 rounded-2xl p-6 flex flex-col justify-between hover:shadow-lg hover:border-primary/40 hover:ring-2 hover:ring-primary/15 hover:ring-offset-1 transition-all duration-300 text-left min-h-72 group cursor-pointer">
-                <div>
-                  <div className="w-11 h-11 bg-white rounded-xl shadow-sm flex items-center justify-center border border-outline-variant/20 mb-5 text-primary group-hover:scale-110 group-hover:bg-primary/10 transition-all duration-300">
-                    <MapPinCheck size={24} />
-                  </div>
-                  <h3 className="font-sans text-[18px] font-bold text-on-surface mb-2 group-hover:text-primary transition-colors">
-                    {dict.landing.feat2_title}
-                  </h3>
-                  <p className="font-sans text-[13px] text-on-surface-variant leading-relaxed mb-4">
-                    {dict.landing.feat2_desc}
-                  </p>
-                </div>
-
-                <div className="bg-surface-container-lowest rounded-lg p-3.5 border border-outline-variant/20 flex items-center gap-3 mt-auto shadow-xs group-hover:scale-[1.03] group-hover:bg-green-50/40 transition-all duration-300">
-                  <div className="w-7 h-7 rounded-full bg-green-100 flex items-center justify-center text-green-600">
-                    <Verified size={16} />
-                  </div>
-                  <span className="text-[12px] font-semibold text-on-surface">
-                    {dict.landing.feat2_ui}
-                  </span>
-                </div>
-              </div>
-
-              {/* Feature 3: Real-time Incident Reports */}
-              <div className="md:col-span-6 bg-surface border border-outline-variant/30 rounded-2xl p-6 flex flex-col justify-between hover:shadow-lg hover:border-error/40 hover:ring-2 hover:ring-red-500/15 hover:ring-offset-1 transition-all duration-300 text-left min-h-64 group cursor-pointer">
-                <div>
-                  <div className="w-11 h-11 bg-error/10 rounded-xl flex items-center justify-center mb-5 text-error group-hover:scale-110 group-hover:bg-error/20 transition-all duration-300">
-                    <TriangleAlert size={24} />
-                  </div>
-                  <h3 className="font-sans text-[18px] font-bold text-on-surface mb-2 group-hover:text-error transition-colors">
-                    {dict.landing.feat3_title}
-                  </h3>
-                  <p className="font-sans text-[13px] text-on-surface-variant leading-relaxed mb-4">
-                    {dict.landing.feat3_desc}
-                  </p>
-                </div>
-
-                <div className="flex gap-3 mt-auto items-center group-hover:translate-x-1.5 transition-transform duration-300">
-                  <div className="h-11 w-11 bg-surface-container-high rounded-lg flex items-center justify-center text-outline border border-outline-variant/30">
-                    <Image size={24} />
-                  </div>
-                  <div className="flex-1 bg-surface-container rounded-lg p-2.5">
-                    <div className="w-1/3 h-2 bg-error/60 rounded-full mb-2" />
-                    <div className="w-2/3 h-1.5 bg-outline-variant/50 rounded-full" />
-                  </div>
-                </div>
-              </div>
-
-              {/* Feature 4: Performance Analytics */}
-              <div className="md:col-span-6 bg-surface border border-outline-variant/30 rounded-2xl p-6 flex flex-col justify-between hover:shadow-lg hover:border-secondary/40 hover:ring-2 hover:ring-secondary/15 hover:ring-offset-1 transition-all duration-300 text-left min-h-64 group cursor-pointer">
-                <div>
-                  <div className="w-11 h-11 bg-secondary/10 rounded-xl flex items-center justify-center mb-5 text-secondary group-hover:scale-110 group-hover:bg-secondary/20 transition-all duration-300">
-                    <ChartColumn size={24} />
-                  </div>
-                  <h3 className="font-sans text-[18px] font-bold text-on-surface mb-2 group-hover:text-secondary transition-colors">
-                    {dict.landing.feat4_title}
-                  </h3>
-                  <p className="font-sans text-[13px] text-on-surface-variant leading-relaxed mb-4">
-                    {dict.landing.feat4_desc}
-                  </p>
-                </div>
-
-                {/* Visual Bar Chart Animation Placeholder */}
-                <div className="flex items-end gap-3 h-12 mt-auto px-2">
-                  <div className="w-full bg-secondary/20 rounded-t-md h-[30%] group-hover:h-[50%] transition-all duration-500" />
-                  <div className="w-full bg-secondary/40 rounded-t-md h-[60%] group-hover:h-[80%] transition-all duration-500" />
-                  <div className="w-full bg-secondary/60 rounded-t-md h-[45%] group-hover:h-[65%] transition-all duration-500" />
-                  <div className="w-full bg-secondary rounded-t-md h-[90%] group-hover:h-full transition-all duration-500" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </section>
 
         {/* ================= PRICING / TRIAL SECTION ================= */}
         <section className="py-12 md:py-14 bg-surface" id="bang-gia">
           <div className="max-w-4xl mx-auto px-6">
-            <div className="bg-surface-container-lowest border border-outline-variant/40 rounded-3xl p-8 md:p-12 text-center shadow-lg hover:shadow-2xl hover:border-primary/40 hover:ring-2 hover:ring-primary/20 hover:ring-offset-2 transition-all duration-300 relative overflow-hidden flex flex-col items-center gap-6 group">
-              {/* Background accent glow */}
-              <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10 group-hover:bg-primary/20 transition-colors duration-500" />
-              <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/10 rounded-full blur-3xl -z-10 group-hover:bg-secondary/20 transition-colors duration-500" />
 
-              {/* Tag / Badge */}
-              <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider group-hover:scale-105 transition-transform duration-300">
-                <CheckCircle2 size={16} />
-                <span>{dict.landing.plans.chuyen_nghiep.name} Solution</span>
+            {/* ── Animated Running Border Wrapper ── */}
+            <div className="relative p-[2px] rounded-3xl overflow-hidden group shadow-lg hover:shadow-2xl transition-all duration-300">
+              
+              {/* Running Border Ray Animation */}
+              <div
+                className="absolute inset-[-150%] pointer-events-none opacity-90 group-hover:opacity-100 transition-opacity"
+                style={{
+                  background:
+                    "conic-gradient(from 0deg, transparent 0 260deg, #0B5ED7 310deg, #60a5fa 340deg, #0A2A66 360deg)",
+                  animation: "spin 4s linear infinite",
+                }}
+              />
+
+              {/* Inner Card Content */}
+              <div className="relative z-10 bg-white rounded-[22px] p-8 md:p-12 text-center flex flex-col items-center gap-6 overflow-hidden">
+                {/* Background accent glow */}
+                <div className="absolute -top-24 -right-24 w-64 h-64 bg-primary/10 rounded-full blur-3xl -z-10 group-hover:bg-primary/20 transition-colors duration-500" />
+                <div className="absolute -bottom-24 -left-24 w-64 h-64 bg-secondary/10 rounded-full blur-3xl -z-10 group-hover:bg-secondary/20 transition-colors duration-500" />
+
+                {/* Tag / Badge */}
+                <div className="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-wider group-hover:scale-105 transition-transform duration-300">
+                  <CheckCircle2 size={16} />
+                  <span>{dict.landing.plans.chuyen_nghiep.name} Solution</span>
+                </div>
+
+                {/* Title */}
+                <h2 className="font-sans text-[26px] md:text-[32px] font-extrabold text-on-surface tracking-tight max-w-2xl">
+                  {dict.landing.pricing_title}
+                </h2>
+
+                {/* General Description summarizing everything */}
+                <p className="font-sans text-[14px] md:text-[15px] text-on-surface-variant max-w-2xl leading-relaxed">
+                  {dict.landing.pricing_desc}
+                </p>
+
+                {/* Key Features Pill Badges */}
+                <div className="flex flex-wrap justify-center gap-2.5 max-w-3xl my-1">
+                  {[
+                    dict.landing.plans.chuyen_nghiep.f1,
+                    dict.landing.plans.chuyen_nghiep.f2,
+                    dict.landing.plans.chuyen_nghiep.f3,
+                    dict.landing.plans.chuyen_nghiep.f4,
+                    dict.landing.plans.chuyen_nghiep.f5,
+                  ].map((feat, idx) => (
+                    <span
+                      key={idx}
+                      className="bg-surface-container border border-outline-variant/30 text-on-surface text-xs font-semibold px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-xs hover:border-primary/40 hover:bg-white hover:scale-[1.02] transition-all duration-200"
+                    >
+                      <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                      <span>{feat}</span>
+                    </span>
+                  ))}
+                </div>
+
+                {/* Start Trial Button Only */}
+                <button
+                  onClick={(e) => handleStartClick(e, "/register-company")}
+                  disabled={loadingPlan !== null}
+                  className="bg-primary hover:bg-primary-container text-on-primary font-bold py-3.5 px-10 rounded-2xl transition-all duration-300 shadow-md hover:shadow-xl hover:scale-[1.04] active:scale-[0.98] text-[15px] h-12 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                >
+                  {loadingPlan === "/register-company" ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      {dict.landing.checking_plan}
+                    </span>
+                  ) : (
+                    dict.landing.plans.chuyen_nghiep.action
+                  )}
+                </button>
               </div>
-
-              {/* Title */}
-              <h2 className="font-sans text-[26px] md:text-[32px] font-extrabold text-on-surface tracking-tight max-w-2xl">
-                {dict.landing.pricing_title}
-              </h2>
-
-              {/* General Description summarizing everything */}
-              <p className="font-sans text-[14px] md:text-[15px] text-on-surface-variant max-w-2xl leading-relaxed">
-                {dict.landing.pricing_desc}
-              </p>
-
-              {/* Key Features Pill Badges */}
-              <div className="flex flex-wrap justify-center gap-2.5 max-w-3xl my-1">
-                {[
-                  dict.landing.plans.chuyen_nghiep.f1,
-                  dict.landing.plans.chuyen_nghiep.f2,
-                  dict.landing.plans.chuyen_nghiep.f3,
-                  dict.landing.plans.chuyen_nghiep.f4,
-                  dict.landing.plans.chuyen_nghiep.f5,
-                ].map((feat, idx) => (
-                  <span
-                    key={idx}
-                    className="bg-surface-container border border-outline-variant/30 text-on-surface text-xs font-semibold px-3.5 py-2 rounded-full flex items-center gap-1.5 shadow-xs hover:border-primary/40 hover:bg-white hover:scale-[1.02] transition-all duration-200"
-                  >
-                    <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
-                    <span>{feat}</span>
-                  </span>
-                ))}
-              </div>
-
-              {/* Start Trial Button Only */}
-              <button
-                onClick={(e) => handleStartClick(e, "/register-company")}
-                disabled={loadingPlan !== null}
-                className="bg-primary hover:bg-primary-container text-on-primary font-bold py-3.5 px-10 rounded-2xl transition-all duration-300 shadow-md hover:shadow-xl hover:scale-[1.04] active:scale-[0.98] text-[15px] h-12 flex items-center justify-center disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
-              >
-                {loadingPlan === "/register-company" ? (
-                  <span className="flex items-center gap-2">
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                    {dict.landing.checking_plan}
-                  </span>
-                ) : (
-                  dict.landing.plans.chuyen_nghiep.action
-                )}
-              </button>
             </div>
           </div>
         </section>

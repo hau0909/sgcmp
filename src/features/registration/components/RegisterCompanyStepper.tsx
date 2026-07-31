@@ -155,30 +155,30 @@ export default function RegisterCompanyStepper() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.fullName.trim())
-      newErrors.fullName = "Họ và tên không được để trống";
+      newErrors.fullName = dict.pages.registration.err_name_required;
     if (!formData.phoneNumber.trim()) {
-      newErrors.phoneNumber = "Số điện thoại không được để trống";
+      newErrors.phoneNumber = dict.pages.registration.err_phone_required;
     } else if (
       !/^(0|\+84)[0-9]{9,10}$/.test(formData.phoneNumber.replace(/\s/g, ""))
     ) {
-      newErrors.phoneNumber = "Số điện thoại không hợp lệ";
+      newErrors.phoneNumber = dict.pages.registration.err_phone_invalid;
     }
 
     if (!formData.identityId.trim()) {
-      newErrors.identityId = "Số CCCD/CMND không được để trống";
+      newErrors.identityId = dict.pages.registration.err_identity_required;
     } else if (!/^[0-9]{9}$|^[0-9]{12}$/.test(formData.identityId.trim())) {
-      newErrors.identityId = "Số CCCD/CMND phải gồm 9 hoặc 12 chữ số";
+      newErrors.identityId = dict.pages.registration.err_identity_invalid;
     }
 
-    if (!formData.issueDate) newErrors.issueDate = "Vui lòng chọn ngày cấp";
+    if (!formData.issueDate) newErrors.issueDate = dict.pages.registration.err_issue_date_required;
     if (!formData.issuePlace.trim())
-      newErrors.issuePlace = "Vui lòng nhập nơi cấp";
+      newErrors.issuePlace = dict.pages.registration.err_issue_place_required;
 
     if (!formData.frontFile && !formData.frontUrl) {
-      newErrors.frontFile = "Vui lòng upload mặt trước CCCD";
+      newErrors.frontFile = dict.pages.registration.err_front_id_required;
     }
     if (!formData.backFile && !formData.backUrl) {
-      newErrors.backFile = "Vui lòng upload mặt sau CCCD";
+      newErrors.backFile = dict.pages.registration.err_back_id_required;
     }
 
     setErrors(newErrors);
@@ -189,32 +189,36 @@ export default function RegisterCompanyStepper() {
     const newErrors: Record<string, string> = {};
 
     if (!formData.companyName.trim())
-      newErrors.companyName = "Tên công ty không được để trống";
+      newErrors.companyName = dict.pages.registration.err_company_name_required;
     if (!formData.businessLicenseNo.trim()) {
-      newErrors.businessLicenseNo = "Mã số doanh nghiệp không được để trống";
+      newErrors.businessLicenseNo = dict.pages.registration.err_tax_required;
     }
 
     if (formData.cityId === "")
-      newErrors.cityId = "Vui lòng chọn Tỉnh/Thành phố";
-    if (formData.wardId === "") newErrors.wardId = "Vui lòng chọn Phường/Xã";
+      newErrors.cityId = dict.pages.registration.err_city_required;
+    if (formData.wardId === "") newErrors.wardId = dict.pages.registration.err_ward_required;
     if (!formData.street.trim())
-      newErrors.street = "Vui lòng nhập địa chỉ chi tiết";
+      newErrors.street = dict.pages.registration.err_street_required;
 
     if (!formData.companyEmail.trim()) {
-      newErrors.companyEmail = "Email liên hệ không được để trống";
+      newErrors.companyEmail = dict.pages.registration.err_company_email_required;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.companyEmail)) {
-      newErrors.companyEmail = "Email liên hệ không hợp lệ";
+      newErrors.companyEmail = dict.pages.registration.err_company_email_invalid;
     }
 
     if (!formData.companyPhone.trim()) {
-      newErrors.companyPhone = "SĐT doanh nghiệp không được để trống";
+      newErrors.companyPhone = dict.pages.registration.err_company_phone_required;
     }
 
     if (!formData.logoFile && !formData.logoUrl) {
-      newErrors.logoFile = "Vui lòng upload logo doanh nghiệp";
+      newErrors.logoFile = dict.pages.registration.err_logo_required;
     }
     if (!formData.licenseFile && !formData.licenseUrl) {
-      newErrors.licenseFile = "Vui lòng upload giấy phép kinh doanh";
+      newErrors.licenseFile = dict.pages.registration.err_license_required;
+    }
+
+    if (formData.galleryFiles.length < 3) {
+      newErrors.galleryFiles = dict.pages.registration.err_gallery_min;
     }
 
     setErrors(newErrors);
@@ -224,7 +228,7 @@ export default function RegisterCompanyStepper() {
   const validateStep3 = () => {
     const newErrors: Record<string, string> = {};
     if (!consentChecked) {
-      newErrors.consent = "Bạn cần đồng ý với các điều khoản cam đoan trên";
+      newErrors.consent = dict.pages.registration.err_consent_required;
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -273,8 +277,7 @@ export default function RegisterCompanyStepper() {
 
     if (!signupPayload) {
       setErrors({
-        general:
-          "Thông tin tài khoản bị thiếu. Vui lòng quay lại bước đầu tiên.",
+        general: (dict.pages.registration as any).err_submit_missing_account || "Thông tin tài khoản bị thiếu. Vui lòng quay lại bước đầu tiên.",
       });
       return;
     }
@@ -295,7 +298,7 @@ export default function RegisterCompanyStepper() {
       if (!registerResult.success) {
         const msg =
           registerResult.message ||
-          "Đăng ký tài khoản thất bại. Vui lòng thử lại.";
+          (dict.pages.registration as any).err_submit_signup_failed || "Đăng ký tài khoản thất bại. Vui lòng thử lại.";
         setErrors({ general: msg });
         return;
       }
@@ -304,7 +307,7 @@ export default function RegisterCompanyStepper() {
       const uid = registerResult.account?.user?.id ?? null;
       if (!uid) {
         setErrors({
-          general: "Không thể xác định ID tài khoản. Vui lòng thử lại.",
+          general: (dict.pages.registration as any).err_submit_no_id || "Không thể xác định ID tài khoản. Vui lòng thử lại.",
         });
         return;
       }
@@ -439,7 +442,7 @@ export default function RegisterCompanyStepper() {
         setSuccessCode(res.registrationCode);
       } else {
         setErrors({
-          general: res?.message || "Đăng ký thất bại. Vui lòng thử lại.",
+          general: res?.message || (dict.pages.registration as any).err_submit_register_failed || "Đăng ký thất bại. Vui lòng thử lại.",
         });
       }
     } catch (err) {
@@ -447,7 +450,7 @@ export default function RegisterCompanyStepper() {
       const errorMessage =
         err instanceof Error
           ? err.message
-          : "Lỗi hệ thống khi gửi thông tin đăng ký.";
+          : (dict.pages.registration as any).err_submit_system || "Lỗi hệ thống khi gửi thông tin đăng ký.";
       setErrors({ general: errorMessage });
     } finally {
       setSubmitting(false);
@@ -479,31 +482,14 @@ export default function RegisterCompanyStepper() {
           </p>
         </div>
 
-        <div className="p-4 bg-surface-container-low border border-outline-variant/60 rounded-xl max-w-sm mx-auto">
-          <span className="text-xs text-on-surface-variant block uppercase tracking-wider font-semibold mb-1">
-            {dict.pages.registration.registration_code}
-          </span>
-          <span className="font-mono text-lg font-bold text-primary tracking-wider">
-            {successCode}
-          </span>
-        </div>
 
-        <p className="text-xs text-on-surface-variant/80 max-w-md mx-auto leading-relaxed">
-          {dict.pages.registration.save_code_hint}
-        </p>
 
         <div className="pt-2 flex justify-center gap-4">
           <button
             onClick={() => router.push("/")}
-            className="border border-outline-variant hover:bg-surface-container-low text-on-surface py-2.5 px-6 rounded-xl text-sm font-semibold transition-all"
+            className="bg-primary hover:bg-primary-container text-white py-2.5 px-8 rounded-xl text-sm font-bold transition-all"
           >
             {dict.pages.registration.home}
-          </button>
-          <button
-            onClick={() => router.push("/profile")}
-            className="bg-primary hover:bg-primary-container text-white py-2.5 px-6 rounded-xl text-sm font-semibold transition-all"
-          >
-            {dict.pages.registration.check_profile}
           </button>
         </div>
       </div>

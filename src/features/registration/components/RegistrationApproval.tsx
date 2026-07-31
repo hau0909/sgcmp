@@ -24,7 +24,9 @@ import {
   Eye,
   ShieldCheck,
   ExternalLink,
-  FileText
+  FileText,
+  Loader2,
+  AlertCircle,
 } from "lucide-react";
 import {
   requestGetRegistrationDetail,
@@ -75,9 +77,12 @@ export default function RegistrationApproval() {
   // State for Rejection Modal
   const [rejectModalOpen, setRejectModalOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [rejectReasonError, setRejectReasonError] = useState(false);
+  const [submittingReject, setSubmittingReject] = useState(false);
 
   // State for Approval Modal
   const [approveModalOpen, setApproveModalOpen] = useState(false);
+  const [submittingApprove, setSubmittingApprove] = useState(false);
 
   // Lightbox preview states
   const [previewImage, setPreviewImage] = useState<string | null>(null);
@@ -145,8 +150,9 @@ export default function RegistrationApproval() {
   }, [registrationId]);
 
   const handleApprove = async () => {
-    if (!registrationId) return;
+    if (!registrationId || submittingApprove || submittingReject) return;
     try {
+      setSubmittingApprove(true);
       await requestUpdateRegistrationStatus(registrationId, "approved");
       if (registration) {
         setRegistration({
@@ -159,16 +165,20 @@ export default function RegistrationApproval() {
     } catch (err: any) {
       console.error(err);
       showToast(err.message || dict.admin_registrations.approve_error);
+    } finally {
+      setSubmittingApprove(false);
     }
   };
 
   const handleReject = async () => {
-    if (!registrationId) return;
+    if (!registrationId || submittingApprove || submittingReject) return;
     if (!rejectReason.trim()) {
-      showToast(dict.admin_registrations.reject_reason_required);
+      setRejectReasonError(true);
       return;
     }
+    setRejectReasonError(false);
     try {
+      setSubmittingReject(true);
       await requestUpdateRegistrationStatus(registrationId, "rejected", rejectReason);
       if (registration) {
         setRegistration({
@@ -182,6 +192,8 @@ export default function RegistrationApproval() {
     } catch (err: any) {
       console.error(err);
       showToast(err.message || dict.admin_registrations.reject_error);
+    } finally {
+      setSubmittingReject(false);
     }
   };
 
@@ -244,10 +256,10 @@ export default function RegistrationApproval() {
     <div className="max-w-7xl mx-auto p-4 md:p-6 space-y-4 md:space-y-6 relative">
       {/* Toast Notification */}
       {toastMessage && (
-        <div className="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-50 animate-in fade-in slide-in-from-bottom-5">
+        <div className="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3 rounded-lg shadow-2xl flex items-center gap-3 z-[9999] animate-in fade-in slide-in-from-bottom-5">
           <CheckCircle className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-sm font-medium">{toastMessage}</span>
-          <button onClick={() => setToastMessage(null)} className="text-white/60 hover:text-white ml-2">
+          <button onClick={() => setToastMessage(null)} className="text-white/60 hover:text-white ml-2 cursor-pointer">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -262,7 +274,9 @@ export default function RegistrationApproval() {
               {dict.admin_registrations.admin}
             </Link>
             <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant/50 shrink-0" />
-            <span className="text-on-surface-variant/70 font-normal">{dict.admin_registrations.status_pending}</span>
+            <Link href="/registrations" className="hover:text-primary transition-colors">
+              {dict.admin_registrations.title_list}
+            </Link>
             <ChevronRight className="w-3.5 h-3.5 text-on-surface-variant/50 shrink-0" />
             <span className="text-primary font-bold">{dict.admin_registrations.title_detail}</span>
           </nav>
@@ -683,11 +697,24 @@ export default function RegistrationApproval() {
                 <label className="text-xs font-bold text-[#434751] uppercase tracking-wider block mb-1.5">{dict.admin_registrations.reject_input_label} <span className="text-red-500">*</span></label>
                 <textarea
                   value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
+                  onChange={(e) => {
+                    setRejectReason(e.target.value);
+                    if (e.target.value.trim()) setRejectReasonError(false);
+                  }}
                   rows={3}
                   placeholder={dict.admin_registrations.reject_input_placeholder}
-                  className="w-full text-sm border border-slate-200 rounded-lg px-3 py-2 resize-none focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-red-400 transition-all placeholder:text-slate-400"
+                  className={`w-full text-sm border rounded-lg px-3 py-2 resize-none focus:outline-none transition-all placeholder:text-slate-400 ${
+                    rejectReasonError
+                      ? "border-red-500 ring-2 ring-red-200 bg-red-50/30 text-red-900 font-semibold"
+                      : "border-slate-200 focus:ring-2 focus:ring-red-300 focus:border-red-400"
+                  }`}
                 />
+                {rejectReasonError && (
+                  <p className="text-xs font-bold text-red-600 mt-1.5 flex items-center gap-1.5 animate-in fade-in">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-red-600" />
+                    {dict.admin_registrations.reject_reason_required || "Vui lòng nhập lý do từ chối trước khi xác nhận!"}
+                  </p>
+                )}
               </div>
               <p className="text-xs text-[#b91c1c] bg-[#fef2f2] border border-[#fca5a5] p-3 rounded-lg leading-normal flex gap-2">
                 <AlertTriangle className="w-4 h-4 shrink-0 text-[#ef4444] mt-0.5" />
@@ -699,14 +726,17 @@ export default function RegistrationApproval() {
             <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
               <button
                 onClick={() => setRejectModalOpen(false)}
-                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded text-sm font-semibold text-slate-700"
+                disabled={submittingReject}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded text-sm font-semibold text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {dict.admin_registrations.cancel}
               </button>
               <button
                 onClick={handleReject}
-                className="px-4 py-2 bg-[#ff0c3b] hover:bg-[#d80a32] active:scale-95 text-white transition-all rounded text-sm font-bold shadow-md cursor-pointer"
+                disabled={submittingReject}
+                className="px-4 py-2 bg-[#ff0c3b] hover:bg-[#d80a32] active:scale-95 text-white transition-all rounded text-sm font-bold shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                {submittingReject && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
                 {dict.admin_registrations.reject_action}
               </button>
             </div>
@@ -723,7 +753,7 @@ export default function RegistrationApproval() {
                 <FileCheck className="w-5 h-5 shrink-0" />
                 <h3 className="font-bold text-[#0b1c30] text-lg font-headline">{dict.admin_registrations.confirm_approve_title}</h3>
               </div>
-              <button onClick={() => setApproveModalOpen(false)} className="text-slate-400 hover:text-slate-600">
+              <button onClick={() => !submittingApprove && setApproveModalOpen(false)} disabled={submittingApprove} className="text-slate-400 hover:text-slate-600">
                 <X className="w-5 h-5" />
               </button>
             </div>
@@ -743,14 +773,17 @@ export default function RegistrationApproval() {
             <div className="bg-slate-50 border-t border-slate-100 px-6 py-4 flex justify-end gap-3">
               <button
                 onClick={() => setApproveModalOpen(false)}
-                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded text-sm font-semibold text-slate-700"
+                disabled={submittingApprove}
+                className="px-4 py-2 border border-slate-200 hover:bg-slate-100 transition-colors rounded text-sm font-semibold text-slate-700 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {dict.admin_registrations.cancel}
               </button>
               <button
                 onClick={handleApprove}
-                className="px-4 py-2 bg-[#024594] hover:bg-[#023b7e] active:scale-95 text-white transition-all rounded text-sm font-bold shadow-md cursor-pointer"
+                disabled={submittingApprove}
+                className="px-4 py-2 bg-[#024594] hover:bg-[#023b7e] active:scale-95 text-white transition-all rounded text-sm font-bold shadow-md cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed flex items-center gap-2"
               >
+                {submittingApprove && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
                 {locale === 'vi' ? 'Đồng ý phê duyệt' : 'Confirm approval'}
               </button>
             </div>

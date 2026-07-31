@@ -262,49 +262,55 @@ export default function MyRegistrationView() {
   // ── Validate edit form ────────────────────────────────────────────────────
   const validateEdit = () => {
     const errs: Record<string, string> = {};
-    if (!editData.fullName.trim()) errs.fullName = "Họ và tên không được để trống";
+    if (!editData.fullName.trim()) errs.fullName = dict.pages.registration.err_name_required;
     
     if (!editData.phoneNumber.trim()) {
-      errs.phoneNumber = "Số điện thoại không được để trống";
+      errs.phoneNumber = dict.pages.registration.err_phone_required;
     } else if (!/^(0|\+84)[0-9]{9,10}$/.test(editData.phoneNumber.replace(/\s/g, ""))) {
-      errs.phoneNumber = "Số điện thoại không hợp lệ";
+      errs.phoneNumber = dict.pages.registration.err_phone_invalid;
     }
 
     if (!editData.identityId.trim()) {
-      errs.identityId = "Số CCCD không được để trống";
+      errs.identityId = dict.pages.registration.err_identity_required;
     } else if (!/^[0-9]{9}$|^[0-9]{12}$/.test(editData.identityId.trim())) {
-      errs.identityId = "Số CCCD/CMND phải gồm 9 hoặc 12 chữ số";
+      errs.identityId = dict.pages.registration.err_identity_invalid;
     }
 
     if (!editData.issueDate) {
-      errs.issueDate = "Vui lòng chọn ngày cấp";
+      errs.issueDate = dict.pages.registration.err_issue_date_required;
     } else {
       const selectedDate = new Date(editData.issueDate);
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       if (selectedDate > today) {
-        errs.issueDate = "Ngày cấp không được lớn hơn ngày hiện tại";
+        errs.issueDate = dict.pages.registration.err_issue_date_invalid;
       }
     }
-    if (!editData.issuePlace.trim()) errs.issuePlace = "Vui lòng nhập nơi cấp";
-    if (!editData.frontUrl && !editData.frontFile) errs.frontFile = "Vui lòng cung cấp ảnh CCCD mặt trước";
-    if (!editData.backUrl && !editData.backFile) errs.backFile = "Vui lòng cung cấp ảnh CCCD mặt sau";
+    if (!editData.issuePlace.trim()) errs.issuePlace = dict.pages.registration.err_issue_place_required;
+    if (!editData.frontUrl && !editData.frontFile) errs.frontFile = dict.pages.registration.err_front_id_required;
+    if (!editData.backUrl && !editData.backFile) errs.backFile = dict.pages.registration.err_back_id_required;
     
-    if (!editData.companyName.trim()) errs.companyName = "Tên công ty không được để trống";
-    if (!editData.businessLicenseNo.trim()) errs.businessLicenseNo = "Mã số thuế không được để trống";
-    if (!editData.companyPhone.trim()) errs.companyPhone = "Số điện thoại doanh nghiệp không được để trống";
+    if (!editData.companyName.trim()) errs.companyName = dict.pages.registration.err_company_name_required;
+    if (!editData.businessLicenseNo.trim()) errs.businessLicenseNo = dict.pages.registration.err_tax_required;
+    if (!editData.companyPhone.trim()) errs.companyPhone = dict.pages.registration.err_company_phone_required;
     
     if (!editData.companyEmail.trim()) {
-      errs.companyEmail = "Email doanh nghiệp không được để trống";
+      errs.companyEmail = dict.pages.registration.err_company_email_required;
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(editData.companyEmail)) {
-      errs.companyEmail = "Email liên hệ không hợp lệ";
+      errs.companyEmail = dict.pages.registration.err_company_email_invalid;
     }
 
-    if (editData.cityId === "") errs.cityId = "Vui lòng chọn Tỉnh/Thành phố";
-    if (editData.wardId === "") errs.wardId = "Vui lòng chọn Phường/Xã";
-    if (!editData.street.trim()) errs.street = "Vui lòng nhập địa chỉ chi tiết";
-    if (!editData.logoUrl && !editData.logoFile) errs.logoFile = "Vui lòng cung cấp logo công ty";
-    if (!editData.licenseUrl && !editData.licenseFile) errs.licenseFile = "Vui lòng cung cấp giấy phép kinh doanh";
+    if (editData.cityId === "") errs.cityId = dict.pages.registration.err_city_required;
+    if (editData.wardId === "") errs.wardId = dict.pages.registration.err_ward_required;
+    if (!editData.street.trim()) errs.street = dict.pages.registration.err_street_required;
+    if (!editData.logoUrl && !editData.logoFile) errs.logoFile = dict.pages.registration.err_logo_required;
+    if (!editData.licenseUrl && !editData.licenseFile) errs.licenseFile = dict.pages.registration.err_license_required;
+    
+    const totalGallery = editData.galleryExisting.length + editData.galleryFiles.length;
+    if (totalGallery < 3) {
+      errs.galleryFiles = dict.pages.registration.err_gallery_min;
+    }
+
     setEditErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -387,10 +393,17 @@ export default function MyRegistrationView() {
         await fetchRegistration(); // reload
         setTimeout(() => setSubmitSuccess(false), 4000);
       } else {
-        setSubmitError(res?.error || "Gửi lại thất bại. Vui lòng thử lại.");
+        const errorMsg = res?.error || res?.message;
+        if (errorMsg === "ERR_DUP_PHONE") setSubmitError(d.err_dup_phone);
+        else if (errorMsg === "ERR_DUP_IDENTITY") setSubmitError(d.err_dup_identity);
+        else if (errorMsg === "ERR_DUP_LICENSE") setSubmitError(d.err_dup_license);
+        else setSubmitError(errorMsg || d.resubmit_failed);
       }
     } catch (err: any) {
-      setSubmitError(err.message || "Lỗi không xác định.");
+      if (err.message === "ERR_DUP_PHONE") setSubmitError(d.err_dup_phone);
+      else if (err.message === "ERR_DUP_IDENTITY") setSubmitError(d.err_dup_identity);
+      else if (err.message === "ERR_DUP_LICENSE") setSubmitError(d.err_dup_license);
+      else setSubmitError(err.message || d.resubmit_error_unknown);
     } finally {
       setSubmitting(false);
     }
@@ -623,7 +636,7 @@ export default function MyRegistrationView() {
                           {editData.galleryExisting.map((url, idx) => (
                             <div key={url} className="relative aspect-square rounded-xl overflow-hidden border border-outline-variant/60 group bg-surface-container">
                               {/* eslint-disable-next-line @next/next/no-img-element */}
-                              <img src={url} alt={`Ảnh cũ ${idx + 1}`} className="w-full h-full object-cover" />
+                              <img src={url} alt={`Image ${idx + 1}`} className="w-full h-full object-cover" />
                               <button
                                 type="button"
                                 onClick={() => setEditData(p => ({ ...p, galleryExisting: p.galleryExisting.filter((_, i) => i !== idx) }))}
@@ -661,6 +674,9 @@ export default function MyRegistrationView() {
                             <span className="text-[11px] font-semibold text-on-surface-variant">{d.gallery_add}</span>
                           </label>
                         </div>
+                        {editErrors.galleryFiles && (
+                          <p className="text-xs text-red-600 mt-2">{editErrors.galleryFiles}</p>
+                        )}
                       </div>
                     </>
                   ) : (
@@ -669,7 +685,7 @@ export default function MyRegistrationView() {
                       <div className="pt-4 border-t border-outline-variant/40">
                         <label className="text-xs font-semibold text-on-surface flex items-center gap-2 mb-2"><Briefcase className="w-4 h-4 text-on-surface-variant" />{d.gallery} ({galleryImages.length})</label>
                         {galleryImages.length > 0 ? (
-                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">{galleryImages.map((img: any, idx: number) => <div key={img.image_id || idx}><ImagePreview url={img.image_url} label={`Ảnh ${idx + 1}`} onView={setPreviewUrl} aspect="square" d={d} /></div>)}</div>
+                          <div className="grid grid-cols-3 sm:grid-cols-4 gap-3">{galleryImages.map((img: any, idx: number) => <div key={img.image_id || idx}><ImagePreview url={img.image_url} label={`Image ${idx + 1}`} onView={setPreviewUrl} aspect="square" d={d} /></div>)}</div>
                         ) : <p className="text-xs text-on-surface-variant bg-surface-container-low p-3 rounded-lg border border-dashed border-outline-variant text-center">{d.no_gallery}</p>}
                       </div>
                     </>

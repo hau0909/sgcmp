@@ -499,7 +499,7 @@ export const updateCompanyPublishRequestStatus = async (
   }
 
   // 3. Update the company status
-  const companyStatus = status === "APPROVED" ? "published" : "active";
+  const companyStatus = status === "APPROVED" ? "published" : "rejected";
   const { error: companyError } = await supabaseServer
     .from("companies")
     .update({
