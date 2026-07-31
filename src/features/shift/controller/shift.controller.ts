@@ -948,12 +948,15 @@ export const handleGetGuardShiftDetail = async ({
   let replacementUserIds: string[] = [];
   let guardsMapping: any[] = [];
   if (replacementGuardIds.length > 0) {
+    const cleanRepIds = Array.from(new Set(replacementGuardIds.filter(Boolean)));
     const { data: dbGuards } = await supabase
       .from("guards")
       .select("guard_id, user_id")
-      .in("guard_id", replacementGuardIds);
+      .in("guard_id", cleanRepIds);
     guardsMapping = dbGuards || [];
-    replacementUserIds = guardsMapping.map((g) => g.user_id);
+    replacementUserIds = Array.from(
+      new Set([...guardsMapping.map((g) => g.user_id), ...cleanRepIds])
+    );
   }
 
   const allUserIds = [...new Set([...userIds, ...replacementUserIds])];
@@ -972,8 +975,8 @@ export const handleGetGuardShiftDetail = async ({
       full_name: profile?.full_name || "Chưa có tên",
       phone_number: profile?.phone_number || null,
       avatar_url: profile?.avatar_url || null,
-      status: hasRep ? "absent" : sa.status,
-      check_in_time: hasRep ? null : sa.check_in_time,
+      status: sa.status,
+      check_in_time: sa.check_in_time,
       is_replacement: false,
       replacement_guard_ids: sa.replacement_guard_ids || [],
     });
@@ -981,21 +984,24 @@ export const handleGetGuardShiftDetail = async ({
     // Add replacement guards
     if (hasRep) {
       sa.replacement_guard_ids.forEach((repGuardId) => {
-        const mappedGuard = guardsMapping.find((g) => g.guard_id === repGuardId);
-        if (mappedGuard) {
-          const repProfile = profiles.find((item) => item.user_id === mappedGuard.user_id);
-          guardList.push({
-            guard_id: mappedGuard.user_id,
-            user_id: mappedGuard.user_id,
-            full_name: repProfile?.full_name || "Chưa có tên",
-            phone_number: repProfile?.phone_number || null,
-            avatar_url: repProfile?.avatar_url || null,
-            status: sa.status,
-            check_in_time: sa.check_in_time,
-            is_replacement: true,
-            replaced_guard_name: profile?.full_name || "Bảo vệ gốc",
-          });
-        }
+        const mappedGuard = guardsMapping.find(
+          (g) => g.guard_id === repGuardId || g.user_id === repGuardId
+        );
+        const repUserId = mappedGuard ? mappedGuard.user_id : repGuardId;
+        const repProfile = profiles.find(
+          (item) => item.user_id === repUserId || item.user_id === repGuardId
+        );
+        guardList.push({
+          guard_id: repUserId,
+          user_id: repUserId,
+          full_name: repProfile?.full_name || "Bảo vệ thay thế",
+          phone_number: repProfile?.phone_number || null,
+          avatar_url: repProfile?.avatar_url || null,
+          status: sa.status,
+          check_in_time: sa.check_in_time,
+          is_replacement: true,
+          replaced_guard_name: profile?.full_name || "Bảo vệ gốc",
+        });
       });
     }
   });

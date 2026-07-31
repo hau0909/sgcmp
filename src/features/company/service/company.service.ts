@@ -12,6 +12,8 @@ import {
   getCompanyPublishRequests,
   getCompanyPublishRequestById,
   updateCompanyPublishRequestStatus,
+  getAdminCompaniesList,
+  updateCompanyStatusByAdmin,
 } from "../repository/company.repository";
 import {
   getCitiesService as getCities,
@@ -376,6 +378,25 @@ export const getCompanyByIdServiceInCustomer = async (
     console.error("Lỗi khi tải chỉ số thống kê công ty:", err);
   }
 
+  // Fetch latest publish request (to get reject_reason if rejected)
+  let latestPublishRequest: any = null;
+  try {
+    const supabaseServer = await createClient();
+    const { data: pubReq } = await supabaseServer
+      .from("company_publish_requests")
+      .select("request_id, status, notes, reject_reason, requested_at, processed_at")
+      .eq("company_id", id)
+      .order("requested_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (pubReq) {
+      latestPublishRequest = pubReq;
+    }
+  } catch (err) {
+    console.error("Lỗi khi tải yêu cầu công khai mới nhất:", err);
+  }
+
   const createdYear = dbCompany.created_at
     ? new Date(dbCompany.created_at).getFullYear()
     : new Date().getFullYear();
@@ -408,6 +429,8 @@ export const getCompanyByIdServiceInCustomer = async (
     createdYear,
     allowed_late_minutes: dbCompany.allowed_late_minutes ?? 5,
     allowed_absent_minutes: dbCompany.allowed_absent_minutes ?? 35,
+    rejectReason: latestPublishRequest?.reject_reason || null,
+    latestPublishRequest,
   };
 };
 export const getCompanyByIdService = async (
@@ -528,3 +551,15 @@ export const updateCompanyPublishRequestStatusService = async (
 ): Promise<void> => {
   await updateCompanyPublishRequestStatus(requestId, status, approvedBy, note);
 };
+
+export const getAdminCompaniesListService = async (): Promise<any[]> => {
+  return await getAdminCompaniesList();
+};
+
+export const updateCompanyStatusByAdminService = async (
+  companyId: string,
+  status: string,
+): Promise<void> => {
+  await updateCompanyStatusByAdmin(companyId, status);
+};
+

@@ -14,7 +14,6 @@ import {
 import { BookingDetailHeader } from "./BookingDetailHeader";
 import { BookingCustomerInfo } from "./BookingCustomerInfo";
 import { BookingServiceSpec } from "./BookingServiceSpec";
-import { EditBookingModal } from "./EditBookingModal";
 import { BookingQuotationPanel } from "./BookingQuotationPanel";
 import { BookingStatus } from "../types";
 import {
@@ -24,8 +23,8 @@ import {
 import { requestGetVerification } from "@/features/verification/api/verification.api";
 import { VerificationStatus } from "@/features/verification/types";
 import { BookingProgress } from "./BookingProgress";
+import { EditBookingModal } from "./EditBookingModal";
 import { useTranslation } from "@/components/providers/LanguageProvider";
-
 
 interface BookingDetailContainerProps {
   bookingId: string;
@@ -74,6 +73,9 @@ export function BookingDetailContainer({
     company_phone?: string;
     company_email?: string;
     company_address?: string;
+    client_company_name?: string;
+    company_scope?: string;
+    company_position?: string;
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -95,8 +97,6 @@ export function BookingDetailContainer({
           setIsLoading(true);
         }
         setError(null);
-
-
 
         const res = await requestGetBookingDetail(bookingId);
         if (res && res.booking) {
@@ -127,6 +127,9 @@ export function BookingDetailContainer({
             company_phone: b.company_phone,
             company_email: b.company_email,
             company_address: b.company_address,
+            client_company_name: b.client_company_name,
+            company_scope: b.company_scope,
+            company_position: b.company_position,
           });
           if (b.contract_id) {
             setContractId(b.contract_id);
@@ -263,7 +266,6 @@ export function BookingDetailContainer({
     try {
       setIsSimulating(true);
 
-
       const updated = await requestUpdateBookingQuotation(bookingId, {
         status: "canceled",
       });
@@ -299,7 +301,6 @@ export function BookingDetailContainer({
   const handleAcceptQuote = async () => {
     try {
       setIsSimulating(true);
-
 
       const res = await requestUpdateBookingQuotation(bookingId, {
         status: "accepted",
@@ -491,7 +492,9 @@ export function BookingDetailContainer({
             }
             contactPerson={
               isCustomer
-                ? booking.company_contact_person || dict.booking.detail.info.company_rep || "Đại diện doanh nghiệp"
+                ? booking.company_contact_person ||
+                  dict.booking.detail.info.company_rep ||
+                  "Đại diện doanh nghiệp"
                 : booking.contact_person
             }
             phone={
@@ -526,9 +529,11 @@ export function BookingDetailContainer({
               isCustomer
                 ? dict.booking.detail.info.company_name ||
                   "Tên doanh nghiệp bảo vệ"
-                : dict.booking.detail.info.customer_name ||
-                  "Tên khách hàng / Công ty"
+                : dict.booking.detail.info.customer_name || "Tên khách hàng"
             }
+            clientCompanyName={booking.client_company_name}
+            companyScope={booking.company_scope}
+            companyPosition={booking.company_position}
           />
 
           {/* Service specifications card */}

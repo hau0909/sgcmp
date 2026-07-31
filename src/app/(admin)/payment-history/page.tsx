@@ -10,13 +10,13 @@ import {
     CircleX,
     Clock3,
     Download,
-    Eye,
     Loader2,
     Search,
     Building2,
 } from "lucide-react";
 
 import { DateRangePicker } from "@/features/payment/component/DateRangePicker";
+import { CustomSelect } from "@/features/payment/component/CustomSelect";
 import { KpiCard } from "@/features/payment/component/KpiCard";
 import { StatusBadge } from "@/features/payment/component/StatusBadge";
 import {
@@ -46,6 +46,13 @@ export default function AdminPaymentHistoryPage() {
         credit_card: dict.admin_payment_history.method_credit || "Thẻ tín dụng",
         e_wallet: dict.admin_payment_history.method_wallet || "Ví điện tử",
     }), [dict]);
+
+    const translatedStatusOptions = useMemo(() => [
+        { value: "all", label: dict.admin_payment_history.status_all || "Tất cả trạng thái" },
+        { value: "completed", label: dict.admin_payment_history.status_completed || "Thành công" },
+        { value: "pending", label: dict.admin_payment_history.status_pending || "Chờ xử lý" },
+        { value: "failed", label: dict.admin_payment_history.status_failed || "Thất bại" },
+    ], [dict]);
 
     // Fetch ALL payments once on mount
     useEffect(() => {
@@ -258,7 +265,7 @@ export default function AdminPaymentHistoryPage() {
                 </section>
 
                 {/* ── Table Card ────────────────────────────────────────── */}
-                <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+                <section className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-visible">
                     {/* Filters */}
                     <div className="rounded-t-2xl border-b border-slate-200 p-4 md:p-5">
                         <div className="grid gap-4 xl:grid-cols-[minmax(280px,1.6fr)_minmax(180px,0.6fr)]">
@@ -283,33 +290,16 @@ export default function AdminPaymentHistoryPage() {
                                 <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
                                     {dict.admin_payment_history.status_label}
                                 </label>
-                                <div className="relative">
-                                    <select
-                                        value={status}
-                                        onChange={(e) => handleStatusChange(e.target.value)}
-                                        className="h-11 w-full appearance-none rounded-lg border border-slate-300 bg-slate-50 px-3 pr-9 text-sm text-slate-900 outline-none transition focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-100 cursor-pointer"
-                                    >
-                                        {statusOptions.map((o) => (
-                                            <option key={o.value} value={o.value}>
-                                                {o.value === 'all'
-                                                    ? dict.admin_payment_history.status_all
-                                                    : o.value === 'pending'
-                                                    ? dict.admin_payment_history.status_pending
-                                                    : o.value === 'completed'
-                                                    ? dict.admin_payment_history.status_completed
-                                                    : o.value === 'failed'
-                                                    ? dict.admin_payment_history.status_failed
-                                                    : o.label}
-                                            </option>
-                                        ))}
-                                    </select>
-                                    <ChevronDown className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-500" />
-                                </div>
+                                <CustomSelect
+                                    value={status}
+                                    options={translatedStatusOptions}
+                                    onChange={handleStatusChange}
+                                />
                             </div>
                         </div>
 
                         {/* Date range */}
-                        <div className="mt-4">
+                        <div className="mt-4 relative z-20">
                             <div className="w-full sm:max-w-[340px]">
                                 <label className="mb-2 block text-xs font-bold uppercase tracking-wide text-slate-700">
                                     {dict.admin_payment_history.time_range_label}
@@ -342,7 +332,6 @@ export default function AdminPaymentHistoryPage() {
                                         { label: dict.admin_payment_history.tbl_method, cls: "min-w-[190px]" },
                                         { label: dict.admin_payment_history.tbl_date, cls: "w-[170px]" },
                                         { label: dict.admin_payment_history.tbl_status, cls: "w-[130px]" },
-                                        { label: dict.admin_payment_history.tbl_action, cls: "w-[90px] text-center" },
                                     ].map(({ label, cls }) => (
                                         <th
                                             key={label}
@@ -379,11 +368,8 @@ export default function AdminPaymentHistoryPage() {
                                             <td className="border-r border-slate-200 px-4 py-5 align-middle">
                                                 <div className="h-4 w-28 bg-slate-200 rounded animate-pulse" />
                                             </td>
-                                            <td className="border-r border-slate-200 px-4 py-5 align-middle">
+                                            <td className="px-4 py-5 align-middle">
                                                 <div className="h-6 w-20 bg-slate-200 rounded-full animate-pulse" />
-                                            </td>
-                                            <td className="px-4 py-5 text-center align-middle">
-                                                <div className="h-8 w-8 bg-slate-200 rounded-lg animate-pulse mx-auto" />
                                             </td>
                                         </tr>
                                     ))
@@ -433,23 +419,14 @@ export default function AdminPaymentHistoryPage() {
                                                     : <span className="text-slate-400">—</span>
                                                 }
                                             </td>
-                                            <td className="border-r border-slate-200 px-4 py-5">
+                                            <td className="px-4 py-5">
                                                 <StatusBadge status={payment.payment_status as PaymentStatus} />
-                                            </td>
-                                            <td className="px-4 py-5 text-center">
-                                                <button
-                                                    type="button"
-                                                    aria-label={`Xem giao dịch ${payment.transaction_code}`}
-                                                    className="inline-flex cursor-pointer h-9 w-9 items-center justify-center rounded-lg text-blue-700 transition hover:bg-blue-50"
-                                                >
-                                                    <Eye className="h-4 w-4" />
-                                                </button>
                                             </td>
                                         </tr>
                                     ))
                                 ) : (
                                     <tr>
-                                        <td colSpan={8} className="px-4 py-16 text-center">
+                                        <td colSpan={7} className="px-4 py-16 text-center">
                                             <p className="font-semibold text-slate-800">{dict.admin_payment_history.no_transactions}</p>
                                             <p className="mt-1 text-sm text-slate-500">
                                                 {dict.admin_payment_history.no_transactions_hint}

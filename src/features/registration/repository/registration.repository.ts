@@ -16,7 +16,7 @@ export const checkRegistrationDuplicatesRepo = async (
       .eq("phone_number", payload.phoneNumber)
       .neq("user_id", userId)
       .maybeSingle();
-    if (dupPhone) throw new Error("Số điện thoại người đại diện này đã được sử dụng bởi một tài khoản khác.");
+    if (dupPhone) throw new Error("ERR_DUP_PHONE");
   }
 
   if (payload.identityId) {
@@ -26,7 +26,7 @@ export const checkRegistrationDuplicatesRepo = async (
       .eq("identity_id", payload.identityId)
       .neq("user_id", userId)
       .maybeSingle();
-    if (dupIdentity) throw new Error("Số CCCD/CMND này đã được sử dụng bởi một tài khoản khác.");
+    if (dupIdentity) throw new Error("ERR_DUP_IDENTITY");
   }
 
 
@@ -38,7 +38,7 @@ export const checkRegistrationDuplicatesRepo = async (
       .eq("business_license_no", payload.businessLicenseNo)
       .neq("owner_id", userId)
       .maybeSingle();
-    if (dupLicense) throw new Error("Mã số thuế/doanh nghiệp này đã được sử dụng.");
+    if (dupLicense) throw new Error("ERR_DUP_LICENSE");
   }
 };
 

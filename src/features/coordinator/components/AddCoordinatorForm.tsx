@@ -387,14 +387,10 @@ export function AddCoordinatorForm() {
 
         if (!isMounted) return;
 
-        // requestGetCurrentPlan returns CurrentPlanWithSubscription which has .plan
-        const currentPlan = planRes?.plan || planRes;
-        if (currentPlan && currentPlan.max_coordinators !== null) {
-          if (coordinatorsRes.total >= currentPlan.max_coordinators) {
-            setLimitError(
-              dict.add_coordinator.limit_error.replace("{0}", String(currentPlan.max_coordinators))
-            );
-          }
+        if (coordinatorsRes.total >= 1) {
+          setLimitError(
+            dict.add_coordinator.limit_error?.replace("{0}", "1") || "Công ty chỉ được phép có tối đa 1 điều phối viên."
+          );
         }
       } catch (err) {
         console.error("Lỗi kiểm tra giới hạn:", err);

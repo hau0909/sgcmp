@@ -106,11 +106,11 @@ interface Employee {
 type ChartView = "line" | "radar";
 
 const getFormattedDate = (locale: string) => {
-  const options: Intl.DateTimeFormatOptions = { 
-    weekday: 'long', 
-    year: 'numeric', 
-    month: 'long', 
-    day: 'numeric' 
+  const options: Intl.DateTimeFormatOptions = {
+    weekday: 'long',
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric'
   };
   return new Date().toLocaleDateString(locale === 'vi' ? 'vi-VN' : 'en-US', options);
 };
@@ -139,6 +139,16 @@ const getActivityConfig = (subType: string) => {
       return {
         icon: <Clock3 className="w-4 h-4" />,
         className: "bg-amber-50 border-amber-200 text-amber-700",
+      };
+    case "attendance_checkout":
+      return {
+        icon: <UserCheck className="w-4 h-4" />,
+        className: "bg-emerald-50 border-emerald-200 text-emerald-700",
+      };
+    case "attendance_completed":
+      return {
+        icon: <CircleCheckBig className="w-4 h-4" />,
+        className: "bg-emerald-50 border-emerald-200 text-emerald-700",
       };
 
     // Replacement
@@ -219,118 +229,204 @@ const getActivityConfig = (subType: string) => {
 
 const getEmployeeStatusLabel = (status: string, dict: any) => {
   const statusKeyMap: Record<string, string> = {
-    "Đang trực": dict?.company_dashboard?.employee_status?.on_duty || "Hoàn thành",
+    "Hoàn thành": dict?.company_dashboard?.employee_status?.completed || "Hoàn thành",
+    "Đang trực": dict?.company_dashboard?.employee_status?.on_duty || "Đang trực",
+    "On Duty": dict?.company_dashboard?.employee_status?.on_duty || "Đang trực",
     "Vắng mặt": dict?.company_dashboard?.employee_status?.absent || "Vắng mặt",
+    "Absent": dict?.company_dashboard?.employee_status?.absent || "Vắng mặt",
     "Đi trễ": dict?.company_dashboard?.employee_status?.late || "Đi trễ",
+    "Late": dict?.company_dashboard?.employee_status?.late || "Đi trễ",
     "Thay ca": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
+    "Shift Change": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
+    "Thay thế": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
+    "Replace": dict?.company_dashboard?.employee_status?.shift_change || "Thay ca",
+    "Replacement": dict?.company_dashboard?.employee_status?.shift_change || "Replacement",
     "Điểm danh trễ": dict?.company_dashboard?.employee_status?.late_checkin || "Điểm danh trễ",
+    "Late Check-in": dict?.company_dashboard?.employee_status?.late_checkin || "Điểm danh trễ",
     "Phân công": dict?.company_dashboard?.employee_status?.assigned || "Phân công",
+    "Assigned": dict?.company_dashboard?.employee_status?.assigned || "Phân công",
     "Chưa điểm danh": dict?.company_dashboard?.employee_status?.not_checked_in || "Chưa điểm danh",
+    "Not Checked-in": dict?.company_dashboard?.employee_status?.not_checked_in || "Chưa điểm danh",
   };
   return statusKeyMap[status] || status;
 };
 
-const formatActivity = (act: RecentActivityItem, locale: string) => {
-  if (locale !== "en") return act;
+const formatTimeRange = (timeRange: string | undefined | null, locale: string, dict: any) => {
+  if (!timeRange) return dict?.company_dashboard?.guards_table?.unknown || "Chưa rõ";
+  if (locale === "en") {
+    return timeRange
+      .replace("Check-in lúc ", "Checked in at ")
+      .replace("Điểm danh lúc ", "Checked in at ")
+      .replace("Kết thúc lúc ", "Ended at ");
+  }
+  return timeRange;
+};
 
+const formatBranchName = (branchName: string | undefined | null, locale: string) => {
+  if (!branchName) return "";
+  if (locale === "en") {
+    return branchName
+      .replace("(Thay ca)", "(Replacement)")
+      .replace("(Thay thế)", "(Replacement)");
+  }
+  return branchName.replace("(Thay thế)", "(Thay ca)");
+};
+
+const formatActivity = (act: RecentActivityItem, locale: string) => {
   let boldText = act.boldText || "";
   let normalText = act.normalText || "";
   let timeLabel = act.timeLabel || "";
   let metaLabel = act.metaLabel || "";
 
-  // 1. boldText translations
-  if (boldText === "Khách hàng") boldText = "Customer";
-  else if (boldText === "Điều phối viên") boldText = "Coordinator";
-  else if (boldText === "Công ty") boldText = "Company";
-  else if (boldText === "Báo cáo sự cố") boldText = "Incident Report";
-  else if (boldText === "Hợp đồng") boldText = "Contract";
-  else if (boldText === "Hợp đồng mới") boldText = "New Contract";
-  else if (boldText === "Bảo vệ mới") boldText = "New Guard";
-  else if (boldText.startsWith("Báo cáo bảo vệ ")) {
-    const rawType = boldText.replace("Báo cáo bảo vệ ", "").toLowerCase();
-    let typeEn = rawType;
-    if (rawType.includes("đi muộn") || rawType.includes("đi trễ")) typeEn = "late arrival";
-    else if (rawType.includes("vắng mặt")) typeEn = "absence";
-    else if (rawType.includes("thái độ")) typeEn = "poor attitude";
-    else if (rawType.includes("ngủ gật")) typeEn = "sleeping on duty";
-    else if (rawType.includes("khác")) typeEn = "other incident";
-    boldText = `Incident report for guard (${typeEn})`;
-  } else if (boldText.startsWith("Hợp đồng HD-")) {
-    boldText = boldText.replace("Hợp đồng HD-", "Contract HD-");
-  } else if (boldText.startsWith("Điều phối viên ")) {
-    boldText = boldText.replace("Điều phối viên ", "Coordinator ");
-  }
-
-  // 2. normalText translations
-  if (normalText.includes("đã điểm danh ca trực đúng giờ")) {
-    normalText = " checked in on time for the shift.";
-  } else if (normalText.includes("đã điểm danh trễ")) {
-    const match = normalText.match(/\d+/);
-    const mins = match ? match[0] : "";
-    normalText = ` checked in late by ${mins} minutes.`;
-  } else if (normalText.includes("chưa điểm danh và đã trễ ca trực")) {
-    normalText = " has not checked in and is late for the shift.";
-  } else if (normalText.includes("bị đánh dấu vắng mặt")) {
-    normalText = " was marked absent.";
-  } else if (normalText.includes("đã điều động")) {
-    const match = normalText.match(/đã điều động (.+) thay cho (.+)\./);
-    if (match) {
-      normalText = ` dispatched ${match[1]} to replace ${match[2]}.`;
-    } else {
-      normalText = " dispatched a replacement guard.";
+  if (locale === "en") {
+    // 1. boldText translations
+    if (boldText === "Khách hàng") boldText = "Customer";
+    else if (boldText === "Điều phối viên") boldText = "Coordinator";
+    else if (boldText === "Công ty") boldText = "Company";
+    else if (boldText === "Báo cáo sự cố") boldText = "Incident Report";
+    else if (boldText === "Hợp đồng") boldText = "Contract";
+    else if (boldText === "Hợp đồng mới") boldText = "New Contract";
+    else if (boldText === "Bảo vệ mới") boldText = "New Guard";
+    else if (boldText.startsWith("Báo cáo bảo vệ ")) {
+      const rawType = boldText.replace("Báo cáo bảo vệ ", "").toLowerCase();
+      let typeEn = rawType;
+      if (rawType.includes("đi muộn") || rawType.includes("đi trễ")) typeEn = "late arrival";
+      else if (rawType.includes("vắng mặt")) typeEn = "absence";
+      else if (rawType.includes("thái độ")) typeEn = "poor attitude";
+      else if (rawType.includes("ngủ gật")) typeEn = "sleeping on duty";
+      else if (rawType.includes("khác")) typeEn = "other incident";
+      boldText = `Incident report for guard (${typeEn})`;
+    } else if (boldText.startsWith("Hợp đồng HD-")) {
+      boldText = boldText.replace("Hợp đồng HD-", "Contract HD-");
+    } else if (boldText.startsWith("Điều phối viên ")) {
+      boldText = boldText.replace("Điều phối viên ", "Coordinator ");
     }
-  } else if (normalText.includes("đã gửi báo cáo bảo vệ")) {
-    const match = normalText.match(/đã gửi báo cáo bảo vệ (.+)\./);
-    const reportTypeStr = match ? match[1] : "";
-    let translatedType = reportTypeStr;
-    if (reportTypeStr.includes("đi muộn") || reportTypeStr.includes("đi trễ")) translatedType = "late arrival";
-    else if (reportTypeStr.includes("vắng mặt")) translatedType = "absence";
-    else if (reportTypeStr.includes("thái độ")) translatedType = "poor attitude";
-    else if (reportTypeStr.includes("ngủ gật")) translatedType = "sleeping on duty";
-    else translatedType = "incident";
-    normalText = ` submitted an incident report regarding guard ${translatedType}.`;
-  } else if (normalText.includes("đã được chuyển sang đang xử lý")) {
-    normalText = " has been moved to in-progress.";
-  } else if (normalText.includes("đã được giải quyết")) {
-    normalText = " has been resolved.";
-  } else if (normalText.includes("đã được đóng")) {
-    normalText = " has been closed.";
-  } else if (normalText.includes("đã chuyển sang hoạt động")) {
-    normalText = " has been activated.";
-  } else if (normalText.includes("đã chính thức có hiệu lực")) {
-    normalText = " has officially taken effect.";
-  } else if (normalText.includes("sẽ hết hạn sau")) {
-    const match = normalText.match(/\d+/);
-    const days = match ? match[0] : "";
-    normalText = ` will expire in ${days} days.`;
-  } else if (normalText.includes("nhận được một yêu cầu dịch vụ mới")) {
-    normalText = " received a new service request.";
-  } else if (normalText.includes("đã được kích hoạt tài khoản")) {
-    normalText = " account has been activated.";
-  } else if (normalText.includes("đang xử lý báo cáo sự cố")) {
-    normalText = " is processing the incident report.";
-  } else if (normalText.includes("đang chờ được duyệt")) {
-    normalText = " is pending approval.";
-  } else if (normalText.includes("vừa gia nhập hệ thống")) {
-    const match = normalText.match(/(.+) vừa gia nhập hệ thống\./);
-    const name = match ? match[1].trim() : "";
-    normalText = ` ${name} joined the system.`;
+
+    // 2. normalText translations
+    if (normalText.includes("đã điểm danh ca trực đúng giờ")) {
+      normalText = " checked in on time for the shift.";
+    } else if (normalText.includes("đã điểm danh trễ")) {
+      const match = normalText.match(/\d+/);
+      const mins = match ? match[0] : "";
+      normalText = ` checked in late by ${mins} minutes.`;
+    } else if (normalText.includes("chưa điểm danh và đã trễ ca trực")) {
+      normalText = " has not checked in and is late for the shift.";
+    } else if (normalText.includes("bị đánh dấu vắng mặt")) {
+      normalText = " was marked absent.";
+    } else if (normalText.includes("đã kết thúc ca")) {
+      normalText = " ended the shift.";
+    } else if (normalText.includes("đã điểm danh ca trực")) {
+      normalText = " checked in for the shift.";
+    } else if (normalText.includes("đã điều động")) {
+      const match = normalText.match(/đã điều động (.+) thay cho (.+)\./);
+      if (match) {
+        normalText = ` dispatched ${match[1]} to replace ${match[2]}.`;
+      } else {
+        normalText = " dispatched a replacement guard.";
+      }
+    } else if (normalText.includes("đã gửi báo cáo bảo vệ")) {
+      const match = normalText.match(/đã gửi báo cáo bảo vệ (.+)\./);
+      const reportTypeStr = match ? match[1] : "";
+      let translatedType = reportTypeStr;
+      if (reportTypeStr.includes("đi muộn") || reportTypeStr.includes("đi trễ")) translatedType = "late arrival";
+      else if (reportTypeStr.includes("vắng mặt")) translatedType = "absence";
+      else if (reportTypeStr.includes("thái độ")) translatedType = "poor attitude";
+      else if (reportTypeStr.includes("ngủ gật")) translatedType = "sleeping on duty";
+      else translatedType = "incident";
+      normalText = ` submitted an incident report regarding guard ${translatedType}.`;
+    } else if (normalText.includes("đã được chuyển sang đang xử lý")) {
+      normalText = " has been moved to in-progress.";
+    } else if (normalText.includes("đã được giải quyết")) {
+      normalText = " has been resolved.";
+    } else if (normalText.includes("đã được đóng")) {
+      normalText = " has been closed.";
+    } else if (normalText.includes("đã chuyển sang hoạt động")) {
+      normalText = " has been activated.";
+    } else if (normalText.includes("đã chính thức có hiệu lực")) {
+      normalText = " has officially taken effect.";
+    } else if (normalText.includes("sẽ hết hạn sau") || normalText.includes("sẽ hết hạn trong")) {
+      const match = normalText.match(/\d+/);
+      const days = match ? match[0] : "";
+      normalText = ` will expire in ${days} days.`;
+    } else if (normalText.includes("nhận được một yêu cầu dịch vụ mới")) {
+      normalText = " received a new service request.";
+    } else if (normalText.includes("đã được kích hoạt tài khoản")) {
+      normalText = " account has been activated.";
+    } else if (normalText.includes("đang xử lý báo cáo sự cố")) {
+      normalText = " is processing the incident report.";
+    } else if (normalText.includes("đang chờ được duyệt")) {
+      normalText = " is pending approval.";
+    } else if (normalText.includes("vừa gia nhập hệ thống")) {
+      const match = normalText.match(/(.+) vừa gia nhập hệ thống\./);
+      const name = match ? match[1].trim() : "";
+      normalText = ` ${name} joined the system.`;
+    }
+
+    // 3. timeLabel translations
+    timeLabel = timeLabel
+      .replace("Hôm nay", "Today")
+      .replace("Hôm qua", "Yesterday");
+
+    // 4. metaLabel translations
+    metaLabel = metaLabel
+      .replace(/^Hệ thống$/, "System")
+      .replace(/^Cảnh báo$/, "Warning")
+      .replace(/^Yêu cầu mới$/, "New Request")
+      .replace(/Hợp đồng /g, "Contract ")
+      .replace(/Ca sáng/g, "Morning Shift")
+      .replace(/Ca chiều/g, "Afternoon Shift")
+      .replace(/Ca đêm/g, "Night Shift");
+  } else {
+    // locale === "vi"
+    if (boldText.startsWith("Contract HD-")) {
+      boldText = boldText.replace("Contract HD-", "Hợp đồng HD-");
+    } else if (boldText === "Customer") boldText = "Khách hàng";
+    else if (boldText === "Coordinator") boldText = "Điều phối viên";
+    else if (boldText === "Company") boldText = "Công ty";
+    else if (boldText === "Incident Report") boldText = "Báo cáo sự cố";
+    else if (boldText === "Contract") boldText = "Hợp đồng";
+    else if (boldText === "New Contract") boldText = "Hợp đồng mới";
+    else if (boldText === "New Guard") boldText = "Bảo vệ mới";
+
+    if (normalText.includes("will expire in")) {
+      const match = normalText.match(/\d+/);
+      const days = match ? match[0] : "";
+      normalText = ` sẽ hết hạn trong ${days} ngày.`;
+    } else if (normalText.includes("was marked absent.")) {
+      normalText = " đã bị đánh dấu vắng mặt.";
+    } else if (normalText.includes("ended the shift.")) {
+      normalText = " đã kết thúc ca làm.";
+    } else if (normalText.includes("checked in on time")) {
+      normalText = " đã điểm danh ca trực đúng giờ.";
+    } else if (normalText.includes("checked in late by")) {
+      const match = normalText.match(/\d+/);
+      const mins = match ? match[0] : "";
+      normalText = ` đã điểm danh trễ ${mins} phút.`;
+    } else if (normalText.includes("has not checked in and is late")) {
+      normalText = " chưa điểm danh và đã trễ ca trực.";
+    } else if (normalText.includes("checked in for the shift.")) {
+      normalText = " đã điểm danh ca trực.";
+    } else if (normalText.includes("dispatched a replacement guard.")) {
+      normalText = " đã điều động bảo vệ thay thế.";
+    } else if (normalText.includes("has been activated.")) {
+      normalText = " đã chuyển sang hoạt động.";
+    } else if (normalText.includes("received a new service request.")) {
+      normalText = " đã nhận một yêu cầu dịch vụ mới.";
+    }
+
+    timeLabel = timeLabel
+      .replace("Today", "Hôm nay")
+      .replace("Yesterday", "Hôm qua");
+
+    metaLabel = metaLabel
+      .replace(/^System$/, "Hệ thống")
+      .replace(/^Warning$/, "Cảnh báo")
+      .replace(/^New Request$/, "Yêu cầu mới")
+      .replace(/Contract /g, "Hợp đồng ")
+      .replace(/Morning Shift/g, "Ca sáng")
+      .replace(/Afternoon Shift/g, "Ca chiều")
+      .replace(/Night Shift/g, "Ca đêm");
   }
-
-  // 3. timeLabel translations
-  timeLabel = timeLabel
-    .replace("Hôm nay", "Today")
-    .replace("Hôm qua", "Yesterday");
-
-  // 4. metaLabel translations
-  metaLabel = metaLabel
-    .replace(/^Hệ thống$/, "System")
-    .replace(/^Cảnh báo$/, "Warning")
-    .replace(/^Yêu cầu mới$/, "New Request")
-    .replace(/Hợp đồng /g, "Contract ")
-    .replace(/Ca sáng/g, "Morning Shift")
-    .replace(/Ca chiều/g, "Afternoon Shift")
-    .replace(/Ca đêm/g, "Night Shift");
 
   return {
     ...act,
@@ -417,6 +513,47 @@ export default function CompanyDashboardPage() {
 
   // Bộ lọc loại hoạt động trong modal
   const [activityFilter, setActivityFilter] = useState<string>("all");
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    if (!company_id) return;
+    setIsRefreshing(true);
+    try {
+      setActiveGuardsLoading(true);
+      setActiveContractsLoading(true);
+      setPendingReportsLoading(true);
+      setRatingLoading(true);
+      setSubInfoLoading(true);
+      setWeeklyShiftDataLoading(true);
+      setShiftStatusDataLoading(true);
+      setTodayGuardsLoading(true);
+      setRecentActivitiesLoading(true);
+
+      await Promise.all([
+        requestGetActiveGuardsOnShift(company_id).then(setActiveGuards).catch((err) => console.error(err)),
+        requestGetActiveContracts(company_id).then(setActiveContracts).catch((err) => console.error(err)),
+        requestGetPendingReports(company_id).then(setPendingReports).catch((err) => console.error(err)),
+        requestGetRating(company_id).then(setRating).catch((err) => console.error(err)),
+        requestGetDashboardSubscription(company_id).then(setSubInfo).catch((err) => console.error(err)),
+        requestGetWeeklyShifts(company_id).then(setWeeklyShiftData).catch((err) => console.error(err)),
+        requestGetShiftStatusToday(company_id).then(setShiftStatusData).catch((err) => console.error(err)),
+        requestGetTodayGuards(company_id).then(setTodayGuards).catch((err) => console.error(err)),
+        requestGetRecentActivities(company_id).then(setRecentActivities).catch((err) => console.error(err)),
+      ]);
+    } finally {
+      setActiveGuardsLoading(false);
+      setActiveContractsLoading(false);
+      setPendingReportsLoading(false);
+      setRatingLoading(false);
+      setSubInfoLoading(false);
+      setWeeklyShiftDataLoading(false);
+      setShiftStatusDataLoading(false);
+      setTodayGuardsLoading(false);
+      setRecentActivitiesLoading(false);
+      setTimeout(() => setIsRefreshing(false), 300);
+    }
+  };
 
   // Trigger animation for the bars on mount
   useEffect(() => {
@@ -523,7 +660,7 @@ export default function CompanyDashboardPage() {
   }, [company_id]);
 
   const employeeStatusConfig: Record<
-    EmployeeStatus,
+    string,
     {
       badgeClass: string;
       dotClass: string;
@@ -531,11 +668,17 @@ export default function CompanyDashboardPage() {
     }
   > = {
     "Hoàn thành": {
-      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
-      dotClass: "bg-emerald-600",
+      badgeClass: "bg-slate-100 text-slate-600 border-slate-200",
+      dotClass: "bg-slate-400",
     },
 
     "Đang trực": {
+      badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
+      dotClass: "bg-emerald-600",
+      animate: true,
+    },
+
+    "On Duty": {
       badgeClass: "bg-emerald-50 text-emerald-700 border-emerald-200",
       dotClass: "bg-emerald-600",
       animate: true,
@@ -546,17 +689,52 @@ export default function CompanyDashboardPage() {
       dotClass: "bg-red-600",
     },
 
+    "Absent": {
+      badgeClass: "bg-red-50 text-red-700 border-red-200",
+      dotClass: "bg-red-600",
+    },
+
     "Đi trễ": {
       badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
       dotClass: "bg-orange-600",
     },
 
+    "Late": {
+      badgeClass: "bg-orange-50 text-orange-700 border-orange-200",
+      dotClass: "bg-orange-600",
+    },
+
     "Thay ca": {
-      badgeClass: "bg-blue-50 text-blue-700 border-blue-200",
-      dotClass: "bg-blue-600",
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
+    },
+
+    "Shift Change": {
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
+    },
+
+    "Thay thế": {
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
+    },
+
+    "Replace": {
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
+    },
+
+    "Replacement": {
+      badgeClass: "bg-purple-50 text-purple-700 border-purple-200",
+      dotClass: "bg-purple-600",
     },
 
     "Điểm danh trễ": {
+      badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
+      dotClass: "bg-amber-600",
+    },
+
+    "Late Check-in": {
       badgeClass: "bg-amber-50 text-amber-700 border-amber-200",
       dotClass: "bg-amber-600",
     },
@@ -566,7 +744,17 @@ export default function CompanyDashboardPage() {
       dotClass: "bg-outline",
     },
 
+    "Assigned": {
+      badgeClass: "bg-surface-container text-on-surface-variant border-outline-variant",
+      dotClass: "bg-outline",
+    },
+
     "Chưa điểm danh": {
+      badgeClass: "bg-red-50 text-red-700 border-red-200",
+      dotClass: "bg-red-500",
+    },
+
+    "Not Checked-in": {
       badgeClass: "bg-red-50 text-red-700 border-red-200",
       dotClass: "bg-red-500",
     },
@@ -606,6 +794,17 @@ export default function CompanyDashboardPage() {
           </h2>
           <p className="text-sm text-slate-500 mt-1">{getFormattedDate(locale)}</p>
         </div>
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={handleRefresh}
+          disabled={isRefreshing}
+          className="gap-2 text-xs font-semibold rounded-xl border-outline-variant hover:border-primary/50 cursor-pointer disabled:opacity-50"
+        >
+          <RefreshCw className={`w-4 h-4 text-primary ${isRefreshing ? "animate-spin" : ""}`} />
+          <span>{dict.coor_dashboard?.refresh || (locale === "en" ? "Refresh" : "Làm mới")}</span>
+        </Button>
       </div>
 
       {/* Key Metrics Grid */}
@@ -1069,29 +1268,6 @@ export default function CompanyDashboardPage() {
                 </div>
               </div>
 
-              {/* Coordinator Resource */}
-              <div className="mb-2 flex justify-between text-xs text-on-surface-variant font-semibold">
-                <span>{dict.company_dashboard.subscription.resource_coordinators}</span>
-                <span className="font-mono">
-                  {subInfo.usage.coordinators}/{subInfo.plan.max_coordinators ?? "∞"}
-                </span>
-              </div>
-              <div className="w-full bg-surface-container rounded-full h-2.5 mb-1 overflow-hidden border border-outline-variant/20">
-                <div
-                  className="bg-primary h-full rounded-full transition-all duration-1000 ease-out"
-                  style={{
-                    width: subInfo.plan.max_coordinators
-                      ? `${Math.min(100, (subInfo.usage.coordinators / subInfo.plan.max_coordinators) * 100)}%`
-                      : "0%",
-                  }}
-                />
-              </div>
-              <p className="text-[11px] text-on-surface-variant/80 text-right mb-6">
-                {subInfo.plan.max_coordinators
-                  ? dict.company_dashboard.subscription.remaining_coordinators.replace("{0}", Math.max(0, subInfo.plan.max_coordinators - subInfo.usage.coordinators).toString())
-                  : dict.company_dashboard.subscription.unlimited}
-              </p>
-
               {/* Guard Resource */}
               <div className="mb-2 flex justify-between text-xs text-on-surface-variant font-semibold">
                 <span>{dict.company_dashboard.subscription.resource_guards}</span>
@@ -1127,7 +1303,7 @@ export default function CompanyDashboardPage() {
             <h3 className="text-base font-bold text-on-surface">
               {dict.company_dashboard.guards_table.title}
             </h3>
-            <div className="flex items-center gap-2 border border-outline-variant rounded px-3 py-1.5 bg-surface-container-lowest w-full sm:w-64 focus-within:border-secondary transition-all">
+            <div className="flex items-center gap-2 border border-outline-variant rounded px-3 py-1.5 bg-surface-container-lowest w-full sm:w-80 focus-within:border-secondary transition-all">
               <Search className="w-4 h-4 text-on-surface-variant" />
               <input
                 type="text"
@@ -1235,11 +1411,11 @@ export default function CompanyDashboardPage() {
                         </td>
 
                         <td className="px-6 py-4 text-on-surface-variant text-xs font-medium">
-                          {emp.branch}
+                          {formatBranchName(emp.branch, locale)}
                         </td>
 
                         <td className="px-6 py-4 text-on-surface-variant text-xs font-semibold whitespace-nowrap">
-                          {emp.timeRange || "Chưa rõ"}
+                          {formatTimeRange(emp.timeRange, locale, dict)}
                         </td>
 
                         <td className="px-6 py-4">
@@ -1260,7 +1436,7 @@ export default function CompanyDashboardPage() {
                             </div>
                           ) : (
                             <span className="text-xs text-on-surface-variant/60">
-                              Chưa có dịch vụ
+                              {dict.company_dashboard.guards_table.no_service}
                             </span>
                           )}
                         </td>
@@ -1380,7 +1556,7 @@ export default function CompanyDashboardPage() {
                   {dict.company_dashboard.modals.guards_title}
                 </h3>
                 <p className="text-xs text-on-surface-variant mt-0.5">
-                  Danh sách chi tiết toàn bộ nhân viên bảo vệ trong ngày hôm nay
+                  {dict.company_dashboard.modals.guards_desc}
                 </p>
               </div>
               <button
@@ -1469,10 +1645,10 @@ export default function CompanyDashboardPage() {
                             </div>
                           </td>
                           <td className="px-6 py-4 text-on-surface-variant text-xs font-medium">
-                            {emp.branch}
+                            {formatBranchName(emp.branch, locale)}
                           </td>
                           <td className="px-6 py-4 text-on-surface-variant text-xs font-semibold whitespace-nowrap">
-                            {emp.timeRange || dict.company_dashboard.guards_table.unknown}
+                            {formatTimeRange(emp.timeRange, locale, dict)}
                           </td>
                           <td className="px-6 py-4">
                             {emp.contractCode ? (

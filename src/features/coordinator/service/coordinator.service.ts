@@ -6,10 +6,11 @@ export const getCoordinatorsService = async (
   companyId: string,
   page = 1,
   limit = 10,
-  search?: string
+  search?: string,
+  status?: string
 ): Promise<{ data: CoordinatorWithUser[]; total: number }> => {
   if (!companyId) throw new Error("Company ID is required");
-  return await getCoordinators(companyId, page, limit, search);
+  return await getCoordinators(companyId, page, limit, search, status);
 };
 
 export const addCoordinatorToCompanyService = async (

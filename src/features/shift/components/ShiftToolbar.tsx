@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, MapPin, Plus, Calendar, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Plus, Calendar, ChevronDown, Check, User } from "lucide-react";
 import { getUserTimeZone, getUserLocale, formatDate } from "@/utils/dateTime";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type ShiftToolbarProps = {
   viewMode: "day" | "week";
   selectedLocation: string;
-  locations: { address: string; status: string }[];
+  locations: { address: string; status: string; customer_name?: string; code?: string }[];
   currentDate: string;
   onChangeViewMode: (mode: "day" | "week") => void;
   onChangeLocation: (location: string) => void;
@@ -548,6 +548,9 @@ export function ShiftToolbar({
   onClickAdd,
 }: ShiftToolbarProps) {
   const { dict, locale: appLocale } = useTranslation();
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
+  const selectedLocObj = useMemo(() => locations.find((l) => l.address === selectedLocation) || locations[0], [locations, selectedLocation]);
+
   const bcp47Locale = appLocale === "en" ? "en-US" : "vi-VN";
   const dateTitle =
     viewMode === "day"
@@ -721,26 +724,99 @@ export function ShiftToolbar({
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="flex h-10 min-w-[220px] items-center gap-2 border border-slate-300 bg-white px-4 rounded-lg focus-within:border-blue-700 hover:bg-slate-100">
-          <MapPin size={17} className="text-slate-500" />
-
-          <select
-            value={selectedLocation}
-            onChange={(event) => onChangeLocation(event.target.value)}
-            className="w-full bg-transparent text-sm text-slate-700 outline-none cursor-pointer"
+        <div className="relative">
+          <button
+            type="button"
+            onClick={() => setIsLocationOpen(!isLocationOpen)}
+            className="flex h-10 min-w-[260px] max-w-[420px] items-center justify-between gap-2.5 rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-medium text-slate-700 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs transition-all cursor-pointer"
           >
-            
+            <div className="flex items-center gap-2 truncate">
+              <MapPin size={16} className="text-blue-600 shrink-0" />
+              {selectedLocObj ? (
+                <span className="truncate">
+                  {selectedLocObj.code && (
+                    <span className="font-bold text-slate-900 mr-1.5 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
+                      {selectedLocObj.code}
+                    </span>
+                  )}
+                  {selectedLocObj.customer_name && (
+                    <span className="font-semibold text-slate-800 mr-1.5">
+                      {selectedLocObj.customer_name} •
+                    </span>
+                  )}
+                  <span className="text-slate-600">{selectedLocObj.address}</span>
+                </span>
+              ) : (
+                <span className="text-slate-400">Chọn địa điểm...</span>
+              )}
+            </div>
+            <ChevronDown
+              size={15}
+              className={`text-slate-400 shrink-0 transition-transform duration-200 ${
+                isLocationOpen ? "rotate-180" : ""
+              }`}
+            />
+          </button>
 
-            {locations.map((loc) => (
-              <option
-                key={loc.address}
-                value={loc.address}
-                style={{ color: getContractStatusColor(loc.status) }}
-              >
-                {loc.address} [{getContractStatusLabel(loc.status, dict)}]
-              </option>
-            ))}
-          </select>
+          {isLocationOpen && (
+            <>
+              <div
+                className="fixed inset-0 z-40"
+                onClick={() => setIsLocationOpen(false)}
+              />
+              <div className="absolute right-0 top-12 z-50 min-w-[320px] max-w-[460px] max-h-80 overflow-y-auto space-y-1 rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                {locations.map((loc) => {
+                  const isSelected = loc.address === selectedLocation;
+                  return (
+                    <button
+                      key={loc.address}
+                      type="button"
+                      onClick={() => {
+                        onChangeLocation(loc.address);
+                        setIsLocationOpen(false);
+                      }}
+                      className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-left text-xs transition-all cursor-pointer ${
+                        isSelected
+                          ? "bg-blue-50 text-blue-700 font-semibold border border-blue-100 shadow-2xs"
+                          : "text-slate-700 hover:bg-slate-50 border border-transparent"
+                      }`}
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          {loc.code && (
+                            <span className={`font-bold px-1.5 py-0.5 rounded text-[11px] ${isSelected ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-700"}`}>
+                              {loc.code}
+                            </span>
+                          )}
+                          {loc.customer_name && (
+                            <span className="flex items-center gap-1 font-semibold text-slate-800 text-[12px]">
+                              <User size={12} className="text-slate-400 shrink-0" />
+                              {loc.customer_name}
+                            </span>
+                          )}
+                          <span
+                            className="ml-auto text-[11px] font-medium px-2 py-0.5 rounded-full"
+                            style={{
+                              color: getContractStatusColor(loc.status),
+                              backgroundColor: `${getContractStatusColor(loc.status)}18`,
+                            }}
+                          >
+                            {getContractStatusLabel(loc.status, dict)}
+                          </span>
+                        </div>
+                        <p className={`mt-1 text-xs truncate ${isSelected ? "text-blue-800 font-medium" : "text-slate-600"}`}>
+                          {loc.address}
+                        </p>
+                      </div>
+                      {isSelected && (
+                        <Check size={16} className="text-blue-600 shrink-0 ml-1" />
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </>
+          )}
         </div>
 
         <button

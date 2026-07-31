@@ -17,6 +17,7 @@ import {
   CalendarDays,
   ShieldCheck,
   LogOut,
+  Loader2,
   UserCircle,
   ChevronDown,
 } from "lucide-react";
@@ -140,10 +141,14 @@ export default function GuardLayout({
     };
   }, [setAuth, clearAuth]);
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    if (loggingOut) return;
     const supabase = createClient();
 
     try {
+      setLoggingOut(true);
       await supabase.auth.signOut();
     } finally {
       clearAuth();
@@ -153,6 +158,7 @@ export default function GuardLayout({
 
       router.replace("/login");
       router.refresh();
+      setLoggingOut(false);
     }
   };
 
@@ -172,9 +178,8 @@ export default function GuardLayout({
 
           {/* Burger Menu Drawer */}
           <aside
-            className={`fixed left-0 top-0 z-50 h-dvh w-[82vw] max-w-[320px] bg-white shadow-2xl transition-transform duration-300 sm:w-[320px] ${
-              menuOpen ? "translate-x-0" : "-translate-x-full"
-            }`}
+            className={`fixed left-0 top-0 z-50 h-dvh w-[82vw] max-w-[320px] bg-white shadow-2xl transition-transform duration-300 sm:w-[320px] ${menuOpen ? "translate-x-0" : "-translate-x-full"
+              }`}
           >
             <div className="flex h-16 items-center justify-between border-b border-slate-200 px-4">
               <div className="flex items-center gap-2 text-sm font-extrabold text-[#0b4f9c]">
@@ -227,18 +232,16 @@ export default function GuardLayout({
                   </div>
                 </div>
                 <ChevronDown
-                  className={`w-4 h-4 text-slate-500 transition-transform duration-300 shrink-0 ${
-                    sidebarUserDropdownOpen ? "rotate-180" : ""
-                  }`}
+                  className={`w-4 h-4 text-slate-500 transition-transform duration-300 shrink-0 ${sidebarUserDropdownOpen ? "rotate-180" : ""
+                    }`}
                 />
               </button>
 
               <div
-                className={`grid transition-all duration-300 ease-in-out ${
-                  sidebarUserDropdownOpen
+                className={`grid transition-all duration-300 ease-in-out ${sidebarUserDropdownOpen
                     ? "grid-rows-[1fr] opacity-100 border-t border-slate-200"
                     : "grid-rows-[0fr] opacity-0 border-t border-transparent"
-                }`}
+                  }`}
               >
                 <div className="overflow-hidden bg-slate-50/60">
                   <Link
@@ -253,9 +256,14 @@ export default function GuardLayout({
                   <button
                     type="button"
                     onClick={handleLogout}
-                    className="w-full flex items-center gap-2.5 px-6 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                    disabled={loggingOut}
+                    className="w-full flex items-center gap-2.5 px-6 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                   >
-                    <LogOut className="w-4 h-4" />
+                    {loggingOut ? (
+                      <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                    ) : (
+                      <LogOut className="w-4 h-4 shrink-0" />
+                    )}
                     <span>{dict.common.logout}</span>
                   </button>
                 </div>
@@ -271,11 +279,10 @@ export default function GuardLayout({
                     key={link.href}
                     href={link.href}
                     onClick={() => setMenuOpen(false)}
-                    className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${
-                      link.active
+                    className={`flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold transition-all ${link.active
                         ? "bg-blue-100 text-[#0b4f9c]"
                         : "text-slate-700 hover:bg-slate-100 hover:text-[#0b4f9c]"
-                    }`}
+                      }`}
                   >
                     <Icon className="h-5 w-5" />
                     <span>{link.name}</span>
@@ -342,9 +349,14 @@ export default function GuardLayout({
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      disabled={loggingOut}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <LogOut className="w-4 h-4" />
+                      {loggingOut ? (
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      ) : (
+                        <LogOut className="w-4 h-4 shrink-0" />
+                      )}
                       <span>{dict.common.logout}</span>
                     </button>
                   </div>
@@ -367,16 +379,14 @@ export default function GuardLayout({
                 <Link
                   key={link.href}
                   href={link.href}
-                  className={`flex h-12 min-w-[92px] flex-1 flex-col items-center justify-center rounded-xl text-[11px] font-bold transition-all sm:max-w-[180px] sm:text-xs ${
-                    link.active
+                  className={`flex h-12 min-w-[92px] flex-1 flex-col items-center justify-center rounded-xl text-[11px] font-bold transition-all sm:max-w-[180px] sm:text-xs ${link.active
                       ? "bg-blue-100 text-[#0b4f9c]"
                       : "text-slate-600 hover:bg-slate-100 hover:text-[#0b4f9c]"
-                  }`}
+                    }`}
                 >
                   <Icon
-                    className={`mb-1 h-5 w-5 ${
-                      link.active ? "text-[#0b4f9c]" : "text-slate-600"
-                    }`}
+                    className={`mb-1 h-5 w-5 ${link.active ? "text-[#0b4f9c]" : "text-slate-600"
+                      }`}
                   />
                   <span className="truncate">{link.name}</span>
                 </Link>

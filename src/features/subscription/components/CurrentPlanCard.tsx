@@ -1,6 +1,7 @@
 import { formatPrice } from "@/utils/formatPrice";
 import { CurrentPlanWithSubscription } from "../types";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { getDurationText } from "@/utils/formatDuration";
 
 export default function CurrentPlanCard({
   currentPlan,
@@ -37,14 +38,7 @@ export default function CurrentPlanCard({
             {isActive ? currentPlan.plan.plan_name : (dict.billing?.no_plan || "Chưa có gói dịch vụ")}
           </h4>
         </div>
-        <div className="text-right">
-          <p className="text-[10px] text-on-surface-variant uppercase tracking-wider font-bold">
-            {dict.billing?.billing_cycle || "Chu kỳ thanh toán"}
-          </p>
-          <p className="text-sm font-semibold text-on-surface mt-1">
-            {isActive ? (dict.billing?.monthly || "Hàng tháng") : "N/A"}
-          </p>
-        </div>
+
       </div>
 
       <div className="relative z-10 mt-6 pt-4 border-t border-outline-variant/60 flex justify-between items-end">
@@ -53,14 +47,14 @@ export default function CurrentPlanCard({
             {isActive ? (dict.billing?.next_expiry || "Ngày hết hạn tiếp theo") : (dict.billing?.plan_duration || "Thời hạn gói")}
           </p>
           <p className="text-sm font-bold text-on-surface font-mono mt-1">
-            {isActive ? currentPlan.subscription.end_date : (dict.billing?.not_subscribed || "Chưa đăng ký")}
+            {isActive ? new Date(currentPlan.subscription.end_date).toLocaleDateString("vi-VN") : (dict.billing?.not_subscribed || "Chưa đăng ký")}
           </p>
         </div>
         <div className="text-right">
           <p className="text-2xl font-bold text-on-surface">
             {isActive ? formatPrice(currentPlan.plan.price) : "0"}{" "}
             <span className="text-xs font-medium text-on-surface-variant">
-              {dict.billing?.per_month || "VNĐ/tháng"}
+              {dict.billing?.currency || "VNĐ"} / {isActive ? getDurationText(currentPlan.plan.duration_days, dict) : (dict.billing?.duration_month || "tháng")}
             </span>
           </p>
         </div>

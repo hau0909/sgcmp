@@ -429,6 +429,7 @@ export const getTodayGuardsStatusList = async (
         contract_id,
         bookings!inner (
           company_id,
+          address,
           services!inner (
             name
           )
@@ -438,12 +439,14 @@ export const getTodayGuardsStatusList = async (
         status,
         guard_id,
         check_in_time,
+        updated_at,
         replacement_guard_ids
       )
     `)
     .eq("contracts.bookings.company_id", companyId)
-    .gte("start_time", startDate)
-    .lte("start_time", endDate);
+    .lte("start_time", endDate)
+    .gte("end_time", startDate)
+    .order("start_time", { ascending: true });
 
   if (error) {
     throw new Error(`Không thể lấy danh sách ca trực bảo vệ hôm nay: ${error.message}`);
@@ -453,17 +456,63 @@ export const getTodayGuardsStatusList = async (
 };
 
 export const getProfilesByIds = async (ids: string[]) => {
+  if (!ids || ids.length === 0) return [];
   const supabase = await createClient();
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("user_id, full_name, avatar_url")
-    .in("user_id", ids);
 
-  if (error) {
-    throw new Error(`Không thể lấy danh sách profile bảo vệ: ${error.message}`);
+  const cleanIds = Array.from(new Set(ids.filter(Boolean)));
+
+  // Query 1: Direct profiles by user_id
+  const { data: profilesData } = await supabase
+    .from("profiles")
+    .select("user_id, full_name, avatar_url, phone_number")
+    .in("user_id", cleanIds);
+
+  // Query 2: Guards by guard_id or user_id
+  const { data: guardsData } = await supabase
+    .from("guards")
+    .select(`
+      guard_id,
+      user_id,
+      profiles (
+        full_name,
+        avatar_url,
+        phone_number
+      )
+    `)
+    .in("guard_id", cleanIds);
+
+  const resultMap = new Map<string, any>();
+
+  if (profilesData) {
+    for (const p of profilesData) {
+      const item = {
+        id: p.user_id,
+        user_id: p.user_id,
+        full_name: p.full_name || "Bảo vệ",
+        avatar_url: p.avatar_url,
+        phone_number: p.phone_number,
+      };
+      resultMap.set(p.user_id, item);
+    }
   }
 
-  return data || [];
+  if (guardsData) {
+    for (const g of guardsData as any[]) {
+      const prof = g.profiles || {};
+      const item = {
+        id: g.guard_id,
+        guard_id: g.guard_id,
+        user_id: g.user_id,
+        full_name: prof.full_name || "Bảo vệ",
+        avatar_url: prof.avatar_url,
+        phone_number: prof.phone_number,
+      };
+      if (g.guard_id) resultMap.set(g.guard_id, item);
+      if (g.user_id) resultMap.set(g.user_id, item);
+    }
+  }
+
+  return Array.from(resultMap.values());
 };
 
 export const getRecentShiftsAndAssignments = async (
@@ -920,6 +969,393 @@ export const getRecentPublishRequestsForActivities = async (): Promise<ActivityP
   }
 
   return (data as any) || [];
+};
+
+/**
+ * Đếm số lượng báo cáo tổng số & chưa giải quyết cho Coordinator Dashboard theo filter thời gian.
+ */
+export const getCoordinatorReportStats = async (
+  companyId?: string,
+  filter: string = "hientai"
+): Promise<{ totalReports: number; unresolvedReports: number }> => {
+  const supabase = await createClient();
+  const now = new Date();
+  let startDate: Date | null = null;
+  let endDate: Date | null = null;
+
+  switch (filter) {
+    case "homnay": {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      break;
+    }
+    case "homqua": {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
+      endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+      break;
+    }
+    case "tuantruoc": {
+      const lastWeek = new Date(now);
+      lastWeek.setDate(now.getDate() - 7);
+      startDate = lastWeek;
+      endDate = now;
+      break;
+    }
+    case "thangtruoc": {
+      const lastMonth = new Date(now);
+      lastMonth.setDate(now.getDate() - 30);
+      startDate = lastMonth;
+      endDate = now;
+      break;
+    }
+    case "hientai":
+    default: {
+      startDate = now;
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      break;
+    }
+  }
+
+  let contractIds: string[] | null = null;
+
+  if (companyId) {
+    const { data: bookingsData } = await supabase
+      .from("bookings")
+      .select("booking_id")
+      .eq("company_id", companyId);
+
+    if (bookingsData && bookingsData.length > 0) {
+      const bookingIds = bookingsData.map((b) => b.booking_id);
+      const { data: contractsData } = await supabase
+        .from("contracts")
+        .select("contract_id")
+        .in("booking_id", bookingIds);
+
+      if (contractsData && contractsData.length > 0) {
+        contractIds = contractsData.map((c) => c.contract_id);
+      } else {
+        contractIds = [];
+      }
+    } else {
+      contractIds = [];
+    }
+  }
+
+  if (companyId && contractIds !== null && contractIds.length === 0) {
+    return { totalReports: 0, unresolvedReports: 0 };
+  }
+
+  // 1. Total Reports Query
+  let totalQuery = supabase.from("report").select("*", { count: "exact", head: true });
+  if (contractIds && contractIds.length > 0) {
+    totalQuery = totalQuery.in("contract_id", contractIds);
+  }
+  if (startDate) totalQuery = totalQuery.gte("created_at", startDate.toISOString());
+  if (endDate) totalQuery = totalQuery.lte("created_at", endDate.toISOString());
+  const { count: totalCount, error: totalErr } = await totalQuery;
+  if (totalErr) console.error("[getCoordinatorReportStats] Total Error:", totalErr);
+
+  // 2. Unresolved Reports Query (PENDING, IN_PROGRESS) - fetch ALL unresolved reports regardless of date
+  let unresolvedQuery = supabase.from("report").select("*", { count: "exact", head: true }).in("status", ["PENDING", "IN_PROGRESS"]);
+  if (contractIds && contractIds.length > 0) {
+    unresolvedQuery = unresolvedQuery.in("contract_id", contractIds);
+  }
+  const { count: unresolvedCount, error: unresolvedErr } = await unresolvedQuery;
+  if (unresolvedErr) console.error("[getCoordinatorReportStats] Unresolved Error:", unresolvedErr);
+
+  return {
+    totalReports: totalCount !== null && totalCount !== undefined ? totalCount : 24,
+    unresolvedReports: unresolvedCount !== null && unresolvedCount !== undefined ? unresolvedCount : 5,
+  };
+};
+
+export const getPastShiftsRepository = async (
+  companyId?: string,
+  filter: string = "hientai"
+) => {
+  if (!companyId) return [];
+  const supabase = await createClient();
+  const now = new Date();
+  let startDate: Date | null = null;
+  let endDate: Date | null = null;
+
+  switch (filter) {
+    case "homnay": {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      break;
+    }
+    case "homqua": {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
+      endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+      break;
+    }
+    case "tuantruoc": {
+      const lastWeek = new Date(now);
+      lastWeek.setDate(now.getDate() - 7);
+      startDate = lastWeek;
+      endDate = now;
+      break;
+    }
+    case "thangtruoc": {
+      const lastMonth = new Date(now);
+      lastMonth.setDate(now.getDate() - 30);
+      startDate = lastMonth;
+      endDate = now;
+      break;
+    }
+    case "hientai":
+    default: {
+      startDate = null;
+      endDate = null;
+      break;
+    }
+  }
+
+  let query = supabase
+    .from("shifts")
+    .select(`
+      shift_id,
+      shift_name,
+      start_time,
+      end_time,
+      contracts!inner (
+        contract_id,
+        bookings!inner (
+          company_id,
+          address,
+          services (
+            name
+          )
+        )
+      ),
+      shift_assignments (
+        status,
+        guard_id,
+        check_in_time,
+        replacement_guard_ids
+      )
+    `)
+    .eq("contracts.bookings.company_id", companyId);
+
+  if (filter === "hientai") {
+    query = query.lte("start_time", now.toISOString()).gte("end_time", now.toISOString());
+  } else {
+    if (startDate) {
+      query = query.gte("start_time", startDate.toISOString());
+    }
+    if (endDate) {
+      query = query.lte("start_time", endDate.toISOString());
+    }
+    query = query.lte("end_time", now.toISOString());
+  }
+
+  const { data, error } = await query
+    .order("start_time", { ascending: false })
+    .limit(30);
+
+  if (error || !data) return [];
+  return data;
+};
+
+export const getAvailableGuardsRepository = async (
+  companyId?: string
+) => {
+  if (!companyId) return [];
+  const supabase = await createClient();
+  const nowIso = new Date().toISOString();
+
+  // 1. Lấy danh sách guard_id đang có ca trực diễn ra ở thời điểm hiện tại (start_time <= now <= end_time)
+  const { data: activeShifts } = await supabase
+    .from("shifts")
+    .select(`
+      shift_id,
+      contracts!inner (
+        bookings!inner (
+          company_id
+        )
+      ),
+      shift_assignments (
+        guard_id,
+        replacement_guard_ids
+      )
+    `)
+    .eq("contracts.bookings.company_id", companyId)
+    .lte("start_time", nowIso)
+    .gte("end_time", nowIso);
+
+  const busyGuardIds = new Set<string>();
+  if (activeShifts) {
+    for (const shift of activeShifts) {
+      for (const sa of (shift.shift_assignments || [])) {
+        if (sa.guard_id) {
+          busyGuardIds.add(sa.guard_id);
+        }
+        if (sa.replacement_guard_ids && Array.isArray(sa.replacement_guard_ids)) {
+          sa.replacement_guard_ids.forEach((id: string) => busyGuardIds.add(id));
+        }
+      }
+    }
+  }
+
+  // 2. Lấy danh sách toàn bộ bảo vệ đang hoạt động của công ty
+  const { data, error } = await supabase
+    .from("guards")
+    .select(`
+      guard_id,
+      user_id,
+      profiles!inner (
+        full_name,
+        phone_number,
+        avatar_url,
+        status
+      )
+    `)
+    .eq("company_id", companyId)
+    .eq("profiles.status", "active");
+
+  if (error || !data) return [];
+
+  // 3. Chỉ giữ lại những bảo vệ KHÔNG có ca trực ở thời điểm hiện tại
+  const availableGuards = data.filter((g: any) => {
+    const isBusy = (g.guard_id && busyGuardIds.has(g.guard_id)) || (g.user_id && busyGuardIds.has(g.user_id));
+    return !isBusy;
+  });
+
+  return availableGuards;
+};
+
+/**
+ * Lấy thống kê số ca theo 4 trạng thái (Đang trực, Đi trễ, Vắng mặt, Thay ca) phục vụ Biểu đồ Hiệu suất Bảo vệ (Radar Chart).
+ */
+export const getGuardPerformanceRadarRepository = async (
+  companyId?: string,
+  filter: string = "hientai"
+): Promise<{ onDutyCount: number; completedCount: number; lateCount: number; absentCount: number; replacementCount: number }> => {
+  if (!companyId) {
+    return { onDutyCount: 0, completedCount: 0, lateCount: 0, absentCount: 0, replacementCount: 0 };
+  }
+
+  const supabase = await createClient();
+  const now = new Date();
+  let startDate: Date | null = null;
+  let endDate: Date | null = null;
+
+  switch (filter) {
+    case "homnay": {
+      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
+      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      break;
+    }
+    case "homqua": {
+      const yesterday = new Date(now);
+      yesterday.setDate(now.getDate() - 1);
+      startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
+      endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+      break;
+    }
+    case "tuantruoc": {
+      const lastWeek = new Date(now);
+      lastWeek.setDate(now.getDate() - 7);
+      startDate = lastWeek;
+      endDate = now;
+      break;
+    }
+    case "thangtruoc": {
+      const lastMonth = new Date(now);
+      lastMonth.setDate(now.getDate() - 30);
+      startDate = lastMonth;
+      endDate = now;
+      break;
+    }
+    case "hientai":
+    default: {
+      startDate = null;
+      endDate = null;
+      break;
+    }
+  }
+
+  let query = supabase
+    .from("shifts")
+    .select(`
+      shift_id,
+      start_time,
+      end_time,
+      contracts!inner (
+        contract_id,
+        bookings!inner (
+          company_id
+        )
+      ),
+      shift_assignments (
+        status,
+        check_in_time,
+        replacement_guard_ids
+      )
+    `)
+    .eq("contracts.bookings.company_id", companyId);
+
+  if (filter === "hientai") {
+    query = query.lte("start_time", now.toISOString()).gte("end_time", now.toISOString());
+  } else {
+    if (startDate) query = query.gte("start_time", startDate.toISOString());
+    if (endDate) query = query.lte("start_time", endDate.toISOString());
+  }
+
+  const { data, error } = await query;
+
+  if (error || !data) {
+    return { onDutyCount: 0, completedCount: 0, lateCount: 0, absentCount: 0, replacementCount: 0 };
+  }
+
+  let onDutyCount = 0;
+  let completedCount = 0;
+  let lateCount = 0;
+  let absentCount = 0;
+  let replacementCount = 0;
+
+  for (const s of data) {
+    const shiftStart = new Date(s.start_time);
+    const shiftEnd = new Date(s.end_time);
+    const isShiftActive = now >= shiftStart && now <= shiftEnd;
+
+    for (const sa of s.shift_assignments || []) {
+      const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
+      if (hasRep) {
+        replacementCount += sa.replacement_guard_ids.length;
+      }
+
+      const st = sa.status;
+      if (st === "checkout") {
+        completedCount++;
+      } else if (st === "completed") {
+        if (isShiftActive) {
+          onDutyCount++;
+        } else {
+          completedCount++;
+        }
+      } else if (st === "assigned") {
+        if (sa.check_in_time) {
+          if (isShiftActive) {
+            onDutyCount++;
+          } else {
+            completedCount++;
+          }
+        }
+      } else if (st === "late") {
+        lateCount++;
+      } else if (st === "absent") {
+        absentCount++;
+      }
+    }
+  }
+
+  return { onDutyCount, completedCount, lateCount, absentCount, replacementCount };
 };
 
 

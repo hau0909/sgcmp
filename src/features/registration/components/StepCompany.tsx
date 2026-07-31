@@ -392,9 +392,12 @@ export default function StepCompany({
             <span className="text-[11px] font-semibold text-on-surface-variant">{dict.pages.registration.gallery_add}</span>
           </label>
         </div>
-        <p className="text-[11px] text-on-surface-variant/80">
+        <p className="text-[11px] text-on-surface-variant/80 mt-1">
           {dict.pages.registration.gallery_hint}
         </p>
+        {errors.galleryFiles && (
+          <p className="text-xs font-semibold text-error mt-1">{errors.galleryFiles}</p>
+        )}
       </div>
     </div>
   );

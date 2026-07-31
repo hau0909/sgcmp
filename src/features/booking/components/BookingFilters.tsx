@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Search } from "lucide-react";
+import { Search, X } from "lucide-react";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface BookingFiltersProps {
@@ -27,22 +27,31 @@ export function BookingFilters({
 }: BookingFiltersProps) {
   const { dict } = useTranslation();
 
+  const handleReset = () => {
+    onSearchChange("");
+    onStatusChange("");
+    onStartDateChange("");
+    onEndDateChange("");
+  };
+
+  const hasActiveFilters = Boolean(search || status || startDate || endDate);
+
   return (
-    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 mb-6 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)]">
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-4">
+    <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-4 shadow-[0_1px_2px_0_rgba(0,0,0,0.05)] transition-all">
+      <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-end">
         {/* Search */}
-        <div className="md:col-span-5 flex flex-col">
+        <div className={`${hasActiveFilters ? "md:col-span-4" : "md:col-span-5"} flex flex-col`}>
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-            {dict.booking.filters.search_label}
+            {dict.company_requests?.search_label || "Tìm kiếm"}
           </label>
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-[16px] h-[16px]" />
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-on-surface-variant w-4 h-4" />
             <input
               type="text"
               value={search}
               onChange={(e) => onSearchChange(e.target.value)}
-              placeholder={dict.booking.filters.search_placeholder}
-              className="w-full pl-9 pr-3 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+              placeholder={dict.company_requests?.search_placeholder || "Mã yêu cầu, Tên khách hàng, Dịch vụ..."}
+              className="w-full pl-9 pr-3 h-[38px] bg-surface-container-lowest border border-outline-variant rounded-lg text-xs text-on-surface placeholder-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
             />
           </div>
         </div>
@@ -50,58 +59,62 @@ export function BookingFilters({
         {/* Status Filter */}
         <div className="md:col-span-3 flex flex-col">
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-            {dict.booking.filters.status_label}
+            {dict.company_requests?.status_label || "Trạng thái"}
           </label>
-          <div className="relative">
-            <select
-              value={status}
-              onChange={(e) => onStatusChange(e.target.value)}
-              className="w-full pl-3 pr-8 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer"
-            >
-              <option value="">{dict.booking.filters.status_all}</option>
-              <option value="pending">{dict.booking.filters.status_pending}</option>
-              <option value="quoted">{dict.booking.filters.status_quoted}</option>
-              <option value="accepted">{dict.booking.filters.status_accepted}</option>
-              <option value="rejected">{dict.booking.filters.status_rejected}</option>
-              <option value="canceled">{dict.booking.filters.status_canceled}</option>
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-on-surface-variant">
-              <svg
-                className="fill-current h-4 w-4"
-                xmlns="http://www.w3.org/2000/svg"
-                viewBox="0 0 20 20"
-              >
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-              </svg>
-            </div>
-          </div>
+          <select
+            value={status}
+            onChange={(e) => onStatusChange(e.target.value)}
+            className="w-full px-3 h-[38px] bg-surface-container-lowest border border-outline-variant rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer"
+          >
+            <option value="">{dict.company_requests?.status_all || "Tất cả trạng thái"}</option>
+            <option value="pending">Chờ báo giá</option>
+            <option value="quoted">Đã báo giá</option>
+            <option value="contract_created">Đã tạo hợp đồng</option>
+            <option value="rejected">Đã từ chối</option>
+            <option value="cancelled">Đã hủy</option>
+          </select>
         </div>
 
-        {/* Date Range */}
-        <div className="md:col-span-4 flex gap-3">
-          <div className="flex-1 flex flex-col">
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-              {dict.booking.filters.start_date}
-            </label>
-            <input
-              type="date"
-              value={startDate}
-              onChange={(e) => onStartDateChange(e.target.value)}
-              className="w-full px-3 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
-            />
-          </div>
-          <div className="flex-1 flex flex-col">
-            <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-              {dict.booking.filters.end_date}
-            </label>
-            <input
-              type="date"
-              value={endDate}
-              onChange={(e) => onEndDateChange(e.target.value)}
-              className="w-full px-3 h-[36px] bg-surface-container-lowest border border-outline-variant rounded text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all cursor-pointer"
-            />
-          </div>
+        {/* Start Date */}
+        <div className="md:col-span-2 flex flex-col">
+          <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+            Từ ngày
+          </label>
+          <input
+            type="date"
+            value={startDate}
+            onChange={(e) => onStartDateChange(e.target.value)}
+            className="w-full px-3 h-[38px] bg-surface-container-lowest border border-outline-variant rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          />
         </div>
+
+        {/* End Date */}
+        <div className="md:col-span-2 flex flex-col">
+          <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
+            Đến ngày
+          </label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => onEndDateChange(e.target.value)}
+            className="w-full px-3 h-[38px] bg-surface-container-lowest border border-outline-variant rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+          />
+        </div>
+
+        {/* Reset Filter Button */}
+        {hasActiveFilters && (
+          <div className="md:col-span-1 flex items-end">
+            <button
+              type="button"
+              onClick={handleReset}
+              title="Xóa bộ lọc"
+              className="h-[38px] w-full flex items-center justify-center gap-1 px-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant text-xs font-medium rounded-lg border border-outline-variant transition-colors"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Xóa</span>
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );

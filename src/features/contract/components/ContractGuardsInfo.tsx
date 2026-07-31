@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Users, Search, X, Loader2, UserRound, Phone, Mail, Check, Lock, Plus, ChevronLeft, ChevronRight } from "lucide-react";
+import { Users, Search, X, Loader2, UserRound, Phone, Mail, Check, Lock, Plus, ChevronLeft, ChevronRight, Info } from "lucide-react";
 import { requestGetAllGuards, requestGetGuardsByContract } from "@/features/guards/api/guard.api";
 import { requestAssignGuardsToContract } from "../api/contract.api";
 import type { GuardListItem } from "@/features/guards/type";
@@ -140,7 +140,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
   };
 
   return (
-    <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative overflow-hidden flex-grow flex-shrink min-w-0">
+    <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative flex-grow flex-shrink min-w-0">
       {/* Toast Notification */}
       {toastMessage && (
         <div className={`fixed bottom-5 right-5 px-5 py-3 rounded-lg shadow-xl flex items-center gap-3 z-[999] animate-in fade-in slide-in-from-bottom-5 ${toastMessage.type === "success" ? "bg-emerald-950 text-emerald-200 border border-emerald-800" : "bg-red-950 text-red-200 border border-red-800"
@@ -153,25 +153,35 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
       )}
 
       {/* Decorative top-right curved background circle */}
-      <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full pointer-events-none"></div>
+      <div className="absolute top-0 right-0 w-24 h-24 overflow-hidden rounded-xl pointer-events-none">
+        <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-bl-full" />
+      </div>
 
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-outline-variant/30 pb-4 mb-4">
         <div>
           <h3 className="text-base font-bold text-on-surface flex items-center gap-2 font-headline">
             <Users className="w-5 h-5 text-primary" />
             <span>{dict.contract_guards?.title || "Phân công bảo vệ"}</span>
+            {/* Info tooltip: guard assignment is optional */}
+            <div className="relative group/info flex items-center">
+              <button
+                type="button"
+                className="w-5 h-5 flex items-center justify-center rounded-full text-slate-400 hover:text-blue-500 transition-colors cursor-default"
+              >
+                <Info className="w-3.5 h-3.5" />
+              </button>
+              <div className="absolute left-0 top-6 pointer-events-none opacity-0 group-hover/info:opacity-100 transition-opacity duration-200 bg-slate-800 text-white text-[11px] font-medium px-3 py-2 rounded-lg shadow-xl z-[9999] w-64 leading-relaxed">
+                <div className="absolute -top-1.5 left-3 border-4 border-transparent border-b-slate-800" />
+                <p className="font-semibold text-blue-300 mb-1">ℹ️ {dict.contract_guards?.info_optional_title || "Phân công bảo vệ không bắt buộc"}</p>
+                <p>{dict.contract_guards?.info_optional_desc || "Bạn có thể ký hợp đồng ngay cả khi chưa phân công. Việc điều phối bảo vệ có thể thực hiện sau khi hợp đồng có hiệu lực."}</p>
+              </div>
+            </div>
           </h3>
           <p className="text-xs text-on-surface-variant mt-1 font-body">
             {dict.contract_guards?.desc || "Danh sách nhân sự bảo vệ phụ trách hợp đồng này."}
           </p>
         </div>
 
-        {customerAgreed ? (
-          <div className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[#f1f5f9] border border-[#cbd5e1] rounded-lg text-xs font-semibold text-slate-600">
-            <Lock className="w-3.5 h-3.5" />
-            <span>{dict.contract_guards?.locked_edit || "Đã khóa chỉnh sửa"}</span>
-          </div>
-        ) : (
           <button
             onClick={handleOpenModal}
             className="px-4 py-2 cursor-pointer bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold rounded-lg transition-all shadow-sm flex items-center gap-1.5"
@@ -179,7 +189,6 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
             <Plus className="w-3.5 h-3.5" />
             <span>{dict.contract_guards?.update_btn || "Cập nhật bảo vệ"}</span>
           </button>
-        )}
       </div>
 
       {isLoading ? (
@@ -191,9 +200,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
           <UserRound className="w-10 h-10 text-outline-variant mx-auto mb-2.5" />
           <p className="text-sm font-semibold text-on-surface">{dict.contract_guards?.no_guards || "Chưa phân công bảo vệ"}</p>
           <p className="text-xs text-on-surface-variant mt-1 max-w-xs mx-auto">
-            {customerAgreed
-              ? dict.contract_guards?.no_guards_desc_locked || "Hợp đồng đã ký bởi khách hàng mà không có bảo vệ nào được chỉ định."
-              : dict.contract_guards?.no_guards_desc_unlocked || "Vui lòng nhấn nút cập nhật ở trên để phân công nhân sự bảo vệ cho hợp đồng này."}
+            {dict.contract_guards?.no_guards_desc_unlocked || "Vui lòng nhấn nút cập nhật ở trên để phân công nhân sự bảo vệ cho hợp đồng này."}
           </p>
         </div>
       ) : (

@@ -155,11 +155,18 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
         description: booking.description || null,
         guards_per_slot: booking.guards_per_slot || 1,
         time_slots: booking.time_slots || [],
+        day_per_week: booking.day_per_week || [],
         start_date: booking.start_date,
         end_date: booking.end_date,
         quoted_price: booking.quoted_price,
+        quotation_type: booking.quotation_type || null,
+        hourly_rate: booking.hourly_rate || null,
+        monthly_rate: booking.monthly_rate || null,
         formatted_price: formattedPrice,
         status: booking.status,
+        company_name: booking.company_name || null,
+        company_scope: booking.company_scope || null,
+        company_position: booking.company_position || null,
         profiles: profile
           ? {
             user_id: profile.user_id,
@@ -190,13 +197,14 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
       position: "Đại diện pháp luật",
     },
     customer: {
-      company_name: "........................",
-      address: profile?.address || "Chưa cập nhật",
-      tax_code: "........................",
+      company_name: booking?.company_name || "",
+      address: booking?.address || profile?.address || "Chưa cập nhật",
+      tax_code: "",
       phone: profile?.phone_number || "Chưa cập nhật",
       email: profile?.email || "Chưa cập nhật",
       representative: profile?.full_name || "Khách hàng không tên",
-      position: "........................",
+      position: booking?.company_position || "",
+      company_scope: booking?.company_scope || "",
     },
     assigned_guards_list: assignedGuards,
   };
@@ -231,10 +239,6 @@ export const signContractCompanyService = async (id: string): Promise<any> => {
   const contract = await getContractDetail(id);
   if (!contract) {
     throw new Error("Không tìm thấy hợp đồng");
-  }
-
-  if (!contract.guard_assigned || contract.guard_assigned.length === 0) {
-    throw new Error("Không thể ký duyệt hợp đồng khi chưa phân công nhân sự bảo vệ.");
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -511,13 +515,14 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
       position: "Đại diện pháp luật",
     },
     customer: {
-      company_name: "........................",
-      address: profile?.address || "Chưa cập nhật",
-      tax_code: "........................",
+      company_name: booking?.company_name || "",
+      address: booking?.address || profile?.address || "Chưa cập nhật",
+      tax_code: "",
       phone: profile?.phone_number || "Chưa cập nhật",
       email: profile?.email || "Chưa cập nhật",
       representative: profile?.full_name || "Khách hàng không tên",
-      position: "........................",
+      position: booking?.company_position || "",
+      company_scope: booking?.company_scope || "",
     },
     assigned_guards_list: assignedGuards,
   };
@@ -571,10 +576,7 @@ export const assignGuardsToContractService = async (
     throw new Error("Bạn không có quyền chỉnh sửa hợp đồng này");
   }
 
-  // Check if customer already agreed
-  if (contract.customer_agreed) {
-    throw new Error("Hợp đồng đã được khách hàng ký duyệt, không thể thay đổi danh sách bảo vệ.");
-  }
+  // Guard assignment is allowed regardless of signature status
 
   // Validate shift duration and minimum guards
   const booking = contract.bookings;

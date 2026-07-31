@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { Suspense, useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { UserCircle } from "lucide-react";
+import { UserCircle, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { requestLogout } from "@/features/auth/api/auth.api";
 import { createClient } from "@/lib/supabase/client";
@@ -43,7 +43,7 @@ const getProfileUserId = (profile: UserProfile | null) => {
 
 export default function Header() {
   const { dict } = useTranslation();
-  
+
   const navLinks: NavLink[] = [
     { label: dict.nav.about, href: "/" },
     { label: dict.nav.hireGuard, href: "/companies" },
@@ -129,8 +129,12 @@ export default function Header() {
     };
   }, [userId, setAuth, clearAuth]);
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    if (loggingOut) return;
     try {
+      setLoggingOut(true);
       await requestLogout();
     } finally {
       clearAuth();
@@ -139,6 +143,7 @@ export default function Header() {
       closeMenus();
       router.replace("/");
       router.refresh();
+      setLoggingOut(false);
     }
   };
 
@@ -330,8 +335,10 @@ export default function Header() {
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      disabled={loggingOut}
+                      className="w-full px-4 py-3 text-left text-sm font-medium text-red-600 hover:bg-red-50 transition-colors flex items-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     >
+                      {loggingOut && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
                       {dict.common.logout}
                     </button>
                   </div>
@@ -514,9 +521,11 @@ export default function Header() {
 
               <button
                 type="button"
-                className="text-[15px] text-red-600 font-semibold text-center py-3 rounded-xl hover:bg-red-50 transition-colors"
+                className="text-[15px] text-red-600 font-semibold text-center py-3 rounded-xl hover:bg-red-50 transition-colors flex items-center justify-center gap-2 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 onClick={handleLogout}
+                disabled={loggingOut}
               >
+                {loggingOut && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
                 {dict.common.logout}
               </button>
             </>

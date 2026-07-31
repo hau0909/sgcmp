@@ -280,6 +280,7 @@ export default function GuardShiftCheckinPage() {
     !checkingIn;
 
   const getStatusLabel = (status: GuardShiftDetailItem["status"], checkInTime?: string | null) => {
+    if (status === "checkout") return "Hoàn thành";
     if (status === "assigned") return t.status_waiting;
     if (status === "completed") return t.status_done_on_time;
     if (status === "late") return checkInTime ? t.status_done_late : t.status_late_pending;

@@ -10,6 +10,7 @@ export { default as CompanyDetailDirector } from "./components/CompanyDetailDire
 export { default as MyCompanyDetail } from "./components/MyCompanyDetail";
 export { default as PublishRequestTable } from "./components/PublishRequestTable";
 export { default as PublishRequestDetail } from "./components/PublishRequestDetail";
+export { AdminCompanyList } from "./components/AdminCompanyList";
 export * from "./api/company.api";
 export * from "./controller/company.controller";
 export * from "./service/company.service";

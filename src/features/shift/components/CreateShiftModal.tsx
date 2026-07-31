@@ -4,7 +4,9 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
   CalendarDays,
+  Check,
   CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Clock,
@@ -60,6 +62,81 @@ const DAY_LABEL_MAP: Record<string, number> = {
   "1": 1, "2": 2, "3": 3, "4": 4, "5": 5, "6": 6, "7": 0,
   // Numeric strings ISO (0 = Sunday, 1 = Monday…)
   "0": 0,
+};
+
+const DAY_NAME_VN_MAP: Record<string, string> = {
+  monday: "Thứ 2",
+  tuesday: "Thứ 3",
+  wednesday: "Thứ 4",
+  thursday: "Thứ 5",
+  friday: "Thứ 6",
+  saturday: "Thứ 7",
+  sunday: "Chủ nhật",
+  mon: "Thứ 2",
+  tue: "Thứ 3",
+  wed: "Thứ 4",
+  thu: "Thứ 5",
+  fri: "Thứ 6",
+  sat: "Thứ 7",
+  sun: "Chủ nhật",
+  "thứ 2": "Thứ 2",
+  "thứ 3": "Thứ 3",
+  "thứ 4": "Thứ 4",
+  "thứ 5": "Thứ 5",
+  "thứ 6": "Thứ 6",
+  "thứ 7": "Thứ 7",
+  "chủ nhật": "Chủ nhật",
+  "1": "Thứ 2",
+  "2": "Thứ 3",
+  "3": "Thứ 4",
+  "4": "Thứ 5",
+  "5": "Thứ 6",
+  "6": "Thứ 7",
+  "7": "Chủ nhật",
+  "0": "Chủ nhật",
+};
+
+const DAY_NAME_EN_MAP: Record<string, string> = {
+  monday: "Monday",
+  tuesday: "Tuesday",
+  wednesday: "Wednesday",
+  thursday: "Thursday",
+  friday: "Friday",
+  saturday: "Saturday",
+  sunday: "Sunday",
+  mon: "Monday",
+  tue: "Tuesday",
+  wed: "Wednesday",
+  thu: "Thursday",
+  fri: "Friday",
+  sat: "Saturday",
+  sun: "Sunday",
+  "thứ 2": "Monday",
+  "thứ 3": "Tuesday",
+  "thứ 4": "Wednesday",
+  "thứ 5": "Thursday",
+  "thứ 6": "Friday",
+  "thứ 7": "Saturday",
+  "chủ nhật": "Sunday",
+  "1": "Monday",
+  "2": "Tuesday",
+  "3": "Wednesday",
+  "4": "Thursday",
+  "5": "Friday",
+  "6": "Saturday",
+  "7": "Sunday",
+  "0": "Sunday",
+};
+
+const formatDaysPerWeek = (days?: string[] | null, isEn = false): string => {
+  if (!days || days.length === 0) return "";
+  const map = isEn ? DAY_NAME_EN_MAP : DAY_NAME_VN_MAP;
+  return days
+    .map((d) => {
+      const key = d.toLowerCase().trim();
+      return map[key] || d;
+    })
+    .join(", ");
 };
 
 type PeriodUnit = "week" | "month" | "year";
@@ -348,9 +425,11 @@ const GUARD_STATUS_CFG: Record<
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalProps) {
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
+  const isEn = locale === "en";
   // ── Contract & basic info ──────────────────────────────────────────────────
   const [contractId, setContractId] = useState("");
+  const [isContractDropdownOpen, setIsContractDropdownOpen] = useState(false);
   const [shiftName, setShiftName] = useState("");
   const [location, setLocation] = useState("");
   const [contracts, setContracts] = useState<ContractOption[]>([]);
@@ -1576,26 +1655,107 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
             <div className="space-y-5 pb-4">
 
               {/* Contract selector */}
-              <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">{dict.create_shift_modal?.contract_label || "Hợp đồng"}</label>
-                <select
-                  value={contractId}
-                  onChange={(e) => handleSelectContract(e.target.value)}
-                  className="w-full rounded-md border border-slate-300 bg-white px-3 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
+              <div className="relative">
+                <label className="mb-2 block text-sm font-medium text-slate-700">
+                  {dict.create_shift_modal?.contract_label || "Hợp đồng"}
+                </label>
+                <button
+                  type="button"
+                  disabled={isLoadingContracts || contracts.length === 0}
+                  onClick={() => setIsContractDropdownOpen(!isContractDropdownOpen)}
+                  className="w-full rounded-xl border border-slate-300 bg-white px-3.5 py-2.5 text-sm font-medium text-slate-800 flex items-center justify-between shadow-2xs hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 transition-all cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                 >
-                  <option value="">
-                    {isLoadingContracts ? (dict.create_shift_modal?.loading_contracts || "Đang tải hợp đồng...") : (dict.create_shift_modal?.select_contract || "Chọn hợp đồng")}
-                  </option>
-                  {contracts.map((c) => (
-                    <option
-                      key={c.contract_id}
-                      value={c.contract_id}
-                      style={{ color: getContractStatusColor(c.status) }}
-                    >
-                      {c.code} — {c.address} ({c.scheduled_days_count ?? 0}/{c.total_working_days_count ?? 0} ngày trực) [{getContractStatusLabel(c.status, dict)}]
-                    </option>
-                  ))}
-                </select>
+                  <div className="flex items-center gap-2 truncate">
+                    <FileText size={17} className="text-blue-600 shrink-0" />
+                    {selectedContract ? (
+                      <div className="flex items-center gap-2 truncate text-left text-xs">
+                        <span className="font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
+                          {selectedContract.code}
+                        </span>
+                        {selectedContract.customer_name && (
+                          <span className="flex items-center gap-1 font-semibold text-slate-800">
+                            <UserRound size={13} className="text-slate-500 shrink-0" />
+                            {selectedContract.customer_name}
+                          </span>
+                        )}
+                        <span className="text-slate-500 truncate">• {selectedContract.address}</span>
+                      </div>
+                    ) : (
+                      <span className="text-slate-400 text-xs font-normal">
+                        {isLoadingContracts
+                          ? (dict.create_shift_modal?.loading_contracts || "Đang tải hợp đồng...")
+                          : (dict.create_shift_modal?.select_contract || "Chọn hợp đồng...")}
+                      </span>
+                    )}
+                  </div>
+                  <ChevronDown
+                    size={16}
+                    className={`text-slate-400 shrink-0 transition-transform duration-200 ${
+                      isContractDropdownOpen ? "rotate-180" : ""
+                    }`}
+                  />
+                </button>
+
+                {isContractDropdownOpen && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-40"
+                      onClick={() => setIsContractDropdownOpen(false)}
+                    />
+                    <div className="absolute left-0 right-0 top-[102%] z-50 max-h-80 overflow-y-auto space-y-1.5 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                      {contracts.map((c) => {
+                        const isSelected = c.contract_id === contractId;
+                        return (
+                          <button
+                            key={c.contract_id}
+                            type="button"
+                            onClick={() => {
+                              handleSelectContract(c.contract_id);
+                              setIsContractDropdownOpen(false);
+                            }}
+                            className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? "bg-blue-50 text-blue-700 font-semibold border border-blue-100 shadow-2xs"
+                                : "text-slate-700 hover:bg-slate-50 border border-transparent"
+                            }`}
+                          >
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2 flex-wrap">
+                                <span className={`font-bold px-1.5 py-0.5 rounded text-[11px] ${isSelected ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-700"}`}>
+                                  {c.code}
+                                </span>
+                                {c.customer_name && (
+                                  <span className="flex items-center gap-1 font-semibold text-slate-800 text-[12px]">
+                                    <UserRound size={13} className="text-slate-400 shrink-0" />
+                                    {c.customer_name}
+                                  </span>
+                                )}
+                                <span className="text-[11px] text-slate-500 font-normal">
+                                  ({c.scheduled_days_count ?? 0}/{c.total_working_days_count ?? 0} {dict.create_shift_modal?.shift_days_suffix || (isEn ? "shift days" : "ngày trực")})
+                                </span>
+                                <span
+                                  className="ml-auto text-[11px] font-medium px-2 py-0.5 rounded-full"
+                                  style={{
+                                    color: getContractStatusColor(c.status),
+                                    backgroundColor: `${getContractStatusColor(c.status)}18`,
+                                  }}
+                                >
+                                  {getContractStatusLabel(c.status, dict)}
+                                </span>
+                              </div>
+                              <p className={`mt-1.5 text-xs truncate ${isSelected ? "text-blue-800 font-medium" : "text-slate-600"}`}>
+                                {c.address}
+                              </p>
+                            </div>
+                            {isSelected && (
+                              <Check size={18} className="text-blue-600 shrink-0 ml-1" />
+                            )}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
                 {!isLoadingContracts && contracts.length === 0 && (
                   <p className="mt-2 text-xs text-red-500">Chưa có hợp đồng để tạo ca trực.</p>
                 )}
@@ -1634,9 +1794,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                     <InfoRow
                       label={dict.create_shift_modal?.working_days_per_week || "Ngày trực / tuần"}
                       value={
-                        selectedContract.day_per_week?.length
-                          ? selectedContract.day_per_week.join(", ")
-                          : (dict.coor_guards?.unupdated || "Chưa cập nhật")
+                        formatDaysPerWeek(selectedContract.day_per_week, isEn) ||
+                        (dict.coor_guards?.unupdated || "Chưa cập nhật")
                       }
                     />
 

@@ -9,14 +9,23 @@ import {
     X,
 } from "lucide-react";
 import type { DateRange } from "../types";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 // ─── Calendar helpers ─────────────────────────────────────────────────────────
 
-const WEEKDAYS = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
-const MONTH_NAMES = [
+const WEEKDAYS_VI = ["CN", "T2", "T3", "T4", "T5", "T6", "T7"];
+const WEEKDAYS_EN = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+const MONTH_NAMES_VI = [
     "Tháng 1", "Tháng 2", "Tháng 3", "Tháng 4",
     "Tháng 5", "Tháng 6", "Tháng 7", "Tháng 8",
     "Tháng 9", "Tháng 10", "Tháng 11", "Tháng 12",
+];
+
+const MONTH_NAMES_EN = [
+    "January", "February", "March", "April",
+    "May", "June", "July", "August",
+    "September", "October", "November", "December",
 ];
 
 function toDateOnly(d: Date): Date {
@@ -55,6 +64,7 @@ type CalendarMonthProps = {
     hovered: Date | null;
     onDayClick: (d: Date) => void;
     onDayHover: (d: Date | null) => void;
+    isEn?: boolean;
 };
 
 function CalendarMonth({
@@ -64,6 +74,7 @@ function CalendarMonth({
     hovered,
     onDayClick,
     onDayHover,
+    isEn = false,
 }: CalendarMonthProps) {
     const daysInMonth = getDaysInMonth(year, month);
     const firstDow = getFirstDayOfWeek(year, month);
@@ -73,6 +84,8 @@ function CalendarMonth({
     for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
 
     const effectiveEnd = range.start && !range.end && hovered ? hovered : range.end;
+    const weekdays = isEn ? WEEKDAYS_EN : WEEKDAYS_VI;
+    const monthNames = isEn ? MONTH_NAMES_EN : MONTH_NAMES_VI;
 
     function dayState(d: Date) {
         const { start } = range;
@@ -92,11 +105,11 @@ function CalendarMonth({
     return (
         <div className="min-w-[240px]">
             <p className="mb-3 text-center text-sm font-semibold text-slate-800">
-                {MONTH_NAMES[month]} {year}
+                {monthNames[month]} {year}
             </p>
 
             <div className="grid grid-cols-7 gap-y-1">
-                {WEEKDAYS.map((wd) => (
+                {weekdays.map((wd) => (
                     <div
                         key={wd}
                         className="py-1 text-center text-[11px] font-semibold text-slate-400"
@@ -152,9 +165,12 @@ function CalendarMonth({
 type DateRangePickerProps = {
     value: DateRange;
     onChange: (range: DateRange) => void;
+    placeholder?: string;
 };
 
-export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
+export function DateRangePicker({ value, onChange, placeholder }: DateRangePickerProps) {
+    const { dict, locale } = useTranslation();
+    const isEn = locale === "en";
     const today = toDateOnly(new Date());
     const [open, setOpen] = useState(false);
     const [hovered, setHovered] = useState<Date | null>(null);
@@ -209,16 +225,19 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
         onChange({ start: null, end: null });
     }
 
+    const defaultPlaceholder = placeholder || dict?.admin_payment_history?.select_date_range || (isEn ? "Select date range" : "Chọn khoảng thời gian");
+
     const displayText = useMemo(() => {
         if (value.start && value.end) return `${formatVN(value.start)} - ${formatVN(value.end)}`;
         if (value.start) return `${formatVN(value.start)} - ...`;
-        return "Chọn khoảng thời gian";
-    }, [value]);
+        return defaultPlaceholder;
+    }, [value, defaultPlaceholder]);
 
     const hasValue = !!(value.start || value.end);
+    const monthNames = isEn ? MONTH_NAMES_EN : MONTH_NAMES_VI;
 
     return (
-        <div className="relative">
+        <div className={`relative ${open ? "z-50" : ""}`}>
             {/* Trigger */}
             <button
                 ref={triggerRef}
@@ -253,7 +272,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
             {open && (
                 <div
                     ref={popoverRef}
-                    className="absolute left-0 top-[calc(100%+6px)] z-50 w-max rounded-xl border border-slate-200 bg-white p-4 shadow-xl"
+                    className="absolute left-0 top-[calc(100%+6px)] z-[100] w-max max-w-[calc(100vw-32px)] sm:max-w-none rounded-xl border border-slate-200 bg-white p-4 shadow-2xl overflow-x-auto"
                 >
                     {/* Navigation */}
                     <div className="mb-4 flex items-center justify-between gap-4">
@@ -266,10 +285,10 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                         </button>
                         <div className="flex gap-8">
                             <span className="text-sm font-semibold text-slate-700">
-                                {MONTH_NAMES[viewMonth]} {viewYear}
+                                {monthNames[viewMonth]} {viewYear}
                             </span>
                             <span className="text-sm font-semibold text-slate-700">
-                                {MONTH_NAMES[rightMonth]} {rightYear}
+                                {monthNames[rightMonth]} {rightYear}
                             </span>
                         </div>
                         <button
@@ -282,7 +301,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                     </div>
 
                     {/* Two calendars */}
-                    <div className="flex gap-6">
+                    <div className="flex flex-col sm:flex-row gap-6">
                         <CalendarMonth
                             year={viewYear}
                             month={viewMonth}
@@ -290,8 +309,9 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                             hovered={hovered}
                             onDayClick={handleDayClick}
                             onDayHover={setHovered}
+                            isEn={isEn}
                         />
-                        <div className="w-px self-stretch bg-slate-100" />
+                        <div className="hidden sm:block w-px self-stretch bg-slate-100" />
                         <CalendarMonth
                             year={rightYear}
                             month={rightMonth}
@@ -299,6 +319,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                             hovered={hovered}
                             onDayClick={handleDayClick}
                             onDayHover={setHovered}
+                            isEn={isEn}
                         />
                     </div>
 
@@ -306,9 +327,9 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                     <div className="mt-4 flex items-center justify-between border-t border-slate-100 pt-3">
                         <p className="text-xs text-slate-500">
                             {!value.start
-                                ? "Chọn ngày bắt đầu"
+                                ? (dict?.admin_payment_history?.select_start_date || (isEn ? "Select start date" : "Chọn ngày bắt đầu"))
                                 : !value.end
-                                    ? "Chọn ngày kết thúc"
+                                    ? (dict?.admin_payment_history?.select_end_date || (isEn ? "Select end date" : "Chọn ngày kết thúc"))
                                     : `${formatVN(value.start)} → ${formatVN(value.end)}`}
                         </p>
                         <div className="flex gap-2">
@@ -317,7 +338,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                                 onClick={clearRange}
                                 className="rounded-md px-3 py-1.5 text-xs font-medium text-slate-600 hover:bg-slate-100"
                             >
-                                Xóa
+                                {dict?.admin_payment_history?.clear || (isEn ? "Clear" : "Xóa")}
                             </button>
                             <button
                                 type="button"
@@ -325,7 +346,7 @@ export function DateRangePicker({ value, onChange }: DateRangePickerProps) {
                                 onClick={() => setOpen(false)}
                                 className="rounded-md bg-blue-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                             >
-                                Xác nhận
+                                {dict?.admin_payment_history?.confirm || (isEn ? "Apply" : "Xác nhận")}
                             </button>
                         </div>
                     </div>
