@@ -273,22 +273,22 @@ export default function RegistrationTable() {
                       {reg.status === "pending" ? (
                         <span className="inline-flex items-center gap-1.5 bg-[#fef3c7] text-[#b45309] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#f59e0b] shrink-0"></span>
-                          PENDING
+                          {dict.admin_registrations.badge_pending}
                         </span>
                       ) : reg.status === "resubmitted" ? (
                         <span className="inline-flex items-center gap-1.5 bg-[#dbeafe] text-[#1d4ed8] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] shrink-0"></span>
-                          RESUBMITTED
+                          {dict.admin_registrations.badge_resubmitted}
                         </span>
                       ) : reg.status === "approved" ? (
                         <span className="inline-flex items-center gap-1.5 bg-[#dcfce7] text-[#166534] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#22c55e] shrink-0"></span>
-                          APPROVED
+                          {dict.admin_registrations.badge_approved}
                         </span>
                       ) : reg.status === "rejected" ? (
                         <span className="inline-flex items-center gap-1.5 bg-[#fee2e2] text-[#991b1b] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#ef4444] shrink-0"></span>
-                          REJECTED
+                          {dict.admin_registrations.badge_rejected}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1.5 bg-[#f3f4f6] text-[#374151] text-[11px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider whitespace-nowrap">

@@ -27,6 +27,7 @@ import {
   ArrowRightLeft,
   UserCircle,
   LogOut,
+  Loader2,
   ChevronDown,
 } from "lucide-react";
 
@@ -62,14 +63,19 @@ export default function CoordinatorLayout({
     });
   }, []);
 
+  const [loggingOut, setLoggingOut] = useState(false);
+
   const handleLogout = async () => {
+    if (loggingOut) return;
     try {
+      setLoggingOut(true);
       await requestLogout();
     } finally {
       clearAuth();
       setUserDropdownOpen(false);
       router.replace("/");
       router.refresh();
+      setLoggingOut(false);
     }
   };
 
@@ -304,9 +310,14 @@ export default function CoordinatorLayout({
                     <button
                       type="button"
                       onClick={handleLogout}
-                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
+                      disabled={loggingOut}
+                      className="w-full flex items-center gap-2.5 px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
                     >
-                      <LogOut className="w-4 h-4" />
+                      {loggingOut ? (
+                        <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                      ) : (
+                        <LogOut className="w-4 h-4 shrink-0" />
+                      )}
                       <span>{dict.common.logout}</span>
                     </button>
                   </div>
