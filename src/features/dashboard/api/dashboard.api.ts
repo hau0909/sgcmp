@@ -335,6 +335,7 @@ export type CurrentUpcomingShiftItem = {
   timeText: string;
   location: string;
   statusText: string;
+  startTime?: string;
 };
 
 /**
@@ -382,6 +383,7 @@ export type PastShiftItem = {
   location: string;
   contractName?: string;
   status: string;
+  startTime?: string;
 };
 
 export type AvailableGuardItem = {

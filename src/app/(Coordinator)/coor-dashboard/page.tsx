@@ -16,6 +16,7 @@ import {
     Search,
     CheckCircle2,
     Phone,
+    MapPin,
 } from "lucide-react";
 import {
     Radar,
@@ -52,8 +53,8 @@ export default function CoordinatorDashboardPage() {
         if (s.includes("PHÂN CÔNG") || s.includes("ASSIGNED")) return t.status_assigned || "PHÂN CÔNG";
         if (s.includes("ĐI TRỄ") || s.includes("LATE")) return t.status_late || "ĐI TRỄ";
         if (s.includes("VẮNG MẶT") || s.includes("ABSENT")) return t.status_absent || "VẮNG MẶT";
-        if (s.includes("THAY CA") || s.includes("REPLACEMENT")) return t.status_replacement || "THAY CA";
-        if (s.includes("HOÀN THÀNH") || s.includes("CHECKOUT") || s.includes("COMPLETED")) return t.status_checkout || "HOÀN THÀNH";
+        if (s.includes("THAY CA") || s.includes("THAY THẾ") || s.includes("REPLACEMENT") || s.includes("SHIFT CHANGE")) return t.status_replacement || "THAY CA";
+        if (s.includes("HOÀN THÀNH") || s.includes("ĐÃ KẾT THÚC") || s.includes("KẾT THÚC") || s.includes("CHECKOUT") || s.includes("COMPLETED")) return t.status_checkout || "HOÀN THÀNH";
         return statusText;
     };
 
@@ -133,7 +134,7 @@ export default function CoordinatorDashboardPage() {
         if (s.includes("ĐI TRỄ") || s.includes("LATE")) {
             return "bg-amber-100 text-amber-700 border-amber-200/80"; // Yellow/Amber (Màu vàng)
         }
-        if (s.includes("THAY CA") || s.includes("REPLACEMENT")) {
+        if (s.includes("THAY CA") || s.includes("THAY THẾ") || s.includes("REPLACEMENT") || s.includes("SHIFT CHANGE")) {
             return "bg-purple-100 text-purple-700 border-purple-200/80"; // Purple (Màu tím)
         }
         if (s.includes("PHÂN CÔNG") || s.includes("SẮP TỚI") || s.includes("UPCOMING") || s.includes("ASSIGNED")) {
@@ -252,7 +253,26 @@ export default function CoordinatorDashboardPage() {
         setTimeout(() => setToastMessage(null), 3000);
     };
 
-    const filteredPastShifts = pastShiftsList.filter((shift) => {
+    const getShiftTimeValue = (shift: { startTime?: string; timeText?: string; time?: string }) => {
+        if (shift.startTime) {
+            const t = new Date(shift.startTime).getTime();
+            if (!isNaN(t) && t > 0) return t;
+        }
+        const str = shift.timeText || shift.time || "";
+        const match = str.match(/(\d{1,2}):(\d{2})/);
+        if (match) {
+            const hours = parseInt(match[1], 10);
+            const minutes = parseInt(match[2], 10);
+            return hours * 60 + minutes;
+        }
+        return 0;
+    };
+
+    const sortedPastShifts = [...pastShiftsList].sort(
+        (a, b) => getShiftTimeValue(a) - getShiftTimeValue(b)
+    );
+
+    const filteredPastShifts = sortedPastShifts.filter((shift) => {
         const query = modalSearchKeyword.toLowerCase().trim();
         if (!query) return true;
         return (
@@ -276,7 +296,11 @@ export default function CoordinatorDashboardPage() {
         );
     });
 
-    const filteredCurrentUpcomingShifts = currentUpcomingShiftsList.filter((shift) => {
+    const sortedCurrentUpcomingShifts = [...currentUpcomingShiftsList].sort(
+        (a, b) => getShiftTimeValue(a) - getShiftTimeValue(b)
+    );
+
+    const filteredCurrentUpcomingShifts = sortedCurrentUpcomingShifts.filter((shift) => {
         const query = currentUpcomingSearchKeyword.toLowerCase().trim();
         if (!query) return true;
         return (
@@ -458,7 +482,7 @@ export default function CoordinatorDashboardPage() {
                                     </div>
                                 ))
                             ) : (
-                                currentUpcomingShiftsList.slice(0, 3).map((shift, idx) => (
+                                currentUpcomingShiftsList.length === 0 ? null : sortedCurrentUpcomingShifts.slice(0, 3).map((shift, idx) => (
                                     <div
                                         key={idx}
                                         className={`rounded-xl p-4 transition-colors ${shift.type === "ONGOING"
@@ -501,7 +525,10 @@ export default function CoordinatorDashboardPage() {
                                                 </div>
 
                                                 <p className="text-xs text-slate-600 mt-1 flex items-center gap-1.5 flex-wrap">
-                                                    <span>{shift.location}</span>
+                                                    <span className="flex items-center gap-1 text-slate-600 font-semibold">
+                                                        <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                        <span>{shift.location}</span>
+                                                    </span>
                                                     {shift.phone && (
                                                         <>
                                                             <span className="text-slate-300">•</span>
@@ -579,7 +606,7 @@ export default function CoordinatorDashboardPage() {
                                         </div>
                                     ))
                                 ) : (
-                                    pastShiftsList.slice(0, 5).map((shift, idx) => (
+                                    pastShiftsList.length === 0 ? null : sortedPastShifts.slice(0, 5).map((shift, idx) => (
                                         <div
                                             key={idx}
                                             className="bg-slate-50/70 hover:bg-slate-100/80 rounded-xl p-3.5 border border-slate-100 transition-colors flex items-start gap-3"
@@ -901,7 +928,10 @@ export default function CoordinatorDashboardPage() {
                                                 {shift.name}
                                             </h4>
                                             <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
-                                                <span>{shift.location}</span>
+                                                <span className="flex items-center gap-1 text-slate-600 font-semibold">
+                                                    <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                    <span>{shift.location}</span>
+                                                </span>
                                                 {shift.phone && (
                                                     <>
                                                         <span className="text-slate-300">•</span>

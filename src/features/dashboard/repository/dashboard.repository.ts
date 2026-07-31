@@ -429,6 +429,7 @@ export const getTodayGuardsStatusList = async (
         contract_id,
         bookings!inner (
           company_id,
+          address,
           services!inner (
             name
           )
@@ -438,12 +439,14 @@ export const getTodayGuardsStatusList = async (
         status,
         guard_id,
         check_in_time,
+        updated_at,
         replacement_guard_ids
       )
     `)
     .eq("contracts.bookings.company_id", companyId)
     .lte("start_time", endDate)
-    .gte("end_time", startDate);
+    .gte("end_time", startDate)
+    .order("start_time", { ascending: true });
 
   if (error) {
     throw new Error(`Không thể lấy danh sách ca trực bảo vệ hôm nay: ${error.message}`);
@@ -453,17 +456,63 @@ export const getTodayGuardsStatusList = async (
 };
 
 export const getProfilesByIds = async (ids: string[]) => {
+  if (!ids || ids.length === 0) return [];
   const supabase = await createClient();
-  const { data, error } = await supabase
+
+  const cleanIds = Array.from(new Set(ids.filter(Boolean)));
+
+  // Query 1: Direct profiles by user_id
+  const { data: profilesData } = await supabase
     .from("profiles")
     .select("user_id, full_name, avatar_url, phone_number")
-    .in("user_id", ids);
+    .in("user_id", cleanIds);
 
-  if (error) {
-    throw new Error(`Không thể lấy danh sách profile bảo vệ: ${error.message}`);
+  // Query 2: Guards by guard_id or user_id
+  const { data: guardsData } = await supabase
+    .from("guards")
+    .select(`
+      guard_id,
+      user_id,
+      profiles (
+        full_name,
+        avatar_url,
+        phone_number
+      )
+    `)
+    .in("guard_id", cleanIds);
+
+  const resultMap = new Map<string, any>();
+
+  if (profilesData) {
+    for (const p of profilesData) {
+      const item = {
+        id: p.user_id,
+        user_id: p.user_id,
+        full_name: p.full_name || "Bảo vệ",
+        avatar_url: p.avatar_url,
+        phone_number: p.phone_number,
+      };
+      resultMap.set(p.user_id, item);
+    }
   }
 
-  return data || [];
+  if (guardsData) {
+    for (const g of guardsData as any[]) {
+      const prof = g.profiles || {};
+      const item = {
+        id: g.guard_id,
+        guard_id: g.guard_id,
+        user_id: g.user_id,
+        full_name: prof.full_name || "Bảo vệ",
+        avatar_url: prof.avatar_url,
+        phone_number: prof.phone_number,
+      };
+      if (g.guard_id) resultMap.set(g.guard_id, item);
+      if (g.user_id) resultMap.set(g.user_id, item);
+    }
+  }
+
+  return Array.from(resultMap.values());
 };
 
 export const getRecentShiftsAndAssignments = async (
@@ -1078,6 +1127,7 @@ export const getPastShiftsRepository = async (
         contract_id,
         bookings!inner (
           company_id,
+          address,
           services (
             name
           )
@@ -1086,7 +1136,8 @@ export const getPastShiftsRepository = async (
       shift_assignments (
         status,
         guard_id,
-        check_in_time
+        check_in_time,
+        replacement_guard_ids
       )
     `)
     .eq("contracts.bookings.company_id", companyId);
@@ -1100,6 +1151,7 @@ export const getPastShiftsRepository = async (
     if (endDate) {
       query = query.lte("start_time", endDate.toISOString());
     }
+    query = query.lte("end_time", now.toISOString());
   }
 
   const { data, error } = await query
@@ -1128,7 +1180,8 @@ export const getAvailableGuardsRepository = async (
         )
       ),
       shift_assignments (
-        guard_id
+        guard_id,
+        replacement_guard_ids
       )
     `)
     .eq("contracts.bookings.company_id", companyId)
@@ -1141,6 +1194,9 @@ export const getAvailableGuardsRepository = async (
       for (const sa of (shift.shift_assignments || [])) {
         if (sa.guard_id) {
           busyGuardIds.add(sa.guard_id);
+        }
+        if (sa.replacement_guard_ids && Array.isArray(sa.replacement_guard_ids)) {
+          sa.replacement_guard_ids.forEach((id: string) => busyGuardIds.add(id));
         }
       }
     }
