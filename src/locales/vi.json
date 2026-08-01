@@ -369,6 +369,9 @@
     "logout": "Đăng xuất",
     "portal_title": "CỔNG THÔNG TIN BẢO VỆ",
     "welcome": "Chào mừng đến với trang bảo vệ",
+    "subscription_expired_badge": "Gói dịch vụ đã hết hạn",
+    "subscription_expired_tooltip": "Gói dịch vụ công ty đã hết hạn. Tính năng bị khóa.",
+    "subscription_expired_banner": "Gói dịch vụ của công ty đã hết hạn. Vui lòng liên hệ công ty bảo vệ để gia hạn.",
     "schedule_title": "Lịch trực",
     "schedule_subtitle": "Xem lịch ca trực theo tuần.",
     "schedule_empty": "Trống lịch",
@@ -490,7 +493,10 @@
     "reports": "Quản lý báo cáo",
     "role": "Điều phối viên",
     "director": "Giám đốc",
-    "switch_to_management": "Chuyển sang quản lý"
+    "switch_to_management": "Chuyển sang quản lý",
+    "subscription_expired_badge": "Gói dịch vụ đã hết hạn",
+    "subscription_expired_tooltip": "Gói dịch vụ công ty đã hết hạn. Tính năng bị khóa.",
+    "subscription_expired_banner": "Gói dịch vụ của công ty đã hết hạn. Vui lòng liên hệ Giám đốc / Quản trị viên công ty để gia hạn gói dịch vụ."
   },
   "layout_admin": {
     "dashboard": "Bảng điều khiển",

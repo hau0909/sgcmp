@@ -367,6 +367,9 @@
     "logout": "Log Out",
     "portal_title": "GUARD PORTAL",
     "welcome": "Welcome to the Guard Portal",
+    "subscription_expired_badge": "Subscription plan expired",
+    "subscription_expired_tooltip": "Company subscription plan has expired. Features are locked.",
+    "subscription_expired_banner": "The company's subscription plan has expired. Please contact the security company to renew.",
     "schedule_title": "Duty Schedule",
     "schedule_subtitle": "View your weekly shift schedule.",
     "schedule_empty": "No shifts",
@@ -487,7 +490,10 @@
     "reports": "Reports",
     "role": "Coordinator",
     "director": "Director",
-    "switch_to_management": "Switch to Management"
+    "switch_to_management": "Switch to Management",
+    "subscription_expired_badge": "Subscription plan expired",
+    "subscription_expired_tooltip": "Company subscription plan has expired. Features are locked.",
+    "subscription_expired_banner": "The company's subscription plan has expired. Please contact the Company Director / Admin to renew the subscription."
   },
   "layout_admin": {
     "dashboard": "Dashboard",
