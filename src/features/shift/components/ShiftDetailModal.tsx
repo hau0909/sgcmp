@@ -59,22 +59,6 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   const [isPending, startTransition] = useTransition();
   const [lastAutoOpenedShiftId, setLastAutoOpenedShiftId] = useState<string | null>(null);
 
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  // Reset dispatch panel when modal closes
-  useEffect(() => {
-    if (!open) {
-      setIsDispatchPanelOpen(false);
-      setReplacementMap({});
-      setActiveSlotId(null);
-      setErrorMessage("");
-      setSearchQuery("");
-      setLastAutoOpenedShiftId(null);
-    }
-  }, [open]);
-
   // ─── Computed helpers ────────────────────────────────────────────────────────
 
   const canDispatchReplacement = (assign: ShiftAssignment) => {
@@ -86,10 +70,15 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
 
   const eligibleAssignments = shift.assignments.filter(canDispatchReplacement);
 
+  const shiftEndTimeMs = new Date(
+    typeof shift.end_time === "string" ? shift.end_time.replace(" ", "T") : shift.end_time
+  ).getTime();
+
   const isShiftEnded =
-    new Date(shift.end_time).getTime() < new Date().getTime() ||
+    (!isNaN(shiftEndTimeMs) && shiftEndTimeMs < Date.now()) ||
     (shift as any).status === "completed" ||
-    (shift as any).status === "checkout";
+    (shift as any).status === "checkout" ||
+    (shift as any).status === "ended";
 
   const isAllDispatched =
     eligibleAssignments.length > 0 &&
@@ -136,10 +125,28 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   const actualGuards = getActualGuardsCount();
   const missingGuards = Math.max(0, shift.required_guards - actualGuards);
 
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Reset dispatch panel when modal closes or shift has ended
+  useEffect(() => {
+    if (!open || isShiftEnded) {
+      setIsDispatchPanelOpen(false);
+    }
+    if (!open) {
+      setReplacementMap({});
+      setActiveSlotId(null);
+      setErrorMessage("");
+      setSearchQuery("");
+      setLastAutoOpenedShiftId(null);
+    }
+  }, [open, isShiftEnded]);
+
   // ─── Dispatch panel open ────────────────────────────────────────────────────
 
   const handleOpenDispatchPanel = async () => {
-    if (eligibleAssignments.length === 0) return;
+    if (isShiftEnded || eligibleAssignments.length === 0) return;
 
     setIsDispatchPanelOpen(true);
     setErrorMessage("");
@@ -180,13 +187,18 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
     }
   };
 
-  // Auto-open dispatch panel when modal mounts if there are guards to replace
+  // Auto-open dispatch panel when modal mounts if there are guards to replace and shift is active
   useEffect(() => {
-    if (open && eligibleAssignments.length > 0 && lastAutoOpenedShiftId !== shift.shift_id) {
+    if (
+      open &&
+      !isShiftEnded &&
+      eligibleAssignments.length > 0 &&
+      lastAutoOpenedShiftId !== shift.shift_id
+    ) {
       setLastAutoOpenedShiftId(shift.shift_id);
       handleOpenDispatchPanel();
     }
-  }, [open, shift.shift_id, eligibleAssignments.length, lastAutoOpenedShiftId]);
+  }, [open, isShiftEnded, shift.shift_id, eligibleAssignments.length, lastAutoOpenedShiftId]);
 
   // ─── Guard selection ────────────────────────────────────────────────────────
 
