@@ -668,7 +668,7 @@ export const getGuardsShiftsInRange = async ({
   guardIds: string[];
   startTime: string;
   endTime: string;
-}): Promise<{ guard_id: string; shift_id: string; start_time: string; end_time: string; duration_minutes: number }[]> => {
+}): Promise<{ guard_id: string; shift_id: string; start_time: string; end_time: string; duration_minutes: number; location?: string; contract_id?: string }[]> => {
   const supabase = await createClient();
 
   if (guardIds.length === 0) return [];
@@ -694,7 +694,9 @@ export const getGuardsShiftsInRange = async ({
         shift_id,
         shift_name,
         start_time,
-        end_time
+        end_time,
+        location,
+        contract_id
       )
     `,
     )
@@ -722,6 +724,8 @@ export const getGuardsShiftsInRange = async ({
     start_time: string;
     end_time: string;
     duration_minutes: number;
+    location?: string;
+    contract_id?: string;
   }[] = [];
 
   for (const item of overlappingData) {
@@ -739,6 +743,8 @@ export const getGuardsShiftsInRange = async ({
         start_time: shift.start_time,
         end_time: shift.end_time,
         duration_minutes: duration,
+        location: shift.location,
+        contract_id: shift.contract_id,
       });
     }
 
@@ -752,6 +758,8 @@ export const getGuardsShiftsInRange = async ({
             start_time: shift.start_time,
             end_time: shift.end_time,
             duration_minutes: duration,
+            location: shift.location,
+            contract_id: shift.contract_id,
           });
         }
       }

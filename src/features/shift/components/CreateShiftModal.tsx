@@ -378,6 +378,8 @@ const getGuardStatusLabel = (status: GuardShiftStatus, dict?: any): string => {
       return dict?.create_shift_modal?.guard_status_selected || "Đã chọn";
     case "assigned":
       return dict?.create_shift_modal?.guard_status_assigned || "Đã phân công";
+    case "warning":
+      return dict?.create_shift_modal?.guard_status_warning || "Cảnh báo di chuyển";
     case "conflict":
       return dict?.create_shift_modal?.guard_status_conflict || "Xung đột ca";
     case "unavailable":
@@ -406,6 +408,11 @@ const GUARD_STATUS_CFG: Record<
     label: "Đã phân công",
     badge: "bg-indigo-100 text-indigo-700",
     dot: "bg-indigo-500",
+  },
+  warning: {
+    label: "Cảnh báo di chuyển",
+    badge: "bg-amber-100 text-amber-800",
+    dot: "bg-amber-500",
   },
   conflict: {
     label: "Xung đột ca",
@@ -763,6 +770,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     const exceedsWeekly = availData?.exceedsWeeklyLimit ?? false;
 
     const isSelected = activeSegmentGuards.includes(guardId);
+    const hasWarning = availData?.hasBackToBackWarning ?? false;
 
     let status: GuardShiftStatus = "available";
     let reason = translateAvailabilityReason(availData?.reason);
@@ -783,6 +791,13 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       status = "conflict";
       reason = translateAvailabilityReason(availData?.reason) || (dict?.create_shift_modal?.status_exceeds_weekly || "Vượt quá 48 giờ làm việc trong tuần");
       isDisabled = true;
+    } else if (hasWarning) {
+      status = "warning";
+      const timeMatch = availData?.warningReason?.match(/\(\d{2}:\d{2}\)/);
+      const timeStr = timeMatch ? timeMatch[0] : "";
+      reason = (dict?.create_shift_modal?.status_back_to_back_warning || "Bảo vệ có ca trực nối tiếp sát giờ tại địa điểm khác ({0})")
+        .replace("{0}", timeStr || "sát giờ");
+      isDisabled = false;
     }
 
     return {
@@ -996,7 +1011,11 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
         setIsCheckingConflicts(true);
         const res = await requestGetGuardAvailability({
           guardIds: allIds,
-          proposedShifts,
+          proposedShifts: proposedShifts.map((ps) => ({
+            ...ps,
+            location,
+            contractId,
+          })),
         });
 
         if (res.data) setGuardAvailabilityMap(res.data);
@@ -2520,9 +2539,11 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             ? "border-indigo-300 bg-indigo-50/40"
                             : info.status === "conflict" || info.reason.includes("Vượt quá")
                               ? "border-red-200 bg-red-50/30"
-                              : info.status === "unavailable"
-                                ? "border-slate-200 bg-slate-50 opacity-60"
-                                : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
+                              : info.status === "warning"
+                                ? "border-amber-300 bg-amber-50/40 hover:border-amber-400"
+                                : info.status === "unavailable"
+                                  ? "border-slate-200 bg-slate-50 opacity-60"
+                                  : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50"
                         } ${info.isDisabled ? "cursor-not-allowed" : "cursor-pointer"}`}
                     >
                       <div className="flex items-center gap-3">
@@ -2541,7 +2562,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                           </div>
                           <span
                             className={`absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white ${isSelected ? "bg-blue-600" :
-                                info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-500" : "bg-slate-400"
+                                info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-500" :
+                                info.status === "warning" ? "bg-amber-500" : "bg-slate-400"
                               }`}
                           />
                         </div>
@@ -2554,11 +2576,12 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                             </p>
                             <span
                               className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${isSelected ? "bg-blue-100 text-blue-700" :
-                                  info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-100 text-red-600" : "bg-slate-100 text-slate-500"
+                                  info.status === "conflict" || info.reason.includes("Vượt quá") ? "bg-red-100 text-red-600" :
+                                  info.status === "warning" ? "bg-amber-100 text-amber-800" : "bg-slate-100 text-slate-500"
                                 }`}
                             >
                               {isSelected && <CheckCircle2 size={10} />}
-                              {(info.status === "conflict" || info.reason.includes("Vượt quá")) && <AlertTriangle size={10} />}
+                              {(info.status === "conflict" || info.reason.includes("Vượt quá") || info.status === "warning") && <AlertTriangle size={10} />}
                               {info.reason}
                             </span>
                           </div>

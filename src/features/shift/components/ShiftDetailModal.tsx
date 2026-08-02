@@ -101,6 +101,7 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   const getStatusStyle = (assign: ShiftAssignment) => {
     if (assign.status === "assigned") return "bg-yellow-50 text-yellow-700 border-yellow-200";
     if (assign.status === "completed") return "bg-emerald-50 text-emerald-700 border-emerald-200";
+    if (assign.status === "checkout") return "bg-slate-100 text-slate-600 border-slate-200";
     if (assign.status === "late") {
       return assign.check_in_time
         ? "bg-orange-50 text-orange-700 border-orange-200"
@@ -113,7 +114,9 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
     let count = 0;
     shift.assignments.forEach((sa) => {
       const isOriginalActive =
-        sa.status === "completed" || (sa.status === "late" && sa.check_in_time !== null);
+        sa.status === "completed" ||
+        sa.status === "checkout" ||
+        (sa.status === "late" && sa.check_in_time !== null);
       if (isOriginalActive) count++;
       if (sa.replacement_guard_ids) {
         count += sa.replacement_guard_ids.length;
