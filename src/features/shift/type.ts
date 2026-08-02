@@ -119,12 +119,15 @@ export type GuardShiftStatus =
   | "available"
   | "selected"
   | "assigned"    // guard designated for the current generation batch
+  | "warning"     // guard available with soft travel warning
   | "conflict"
   | "unavailable";
 
 export type GuardAvailabilityInfo = {
   guardId: string;
   hasConflict: boolean;
+  hasBackToBackWarning?: boolean;
+  warningReason?: string;
   assignedMinutesToday: number;
   proposedMinutes: number;
   totalMinutesAfterAssign: number;

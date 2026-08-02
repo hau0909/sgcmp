@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import RoleGuard from "@/components/auth/RoleGuard";
 import { useAuthStore } from "@/store/auth.store";
+import { useSubscriptionStore } from "@/store/subscription.store";
 import { requestGetCompanyById } from "@/features/company/api/company.api";
 import { requestGetUserProfile, requestLogout } from "@/features/auth/api/auth.api";
 import { useTranslation } from "@/components/providers/LanguageProvider";
@@ -29,6 +30,7 @@ import {
   LogOut,
   Loader2,
   ChevronDown,
+  AlertTriangle,
 } from "lucide-react";
 
 export default function CoordinatorLayout({
@@ -46,10 +48,20 @@ export default function CoordinatorLayout({
   const companyId = useAuthStore((state) => state.company_id);
   const role = useAuthStore((state) => state.role);
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const fetchSubscription = useSubscriptionStore((state) => state.fetchSubscription);
+  const { isActive, isLoading } = useSubscriptionStore();
+  const isSubscriptionExpired = !isLoading && !isActive && !!companyId;
+
   const [companyInfo, setCompanyInfo] = useState<{
     name: string;
     ownerName?: string;
   } | null>(null);
+
+  useEffect(() => {
+    if (companyId) {
+      fetchSubscription(companyId);
+    }
+  }, [companyId, fetchSubscription]);
 
   useEffect(() => {
     requestGetUserProfile().then((res) => {
@@ -195,8 +207,26 @@ export default function CoordinatorLayout({
 
           {/* Navigation Section */}
           <nav className="flex-1 flex flex-col gap-1 overflow-y-auto">
+            {isSubscriptionExpired && (
+              <div className="mx-1 mb-2 p-2.5 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-bold flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+                <span>{dict.layout_coordinator?.subscription_expired_badge || "Gói dịch vụ đã hết hạn"}</span>
+              </div>
+            )}
             {sidebarLinks.map((link, idx) => {
               const Icon = link.icon;
+              if (isSubscriptionExpired) {
+                return (
+                  <div
+                    key={idx}
+                    title={dict.layout_coordinator?.subscription_expired_tooltip || "Gói dịch vụ công ty đã hết hạn. Tính năng bị khóa."}
+                    className="flex items-center gap-3 px-3 py-2 rounded-lg font-body text-sm font-semibold text-on-surface-variant/40 bg-surface-container/30 opacity-50 cursor-not-allowed select-none"
+                  >
+                    <Icon className="w-5 h-5 text-on-surface-variant/40 shrink-0" />
+                    <span>{link.name}</span>
+                  </div>
+                );
+              }
               return (
                 <Link
                   key={idx}
@@ -230,6 +260,16 @@ export default function CoordinatorLayout({
 
         {/* Main Panel */}
         <div className="flex-1 flex flex-col md:ml-64 h-screen overflow-hidden">
+          {/* Subscription Expired Alert Banner */}
+          {isSubscriptionExpired && (
+            <div className="bg-amber-50 border-b border-amber-200 px-6 py-2.5 flex items-center gap-2 text-amber-800 text-xs font-semibold shrink-0">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>
+                {dict.layout_coordinator?.subscription_expired_banner || "Gói dịch vụ của công ty đã hết hạn. Vui lòng liên hệ Giám đốc / Quản trị viên công ty để gia hạn gói dịch vụ."}
+              </span>
+            </div>
+          )}
+
           {/* Top Header matching (company) structure exactly */}
           <header className="bg-surface-container-lowest border-b border-outline-variant w-full h-16 px-6 flex justify-between items-center z-30 shrink-0">
             {/* Brand & Mobile Toggle */}

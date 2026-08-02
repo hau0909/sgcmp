@@ -369,6 +369,9 @@
     "logout": "Đăng xuất",
     "portal_title": "CỔNG THÔNG TIN BẢO VỆ",
     "welcome": "Chào mừng đến với trang bảo vệ",
+    "subscription_expired_badge": "Gói dịch vụ đã hết hạn",
+    "subscription_expired_tooltip": "Gói dịch vụ công ty đã hết hạn. Tính năng bị khóa.",
+    "subscription_expired_banner": "Gói dịch vụ của công ty đã hết hạn. Vui lòng liên hệ công ty bảo vệ để gia hạn.",
     "schedule_title": "Lịch trực",
     "schedule_subtitle": "Xem lịch ca trực theo tuần.",
     "schedule_empty": "Trống lịch",
@@ -490,7 +493,10 @@
     "reports": "Quản lý báo cáo",
     "role": "Điều phối viên",
     "director": "Giám đốc",
-    "switch_to_management": "Chuyển sang quản lý"
+    "switch_to_management": "Chuyển sang quản lý",
+    "subscription_expired_badge": "Gói dịch vụ đã hết hạn",
+    "subscription_expired_tooltip": "Gói dịch vụ công ty đã hết hạn. Tính năng bị khóa.",
+    "subscription_expired_banner": "Gói dịch vụ của công ty đã hết hạn. Vui lòng liên hệ Giám đốc / Quản trị viên công ty để gia hạn gói dịch vụ."
   },
   "layout_admin": {
     "dashboard": "Bảng điều khiển",
@@ -2349,6 +2355,7 @@
     "guard_status_available": "Sẵn sàng",
     "guard_status_selected": "Đã chọn",
     "guard_status_assigned": "Đã phân công",
+    "guard_status_warning": "Cảnh báo di chuyển",
     "guard_status_conflict": "Xung đột ca",
     "guard_status_unavailable": "Không khả dụng",
     "contract_status_active": "Hoạt động",
@@ -2361,6 +2368,7 @@
     "status_assignable": "Có thể phân công",
     "status_selected": "Đã chọn",
     "status_db_conflict": "Trùng với ca trực khác",
+    "status_back_to_back_warning": "Bảo vệ có ca trực nối tiếp sát giờ tại địa điểm khác ({0})",
     "status_exceeds_daily": "Vượt quá 8 giờ làm việc trong ngày",
     "status_exceeds_weekly": "Vượt quá 48 giờ làm việc trong tuần",
     "valid": "Hợp lệ",
