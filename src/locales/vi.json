@@ -1744,6 +1744,8 @@
     "error_delete": "Có lỗi xảy ra khi xóa tệp."
   },
   "contract_guards": {
+    "status_free": "Sẵn sàng",
+    "status_conflict": "Trùng lịch hợp đồng",
     "male": "Nam",
     "female": "Nữ",
     "other": "Khác",
@@ -2128,6 +2130,7 @@
     "status_substitute": "Thay ca",
     "status_active": "Hoạt động",
     "status_inactive": "Vô hiệu hóa",
+    "status_banned": "Đã bị khóa",
     "gender_male": "Nam",
     "gender_female": "Nữ",
     "col_avatar": "Ảnh",
@@ -2150,6 +2153,7 @@
     "subtitle": "Thông tin chi tiết nhân viên bảo vệ",
     "status_active": "HOẠT ĐỘNG",
     "status_inactive": "VÔ HIỆU HÓA",
+    "status_banned": "ĐÃ BỊ KHÓA",
     "edit_profile": "Chỉnh sửa hồ sơ",
     "cancel": "Hủy",
     "save": "Lưu thay đổi",
@@ -2348,6 +2352,7 @@
     "fully_assigned": "Đầy đủ bảo vệ",
     "needs_more_guards": "CẦN PHÂN CÔNG THÊM BẢO VỆ",
     "available_guards": "Bảo vệ khả dụng",
+    "guard_selection_note": "Lưu ý: Bạn có thể tự do chọn bất kỳ bảo vệ nào trong hoặc ngoài hợp đồng để phân công cho ca trực.",
     "search_guard_placeholder": "Tìm kiếm bảo vệ...",
     "filter_free_time": "Lọc theo thời gian rảnh",
     "assign": "Phân công",
@@ -2461,7 +2466,24 @@
     "shifts_preview_text": "✓ {0} ca trực · {1} ngày × {2} ca",
     "shifts_preview_in": "trong",
     "status_exceeds_daily_on_date": "Vượt quá 8 giờ ngày {0}",
-    "status_conflict_on_date": "Trùng lịch ngày {0}"
+    "status_conflict_on_date": "Trùng lịch ngày {0}",
+    "contract_guards_section": "Bảo vệ trong hợp đồng",
+    "other_guards_section": "Bảo vệ ngoài hợp đồng",
+    "section_collapse": "Thu gọn",
+    "section_expand": "Mở rộng",
+    "contract_has_no_guards": "Hợp đồng này chưa có bảo vệ chỉ định.",
+    "no_contract_guards_matching": "Không tìm thấy bảo vệ phù hợp trong hợp đồng.",
+    "no_other_guards_matching": "Không tìm thấy bảo vệ ngoài hợp đồng phù hợp.",
+    "load_more_contract_guards": "Tải thêm bảo vệ trong hợp đồng",
+    "load_more_other_guards": "Tải thêm bảo vệ ngoài hợp đồng",
+    "loading_more_guards": "Đang tải thêm bảo vệ...",
+    "slot_valid_no_edit": "Ca trực đã hợp lệ — Không cần chỉnh sửa",
+    "err_invalid_original_slot": "Khung giờ gốc không hợp lệ.",
+    "err_empty_split_list": "Danh sách ca tách không được để trống.",
+    "err_shift_exceed_8h": "Ca trực không được vượt quá 8 tiếng.",
+    "err_split_gaps": "Các ca tách phải liên tục, không được bị hở thời gian.",
+    "err_split_overlaps": "Các ca tách không được trùng thời gian.",
+    "err_split_total_must_equal": "Tổng thời gian sau khi tách phải bằng tổng thời gian ca ban đầu."
   },
   "shift_toolbar": {
     "view_day": "Ngày",
@@ -2477,7 +2499,8 @@
     "unupdated_location": "Chưa cập nhật địa điểm",
     "continuous_shifts": "ca liên tục",
     "contract_location_subtitle": "Địa điểm hợp đồng",
-    "location_header": "ĐỊA ĐIỂM / VỊ TRÍ"
+    "location_header": "ĐỊA ĐIỂM / VỊ TRÍ",
+    "no_shifts_today": "Không có ca trực trong ngày hôm nay."
   },
   "shift_week": {
     "shift_name": "Tên ca trực",
@@ -2956,11 +2979,6 @@
     "method_bank": "Chuyển khoản ngân hàng",
     "method_credit": "Thẻ tín dụng",
     "method_wallet": "Ví điện tử",
-    "status_all": "Tất cả trạng thái",
-    "status_pending": "Chờ xử lý",
-    "status_completed": "Thành công",
-    "status_failed": "Thất bại",
-    "status_refunded": "Hoàn tiền",
     "unknown_company": "Không rõ",
     "loading": "Đang tải dữ liệu..."
   },

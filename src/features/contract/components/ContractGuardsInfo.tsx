@@ -79,6 +79,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
           limit: MODAL_PAGE_SIZE,
           status: "active",
           search: searchKeyword,
+          checkContractId: contractId,
         });
         if (res && res.success) {
           setAllGuards(res.data?.guards || []);
@@ -182,13 +183,13 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
           </p>
         </div>
 
-          <button
-            onClick={handleOpenModal}
-            className="px-4 py-2 cursor-pointer bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold rounded-lg transition-all shadow-sm flex items-center gap-1.5"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{dict.contract_guards?.update_btn || "Cập nhật bảo vệ"}</span>
-          </button>
+        <button
+          onClick={handleOpenModal}
+          className="px-4 py-2 cursor-pointer bg-primary hover:bg-primary/95 text-on-primary text-xs font-bold rounded-lg transition-all shadow-sm flex items-center gap-1.5"
+        >
+          <Plus className="w-3.5 h-3.5" />
+          <span>{dict.contract_guards?.update_btn || "Cập nhật bảo vệ"}</span>
+        </button>
       </div>
 
       {isLoading ? (
@@ -315,22 +316,30 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                     const profile = getGuardProfile(guard.profiles);
                     if (!profile) return null;
                     const isSelected = selectedGuardIds.includes(guard.guard_id);
+                    const isConflicted = !!guard.conflictInfo?.hasConflict;
 
                     return (
                       <div
                         key={guard.guard_id}
-                        onClick={() => handleToggleGuard(guard.guard_id)}
-                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer select-none ${isSelected
-                          ? "border-primary bg-primary/5 shadow-sm"
-                          : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50"
+                        onClick={() => {
+                          if (isConflicted) return;
+                          handleToggleGuard(guard.guard_id);
+                        }}
+                        className={`flex items-center gap-3 p-3 rounded-lg border transition-all select-none ${isConflicted
+                            ? "border-slate-100 bg-slate-50/40 opacity-60 cursor-not-allowed"
+                            : isSelected
+                              ? "border-primary bg-primary/5 shadow-sm cursor-pointer"
+                              : "border-slate-200 hover:border-slate-300 hover:bg-slate-50/50 cursor-pointer"
                           }`}
                       >
                         {/* Custom Checkbox */}
-                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isSelected
-                          ? "bg-primary border-primary text-on-primary"
-                          : "border-slate-300 bg-white"
+                        <div className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 transition-colors ${isConflicted
+                            ? "border-slate-200 bg-slate-100 text-slate-300"
+                            : isSelected
+                              ? "bg-primary border-primary text-on-primary"
+                              : "border-slate-300 bg-white"
                           }`}>
-                          {isSelected && <Check className="w-3.5 h-3.5 stroke-[3px]" />}
+                          {!isConflicted && isSelected && <Check className="w-3.5 h-3.5 stroke-[3px]" />}
                         </div>
 
                         {profile.avatar_url ? (
@@ -351,9 +360,29 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                           <p className="text-sm font-bold text-slate-800 truncate">
                             {profile.full_name || dict.contract_guards?.unnamed || "Không tên"}
                           </p>
-                          <p className="text-xs text-slate-500 truncate mt-0.5">
-                            {profile.phone_number || dict.contract_guards?.no_phone || "Không có SĐT"}
-                          </p>
+                          <div className="flex flex-col gap-0.5 mt-0.5">
+                            <span className="text-xs text-slate-500 truncate">
+                              {profile.phone_number || dict.contract_guards?.no_phone || "Không có SĐT"}
+                            </span>
+                            {profile.email && (
+                              <span className="text-[11px] text-slate-400 font-mono truncate">
+                                {profile.email}
+                              </span>
+                            )}
+                            {guard.conflictInfo && (
+                              <div className="mt-0.5">
+                                {guard.conflictInfo.hasConflict ? (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-red-50 text-red-700 border border-red-100 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30">
+                                    {dict.contract_guards?.status_conflict || "Trùng lịch hợp đồng"} #{guard.conflictInfo.conflictContractCode || guard.conflictInfo.reason}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-100 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30">
+                                    {dict.contract_guards?.status_free || "Rảnh"}
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
                     );

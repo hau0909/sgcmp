@@ -133,6 +133,11 @@ export type GuardProfileItem = {
 export type GuardListItem = {
   guard_id: string;
   profiles: GuardProfileItem | GuardProfileItem[] | null;
+  conflictInfo?: {
+    hasConflict: boolean;
+    reason: string;
+    conflictContractCode?: string;
+  };
 };
 
 export interface GuardPagination {
@@ -156,6 +161,7 @@ export type GetAllGuardsRepositoryParams = {
   status?: string;
   workStatus?: string;
   timeZone?: string;
+  checkContractId?: string;
 };
 
 export type GetAllGuardsRepositoryResult = {
@@ -172,6 +178,7 @@ export type GetAllGuardsServiceParams = {
   status?: string;
   workStatus?: string;
   timeZone?: string;
+  checkContractId?: string;
 };
 
 export type HandleGetAllGuardsInput = {
@@ -182,6 +189,7 @@ export type HandleGetAllGuardsInput = {
   status?: string | null;
   workStatus?: string | null;
   timeZone?: string | null;
+  checkContractId?: string | null;
 };
 
 export interface GetAllGuardsParams {
@@ -192,6 +200,7 @@ export interface GetAllGuardsParams {
   status?: string;
   workStatus?: string;
   timeZone?: string;
+  checkContractId?: string;
 }
 
 export type HandleGetAllGuardsResult = {
