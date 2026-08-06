@@ -137,35 +137,41 @@ export const handleGetAdminRecentActivities = async (timeFilter: string = "month
 
 export const handleGetCoordinatorReportStats = async (
   companyId?: string,
-  filter: string = "hientai"
+  filter: string = "hientai",
+  clientDate?: string
 ) => {
-  return await getCoordinatorReportStatsService(companyId, filter);
+  return await getCoordinatorReportStatsService(companyId, filter, clientDate);
 };
 
 export const handleGetCurrentUpcomingShiftsToday = async (
-  companyId?: string
+  companyId?: string,
+  filter: string = "hientai",
+  clientDate?: string
 ) => {
-  return await getCurrentUpcomingShiftsTodayService(companyId);
+  return await getCurrentUpcomingShiftsTodayService(companyId, filter, clientDate);
 };
 
 export const handleGetPastShifts = async (
   companyId?: string,
-  filter: string = "hientai"
+  filter: string = "hientai",
+  clientDate?: string
 ) => {
-  return await getPastShiftsService(companyId, filter);
+  return await getPastShiftsService(companyId, filter, clientDate);
 };
 
 export const handleGetAvailableGuards = async (
-  companyId?: string
+  companyId?: string,
+  clientDate?: string
 ) => {
-  return await getAvailableGuardsService(companyId);
+  return await getAvailableGuardsService(companyId, clientDate);
 };
 
 export const handleGetGuardPerformanceRadar = async (
   companyId?: string,
-  filter: string = "hientai"
+  filter: string = "hientai",
+  clientDate?: string
 ) => {
-  return await getGuardPerformanceRadarService(companyId, filter);
+  return await getGuardPerformanceRadarService(companyId, filter, clientDate);
 };
 
 

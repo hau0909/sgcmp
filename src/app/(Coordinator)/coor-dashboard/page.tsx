@@ -192,11 +192,12 @@ export default function CoordinatorDashboardPage() {
     const fetchDashboardData = useCallback(async (filter: string) => {
         setIsLoadingStats(true);
         try {
+            const clientDate = new Date().toISOString();
             const [reportStatsData, pastShiftsData, availableGuardsData, radarData] = await Promise.all([
-                requestGetCoordinatorReportStats(companyId, "homnay"),
-                requestGetPastShifts(companyId, filter),
-                requestGetAvailableGuards(companyId),
-                requestGetGuardPerformanceRadar(companyId, filter),
+                requestGetCoordinatorReportStats(companyId, "homnay", clientDate),
+                requestGetPastShifts(companyId, filter, clientDate),
+                requestGetAvailableGuards(companyId, clientDate),
+                requestGetGuardPerformanceRadar(companyId, filter, clientDate),
             ]);
 
             if (reportStatsData) {

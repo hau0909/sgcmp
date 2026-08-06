@@ -344,11 +344,13 @@ export type CurrentUpcomingShiftItem = {
  */
 export const requestGetCoordinatorReportStats = (
   companyId?: string,
-  timeFilter: string = "hientai"
+  timeFilter: string = "hientai",
+  clientDate?: string
 ): Promise<{ totalReports: number; unresolvedReports: number; currentUpcomingShifts: CurrentUpcomingShiftItem[]; filter: string }> => {
   const params = new URLSearchParams();
   if (companyId) params.append("companyId", companyId);
   if (timeFilter) params.append("timeFilter", timeFilter);
+  if (clientDate) params.append("clientDate", clientDate);
 
   return fetcher(
     `/api/dashboard/coordinator?${params.toString()}`,
@@ -362,11 +364,13 @@ export const requestGetCoordinatorReportStats = (
  */
 export const requestGetCurrentUpcomingShiftsToday = (
   companyId?: string,
-  timeFilter: string = "hientai"
+  timeFilter: string = "hientai",
+  clientDate?: string
 ): Promise<CurrentUpcomingShiftItem[]> => {
   const params = new URLSearchParams();
   if (companyId) params.append("companyId", companyId);
   if (timeFilter) params.append("timeFilter", timeFilter);
+  if (clientDate) params.append("clientDate", clientDate);
 
   return fetcher(
     `/api/dashboard/coordinator/current-upcoming-shifts?${params.toString()}`,
@@ -407,11 +411,13 @@ export type GuardPerformanceRadarItem = {
  */
 export const requestGetPastShifts = (
   companyId?: string,
-  timeFilter: string = "hientai"
+  timeFilter: string = "hientai",
+  clientDate?: string
 ): Promise<PastShiftItem[]> => {
   const params = new URLSearchParams();
   if (companyId) params.append("companyId", companyId);
   if (timeFilter) params.append("timeFilter", timeFilter);
+  if (clientDate) params.append("clientDate", clientDate);
 
   return fetcher(
     `/api/dashboard/coordinator/past-shifts?${params.toString()}`,
@@ -424,10 +430,12 @@ export const requestGetPastShifts = (
  * GET /api/dashboard/coordinator/available-guards?companyId=...
  */
 export const requestGetAvailableGuards = (
-  companyId?: string
+  companyId?: string,
+  clientDate?: string
 ): Promise<AvailableGuardItem[]> => {
   const params = new URLSearchParams();
   if (companyId) params.append("companyId", companyId);
+  if (clientDate) params.append("clientDate", clientDate);
 
   return fetcher(
     `/api/dashboard/coordinator/available-guards?${params.toString()}`,
@@ -441,11 +449,13 @@ export const requestGetAvailableGuards = (
  */
 export const requestGetGuardPerformanceRadar = (
   companyId?: string,
-  timeFilter: string = "hientai"
+  timeFilter: string = "hientai",
+  clientDate?: string
 ): Promise<GuardPerformanceRadarItem[]> => {
   const params = new URLSearchParams();
   if (companyId) params.append("companyId", companyId);
   if (timeFilter) params.append("timeFilter", timeFilter);
+  if (clientDate) params.append("clientDate", clientDate);
 
   return fetcher(
     `/api/dashboard/coordinator/performance?${params.toString()}`,

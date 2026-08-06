@@ -1450,12 +1450,13 @@ export interface CurrentUpcomingShiftItem {
 
 export const getCurrentUpcomingShiftsTodayService = async (
   companyId?: string,
-  timeFilter?: string
+  timeFilter?: string,
+  clientDate?: string
 ): Promise<CurrentUpcomingShiftItem[]> => {
   if (!companyId) {
     return [];
   }
-  const now = new Date();
+  const now = clientDate && !Number.isNaN(new Date(clientDate).getTime()) ? new Date(clientDate) : new Date();
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
 
   // Always query shifts active right now or starting from current time 'now' until end of today
@@ -1583,10 +1584,11 @@ export const getCurrentUpcomingShiftsTodayService = async (
 
 export const getCoordinatorReportStatsService = async (
   companyId?: string,
-  filter: string = "hientai"
+  filter: string = "hientai",
+  clientDate?: string
 ): Promise<{ totalReports: number; unresolvedReports: number; currentUpcomingShifts: CurrentUpcomingShiftItem[]; filter: string }> => {
   const stats = await getCoordinatorReportStats(companyId, filter);
-  const currentUpcomingShifts = await getCurrentUpcomingShiftsTodayService(companyId, filter);
+  const currentUpcomingShifts = await getCurrentUpcomingShiftsTodayService(companyId, filter, clientDate);
   return {
     ...stats,
     currentUpcomingShifts,
@@ -1623,10 +1625,11 @@ export interface GuardPerformanceRadarItem {
 
 export const getPastShiftsService = async (
   companyId?: string,
-  filter: string = "hientai"
+  filter: string = "hientai",
+  clientDate?: string
 ): Promise<PastShiftItem[]> => {
   if (!companyId) return [];
-  const data = await getPastShiftsRepository(companyId, filter);
+  const data = await getPastShiftsRepository(companyId, filter, clientDate);
   if (!data || data.length === 0) return [];
 
   const guardIds = Array.from(
@@ -1717,10 +1720,11 @@ export const getPastShiftsService = async (
 };
 
 export const getAvailableGuardsService = async (
-  companyId?: string
+  companyId?: string,
+  clientDate?: string
 ): Promise<AvailableGuardItem[]> => {
   if (!companyId) return [];
-  const data = await getAvailableGuardsRepository(companyId);
+  const data = await getAvailableGuardsRepository(companyId, clientDate);
   if (!data || data.length === 0) return [];
 
   return data.map((g: any) => ({
@@ -1734,9 +1738,10 @@ export const getAvailableGuardsService = async (
 
 export const getGuardPerformanceRadarService = async (
   companyId?: string,
-  filter: string = "hientai"
+  filter: string = "hientai",
+  clientDate?: string
 ): Promise<GuardPerformanceRadarItem[]> => {
-  const counts = await getGuardPerformanceRadarRepository(companyId, filter);
+  const counts = await getGuardPerformanceRadarRepository(companyId, filter, clientDate);
 
   const maxVal = Math.max(counts.onDutyCount, counts.completedCount, counts.lateCount, counts.absentCount, counts.replacementCount, 1);
   const calcScore = (val: number) => Math.min(100, Math.round((val / maxVal) * 90) + 10);

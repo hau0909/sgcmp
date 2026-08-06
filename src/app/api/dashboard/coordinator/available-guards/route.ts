@@ -6,8 +6,9 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const companyId = searchParams.get("companyId") || undefined;
+        const clientDate = searchParams.get("clientDate") || undefined;
 
-        const result = await handleGetAvailableGuards(companyId);
+        const result = await handleGetAvailableGuards(companyId, clientDate);
 
         return NextResponse.json(result, { status: 200 });
     } catch (error) {
