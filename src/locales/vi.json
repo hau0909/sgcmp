@@ -203,7 +203,10 @@
       "phone_invalid": "Số điện thoại phải bắt đầu bằng 0 hoặc +84.",
       "address_required": "Vui lòng nhập địa chỉ.",
       "image_type": "Vui lòng chọn file ảnh định dạng JPG, PNG hoặc WEBP.",
-      "image_size": "Ảnh không được vượt quá 5MB."
+      "image_size": "Ảnh không được vượt quá 5MB.",
+      "allowed_late_invalid": "Vui lòng nhập số phút cho phép đi trễ hợp lệ (số nguyên ≥ 0).",
+      "allowed_absent_invalid": "Vui lòng nhập số phút tối đa tính vắng mặt hợp lệ (số nguyên ≥ 0).",
+      "late_greater_than_absent": "Số phút cho phép đi trễ không được lớn hơn số phút tính vắng mặt."
     },
     "messages": {
       "logo_success": "Cập nhật logo công ty thành công.",
@@ -261,6 +264,7 @@
       "avatar_desc": "JPG, PNG, WEBP. Tối đa 5MB",
       "banner": "Ảnh bìa doanh nghiệp",
       "banner_desc": "Hiển thị ở phần đầu trang chi tiết của khách hàng.",
+      "banner_empty": "Chưa có ảnh bìa",
       "intro": "Giới thiệu doanh nghiệp",
       "intro_placeholder": "Nhập giới thiệu doanh nghiệp...",
       "intro_empty": "Chưa có giới thiệu doanh nghiệp.",
@@ -273,6 +277,12 @@
       "email": "Email",
       "phone": "Số điện thoại",
       "address": "Địa chỉ",
+      "attendance_rules": "Quy định điểm danh (Đi trễ / Vắng mặt)",
+      "allowed_late_label": "Số phút cho phép đi trễ tối đa:",
+      "allowed_absent_label": "Số phút tối đa tính vắng mặt:",
+      "minutes_unit": "phút",
+      "placeholder_late": "Ví dụ: 5 hoặc 5 phút",
+      "placeholder_absent": "Ví dụ: 35 hoặc 35 phút",
       "license": "Hồ sơ pháp lý & Giấy phép",
       "business_license": "Giấy phép hoạt động kinh doanh",
       "license_status": "Tài liệu Hình ảnh • Đã tải lên",
