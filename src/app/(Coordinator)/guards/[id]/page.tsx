@@ -536,11 +536,15 @@ export default function GuardDetailPage() {
 
               {profile?.status === "active" ? (
                 <span className="rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700">
-                  {dict.guard_detail?.status_active}
+                  {dict.guard_detail?.status_active || "HOẠT ĐỘNG"}
+                </span>
+              ) : profile?.status === "banned" ? (
+                <span className="rounded-full bg-rose-100 px-3 py-1 text-xs font-semibold text-rose-700">
+                  {dict.guard_detail?.status_banned || "ĐÃ BỊ KHÓA"}
                 </span>
               ) : (
-                <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-700">
-                  {dict.guard_detail?.status_inactive}
+                <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700">
+                  {dict.guard_detail?.status_inactive || "VÔ HIỆU HÓA"}
                 </span>
               )}
             </div>

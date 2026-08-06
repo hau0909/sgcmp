@@ -162,6 +162,7 @@ export default function GuardListScreen() {
     { value: "", label: dict.coor_guards?.filter_status || "Trạng thái (Tất cả)" },
     { value: "active", label: dict.coor_guards?.status_active || "Hoạt động" },
     { value: "unactive", label: dict.coor_guards?.status_inactive || "Vô hiệu hóa" },
+    { value: "banned", label: dict.coor_guards?.status_banned || "Đã bị khóa" },
   ];
 
   const genderOptions = [
@@ -505,8 +506,12 @@ export default function GuardListScreen() {
                           <span className="inline-flex items-center rounded-md bg-green-50 px-2.5 py-1 text-xs font-semibold text-green-700 ring-1 ring-inset ring-green-600/20">
                             {dict.coor_guards?.status_active || "HOẠT ĐỘNG"}
                           </span>
+                        ) : profile?.status === "banned" ? (
+                          <span className="inline-flex items-center rounded-md bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                            {dict.coor_guards?.status_banned || "ĐÃ BỊ KHÓA"}
+                          </span>
                         ) : (
-                          <span className="inline-flex items-center rounded-md bg-red-50 px-2.5 py-1 text-xs font-semibold text-red-700 ring-1 ring-inset ring-red-600/20">
+                          <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-700 ring-1 ring-inset ring-slate-600/20">
                             {dict.coor_guards?.status_inactive || "VÔ HIỆU HÓA"}
                           </span>
                         )}

@@ -422,6 +422,7 @@ export const handleGetAllGuards = async ({
   status,
   workStatus,
   timeZone,
+  checkContractId,
 }: HandleGetAllGuardsInput): Promise<HandleGetAllGuardsResult> => {
   try {
     const profile = await getCurrentUserProfileService();
@@ -479,7 +480,7 @@ export const handleGetAllGuards = async ({
       Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1;
 
     const validLimit =
-      Number.isInteger(limitNumber) && limitNumber > 0 && limitNumber <= 50
+      Number.isInteger(limitNumber) && limitNumber > 0 && limitNumber <= 100
         ? limitNumber
         : 10;
 
@@ -487,6 +488,7 @@ export const handleGetAllGuards = async ({
     const genderVal = gender?.trim() ?? "";
     const statusVal = status?.trim() ?? "";
     const workStatusVal = workStatus?.trim() ?? "";
+    const checkContractIdVal = checkContractId?.trim() || undefined;
 
     const data = await getAllGuardService({
       company_id,
@@ -497,6 +499,7 @@ export const handleGetAllGuards = async ({
       status: statusVal,
       workStatus: workStatusVal,
       timeZone: timeZone || undefined,
+      checkContractId: checkContractIdVal,
     });
 
     return {
@@ -843,7 +846,7 @@ export const handleGetGuardsByContract = async ({
       Number.isInteger(pageNumber) && pageNumber > 0 ? pageNumber : 1;
 
     const validLimit =
-      Number.isInteger(limitNumber) && limitNumber > 0 && limitNumber <= 50
+      Number.isInteger(limitNumber) && limitNumber > 0 && limitNumber <= 100
         ? limitNumber
         : 10;
 
