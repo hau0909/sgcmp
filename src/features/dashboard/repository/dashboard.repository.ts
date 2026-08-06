@@ -1073,11 +1073,12 @@ export const getCoordinatorReportStats = async (
 
 export const getPastShiftsRepository = async (
   companyId?: string,
-  filter: string = "hientai"
+  filter: string = "hientai",
+  clientDate?: string
 ) => {
   if (!companyId) return [];
   const supabase = await createClient();
-  const now = new Date();
+  const now = clientDate && !Number.isNaN(new Date(clientDate).getTime()) ? new Date(clientDate) : new Date();
   let startDate: Date | null = null;
   let endDate: Date | null = null;
 
@@ -1163,11 +1164,13 @@ export const getPastShiftsRepository = async (
 };
 
 export const getAvailableGuardsRepository = async (
-  companyId?: string
+  companyId?: string,
+  clientDate?: string
 ) => {
   if (!companyId) return [];
   const supabase = await createClient();
-  const nowIso = new Date().toISOString();
+  const now = clientDate && !Number.isNaN(new Date(clientDate).getTime()) ? new Date(clientDate) : new Date();
+  const nowIso = now.toISOString();
 
   // 1. Lấy danh sách guard_id đang có ca trực diễn ra ở thời điểm hiện tại (start_time <= now <= end_time)
   const { data: activeShifts } = await supabase
@@ -1234,14 +1237,15 @@ export const getAvailableGuardsRepository = async (
  */
 export const getGuardPerformanceRadarRepository = async (
   companyId?: string,
-  filter: string = "hientai"
+  filter: string = "hientai",
+  clientDate?: string
 ): Promise<{ onDutyCount: number; completedCount: number; lateCount: number; absentCount: number; replacementCount: number }> => {
   if (!companyId) {
     return { onDutyCount: 0, completedCount: 0, lateCount: 0, absentCount: 0, replacementCount: 0 };
   }
 
   const supabase = await createClient();
-  const now = new Date();
+  const now = clientDate && !Number.isNaN(new Date(clientDate).getTime()) ? new Date(clientDate) : new Date();
   let startDate: Date | null = null;
   let endDate: Date | null = null;
 

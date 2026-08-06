@@ -118,13 +118,18 @@ export const requestGetGuardShiftDetail = async ({
 export const requestCheckinGuardShift = async ({
   shiftId,
   imageFile,
+  fakeTime,
 }: {
   shiftId: string;
   imageFile?: File;
+  fakeTime?: string;
 }): Promise<CheckinGuardShiftResponse> => {
   const formData = new FormData();
   if (imageFile) {
     formData.append("image", imageFile);
+  }
+  if (fakeTime) {
+    formData.append("fakeTime", fakeTime);
   }
 
   return await fetcher(`/api/shifts/${encodeURIComponent(shiftId)}/checkin`, {
