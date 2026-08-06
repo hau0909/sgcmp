@@ -267,7 +267,7 @@ export function ShiftScheduleTable({
     return (
       <div className="rounded-sm border border-slate-300 bg-white p-10 text-center">
         <p className="text-sm font-medium text-slate-500">
-          {dict.report?.table?.no_data_title || "Không có ca trực trong ngày này."}
+          {dict.shift_schedule_table?.no_shifts_today || "Không có ca trực hôm nay."}
         </p>
       </div>
     );
