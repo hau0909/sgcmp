@@ -1067,9 +1067,11 @@ export const handleGetGuardShiftDetail = async ({
 export const handleCheckinGuardShift = async ({
   shiftId,
   file,
+  fakeTime,
 }: {
   shiftId: string;
   file?: File;
+  fakeTime?: string;
 }) => {
   if (!shiftId || !isValidUuid(shiftId)) {
     throw new ShiftApiError("Mã ca trực không hợp lệ.", 400);
@@ -1121,7 +1123,13 @@ export const handleCheckinGuardShift = async ({
     throw new ShiftApiError("Ca trực này đã bị đánh dấu vắng mặt.", 409);
   }
 
-  const now = new Date();
+  let now = new Date();
+  if (fakeTime) {
+    const parsedFakeTime = new Date(fakeTime);
+    if (!Number.isNaN(parsedFakeTime.getTime())) {
+      now = parsedFakeTime;
+    }
+  }
   const shiftStartTime = new Date(shift.start_time);
 
   if (Number.isNaN(shiftStartTime.getTime())) {
