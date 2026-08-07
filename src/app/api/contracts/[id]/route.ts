@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import {
   handleGetContractDetail,
   handleSignContractCompany,
+  handleUpdateContractDates,
 } from "@/features/contract/controller/contract.controller";
 
 interface RouteParams {
@@ -52,21 +53,29 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     }
 
     const body = await request.json();
-    const { action } = body;
+    const { action, startDate, endDate } = body;
 
-    if (action !== "sign") {
+    if (action === "sign") {
+      const result = await handleSignContractCompany(id);
       return NextResponse.json(
-        { error: "Hành động không hợp lệ" },
-        { status: 400 }
+        { success: true, contract: result },
+        { status: 200 }
       );
     }
 
-    const result = await handleSignContractCompany(id);
+    if (action === "update_dates") {
+      const result = await handleUpdateContractDates(id, startDate, endDate);
+      return NextResponse.json(
+        { success: true, contract: result },
+        { status: 200 }
+      );
+    }
 
     return NextResponse.json(
-      { success: true, contract: result },
-      { status: 200 }
+      { error: "Hành động không hợp lệ" },
+      { status: 400 }
     );
+
   } catch (error) {
     const err = error as Error;
     console.error("[PUT /api/contracts/[id]] Error:", err);

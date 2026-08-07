@@ -115,3 +115,22 @@ export async function requestAssignGuardsToContract(contractId: string, guardIds
   });
 }
 
+export async function requestUpdateContractDates(
+  id: string,
+  startDate?: string,
+  endDate?: string
+) {
+  return await fetcher(`/api/contracts/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      action: "update_dates",
+      startDate,
+      endDate,
+    }),
+  });
+}
+
+
