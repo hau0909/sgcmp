@@ -47,6 +47,7 @@ export async function GET(request: NextRequest) {
       status: searchParams.get("status"),
       workStatus: searchParams.get("workStatus"),
       timeZone: request.headers.get("x-timezone") || undefined,
+      checkContractId: searchParams.get("checkContractId"),
     });
 
     return NextResponse.json(result, {

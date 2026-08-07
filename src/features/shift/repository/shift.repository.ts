@@ -65,6 +65,9 @@ export const getShiftContractsByCompanyId = async (
       booking:bookings!inner (
         booking_id,
         company_id,
+        company_name,
+        company_scope,
+        company_position,
         address,
         description,
         guards_per_slot,
@@ -82,7 +85,7 @@ export const getShiftContractsByCompanyId = async (
       )
     `,
     )
-    .in("status", ["active", "completed", "cancelled"]) // status của contracts
+    .in("status", ["active", "completed"]) // status của contracts
     .eq("booking.company_id", companyId)
     .eq("booking.status", "accepted") // status của bookings
     .order("created_at", {
@@ -165,7 +168,9 @@ export const getShiftContractsByCompanyId = async (
       contract_id: contract.contract_id,
       code: `HD-${String(index + 1).padStart(3, "0")}`,
       customer_name: customer?.full_name ?? "Chưa cập nhật",
-      company_name: company?.company_name ?? "Chưa cập nhật",
+      company_name: (booking as any)?.company_name ?? company?.company_name ?? "Chưa cập nhật",
+      company_scope: (booking as any)?.company_scope ?? null,
+      company_position: (booking as any)?.company_position ?? null,
       service_name: service?.name ?? "Chưa cập nhật",
       address: booking?.address ?? "Chưa cập nhật",
       guards_per_slot: booking?.guards_per_slot ?? 1,
@@ -668,7 +673,7 @@ export const getGuardsShiftsInRange = async ({
   guardIds: string[];
   startTime: string;
   endTime: string;
-}): Promise<{ guard_id: string; shift_id: string; start_time: string; end_time: string; duration_minutes: number }[]> => {
+}): Promise<{ guard_id: string; shift_id: string; start_time: string; end_time: string; duration_minutes: number; location?: string; contract_id?: string }[]> => {
   const supabase = await createClient();
 
   if (guardIds.length === 0) return [];
@@ -694,7 +699,9 @@ export const getGuardsShiftsInRange = async ({
         shift_id,
         shift_name,
         start_time,
-        end_time
+        end_time,
+        location,
+        contract_id
       )
     `,
     )
@@ -722,6 +729,8 @@ export const getGuardsShiftsInRange = async ({
     start_time: string;
     end_time: string;
     duration_minutes: number;
+    location?: string;
+    contract_id?: string;
   }[] = [];
 
   for (const item of overlappingData) {
@@ -739,6 +748,8 @@ export const getGuardsShiftsInRange = async ({
         start_time: shift.start_time,
         end_time: shift.end_time,
         duration_minutes: duration,
+        location: shift.location,
+        contract_id: shift.contract_id,
       });
     }
 
@@ -752,6 +763,8 @@ export const getGuardsShiftsInRange = async ({
             start_time: shift.start_time,
             end_time: shift.end_time,
             duration_minutes: duration,
+            location: shift.location,
+            contract_id: shift.contract_id,
           });
         }
       }

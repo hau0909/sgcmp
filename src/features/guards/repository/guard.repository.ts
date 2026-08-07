@@ -266,6 +266,84 @@ export const uploadGuardFile = async ({
   };
 };
 
+export const mapWorkingDaysToNumbers = (workingDays: string[]): number[] => {
+  const result: number[] = [];
+  const map: Record<string, number> = {
+    "monday": 1, "tuesday": 2, "wednesday": 3, "thursday": 4, "friday": 5, "saturday": 6, "sunday": 0,
+    "t2": 1, "t3": 2, "t4": 3, "t5": 4, "t6": 5, "t7": 6, "cn": 0,
+    "2": 1, "3": 2, "4": 3, "5": 4, "6": 5, "7": 6, "8": 0, "chủ nhật": 0, "chu nhat": 0
+  };
+
+  const arr = Array.isArray(workingDays) ? workingDays : [];
+  if (arr.length === 0) {
+    return [0, 1, 2, 3, 4, 5, 6]; // default to all days
+  }
+
+  for (const day of arr) {
+    const d = String(day).trim().toLowerCase();
+    if (map[d] !== undefined) {
+      if (!result.includes(map[d])) result.push(map[d]);
+    } else if (d.includes("thứ 2") || d.includes("thu 2")) {
+      if (!result.includes(1)) result.push(1);
+    } else if (d.includes("thứ 3") || d.includes("thu 3")) {
+      if (!result.includes(2)) result.push(2);
+    } else if (d.includes("thứ 4") || d.includes("thu 4")) {
+      if (!result.includes(3)) result.push(3);
+    } else if (d.includes("thứ 5") || d.includes("thu 5")) {
+      if (!result.includes(4)) result.push(4);
+    } else if (d.includes("thứ 6") || d.includes("thu 6")) {
+      if (!result.includes(5)) result.push(5);
+    } else if (d.includes("thứ 7") || d.includes("thu 7")) {
+      if (!result.includes(6)) result.push(6);
+    } else if (d.includes("chủ nhật") || d.includes("chu nhat")) {
+      if (!result.includes(0)) result.push(0);
+    }
+  }
+  return result;
+};
+
+interface WeeklyInterval {
+  start: number;
+  end: number;
+}
+
+export const getWeeklyIntervals = (workingDays: number[], timeSlots: string[]): WeeklyInterval[] => {
+  const intervals: WeeklyInterval[] = [];
+  const parsedSlots = (timeSlots || []).map((slotStr) => {
+    const match = slotStr.match(/(\d{2}):(\d{2})\s*-\s*(\d{2}):(\d{2})/);
+    if (!match) return null;
+    const startMin = parseInt(match[1]) * 60 + parseInt(match[2]);
+    const endMin = parseInt(match[3]) * 60 + parseInt(match[4]);
+    return { startMin, endMin };
+  }).filter(Boolean);
+
+  for (const day of workingDays) {
+    for (const slot of parsedSlots) {
+      if (!slot) continue;
+      const { startMin, endMin } = slot;
+      if (endMin > startMin) {
+        // Normal slot
+        intervals.push({
+          start: day * 24 * 60 + startMin,
+          end: day * 24 * 60 + endMin,
+        });
+      } else {
+        // Midnight-crossing slot
+        intervals.push({
+          start: day * 24 * 60 + startMin,
+          end: (day + 1) * 24 * 60,
+        });
+        const nextDay = (day + 1) % 7;
+        intervals.push({
+          start: nextDay * 24 * 60,
+          end: nextDay * 24 * 60 + endMin,
+        });
+      }
+    }
+  }
+  return intervals;
+};
+
 export const getAllGuards = async ({
   company_id,
   page,
@@ -275,6 +353,7 @@ export const getAllGuards = async ({
   status,
   workStatus,
   timeZone,
+  checkContractId,
 }: GetAllGuardsRepositoryParams): Promise<GetAllGuardsRepositoryResult> => {
   const supabase = await createClient();
 
@@ -483,6 +562,9 @@ export const getAllGuards = async ({
     .order("created_at", {
       ascending: false,
     })
+    .order("guard_id", {
+      ascending: false,
+    })
     .range(from, to);
 
   if (matchedUserIds) {
@@ -505,7 +587,16 @@ export const getAllGuards = async ({
   }
 
   if (status) {
-    query = query.eq("profiles.status", status);
+    const normalizedStatus = status.trim().toLowerCase();
+    if (normalizedStatus === "active") {
+      query = query.or("status.eq.active,status.is.null", { foreignTable: "profiles" });
+    } else if (normalizedStatus === "unactive" || normalizedStatus === "inactive") {
+      query = query.eq("profiles.status", "unactive");
+    } else if (normalizedStatus === "banned") {
+      query = query.eq("profiles.status", "banned");
+    } else {
+      query = query.eq("profiles.status", status);
+    }
   }
 
   const { data, error, count } = await query;
@@ -514,8 +605,121 @@ export const getAllGuards = async ({
     throw new Error(error.message);
   }
 
+  const guardsList = (data ?? []) as unknown as GuardListItem[];
+
+  if (checkContractId) {
+    try {
+      // 1. Get the current contract details
+      const { data: currentContract } = await supabase
+        .from("contracts")
+        .select(`
+          contract_id,
+          start_date,
+          end_date,
+          status,
+          bookings (
+            time_slots,
+            day_per_week
+          )
+        `)
+        .eq("contract_id", checkContractId)
+        .single();
+
+      if (currentContract) {
+        const cBooking = Array.isArray(currentContract.bookings)
+          ? currentContract.bookings[0]
+          : currentContract.bookings;
+
+        const cDays = mapWorkingDaysToNumbers(cBooking?.day_per_week || []);
+        const cSlots = cBooking?.time_slots || [];
+        const cIntervals = getWeeklyIntervals(cDays, cSlots);
+
+        // 2. Get all OTHER active or pending_signatures contracts with assigned guards for this company
+        const { data: otherContracts } = await supabase
+          .from("contracts")
+          .select(`
+            contract_id,
+            start_date,
+            end_date,
+            status,
+            guard_assigned,
+            bookings!inner (
+              time_slots,
+              day_per_week,
+              company_id
+            )
+          `)
+          .eq("bookings.company_id", company_id)
+          .neq("contract_id", checkContractId)
+          .in("status", ["active", "pending_signatures"])
+          .not("guard_assigned", "is", null);
+
+        const guardsWithConflicts: Record<string, { hasConflict: boolean; reason: string; conflictContractCode?: string }> = {};
+
+        if (otherContracts && otherContracts.length > 0) {
+          const cStart = new Date(currentContract.start_date);
+          const cEnd = new Date(currentContract.end_date);
+
+          for (const o of otherContracts) {
+            const oBooking = Array.isArray(o.bookings) ? o.bookings[0] : o.bookings;
+            if (!oBooking) continue;
+
+            const oStart = new Date(o.start_date);
+            const oEnd = new Date(o.end_date);
+
+            // Step 1: Check date range overlap
+            const datesOverlap = cStart <= oEnd && cEnd >= oStart;
+            if (!datesOverlap) continue;
+
+            // Step 2 & 3: Check working days and time slots overlap
+            const oDays = mapWorkingDaysToNumbers(oBooking.day_per_week || []);
+            const oSlots = oBooking.time_slots || [];
+            const oIntervals = getWeeklyIntervals(oDays, oSlots);
+
+            let intervalsOverlap = false;
+            for (const iC of cIntervals) {
+              for (const iO of oIntervals) {
+                if (iC.start < iO.end && iO.start < iC.end) {
+                  intervalsOverlap = true;
+                  break;
+                }
+              }
+              if (intervalsOverlap) break;
+            }
+
+            if (intervalsOverlap) {
+              const assignedGuards = o.guard_assigned || [];
+              const oCode = `HD-${o.contract_id.slice(0, 8).toUpperCase()}`;
+              for (const guardId of assignedGuards) {
+                if (!guardsWithConflicts[guardId]) {
+                  guardsWithConflicts[guardId] = {
+                    hasConflict: true,
+                    reason: "conflict",
+                    conflictContractCode: oCode,
+                  };
+                }
+              }
+            }
+          }
+        }
+
+        // Attach conflictInfo to each guard in the output list
+        for (const guard of guardsList) {
+          const conflict = guardsWithConflicts[guard.guard_id];
+          guard.conflictInfo = conflict || { hasConflict: false, reason: "" };
+        }
+      }
+    } catch (err) {
+      console.error("Error checking contract overlaps for guards:", err);
+    }
+  } else {
+    for (const guard of guardsList) {
+      guard.conflictInfo = { hasConflict: false, reason: "" };
+    }
+  }
+
   return {
-    guards: (data ?? []) as unknown as GuardListItem[],
+    guards: guardsList,
     total: count ?? 0,
   };
 };
@@ -732,6 +936,9 @@ export const getGuardsByContract = async ({
     .in("guard_id", guardAssigned)
     .eq("company_id", company_id)
     .order("created_at", {
+      ascending: false,
+    })
+    .order("guard_id", {
       ascending: false,
     })
     .range(from, to);

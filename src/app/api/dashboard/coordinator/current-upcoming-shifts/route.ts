@@ -6,7 +6,9 @@ export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const companyId = searchParams.get("companyId") || undefined;
-        const result = await handleGetCurrentUpcomingShiftsToday(companyId);
+        const timeFilter = searchParams.get("timeFilter") || "hientai";
+        const clientDate = searchParams.get("clientDate") || undefined;
+        const result = await handleGetCurrentUpcomingShiftsToday(companyId, timeFilter, clientDate);
 
         return NextResponse.json(result, { status: 200 });
     } catch (error) {

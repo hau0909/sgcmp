@@ -8,6 +8,7 @@ import RoleGuard from "@/components/auth/RoleGuard";
 import { createClient } from "@/lib/supabase/client";
 import { requestGetUserProfile } from "@/features/auth/api/auth.api";
 import { useAuthStore } from "@/store/auth.store";
+import { useSubscriptionStore } from "@/store/subscription.store";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   Menu,
@@ -20,6 +21,7 @@ import {
   Loader2,
   UserCircle,
   ChevronDown,
+  AlertTriangle,
 } from "lucide-react";
 
 type UserRole =
@@ -63,6 +65,18 @@ export default function GuardLayout({
   const userId = useAuthStore((state) => state.user_id);
   const setAuth = useAuthStore((state) => state.setAuth);
   const clearAuth = useAuthStore((state) => state.clearAuth);
+  const authCompanyId = useAuthStore((state) => state.company_id);
+  const companyId = authCompanyId || profile?.company_id;
+
+  const fetchSubscription = useSubscriptionStore((state) => state.fetchSubscription);
+  const { isActive, isLoading } = useSubscriptionStore();
+  const isSubscriptionExpired = !isLoading && !isActive && !!companyId;
+
+  useEffect(() => {
+    if (companyId) {
+      fetchSubscription(companyId);
+    }
+  }, [companyId, fetchSubscription]);
 
   const bottomLinks = [
     {
@@ -271,8 +285,27 @@ export default function GuardLayout({
             </div>
 
             <nav className="flex flex-col gap-2 p-4">
+              {isSubscriptionExpired && (
+                <div className="mb-2 p-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-700 text-xs font-bold flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 shrink-0 text-amber-600" />
+                  <span>{dict.layout_guard?.subscription_expired_badge || "Gói dịch vụ đã hết hạn"}</span>
+                </div>
+              )}
               {bottomLinks.map((link) => {
                 const Icon = link.icon;
+
+                if (isSubscriptionExpired) {
+                  return (
+                    <div
+                      key={link.href}
+                      title={dict.layout_guard?.subscription_expired_tooltip || "Gói dịch vụ công ty đã hết hạn. Tính năng bị khóa."}
+                      className="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-bold text-slate-400 bg-slate-50 opacity-50 cursor-not-allowed select-none"
+                    >
+                      <Icon className="h-5 w-5 text-slate-400" />
+                      <span>{link.name}</span>
+                    </div>
+                  );
+                }
 
                 return (
                   <Link
@@ -291,6 +324,14 @@ export default function GuardLayout({
               })}
             </nav>
           </aside>
+
+          {/* Subscription Expired Alert Banner */}
+          {isSubscriptionExpired && (
+            <div className="bg-amber-50 border-b border-amber-200 px-4 py-2 flex items-center gap-2 text-amber-800 text-xs font-semibold shrink-0 z-30">
+              <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+              <span>{dict.layout_guard?.subscription_expired_banner || "Gói dịch vụ của công ty đã hết hạn. Vui lòng liên hệ công ty bảo vệ để gia hạn."}</span>
+            </div>
+          )}
 
           {/* Top Header */}
           <header className="z-30 flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-4 sm:px-6 lg:px-8">
@@ -374,6 +415,19 @@ export default function GuardLayout({
           <nav className="z-30 flex h-16 shrink-0 items-center justify-around border-t border-slate-200 bg-white px-2 sm:px-6 lg:px-8">
             {bottomLinks.map((link) => {
               const Icon = link.icon;
+
+              if (isSubscriptionExpired) {
+                return (
+                  <div
+                    key={link.href}
+                    title={dict.layout_guard?.subscription_expired_tooltip || "Gói dịch vụ công ty đã hết hạn. Tính năng bị khóa."}
+                    className="flex h-12 min-w-[92px] flex-1 flex-col items-center justify-center rounded-xl text-[11px] font-bold text-slate-400 opacity-50 cursor-not-allowed select-none sm:max-w-[180px] sm:text-xs"
+                  >
+                    <Icon className="mb-1 h-5 w-5 text-slate-400" />
+                    <span className="truncate">{link.name}</span>
+                  </div>
+                );
+              }
 
               return (
                 <Link

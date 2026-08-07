@@ -15,12 +15,17 @@ export async function POST(request: Request, { params }: RouteParams) {
     const { shiftId } = await params;
 
     let file: File | undefined;
+    let fakeTime: string | undefined;
 
     try {
       const formData = await request.formData();
       const imageFile = formData.get("image");
       if (imageFile instanceof File) {
         file = imageFile;
+      }
+      const fakeTimeVal = formData.get("fakeTime");
+      if (typeof fakeTimeVal === "string" && fakeTimeVal.trim()) {
+        fakeTime = fakeTimeVal.trim();
       }
     } catch {
       // Form data or file can be empty (e.g. auto absent updates or checkins without image)
@@ -29,6 +34,7 @@ export async function POST(request: Request, { params }: RouteParams) {
     const result = await handleCheckinGuardShift({
       shiftId,
       file,
+      fakeTime,
     });
 
     const status = result.assignment.status;

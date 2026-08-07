@@ -62,7 +62,9 @@ type EditField =
   | "registration_code"
   | "email"
   | "phone"
-  | "address";
+  | "address"
+  | "allowed_late_minutes"
+  | "allowed_absent_minutes";
 
 type FieldErrors = Partial<Record<EditField, string>>;
 
@@ -349,6 +351,24 @@ export default function MyCompanyDetail() {
 
     if (!editStreet.trim() || editCityId === "" || editWardId === "") {
       nextErrors.address = dict.company_detail.validation.address_required;
+    }
+
+    const rawLateDigits = allowedLateMinutesStr.replace(/\D/g, "");
+    const rawAbsentDigits = allowedAbsentMinutesStr.replace(/\D/g, "");
+
+    const parsedLate = rawLateDigits !== "" ? parseInt(rawLateDigits, 10) : NaN;
+    const parsedAbsent = rawAbsentDigits !== "" ? parseInt(rawAbsentDigits, 10) : NaN;
+
+    if (isNaN(parsedLate) || parsedLate < 0) {
+      nextErrors.allowed_late_minutes = dict.company_detail.validation.allowed_late_invalid;
+    }
+
+    if (isNaN(parsedAbsent) || parsedAbsent < 0) {
+      nextErrors.allowed_absent_minutes = dict.company_detail.validation.allowed_absent_invalid;
+    }
+
+    if (!isNaN(parsedLate) && !isNaN(parsedAbsent) && parsedLate > parsedAbsent) {
+      nextErrors.allowed_late_minutes = dict.company_detail.validation.late_greater_than_absent;
     }
 
     setFieldErrors(nextErrors);
@@ -1217,7 +1237,9 @@ export default function MyCompanyDetail() {
                   </>
                 ) : (
                   <div className="absolute inset-0 bg-gradient-to-r from-slate-800 via-slate-900 to-indigo-950 flex items-center justify-center">
-                    <span className="text-xs font-semibold text-slate-400">Chưa có ảnh bìa</span>
+                    <span className="text-xs font-semibold text-slate-400">
+                      {dict.company_detail.sections.banner_empty}
+                    </span>
                   </div>
                 )}
 
@@ -1495,40 +1517,56 @@ export default function MyCompanyDetail() {
             {/* Quy định điểm danh */}
             <div className="pt-4 border-t border-outline-variant/40 space-y-3">
               <h4 className="text-xs font-bold text-outline uppercase tracking-wider">
-                Quy định điểm danh (Đi trễ / Vắng mặt)
+                {dict.company_detail.sections.attendance_rules}
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div className="space-y-1">
                   <span className="font-bold text-on-surface-variant text-xs block">
-                    Số phút cho phép đi trễ tối đa:
+                    {dict.company_detail.sections.allowed_late_label}
                   </span>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={allowedLateMinutesStr}
-                      onChange={(e) => setAllowedLateMinutesStr(e.target.value)}
-                      className={baseEditControlClassName}
-                      placeholder="Ví dụ: 5 hoặc 5 phút"
-                    />
+                    <>
+                      <input
+                        type="text"
+                        value={allowedLateMinutesStr}
+                        onChange={(e) => {
+                          setAllowedLateMinutesStr(e.target.value);
+                          clearFieldError("allowed_late_minutes");
+                        }}
+                        className={getEditControlClassName("allowed_late_minutes")}
+                        placeholder={dict.company_detail.sections.placeholder_late}
+                      />
+                      {renderFieldError("allowed_late_minutes")}
+                    </>
                   ) : (
-                    <span className="font-semibold text-on-surface font-mono">{allowedLateMinutes} phút</span>
+                    <span className="font-semibold text-on-surface font-mono">
+                      {allowedLateMinutes} {dict.company_detail.sections.minutes_unit}
+                    </span>
                   )}
                 </div>
 
                 <div className="space-y-1">
                   <span className="font-bold text-on-surface-variant text-xs block">
-                    Số phút tối đa tính vắng mặt:
+                    {dict.company_detail.sections.allowed_absent_label}
                   </span>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={allowedAbsentMinutesStr}
-                      onChange={(e) => setAllowedAbsentMinutesStr(e.target.value)}
-                      className={baseEditControlClassName}
-                      placeholder="Ví dụ: 35 hoặc 35 phút"
-                    />
+                    <>
+                      <input
+                        type="text"
+                        value={allowedAbsentMinutesStr}
+                        onChange={(e) => {
+                          setAllowedAbsentMinutesStr(e.target.value);
+                          clearFieldError("allowed_absent_minutes");
+                        }}
+                        className={getEditControlClassName("allowed_absent_minutes")}
+                        placeholder={dict.company_detail.sections.placeholder_absent}
+                      />
+                      {renderFieldError("allowed_absent_minutes")}
+                    </>
                   ) : (
-                    <span className="font-semibold text-on-surface font-mono">{allowedAbsentMinutes} phút</span>
+                    <span className="font-semibold text-on-surface font-mono">
+                      {allowedAbsentMinutes} {dict.company_detail.sections.minutes_unit}
+                    </span>
                   )}
                 </div>
               </div>

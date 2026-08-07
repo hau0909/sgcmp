@@ -97,8 +97,8 @@ export default function GuardPerformancePage() {
     };
 
     const [isCalendarOpen, setIsCalendarOpen] = useState(false);
-    const [startDate, setStartDate] = useState(() => getPresetDates("today").start);
-    const [endDate, setEndDate] = useState(() => getPresetDates("today").end);
+    const [startDate, setStartDate] = useState(() => getPresetDates("thisMonth").start);
+    const [endDate, setEndDate] = useState(() => getPresetDates("thisMonth").end);
 
     const [tempStartDate, setTempStartDate] = useState(startDate);
     const [tempEndDate, setTempEndDate] = useState(endDate);

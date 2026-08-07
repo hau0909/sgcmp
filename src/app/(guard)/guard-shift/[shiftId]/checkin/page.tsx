@@ -423,6 +423,7 @@ export default function GuardShiftCheckinPage() {
       const response = await requestCheckinGuardShift({
         shiftId: shift.id,
         imageFile: checkinImageFile || undefined,
+        fakeTime: currentTime.toISOString(),
       });
 
       setShift((currentShift) => {

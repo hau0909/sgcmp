@@ -55,6 +55,8 @@ export type ContractOption = {
   code: string;
   customer_name: string;
   company_name: string;
+  company_scope?: string | null;
+  company_position?: string | null;
   service_name: string;
   address: string;
   guards_per_slot: number;
@@ -85,6 +87,8 @@ export type SplitShiftSegment = {
   endMinutes: number;
   durationMinutes: number;
   assignedGuardIds?: string[];
+  shiftName?: string;
+  isCustomName?: boolean;
 };
 
 export type CreateShiftInput = {
@@ -96,7 +100,7 @@ export type CreateShiftInput = {
   location: string;
   guard_id: string[];
   original_slot?: string;
-  splits?: { start_time: string; end_time: string; guard_id: string[] }[];
+  splits?: { start_time: string; end_time: string; guard_id: string[]; shift_name?: string }[];
 };
 
 export type ShiftSlotConfigStatus =
@@ -119,12 +123,15 @@ export type GuardShiftStatus =
   | "available"
   | "selected"
   | "assigned"    // guard designated for the current generation batch
+  | "warning"     // guard available with soft travel warning
   | "conflict"
   | "unavailable";
 
 export type GuardAvailabilityInfo = {
   guardId: string;
   hasConflict: boolean;
+  hasBackToBackWarning?: boolean;
+  warningReason?: string;
   assignedMinutesToday: number;
   proposedMinutes: number;
   totalMinutesAfterAssign: number;

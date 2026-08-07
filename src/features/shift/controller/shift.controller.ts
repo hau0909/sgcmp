@@ -252,6 +252,7 @@ export const handleCreateWorkShift = async (request: Request) => {
         start_time: s.start_time,
         end_time: s.end_time,
         guard_id: s.guard_id,
+        shift_name: s.shift_name || body.shift_name,
       })),
     };
 
@@ -548,6 +549,7 @@ export const handleCreateWorkShift = async (request: Request) => {
         for (const split of input.splits) {
           const splitInput = {
             ...input,
+            shift_name: split.shift_name || input.shift_name,
             start_time: split.start_time,
             end_time: split.end_time,
             guard_id: split.guard_id,
@@ -1067,9 +1069,11 @@ export const handleGetGuardShiftDetail = async ({
 export const handleCheckinGuardShift = async ({
   shiftId,
   file,
+  fakeTime,
 }: {
   shiftId: string;
   file?: File;
+  fakeTime?: string;
 }) => {
   if (!shiftId || !isValidUuid(shiftId)) {
     throw new ShiftApiError("Mã ca trực không hợp lệ.", 400);
@@ -1121,7 +1125,13 @@ export const handleCheckinGuardShift = async ({
     throw new ShiftApiError("Ca trực này đã bị đánh dấu vắng mặt.", 409);
   }
 
-  const now = new Date();
+  let now = new Date();
+  if (fakeTime) {
+    const parsedFakeTime = new Date(fakeTime);
+    if (!Number.isNaN(parsedFakeTime.getTime())) {
+      now = parsedFakeTime;
+    }
+  }
   const shiftStartTime = new Date(shift.start_time);
 
   if (Number.isNaN(shiftStartTime.getTime())) {
@@ -1256,12 +1266,14 @@ export const handleGetGuardAvailability = async (request: Request) => {
       guardIds: string[];
       startTime?: string;
       endTime?: string;
-      proposedShifts?: { startTime: string; endTime: string }[];
+      location?: string;
+      contractId?: string;
+      proposedShifts?: { startTime: string; endTime: string; location?: string; contractId?: string }[];
     };
 
     let proposedShifts = body.proposedShifts;
     if (!proposedShifts && body.startTime && body.endTime) {
-      proposedShifts = [{ startTime: body.startTime, endTime: body.endTime }];
+      proposedShifts = [{ startTime: body.startTime, endTime: body.endTime, location: body.location, contractId: body.contractId }];
     }
 
     if (
@@ -1302,6 +1314,8 @@ export const handleGetGuardAvailability = async (request: Request) => {
     const availabilityMap: Record<string, {
       guardId: string;
       hasConflict: boolean;
+      hasBackToBackWarning?: boolean;
+      warningReason?: string;
       assignedMinutesToday: number;
       proposedMinutes: number;
       totalMinutesAfterAssign: number;
@@ -1319,6 +1333,9 @@ export const handleGetGuardAvailability = async (request: Request) => {
       let firstExceedsDailyDate: string | null = null;
       let firstExceedsWeeklyDate: string | null = null;
 
+      let firstBackToBackWarningDate: string | null = null;
+      let firstBackToBackWarningTime: string | null = null;
+
       let lastProposedMinutes = 0;
       let lastAssignedMinutesToday = 0;
       let lastTotalMinutesAfterAssign = 0;
@@ -1329,6 +1346,9 @@ export const handleGetGuardAvailability = async (request: Request) => {
         const startProposed = new Date(ps.startTime).getTime();
         const endProposed = new Date(ps.endTime).getTime();
         const proposedDuration = (endProposed - startProposed) / (1000 * 60);
+
+        const propLocation = ps.location || body.location;
+        const propContractId = ps.contractId || body.contractId;
 
         const localProp = new Date(ps.startTime);
         localProp.setUTCHours(localProp.getUTCHours() + 7);
@@ -1352,6 +1372,28 @@ export const handleGetGuardAvailability = async (request: Request) => {
             const endDb = new Date(gs.end_time).getTime();
             if (startDb < endProposed && endDb > startProposed) {
               hasConflict = true;
+            } else {
+              // Check back-to-back gap (<= 30 mins)
+              const gapEndToStart = Math.abs(startProposed - endDb) / (1000 * 60);
+              const gapStartToEnd = Math.abs(startDb - endProposed) / (1000 * 60);
+
+              if (gapEndToStart <= 30 || gapStartToEnd <= 30) {
+                const isDifferentPlace =
+                  (gs.location && propLocation && gs.location.trim().toLowerCase() !== propLocation.trim().toLowerCase()) ||
+                  (gs.contract_id && propContractId && gs.contract_id !== propContractId) ||
+                  (Boolean(gs.location || gs.contract_id) && !propLocation && !propContractId);
+
+                if (isDifferentPlace && !firstBackToBackWarningDate) {
+                  const gsEndLocal = new Date(gs.end_time);
+                  gsEndLocal.setUTCHours(gsEndLocal.getUTCHours() + 7);
+                  const connectTime = gapEndToStart <= 30
+                    ? gsEndLocal.toISOString().substring(11, 16)
+                    : new Date(gs.start_time).toISOString().substring(11, 16);
+
+                  firstBackToBackWarningDate = propDateStr;
+                  firstBackToBackWarningTime = connectTime;
+                }
+              }
             }
           }
         }
@@ -1413,9 +1455,19 @@ export const handleGetGuardAvailability = async (request: Request) => {
         reason = `Vượt quá 48 giờ tuần ${formatDateStrVN(weekMon)} - ${formatDateStrVN(weekSun)}`;
       }
 
+      let hasBackToBackWarning = false;
+      let warningReason: string | undefined = undefined;
+
+      if (!hasConflict && !exceedsDailyLimit && !exceedsWeeklyLimit && firstBackToBackWarningDate && firstBackToBackWarningTime) {
+        hasBackToBackWarning = true;
+        warningReason = `Bảo vệ có ca trực nối tiếp sát giờ (${firstBackToBackWarningTime}) tại địa điểm khác`;
+      }
+
       availabilityMap[guardId] = {
         guardId,
         hasConflict,
+        hasBackToBackWarning,
+        warningReason,
         assignedMinutesToday: lastAssignedMinutesToday,
         proposedMinutes: lastProposedMinutes,
         totalMinutesAfterAssign: lastTotalMinutesAfterAssign,
