@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useParams, useRouter } from "next/navigation";
 import {
   ArrowLeft,
+  Building2,
   Camera,
   CheckCircle2,
   Clock3,
@@ -614,6 +615,18 @@ export default function GuardShiftCheckinPage() {
               </p>
             </div>
           </div>
+
+          {(shift.company_name || shift.company?.company_name) && (
+            <div className="mt-3 rounded-xl bg-blue-50/60 border border-blue-100 p-3 flex items-start gap-2">
+              <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+              <div>
+                <p className="text-xs font-bold text-slate-500">{dict.create_shift_modal?.label_company || "Công ty"}</p>
+                <p className="mt-0.5 text-sm font-bold text-slate-800">
+                  {shift.company_name || shift.company?.company_name}
+                </p>
+              </div>
+            </div>
+          )}
 
           <div className="mt-3 rounded-xl bg-slate-50 p-3">
             <p className="text-xs font-bold text-slate-500">{t.address_label}</p>

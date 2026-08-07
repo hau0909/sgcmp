@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import { Building2, Clock3, MapPin } from "lucide-react";
+import { Building2, Clock3, MapPin, Building } from "lucide-react";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export type ShiftStatus = "assigned" | "completed" | "checkout" | "absent" | "late";
@@ -12,6 +12,7 @@ export type ShiftItem = {
   location: string;
   address: string;
   shift_name: string;
+  company_name?: string;
   status: ShiftStatus;
   is_replacement?: boolean;
 };
@@ -45,9 +46,8 @@ export function ShiftCard({ shift }: ShiftCardProps) {
 
   return (
     <div
-      className={`rounded-lg border border-slate-200 bg-white p-3 shadow-sm ${
-        isAbsent ? "opacity-70" : ""
-      }`}
+      className={`rounded-lg border border-slate-200 bg-white p-3 shadow-sm ${isAbsent ? "opacity-70" : ""
+        }`}
     >
       <div className="mb-3 flex justify-start">
         <span
@@ -61,20 +61,33 @@ export function ShiftCard({ shift }: ShiftCardProps) {
       </div>
 
       <div className="space-y-2">
-        <div className="flex items-start gap-2 text-slate-700">
+        <div className="flex items-start gap-1.5 text-slate-700">
           <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#0b4f9c]" />
+          <span className="text-xs font-semibold text-slate-500 shrink-0">{card.label_time || "Thời gian:"}</span>
           <span className="text-xs font-bold leading-5">{shift.time}</span>
         </div>
 
-        <div className="flex items-start gap-2 text-slate-700">
-          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0b4f9c]" />
+        {shift.company_name && (
+          <div className="flex items-start gap-1.5 text-slate-700">
+            <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0b4f9c]" />
+            <span className="text-xs font-semibold text-slate-500 shrink-0">{card.label_company || "Công ty:"}</span>
+            <span className="text-xs font-bold leading-5">
+              {shift.company_name}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-start gap-1.5 text-slate-700">
+          <Building className="mt-0.5 h-4 w-4 shrink-0 text-[#0b4f9c]" />
+          <span className="text-xs font-semibold text-slate-500 shrink-0">{card.label_shift || "Ca trực:"}</span>
           <span className="text-xs font-medium leading-5">
             {shift.shift_name}
           </span>
         </div>
 
-        <div className="flex items-start gap-2 text-slate-700">
-          <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0b4f9c]" />
+        <div className="flex items-start gap-1.5 text-slate-700">
+          <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0b4f9c]" />
+          <span className="text-xs font-semibold text-slate-500 shrink-0">{card.label_location || "Vị trí:"}</span>
           <span className="text-xs font-medium leading-5">
             {shift.location}
           </span>

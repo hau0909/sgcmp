@@ -2,7 +2,7 @@
 
 import React, { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { MapPin, Clock3, CalendarDays, Building2 } from "lucide-react";
+import { MapPin, Clock3, CalendarDays, Building2, Building } from "lucide-react";
 import { type ShiftItem } from "@/features/shift/components/ShiftCardGuard";
 import { requestGetGuardShiftsByDay } from "@/features/shift/api/shift.api";
 import type { GuardShiftItem } from "@/features/shift/type";
@@ -56,6 +56,7 @@ const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
     shift_name: shift.shift_name,
     location: shift.location,
     address: shift.address,
+    company_name: shift.company_name,
     status: shift.status,
     is_replacement: shift.is_replacement,
   };
@@ -209,16 +210,27 @@ export default function GuardShiftPage() {
                 <div className="space-y-3">
                   <div className="flex items-start gap-2 text-slate-700">
                     <Clock3 className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+                    <span className="text-sm font-semibold text-slate-500 shrink-0">{card.label_time || "Thời gian:"}</span>
                     <span className="text-sm font-extrabold">{shift.time}</span>
                   </div>
 
+                  {shift.company_name && (
+                    <div className="flex items-start gap-2 text-slate-700">
+                      <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+                      <span className="text-sm font-semibold text-slate-500 shrink-0">{card.label_company || "Công ty:"}</span>
+                      <span className="text-sm font-extrabold">{shift.company_name}</span>
+                    </div>
+                  )}
+
                   <div className="flex items-start gap-2 text-slate-700">
                     <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+                    <span className="text-sm font-semibold text-slate-500 shrink-0">{card.label_address || "Địa chỉ:"}</span>
                     <span className="text-sm font-bold">{shift.address}</span>
                   </div>
 
                   <div className="flex items-start gap-2 text-slate-700">
-                    <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+                    <Building className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+                    <span className="text-sm font-semibold text-slate-500 shrink-0">{card.label_location || "Vị trí:"}</span>
                     <span className="text-sm font-bold">{shift.location}</span>
                   </div>
                 </div>
