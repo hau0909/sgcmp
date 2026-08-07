@@ -33,7 +33,7 @@ const getTodayKey = () => {
 
 const getUniqueLocationsFromContracts = (contracts: ContractOption[]) => {
   const seen = new Set<string>();
-  const results: { address: string; status: string; customer_name?: string; code?: string }[] = [];
+  const results: { address: string; status: string; customer_name?: string; company_name?: string; code?: string }[] = [];
   for (const contract of contracts) {
     if (contract.address && !seen.has(contract.address)) {
       seen.add(contract.address);
@@ -41,6 +41,7 @@ const getUniqueLocationsFromContracts = (contracts: ContractOption[]) => {
         address: contract.address,
         status: contract.status,
         customer_name: contract.customer_name,
+        company_name: contract.company_name,
         code: contract.code,
       });
     }

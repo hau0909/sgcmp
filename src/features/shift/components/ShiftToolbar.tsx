@@ -1,12 +1,12 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { ChevronLeft, ChevronRight, MapPin, Plus, Calendar, ChevronDown, Check, User } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Plus, Calendar, ChevronDown, Check, User, Building2 } from "lucide-react";
 import { getUserTimeZone, getUserLocale, formatDate } from "@/utils/dateTime";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type ShiftToolbarProps = {
   viewMode: "day" | "week";
   selectedLocation: string;
-  locations: { address: string; status: string; customer_name?: string; code?: string }[];
+  locations: { address: string; status: string; customer_name?: string; company_name?: string; code?: string }[];
   currentDate: string;
   onChangeViewMode: (mode: "day" | "week") => void;
   onChangeLocation: (location: string) => void;
@@ -548,6 +548,7 @@ export function ShiftToolbar({
   onClickAdd,
 }: ShiftToolbarProps) {
   const { dict, locale: appLocale } = useTranslation();
+  const isEn = appLocale === "en";
   const [isLocationOpen, setIsLocationOpen] = useState(false);
   const selectedLocObj = useMemo(() => locations.find((l) => l.address === selectedLocation) || locations[0], [locations, selectedLocation]);
 
@@ -728,10 +729,10 @@ export function ShiftToolbar({
           <button
             type="button"
             onClick={() => setIsLocationOpen(!isLocationOpen)}
-            className="flex h-10 min-w-[260px] max-w-[420px] items-center justify-between gap-2.5 rounded-xl border border-slate-300 bg-white px-3.5 text-xs font-medium text-slate-700 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs transition-all cursor-pointer"
+            className="flex h-10 min-w-[260px] max-w-[460px] items-center justify-between gap-2.5 rounded-xl border border-slate-300 bg-white px-3.5 text-sm font-medium text-slate-800 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-100 shadow-2xs transition-all cursor-pointer"
           >
             <div className="flex items-center gap-2 truncate">
-              <MapPin size={16} className="text-blue-600 shrink-0" />
+              <MapPin size={17} className="text-blue-600 shrink-0" />
               {selectedLocObj ? (
                 <span className="truncate">
                   {selectedLocObj.code && (
@@ -739,19 +740,22 @@ export function ShiftToolbar({
                       {selectedLocObj.code}
                     </span>
                   )}
+                  <span className="font-bold text-slate-900 mr-1.5 text-xs">
+                    {(!selectedLocObj.company_name || selectedLocObj.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : selectedLocObj.company_name} •
+                  </span>
                   {selectedLocObj.customer_name && (
-                    <span className="font-semibold text-slate-800 mr-1.5">
-                      {selectedLocObj.customer_name} •
+                    <span className="text-slate-600 mr-1.5 text-xs">
+                      ({selectedLocObj.customer_name}) •
                     </span>
                   )}
-                  <span className="text-slate-600">{selectedLocObj.address}</span>
+                  <span className="text-slate-600 text-xs">{selectedLocObj.address}</span>
                 </span>
               ) : (
-                <span className="text-slate-400">Chọn địa điểm...</span>
+                <span className="text-slate-400 text-xs">Chọn địa điểm...</span>
               )}
             </div>
             <ChevronDown
-              size={15}
+              size={16}
               className={`text-slate-400 shrink-0 transition-transform duration-200 ${
                 isLocationOpen ? "rotate-180" : ""
               }`}
@@ -764,7 +768,7 @@ export function ShiftToolbar({
                 className="fixed inset-0 z-40"
                 onClick={() => setIsLocationOpen(false)}
               />
-              <div className="absolute right-0 top-12 z-50 min-w-[320px] max-w-[460px] max-h-80 overflow-y-auto space-y-1 rounded-2xl border border-slate-200/90 bg-white p-1.5 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+              <div className="absolute right-0 top-12 z-50 min-w-[340px] max-w-[480px] max-h-80 overflow-y-auto space-y-1 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150">
                 {locations.map((loc) => {
                   const isSelected = loc.address === selectedLocation;
                   return (
@@ -775,7 +779,7 @@ export function ShiftToolbar({
                         onChangeLocation(loc.address);
                         setIsLocationOpen(false);
                       }}
-                      className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-left text-xs transition-all cursor-pointer ${
+                      className={`w-full flex items-center justify-between gap-3 px-3.5 py-2.5 rounded-xl text-left transition-all cursor-pointer ${
                         isSelected
                           ? "bg-blue-50 text-blue-700 font-semibold border border-blue-100 shadow-2xs"
                           : "text-slate-700 hover:bg-slate-50 border border-transparent"
@@ -788,10 +792,14 @@ export function ShiftToolbar({
                               {loc.code}
                             </span>
                           )}
+                          <span className="flex items-center gap-1 font-bold text-slate-900 text-[13px]">
+                            <Building2 size={13} className="text-slate-500 shrink-0" />
+                            {(!loc.company_name || loc.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : loc.company_name}
+                          </span>
                           {loc.customer_name && (
-                            <span className="flex items-center gap-1 font-semibold text-slate-800 text-[12px]">
+                            <span className="flex items-center gap-1 text-slate-600 text-[12px]">
                               <User size={12} className="text-slate-400 shrink-0" />
-                              {loc.customer_name}
+                              ({loc.customer_name})
                             </span>
                           )}
                           <span
