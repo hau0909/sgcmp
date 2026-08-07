@@ -252,6 +252,7 @@ export const handleCreateWorkShift = async (request: Request) => {
         start_time: s.start_time,
         end_time: s.end_time,
         guard_id: s.guard_id,
+        shift_name: s.shift_name || body.shift_name,
       })),
     };
 
@@ -548,6 +549,7 @@ export const handleCreateWorkShift = async (request: Request) => {
         for (const split of input.splits) {
           const splitInput = {
             ...input,
+            shift_name: split.shift_name || input.shift_name,
             start_time: split.start_time,
             end_time: split.end_time,
             guard_id: split.guard_id,

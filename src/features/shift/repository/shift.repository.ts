@@ -65,6 +65,9 @@ export const getShiftContractsByCompanyId = async (
       booking:bookings!inner (
         booking_id,
         company_id,
+        company_name,
+        company_scope,
+        company_position,
         address,
         description,
         guards_per_slot,
@@ -82,7 +85,7 @@ export const getShiftContractsByCompanyId = async (
       )
     `,
     )
-    .in("status", ["active", "completed", "cancelled"]) // status của contracts
+    .in("status", ["active", "completed"]) // status của contracts
     .eq("booking.company_id", companyId)
     .eq("booking.status", "accepted") // status của bookings
     .order("created_at", {
@@ -165,7 +168,9 @@ export const getShiftContractsByCompanyId = async (
       contract_id: contract.contract_id,
       code: `HD-${String(index + 1).padStart(3, "0")}`,
       customer_name: customer?.full_name ?? "Chưa cập nhật",
-      company_name: company?.company_name ?? "Chưa cập nhật",
+      company_name: (booking as any)?.company_name ?? company?.company_name ?? "Chưa cập nhật",
+      company_scope: (booking as any)?.company_scope ?? null,
+      company_position: (booking as any)?.company_position ?? null,
       service_name: service?.name ?? "Chưa cập nhật",
       address: booking?.address ?? "Chưa cập nhật",
       guards_per_slot: booking?.guards_per_slot ?? 1,
