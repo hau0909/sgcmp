@@ -344,6 +344,7 @@ export function ContractDetailContainer({
         }
         onSignCompany={() => setIsSignModalOpen(true)}
         contract={contract}
+        onContractUpdated={() => fetchDetail(false)}
       />
 
       {/* Bento Grid Layout */}

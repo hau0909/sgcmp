@@ -588,3 +588,26 @@ export const assignGuardsToContractService = async (
     guard_assigned: guardIds,
   });
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const updateContractDatesService = async (
+  id: string,
+  startDate?: string | null,
+  endDate?: string | null,
+): Promise<any> => {
+  const contract = await getContractDetail(id);
+  if (!contract) {
+    throw new Error("Không tìm thấy hợp đồng");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload: any = {};
+  if (startDate !== undefined && startDate !== null) {
+    payload.start_date = startDate ? new Date(startDate).toISOString() : null;
+  }
+  if (endDate !== undefined && endDate !== null) {
+    payload.end_date = endDate ? new Date(endDate).toISOString() : null;
+  }
+
+  return await updateContract(id, payload);
+};
