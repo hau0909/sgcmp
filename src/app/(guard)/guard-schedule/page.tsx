@@ -94,6 +94,7 @@ const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
     shift_name: shift.shift_name,
     location: shift.location,
     address: shift.address,
+    company_name: shift.company_name,
     status: shift.status,
   };
 };
@@ -177,6 +178,7 @@ export default function GuardSchedulePage() {
             shift_name: s.shift_name,
             location: s.location,
             address: s.address,
+            company_name: s.company_name,
             status: s.status,
             is_replacement: s.guard_id ? s.guard_id !== userId : false,
           }));

@@ -89,6 +89,8 @@ export type SplitShiftSegment = {
   assignedGuardIds?: string[];
   shiftName?: string;
   isCustomName?: boolean;
+  location?: string;
+  isCustomLocation?: boolean;
 };
 
 export type CreateShiftInput = {
@@ -409,6 +411,7 @@ export type GuardShiftItem = {
   shift_name: string;
   location: string;
   address: string;
+  company_name?: string;
 
   status: ShiftAssignmentStatus;
   guard_id?: string;
@@ -536,6 +539,7 @@ export type GuardShiftDetailItem = {
   shift_name: string;
   location: string;
   address: string;
+  company_name?: string;
   status: ShiftAssignmentStatus;
   check_in_time: string | null;
   start_time: string;

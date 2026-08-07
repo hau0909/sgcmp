@@ -1018,6 +1018,7 @@ export const handleGetGuardShiftDetail = async ({
     location: shift.location || "Chưa cập nhật vị trí",
     shift_name: shift.shift_name || "Chưa cập nhật ca trực",
     address: booking?.address || shift.location || "Chưa cập nhật địa chỉ",
+    company_name: (booking as any)?.company_name || company?.company_name || undefined,
     status: assignment.status,
     check_in_time: assignment.check_in_time,
     start_time: shift.start_time,
@@ -1032,13 +1033,13 @@ export const handleGetGuardShiftDetail = async ({
       : null,
     allowed_late_minutes: company?.allowed_late_minutes ?? 5,
     allowed_absent_minutes: company?.allowed_absent_minutes ?? 35,
-    company: company
+    company: (booking || company)
       ? {
-        company_id: company.company_id,
-        company_name: company.company_name || "Chưa cập nhật công ty",
-        address: typeof company.address === "string" ? company.address : null,
-        allowed_late_minutes: company.allowed_late_minutes ?? 5,
-        allowed_absent_minutes: company.allowed_absent_minutes ?? 35,
+        company_id: company?.company_id || "",
+        company_name: (booking as any)?.company_name || company?.company_name || "Chưa cập nhật công ty",
+        address: typeof company?.address === "string" ? company.address : null,
+        allowed_late_minutes: company?.allowed_late_minutes ?? 5,
+        allowed_absent_minutes: company?.allowed_absent_minutes ?? 35,
       }
       : null,
     service: service

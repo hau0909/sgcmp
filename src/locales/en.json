@@ -389,7 +389,12 @@
       "status_assigned": "ASSIGNED",
       "status_completed": "ON DUTY",
       "status_late": "LATE",
-      "status_absent": "ABSENT"
+      "status_absent": "ABSENT",
+      "label_time": "Time:",
+      "label_company": "Company:",
+      "label_shift": "Shift:",
+      "label_location": "Duty Area:",
+      "label_address": "Address:"
     },
     "guard_shift": {
       "title": "Today's Shifts",
@@ -456,8 +461,8 @@
       "flip_camera_title": "Flip camera",
       "capture_title": "Capture photo",
       "camera_overlay_label": "Take check-in photo",
-      "upcoming_shift": "Upcoming Shift",
-      "location_label": "Location",
+      "upcoming_shift": "Current shift",
+      "location_label": "Duty Area",
       "duration_label": "Duration",
       "address_label": "Address",
       "photo_section_title": "Check-in Photo",
@@ -2347,7 +2352,7 @@
     "checking_availability": "Checking...",
     "label_company": "Company Name",
     "label_company_scope": "Company Scope",
-    "label_company_position": "Contact Position",
+    "label_company_position": "Company Position",
     "contract_period_label": "Contract Period",
     "customize_sub_shift_name_hint": "Customizing for Sub-shift {0}",
     "shift_location_label": "Shift Location",
