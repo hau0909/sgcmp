@@ -10,6 +10,7 @@ export type Shift = {
   required_guards: number;
   location: string;
   contract_address?: string;
+  company_name?: string;
   created_at: string;
   updated_at: string;
 };

@@ -7,6 +7,7 @@ import { getUserTimeZone, getUserLocale, formatDate, formatTime as formatTimeHel
 import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   AlertTriangle,
+  Building2,
   CalendarX,
   Clock,
   MapPin,
@@ -58,7 +59,8 @@ function GuardSubTooltip({
   shift: ShiftWithAssignments;
   position: TooltipPosition;
 }) {
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
+  const isEn = locale === "en";
   return createPortal(
     <div
       className="pointer-events-none fixed z-[10000] w-[300px] rounded-md border border-slate-200 bg-white p-4 text-left shadow-2xl"
@@ -80,6 +82,10 @@ function GuardSubTooltip({
         <div>
           <p className="text-xs font-semibold uppercase text-slate-400">
             {dict?.shift_week?.location || "Địa điểm"}
+          </p>
+          <p className="mt-0.5 text-xs font-bold text-blue-700 flex items-center gap-1">
+            <Building2 size={12} className="text-blue-600 shrink-0" />
+            {(!shift.company_name || shift.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : shift.company_name}
           </p>
           <p className="mt-1 text-sm font-medium text-slate-700">
             {shift.contract_address || (dict?.shift_week?.unupdated || "Chưa cập nhật")}

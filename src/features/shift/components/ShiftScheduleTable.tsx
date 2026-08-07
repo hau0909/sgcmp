@@ -1,4 +1,5 @@
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { Building2 } from "lucide-react";
 import type { ShiftWithAssignments, TimeSlot } from "../type";
 import { getShiftCellKey, getSlotIdByShift } from "../utils/shift.utils";
 import { formatTime as formatTimeHelper } from "@/utils/dateTime";
@@ -223,7 +224,8 @@ export function ShiftScheduleTable({
   selectedLocation = "all",
   weekStartDate,
 }: ShiftScheduleTableProps) {
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
+  const isEn = locale === "en";
   const uniqueShiftMap = new Map<string, ShiftWithAssignments>();
   shifts.forEach((shift) => {
     if (!uniqueShiftMap.has(shift.shift_id)) {
@@ -405,9 +407,21 @@ export function ShiftScheduleTable({
                   gridRow: `1 / span ${trackCount}`,
                 }}
               >
-                <p className="font-semibold text-slate-900">
-                  {contractAddress}
-                </p>
+                {(() => {
+                  const matchShift = visibleShifts.find((s) => getShiftContractAddress(s, dict) === contractAddress);
+                  const companyName = (!matchShift?.company_name || matchShift.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : matchShift.company_name;
+                  return (
+                    <>
+                      <p className="flex items-center gap-1.5 font-bold text-blue-700 text-sm mb-1.5">
+                        <Building2 size={15} className="text-blue-600 shrink-0" />
+                        {companyName}
+                      </p>
+                      <p className="font-bold text-slate-900 text-sm leading-snug">
+                        {contractAddress}
+                      </p>
+                    </>
+                  );
+                })()}
                 <p className="mt-1 text-sm text-slate-500">{dict.shift_schedule_table?.contract_location_subtitle || "Địa điểm hợp đồng"}</p>
               </div>
 
