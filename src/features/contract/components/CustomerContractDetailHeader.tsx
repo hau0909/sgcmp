@@ -1,12 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import Link from "next/link";
-import { ArrowLeft, Clock, CheckCircle2, PenLine, Star, FileText } from "lucide-react";
+import { ArrowLeft, Clock, CheckCircle2, PenLine, Star } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { exportContractDocx } from "../utils/exportDocx";
-import { ExportContractModal, ContractExportFormData } from "./ExportContractModal";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 type ContractStatus = "pending_signatures" | "active" | "completed" | "cancelled";
@@ -79,7 +77,6 @@ export function CustomerContractDetailHeader({
   contract,
 }: CustomerContractDetailHeaderProps) {
   const { dict } = useTranslation();
-  const [isExportModalOpen, setIsExportModalOpen] = useState(false);
 
   const STATUS_MAP: Record<ContractStatus, { label: string; className: string }> = {
     pending_signatures: {
@@ -105,44 +102,27 @@ export function CustomerContractDetailHeader({
     className: "bg-muted text-muted-foreground",
   };
 
-  const handleExport = (formData: ContractExportFormData) => {
-    exportContractDocx(contract, formData);
-  };
-
   return (
-    <>
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-6 border-b border-outline-variant/60">
-        {/* Left: back + title */}
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
-          <Link
-            href="/my-contracts"
-            className="flex items-center gap-1.5 text-secondary hover:text-primary transition-colors text-sm font-semibold w-fit"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span>{dict.contract.detail.back_btn}</span>
-          </Link>
-          <h2 className="text-xl md:text-2xl font-bold text-on-background flex flex-wrap items-center gap-2 font-headline">
-            {dict.contract.detail.title}{" "}
-            <span className="font-mono text-primary">#{contractCode}</span>
-          </h2>
-        </div>
+    <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-4 mb-6 border-b border-outline-variant/60">
+      {/* Left: back + title */}
+      <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+        <Link
+          href="/my-contracts"
+          className="flex items-center gap-1.5 text-secondary hover:text-primary transition-colors text-sm font-semibold w-fit"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          <span>{dict.contract.detail.back_btn}</span>
+        </Link>
+        <h2 className="text-xl md:text-2xl font-bold text-on-background flex flex-wrap items-center gap-2 font-headline">
+          {dict.contract.detail.title}{" "}
+          <span className="font-mono text-primary">#{contractCode}</span>
+        </h2>
+      </div>
 
-        {/* Right: chips + cta */}
-        <div className="flex flex-wrap items-center gap-3">
-          <SignatureChip label={dict.contract.detail.you} agreed={customerAgreed} dict={dict} />
-          <SignatureChip label={dict.contract.detail.company} agreed={companyAgreed} dict={dict} />
-
-          {/* Tải file Word */}
-          {contract && (
-            <Button
-              onClick={() => setIsExportModalOpen(true)}
-              variant="outline"
-              className="font-bold border-primary text-primary hover:bg-primary/5 px-4 py-2 rounded-lg text-sm transition-all duration-100 flex items-center gap-1.5 cursor-pointer shadow-sm active:scale-95"
-            >
-              <FileText className="w-4 h-4" />
-              <span>{dict.contract.detail.download_docx}</span>
-            </Button>
-          )}
+      {/* Right: chips + cta */}
+      <div className="flex flex-wrap items-center gap-3">
+        <SignatureChip label={dict.contract.detail.you} agreed={customerAgreed} dict={dict} />
+        <SignatureChip label={dict.contract.detail.company} agreed={companyAgreed} dict={dict} />
 
         {status !== "pending_signatures" && (
           <Badge
@@ -204,12 +184,6 @@ export function CustomerContractDetailHeader({
         )}
       </div>
     </div>
-      <ExportContractModal
-        isOpen={isExportModalOpen}
-        onClose={() => setIsExportModalOpen(false)}
-        contract={contract}
-        onExport={handleExport}
-      />
-    </>
   );
 }
+

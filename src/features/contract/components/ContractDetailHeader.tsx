@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { exportContractDocx } from "../utils/exportDocx";
 import { ExportContractModal, ContractExportFormData } from "./ExportContractModal";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { requestUpdateContractDates } from "../api/contract.api";
 
 interface ContractDetailHeaderProps {
   contractCode: string;
@@ -19,6 +20,7 @@ interface ContractDetailHeaderProps {
   hasGuards: boolean;
   onSignCompany?: () => void;
   contract?: any;
+  onContractUpdated?: () => void;
 }
 
 export function ContractDetailHeader({
@@ -30,6 +32,7 @@ export function ContractDetailHeader({
   hasGuards,
   onSignCompany,
   contract,
+  onContractUpdated,
 }: ContractDetailHeaderProps) {
   const { dict } = useTranslation();
   const [isExportModalOpen, setIsExportModalOpen] = useState(false);
@@ -67,9 +70,24 @@ export function ContractDetailHeader({
 
   const statusInfo = getStatusDisplay(status);
 
-  const handleExport = (formData: ContractExportFormData) => {
+  const handleExport = async (formData: ContractExportFormData) => {
+    try {
+      if (contract?.contract_id && (formData.start_date || formData.end_date)) {
+        await requestUpdateContractDates(
+          contract.contract_id,
+          formData.start_date,
+          formData.end_date
+        );
+        if (onContractUpdated) {
+          onContractUpdated();
+        }
+      }
+    } catch (err) {
+      console.error("Lỗi khi cập nhật ngày hợp đồng:", err);
+    }
     exportContractDocx(contract, formData);
   };
+
 
   return (
     <>

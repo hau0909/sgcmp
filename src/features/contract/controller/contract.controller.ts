@@ -12,6 +12,7 @@ import {
   getCustomerContractDetailService,
   completeContractCustomerService,
   assignGuardsToContractService,
+  updateContractDatesService,
 } from "../service/contract.service";
 import { CustomerContract } from "../types";
 
@@ -117,3 +118,13 @@ export const handleAssignGuardsToContract = async (
     contract,
   };
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const handleUpdateContractDates = async (
+  id: string,
+  startDate?: string,
+  endDate?: string
+): Promise<any> => {
+  return await updateContractDatesService(id, startDate, endDate);
+};
+
