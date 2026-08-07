@@ -39,6 +39,35 @@ export const validateUpdateCompanyProfileInput = (
   }
 
   validateRequiredString(input.address, "Địa chỉ không hợp lệ.");
+
+  if (input.allowed_late_minutes !== undefined && input.allowed_late_minutes !== null) {
+    if (
+      typeof input.allowed_late_minutes !== "number" ||
+      isNaN(input.allowed_late_minutes) ||
+      input.allowed_late_minutes < 0
+    ) {
+      throw new Error("Số phút cho phép đi trễ không hợp lệ (phải là số nguyên ≥ 0).");
+    }
+  }
+
+  if (input.allowed_absent_minutes !== undefined && input.allowed_absent_minutes !== null) {
+    if (
+      typeof input.allowed_absent_minutes !== "number" ||
+      isNaN(input.allowed_absent_minutes) ||
+      input.allowed_absent_minutes < 0
+    ) {
+      throw new Error("Số phút tối đa tính vắng mặt không hợp lệ (phải là số nguyên ≥ 0).");
+    }
+  }
+
+  if (
+    typeof input.allowed_late_minutes === "number" &&
+    typeof input.allowed_absent_minutes === "number"
+  ) {
+    if (input.allowed_late_minutes > input.allowed_absent_minutes) {
+      throw new Error("Số phút cho phép đi trễ không được lớn hơn số phút tính vắng mặt.");
+    }
+  }
 };
 
 export const validateUploadCompanyImageInput = ({
