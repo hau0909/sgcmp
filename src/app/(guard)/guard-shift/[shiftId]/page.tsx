@@ -4,6 +4,7 @@ import React, { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import {
   ArrowLeft,
+  Building,
   Building2,
   CalendarDays,
   Clock3,
@@ -271,7 +272,7 @@ export default function GuardShiftDetailPage() {
             </div>
 
             <p className="text-sm font-black text-slate-900">
-              {shift.location}
+              {shift.address || shift.location}
             </p>
           </div>
 
@@ -285,19 +286,37 @@ export default function GuardShiftDetailPage() {
           </div>
         </div>
 
-        <div className="mt-4 rounded-xl bg-slate-50 p-3">
-          <div className="flex items-start gap-2">
-            <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
-
-            <div>
-              <p className="text-xs font-bold text-slate-500">{t.address_label}</p>
-
-              <p className="mt-1 text-sm font-bold text-slate-800">
-                {shift.address}
-              </p>
+        {(shift.company_name || shift.company?.company_name) && (
+          <div className="mt-3 rounded-xl bg-blue-50/60 border border-blue-100 p-3">
+            <div className="flex items-start gap-2">
+              <Building2 className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+              <div>
+                <p className="text-xs font-bold text-slate-500">
+                  {dict.create_shift_modal?.label_company || "Công ty"}
+                </p>
+                <p className="mt-0.5 text-sm font-black text-slate-900">
+                  {shift.company_name || shift.company?.company_name}
+                </p>
+              </div>
             </div>
           </div>
-        </div>
+        )}
+
+        {shift.location && shift.location !== shift.address && (
+          <div className="mt-3 rounded-xl bg-slate-50 p-3">
+            <div className="flex items-start gap-2">
+              <Building className="mt-0.5 h-4 w-4 shrink-0 text-[#0754a6]" />
+
+              <div>
+                <p className="text-xs font-bold text-slate-500">{t.area_label || "Vị trí trực"}</p>
+
+                <p className="mt-1 text-sm font-bold text-slate-800">
+                  {shift.location}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </section>
 
       <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">

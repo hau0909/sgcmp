@@ -1358,7 +1358,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     const contract = contracts.find((c) => c.contract_id === value);
     if (!contract) return;
 
-    setLocation(contract.address);
+    setLocation("");
 
     setIsLoadingLatestDate(true);
     setIsLoadingScheduledDates(true);
@@ -1461,6 +1461,34 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     }
   };
 
+  const handleLocationChange = (newLoc: string) => {
+    setSubmitError("");
+    setLocation(newLoc);
+
+    if (activeSlotIndex >= 0 && activeSegmentId) {
+      setSlots((prev) =>
+        prev.map((slot, sIdx) => {
+          if (sIdx !== activeSlotIndex) return slot;
+          const segs = slot.segments || [];
+          const isFirstSeg = segs.length > 0 && segs[0].id === activeSegmentId;
+
+          return {
+            ...slot,
+            segments: segs.map((seg) => {
+              if (seg.id === activeSegmentId) {
+                return { ...seg, location: newLoc, isCustomLocation: true };
+              }
+              if (isFirstSeg && !seg.isCustomLocation) {
+                return { ...seg, location: newLoc };
+              }
+              return seg;
+            }),
+          };
+        })
+      );
+    }
+  };
+
   const handleAddSegment = (slotIdx: number) => {
     let createdSegId = "";
     setSlots((prev) => {
@@ -1505,6 +1533,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
         assignedGuardIds: [],
         shiftName: lastSeg.shiftName || shiftName,
         isCustomName: false,
+        location: lastSeg.location || location,
+        isCustomLocation: false,
       };
       createdSegId = newSeg.id;
 
@@ -1788,6 +1818,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               end_time: segEndISO,
               guard_id: segAssignedIds,
               shift_name: seg.shiftName?.trim() || shiftName.trim(),
+              location: seg.location?.trim() || location.trim() || "",
             };
           }));
 
@@ -1835,7 +1866,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               start_time: splitsPayload[0].start_time,
               end_time: splitsPayload[0].end_time,
               required_guards: requiredGuards,
-              location,
+              location: splitsPayload[0].location || location.trim() || "",
               guard_id: splitsPayload[0].guard_id,
               original_slot: slot.bookingTimeSlot,
               splits: splitsPayload,
@@ -2185,12 +2216,20 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
               {/* Location */}
               <div>
-                <label className="mb-2 block text-sm font-medium text-slate-700">{dict.create_shift_modal?.shift_location_label || "Vị trí trực cụ thể"}</label>
+                <div className="mb-2 flex items-center justify-between">
+                  <label className="text-sm font-medium text-slate-700">{dict.create_shift_modal?.shift_location_label || "Vị trí trực cụ thể"}</label>
+                  {activeSegment && (
+                    <span className="text-[11px] font-medium text-blue-600">
+                      {(dict.create_shift_modal?.customize_sub_shift_location_hint || (isEn ? "Customize for Sub-shift {0}" : "Tùy chỉnh cho Ca nhỏ {0}"))
+                        .replace("{0}", activeSegment.startTime ? `(${activeSegment.startTime}–${activeSegment.endTime || "?"})` : "")}
+                    </span>
+                  )}
+                </div>
                 <div className="relative">
                   <MapPin size={17} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
-                    value={location}
-                    onChange={(e) => { setLocation(e.target.value); setSubmitError(""); }}
+                    value={activeSegment?.location !== undefined ? activeSegment.location : location}
+                    onChange={(e) => handleLocationChange(e.target.value)}
                     placeholder={dict.create_shift_modal?.shift_location_placeholder || "Ví dụ: Sảnh chính tầng 1"}
                     className="w-full rounded-md border border-slate-300 px-9 py-2.5 text-sm outline-none focus:border-blue-600 focus:ring-2 focus:ring-blue-100"
                   />

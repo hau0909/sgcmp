@@ -980,6 +980,7 @@ const mapShiftRowToItem = (
     shift_name: shift.shift_name ?? "Chưa cập nhật tên ca trực",
     location: shift.location ?? "Chưa cập nhật vị trí",
     address: booking?.address ?? "Chưa cập nhật địa chỉ",
+    company_name: (booking as any)?.company_name ?? undefined,
 
     status: row.status,
     guard_id: row.guard_id,
@@ -1054,6 +1055,7 @@ export const getGuardShiftsByRange = async ({
           contract_id,
           bookings!inner (
             booking_id,
+            company_name,
             address
           )
         )
