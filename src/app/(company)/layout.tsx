@@ -27,8 +27,7 @@ import {
 import { useAuthStore } from "@/store/auth.store";
 import { useSubscriptionStore } from "@/store/subscription.store";
 import { requestGetCompanyById } from "@/features/company/api/company.api";
-import { requestGetUserProfile } from "@/features/auth/api/auth.api";
-import { requestLogout } from "@/features/auth/api/auth.api";
+import { requestGetUserProfile, requestLogout } from "@/features/auth/api/auth.api";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export default function CompanyLayout({
@@ -44,6 +43,7 @@ export default function CompanyLayout({
   const [userProfile, setUserProfile] = useState<{ full_name: string | null; email: string | null; avatar_url: string | null } | null>(null);
 
   const companyId = useAuthStore((state) => state.company_id);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const fetchSubscription = useSubscriptionStore(
     (state) => state.fetchSubscription,
@@ -54,44 +54,52 @@ export default function CompanyLayout({
     ownerName?: string;
   } | null>(null);
 
+  // Luôn fetch từ API để không bị kẹt nếu store chưa hydrate
   useEffect(() => {
-    if (!companyId) return;
     let active = true;
-    const fetchCompany = async () => {
+
+    const init = async () => {
       try {
-        const data = await requestGetCompanyById(companyId);
+        // Lấy profile + company_id từ server
+        const res = await requestGetUserProfile();
+        if (!active || !res?.success || !res.data) return;
+
+        const profile = res.data;
+        const cid: string | null = profile.company_id ?? null;
+        const uid: string = profile.user_id ?? profile.id;
+        const role = profile.role;
+
+        // Cập nhật store nếu cần
+        if (uid && role) {
+          setAuth({ user_id: uid, role, company_id: cid ?? null });
+        }
+
+        // Cập nhật user profile hiển thị
+        setUserProfile({
+          full_name: profile.full_name ?? null,
+          email: profile.email ?? null,
+          avatar_url: profile.avatar_url ?? null,
+        });
+
+        if (!cid) return;
+
+        // Nếu đã có data cũ cho đúng company này → fetch ngầm (silent) để tránh flash
+        // Nếu là company khác hoặc chưa từng fetch → fetch bình thường (hiện loading)
+        const cachedCompanyId = useSubscriptionStore.getState().lastFetchedCompanyId;
+        fetchSubscription(cid, cachedCompanyId === cid);
+
+        // Fetch company info
+        const data = await requestGetCompanyById(cid);
         if (active && data) {
-          setCompanyInfo({
-            name: data.name,
-            ownerName: data.ownerName,
-          });
+          setCompanyInfo({ name: data.name, ownerName: data.ownerName });
         }
       } catch (err) {
-        console.error("Lỗi khi tải thông tin công ty trong layout:", err);
+        console.error("Lỗi khi khởi tạo layout công ty:", err);
       }
     };
-    fetchCompany();
-    return () => {
-      active = false;
-    };
-  }, [companyId]);
 
-  useEffect(() => {
-    if (companyId) {
-      fetchSubscription(companyId);
-    }
-  }, [companyId, fetchSubscription]);
-
-  useEffect(() => {
-    requestGetUserProfile().then((res) => {
-      if (res?.success && res.data) {
-        setUserProfile({
-          full_name: res.data.full_name ?? null,
-          email: res.data.email ?? null,
-          avatar_url: res.data.avatar_url ?? null,
-        });
-      }
-    });
+    init();
+    return () => { active = false; };
   }, []);
 
   const [loggingOut, setLoggingOut] = useState(false);
@@ -142,7 +150,7 @@ export default function CompanyLayout({
       icon: Building2,
       active: pathname === "/my-company" || pathname.startsWith("/my-company/"),
     },
-    ...(isActive
+    ...(!isLoading && isActive
       ? [
         {
           name: dict.layout_company.requests,
@@ -318,7 +326,7 @@ export default function CompanyLayout({
                 </h1>
                 {companyInfo?.ownerName && (
                   <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest">
-                    {dict.layout_company.representative}:{" "}
+                    {"Giám đốc"}:{" "}
                     {companyInfo.ownerName}
                   </p>
                 )}

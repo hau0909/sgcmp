@@ -2,6 +2,7 @@ import {
   registerAccountService,
   loginAccountService,
   getUserProfileService,
+  getCompanyIdByUserService,
   logoutUserService,
 } from "../service/auth.service";
 import {
@@ -151,12 +152,14 @@ export const handleGetUserProfile = async (userId: string) => {
 
   try {
     const userProfile = await getUserProfileService(userId);
+    const company_id = await getCompanyIdByUserService(userId, userProfile.role);
 
     return {
       success: true,
       message: "lấy thông tin tài khoảng thành công",
       data: {
         id: userProfile.user_id,
+        user_id: userProfile.user_id,
         email: userProfile.email,
         full_name: userProfile.full_name,
         phone_number: userProfile.phone_number,
@@ -168,6 +171,7 @@ export const handleGetUserProfile = async (userId: string) => {
         status: userProfile.status,
         created_at: userProfile.created_at,
         updated_at: userProfile.updated_at,
+        company_id,
       },
     };
   } catch (error) {
