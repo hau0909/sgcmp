@@ -47,6 +47,7 @@ export default function CoordinatorLayout({
 
   const companyId = useAuthStore((state) => state.company_id);
   const role = useAuthStore((state) => state.role);
+  const setAuth = useAuthStore((state) => state.setAuth);
   const clearAuth = useAuthStore((state) => state.clearAuth);
   const fetchSubscription = useSubscriptionStore((state) => state.fetchSubscription);
   const { isActive, isLoading } = useSubscriptionStore();
@@ -57,22 +58,45 @@ export default function CoordinatorLayout({
     ownerName?: string;
   } | null>(null);
 
+  // Luôn fetch từ API để không bị kẹt nếu store chưa hydrate
   useEffect(() => {
-    if (companyId) {
-      fetchSubscription(companyId);
-    }
-  }, [companyId, fetchSubscription]);
+    let active = true;
 
-  useEffect(() => {
-    requestGetUserProfile().then((res) => {
-      if (res?.success && res.data) {
+    const init = async () => {
+      try {
+        const res = await requestGetUserProfile();
+        if (!active || !res?.success || !res.data) return;
+
+        const profile = res.data;
+        const cid: string | null = profile.company_id ?? null;
+        const uid: string = profile.user_id ?? profile.id;
+        const r = profile.role;
+
+        if (uid && r) {
+          setAuth({ user_id: uid, role: r, company_id: cid ?? null });
+        }
+
         setUserProfile({
-          full_name: res.data.full_name ?? null,
-          email: res.data.email ?? null,
-          avatar_url: res.data.avatar_url ?? null,
+          full_name: profile.full_name ?? null,
+          email: profile.email ?? null,
+          avatar_url: profile.avatar_url ?? null,
         });
+
+        if (!cid) return;
+
+        fetchSubscription(cid);
+
+        const data = await requestGetCompanyById(cid);
+        if (active && data) {
+          setCompanyInfo({ name: data.name, ownerName: data.ownerName });
+        }
+      } catch (err) {
+        console.error("Lỗi khi khởi tạo Coordinator layout:", err);
       }
-    });
+    };
+
+    init();
+    return () => { active = false; };
   }, []);
 
   const [loggingOut, setLoggingOut] = useState(false);
@@ -90,31 +114,6 @@ export default function CoordinatorLayout({
       setLoggingOut(false);
     }
   };
-
-  useEffect(() => {
-    if (!companyId) return;
-    let active = true;
-    const fetchCompany = async () => {
-      try {
-        const data = await requestGetCompanyById(companyId);
-        if (active && data) {
-          setCompanyInfo({
-            name: data.name,
-            ownerName: data.ownerName,
-          });
-        }
-      } catch (err) {
-        console.error(
-          "Lỗi khi tải thông tin công ty trong Coordinator layout:",
-          err,
-        );
-      }
-    };
-    fetchCompany();
-    return () => {
-      active = false;
-    };
-  }, [companyId]);
 
   // Sidebar Items
   const sidebarLinks = [
@@ -286,7 +285,8 @@ export default function CoordinatorLayout({
                 </h1>
                 {companyInfo?.ownerName && (
                   <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest">
-                    {dict.layout_coordinator.director}: {companyInfo.ownerName}
+                    {role === "company-admin" ? "Giám đốc" : "Điều phối viên"}:{" "}
+                    {companyInfo.ownerName}
                   </p>
                 )}
               </div>
