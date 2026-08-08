@@ -1018,7 +1018,7 @@ export const handleGetGuardShiftDetail = async ({
     location: shift.location || "Chưa cập nhật vị trí",
     shift_name: shift.shift_name || "Chưa cập nhật ca trực",
     address: booking?.address || shift.location || "Chưa cập nhật địa chỉ",
-    company_name: (booking as any)?.company_name || company?.company_name || undefined,
+    company_name: (booking as any)?.company_name || undefined,
     status: assignment.status,
     check_in_time: assignment.check_in_time,
     start_time: shift.start_time,

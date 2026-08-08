@@ -85,7 +85,7 @@ export const getShiftContractsByCompanyId = async (
       )
     `,
     )
-    .in("status", ["active", "completed"]) // status của contracts
+    .eq("status", "active") // status của contracts
     .eq("booking.company_id", companyId)
     .eq("booking.status", "accepted") // status của bookings
     .order("created_at", {
@@ -168,7 +168,7 @@ export const getShiftContractsByCompanyId = async (
       contract_id: contract.contract_id,
       code: `HD-${String(index + 1).padStart(3, "0")}`,
       customer_name: customer?.full_name ?? "Chưa cập nhật",
-      company_name: (booking as any)?.company_name ?? company?.company_name ?? "Chưa cập nhật",
+      company_name: (booking as any)?.company_name || null,
       company_scope: (booking as any)?.company_scope ?? null,
       company_position: (booking as any)?.company_position ?? null,
       service_name: service?.name ?? "Chưa cập nhật",
@@ -813,6 +813,7 @@ const mapShiftWithAssignments = (shift: ShiftQuery): ShiftWithAssignments => {
     required_guards: shift.required_guards,
     location: shift.location,
     contract_address: booking?.address ?? "",
+    company_name: (booking as any)?.company_name || undefined,
     created_at: shift.created_at,
     updated_at: shift.updated_at,
     assignments: (shift.shift_assignments ?? []).map(mapShiftAssignment),
@@ -845,7 +846,11 @@ export const getAllShiftsByDateRange = async ({
         updated_at,
         contracts!inner (
           bookings!inner (
-            address
+            address,
+            company_name,
+            company:companies!bookings_company_id_fkey (
+              company_name
+            )
           )
         ),
         shift_assignments (

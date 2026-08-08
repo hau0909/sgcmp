@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   AlertTriangle,
+  Building2,
   CalendarDays,
   Check,
   CheckCircle2,
@@ -216,6 +217,32 @@ const toISO = (date: string, time: string): string =>
   localTimeToUtc(date, `${time}:00`);
 
 /**
+ * Calculate the end date of a generation period.
+ * For "week":
+ * - If starting on Monday, aligns to Sunday after val weeks (cStart + 6 + (val - 1) * 7).
+ * - If starting mid-week (Tue-Sun), includes remaining days of the current week + val full weeks (ending on Sunday).
+ * For "month": adds val months and subtracts 1 day.
+ * For "year": adds val years and subtracts 1 day.
+ */
+const calculatePeriodEnd = (cStart: Date, unit: PeriodUnit, val: number): Date => {
+  const periodEnd = new Date(cStart);
+  if (unit === "week") {
+    const dayOfWeek = cStart.getDay(); // 0 = Sunday, 1 = Monday ... 6 = Saturday
+    const daysUntilSunday = (7 - dayOfWeek) % 7;
+    // If starting mid-week (not Monday), include remaining days of this week + val full weeks
+    const extraWeeks = dayOfWeek === 1 ? val - 1 : val;
+    periodEnd.setDate(periodEnd.getDate() + daysUntilSunday + extraWeeks * 7);
+  } else if (unit === "month") {
+    periodEnd.setMonth(periodEnd.getMonth() + val);
+    periodEnd.setDate(periodEnd.getDate() - 1);
+  } else {
+    periodEnd.setFullYear(periodEnd.getFullYear() + val);
+    periodEnd.setDate(periodEnd.getDate() - 1);
+  }
+  return periodEnd;
+};
+
+/**
  * Generate all dates in [contractStart, contractEnd] ∩ [contractStart, contractStart+period]
  * that match the target weekday numbers.
  */
@@ -229,12 +256,7 @@ const generateDates = (
   const cStart = new Date(`${contractStart}T00:00:00`);
   const cEnd = new Date(`${contractEnd}T00:00:00`);
 
-  const periodEnd = new Date(cStart);
-  if (unit === "week") periodEnd.setDate(periodEnd.getDate() + value * 7);
-  else if (unit === "month") periodEnd.setMonth(periodEnd.getMonth() + value);
-  else periodEnd.setFullYear(periodEnd.getFullYear() + value);
-  // Subtract 1 day to make the end date inclusive of the period duration
-  periodEnd.setDate(periodEnd.getDate() - 1);
+  const periodEnd = calculatePeriodEnd(cStart, unit, value);
 
   const from = cStart;
   const to = periodEnd < cEnd ? periodEnd : cEnd;
@@ -675,15 +697,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     const cStart = new Date(`${generationStartDate}T00:00:00`);
     const cEnd = new Date(`${selectedContract.end_date}T00:00:00`);
 
-    const periodEnd = new Date(cStart);
-    if (periodUnit === "week") {
-      periodEnd.setDate(periodEnd.getDate() + val * 7);
-    } else if (periodUnit === "month") {
-      periodEnd.setMonth(periodEnd.getMonth() + val);
-    } else {
-      periodEnd.setFullYear(periodEnd.getFullYear() + val);
-    }
-    periodEnd.setDate(periodEnd.getDate() - 1);
+    const periodEnd = calculatePeriodEnd(cStart, periodUnit, val);
 
     return periodEnd > cEnd;
   }, [selectedContract, generationStartDate, periodValue, periodUnit]);
@@ -739,16 +753,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
     const cStart = new Date(`${generationStartDate}T00:00:00`);
 
-    const periodEnd = new Date(cStart);
-    if (periodUnit === "week") {
-      periodEnd.setDate(periodEnd.getDate() + val * 7);
-    } else if (periodUnit === "month") {
-      periodEnd.setMonth(periodEnd.getMonth() + val);
-    } else {
-      periodEnd.setFullYear(periodEnd.getFullYear() + val);
-    }
-    // Subtract 1 day to make the end date inclusive of the period duration
-    periodEnd.setDate(periodEnd.getDate() - 1);
+    const periodEnd = calculatePeriodEnd(cStart, periodUnit, val);
 
     if (periodEnd < cStart) {
       return (dict?.create_shift_modal?.err_cycle_before_contract || "Chu kỳ kết thúc vào ngày {0}, trước ngày hợp đồng bắt đầu ({1}).")
@@ -2031,10 +2036,14 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                         <span className="font-bold text-slate-900 bg-slate-100 px-1.5 py-0.5 rounded">
                           {selectedContract.code}
                         </span>
+                        <span className="flex items-center gap-1 font-semibold text-slate-800 shrink-0">
+                          <Building2 size={13} className="text-slate-500 shrink-0" />
+                          {(!selectedContract.company_name || selectedContract.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : selectedContract.company_name}
+                        </span>
                         {selectedContract.customer_name && (
-                          <span className="flex items-center gap-1 font-semibold text-slate-800">
-                            <UserRound size={13} className="text-slate-500 shrink-0" />
-                            {selectedContract.customer_name}
+                          <span className="flex items-center gap-1 text-slate-600 truncate">
+                            <UserRound size={13} className="text-slate-400 shrink-0" />
+                            ({selectedContract.customer_name})
                           </span>
                         )}
                         <span className="text-slate-500 truncate">• {selectedContract.address}</span>
@@ -2081,10 +2090,14 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                 <span className={`font-bold px-1.5 py-0.5 rounded text-[11px] ${isSelected ? "bg-blue-100 text-blue-800" : "bg-slate-100 text-slate-700"}`}>
                                   {c.code}
                                 </span>
+                                <span className="flex items-center gap-1 font-semibold text-slate-800 text-[12px]">
+                                  <Building2 size={13} className="text-slate-500 shrink-0" />
+                                  {(!c.company_name || c.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : c.company_name}
+                                </span>
                                 {c.customer_name && (
-                                  <span className="flex items-center gap-1 font-semibold text-slate-800 text-[12px]">
+                                  <span className="flex items-center gap-1 text-slate-600 text-[12px]">
                                     <UserRound size={13} className="text-slate-400 shrink-0" />
-                                    {c.customer_name}
+                                    ({c.customer_name})
                                   </span>
                                 )}
                                 <span className="text-[11px] text-slate-500 font-normal">
@@ -2133,7 +2146,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                       </span>
                     </div>
                     <InfoRow label={dict.company_verifications?.table_customer || "Khách hàng"} value={selectedContract.customer_name} />
-                    <InfoRow label={dict.create_shift_modal?.label_company || "Tên công ty"} value={selectedContract.company_name} />
+                    <InfoRow label={dict.create_shift_modal?.label_company || "Tên công ty"} value={(!selectedContract.company_name || selectedContract.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : selectedContract.company_name} />
                     {selectedContract.company_scope && (
                       <InfoRow label={dict.create_shift_modal?.label_company_scope || "Quy mô công ty"} value={selectedContract.company_scope} />
                     )}
