@@ -4,7 +4,7 @@ import {
   loginAccount,
   logoutUser,
 } from "../repository/auth.repository";
-import { getUserProfile, getCurrentUser } from "../repository/auth.repository";
+import { getUserProfile, getCurrentUser, getCompanyIdByUser } from "../repository/auth.repository";
 
 export const registerAccountService = async ({
   email,
@@ -45,6 +45,13 @@ export const loginAccountService = async ({
 
 export const getUserProfileService = async (userId: string) => {
   return getUserProfile(userId);
+};
+
+export const getCompanyIdByUserService = async (
+  userId: string,
+  role: string,
+): Promise<string | null> => {
+  return getCompanyIdByUser(userId, role);
 };
 
 export const getCurrentUserProfileService = async () => {

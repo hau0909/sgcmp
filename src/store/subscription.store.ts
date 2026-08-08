@@ -5,8 +5,15 @@ import { requestCheckSubscription } from "@/features/subscription/api/subscripti
 
 type SubscriptionStore = CompanySubscriptionCheckResult & {
   isLoading: boolean;
+  /** ID công ty đã được fetch lần cuối — dùng để tránh flash khi re-mount */
+  lastFetchedCompanyId: string | null;
   setSubscriptionStatus: (status: CompanySubscriptionCheckResult) => void;
-  fetchSubscription: (companyId: string) => Promise<void>;
+  /**
+   * Fetch subscription.
+   * - silent=true: không reset isLoading (dùng khi đã có data cũ của cùng company)
+   * - silent=false (mặc định): reset isLoading=true trước khi fetch
+   */
+  fetchSubscription: (companyId: string, silent?: boolean) => Promise<void>;
   clearSubscription: () => void;
 };
 
@@ -17,6 +24,7 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
       isActive: false,
       subscription: null,
       isLoading: true,
+      lastFetchedCompanyId: null,
 
       setSubscriptionStatus: (status) =>
         set({
@@ -26,8 +34,10 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
           isLoading: false,
         }),
 
-      fetchSubscription: async (companyId) => {
-        set({ isLoading: true });
+      fetchSubscription: async (companyId, silent = false) => {
+        if (!silent) {
+          set({ isLoading: true });
+        }
         try {
           const result = await requestCheckSubscription(companyId);
           set({
@@ -35,6 +45,7 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
             isActive: result.isActive,
             subscription: result.subscription,
             isLoading: false,
+            lastFetchedCompanyId: companyId,
           });
         } catch (error) {
           console.error("Lỗi khi đồng bộ gói dịch vụ:", error);
@@ -48,6 +59,7 @@ export const useSubscriptionStore = create<SubscriptionStore>()(
           isActive: false,
           subscription: null,
           isLoading: false,
+          lastFetchedCompanyId: null,
         }),
     }),
     {

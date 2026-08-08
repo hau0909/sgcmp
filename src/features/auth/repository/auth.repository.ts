@@ -239,3 +239,45 @@ export const logoutUser = async () => {
 
   return true;
 };
+
+export const getCompanyIdByUser = async (
+  userId: string,
+  role: string,
+): Promise<string | null> => {
+  const supabase = await createClient();
+
+  if (role === "company-admin") {
+    const { data, error } = await supabase
+      .from("companies")
+      .select("company_id")
+      .eq("owner_id", userId)
+      .single();
+
+    if (error || !data) return null;
+    return data.company_id;
+  }
+
+  if (role === "coordinator") {
+    const { data, error } = await supabase
+      .from("coordinators")
+      .select("company_id")
+      .eq("user_id", userId)
+      .single();
+
+    if (error || !data) return null;
+    return data.company_id;
+  }
+
+  if (role === "guard") {
+    const { data, error } = await supabase
+      .from("guards")
+      .select("company_id")
+      .eq("user_id", userId)
+      .single();
+
+    if (error || !data) return null;
+    return data.company_id;
+  }
+
+  return null;
+};
