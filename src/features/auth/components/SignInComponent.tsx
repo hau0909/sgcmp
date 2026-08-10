@@ -85,6 +85,7 @@ export default function SignInComponent() {
   const validateForm = () => {
     const newErrors: FormErrors = {};
     const trimmedEmail = email.trim();
+    const trimmedPassword = password.trim();
 
     if (!trimmedEmail) {
       newErrors.email = dict.pages.auth.login.errors.email_required;
@@ -92,7 +93,7 @@ export default function SignInComponent() {
       newErrors.email = dict.pages.auth.login.errors.email_invalid;
     }
 
-    if (!password) {
+    if (!trimmedPassword) {
       newErrors.password = dict.pages.auth.login.errors.password_required;
     }
 
@@ -114,10 +115,11 @@ export default function SignInComponent() {
       setSuccessMessage("");
 
       const trimmedEmail = email.trim();
+      const trimmedPassword = password.trim();
 
       const result = await requestLoginAccount({
         email: trimmedEmail,
-        password,
+        password: trimmedPassword,
       });
 
       if (!result?.success) {
