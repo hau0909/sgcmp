@@ -39,6 +39,8 @@ export default function SignUp() {
     const trimmedFullName = fullName.trim();
     const trimmedEmail = email.trim();
     const normalizedPhoneNumber = phoneNumber.replace(/\s/g, "");
+    const trimmedPassword = password.trim();
+    const trimmedConfirmPassword = confirmPassword.trim();
 
     if (!trimmedFullName) {
       newErrors.fullName = dict.pages.auth.register.errors.name_required;
@@ -60,15 +62,15 @@ export default function SignUp() {
       newErrors.phone = dict.pages.auth.register.errors.phone_invalid;
     }
 
-    if (!password) {
+    if (!trimmedPassword) {
       newErrors.password = dict.pages.auth.register.errors.password_required;
-    } else if (password.length < 8) {
+    } else if (trimmedPassword.length < 8) {
       newErrors.password = dict.pages.auth.register.errors.password_short;
     }
 
-    if (!confirmPassword) {
+    if (!trimmedConfirmPassword) {
       newErrors.confirmPassword = dict.pages.auth.register.errors.confirm_required;
-    } else if (confirmPassword !== password) {
+    } else if (trimmedConfirmPassword !== trimmedPassword) {
       newErrors.confirmPassword = dict.pages.auth.register.errors.confirm_mismatch;
     }
 
@@ -93,11 +95,13 @@ export default function SignUp() {
       const trimmedFullName = fullName.trim();
       const trimmedEmail = email.trim();
       const normalizedPhoneNumber = phoneNumber.replace(/\s/g, "");
+      const trimmedPassword = password.trim();
+      const trimmedConfirmPassword = confirmPassword.trim();
 
       const result = await requestRegisterAccount({
         email: trimmedEmail,
-        password,
-        confirmPassword,
+        password: trimmedPassword,
+        confirmPassword: trimmedConfirmPassword,
         fullName: trimmedFullName,
         phoneNumber: normalizedPhoneNumber,
       });

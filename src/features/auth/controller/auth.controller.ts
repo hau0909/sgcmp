@@ -27,10 +27,13 @@ export const handleRegisterAccount = async ({
   companyEmail,
   companyPhone,
 }: RegisterInput) => {
+  const trimmedPassword = password.trim();
+  const trimmedConfirmPassword = confirmPassword.trim();
+
   const validateError = validateRegisterInput({
     email,
-    password,
-    confirmPassword,
+    password: trimmedPassword,
+    confirmPassword: trimmedConfirmPassword,
     phoneNumber,
     fullName,
   });
@@ -63,8 +66,8 @@ export const handleRegisterAccount = async ({
   try {
     const account = await registerAccountService({
       email,
-      password,
-      confirmPassword,
+      password: trimmedPassword,
+      confirmPassword: trimmedConfirmPassword,
       role: "customer",
       phoneNumber,
       fullName,
@@ -103,7 +106,9 @@ export const handleRegisterAccount = async ({
 };
 
 export const handleLoginAccount = async ({ email, password }: LoginInput) => {
-  const validateError = validateLoginInput({ email, password });
+  const trimmedPassword = password.trim();
+
+  const validateError = validateLoginInput({ email, password: trimmedPassword });
 
   if (validateError) {
     return {
@@ -113,7 +118,7 @@ export const handleLoginAccount = async ({ email, password }: LoginInput) => {
   }
 
   try {
-    const loginResult = await loginAccountService({ email, password });
+    const loginResult = await loginAccountService({ email, password: trimmedPassword });
 
     return {
       success: true,
