@@ -4,10 +4,12 @@ import React, { useState, useEffect, useRef, Suspense } from "react";
 import {
   Search,
   MapPin,
+  MapPinOff,
   Star,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
+  X,
 } from "lucide-react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -131,6 +133,7 @@ export default function SearchCompanies() {
   const { dict } = useTranslation();
 
   const location = searchParams.get("location") || "";
+  const isGps = searchParams.get("isGps") === "true";
   const selectedService = searchParams.get("service") || "";
   const minPriceParam = searchParams.get("minPrice");
   const minPrice = minPriceParam ? parseInt(minPriceParam, 10) : undefined;
@@ -148,6 +151,15 @@ export default function SearchCompanies() {
   const [totalPagesState, setTotalPagesState] = useState(1);
   const [isLoadingExplore, setIsLoadingExplore] = useState(true);
 
+  // Fallback banner state (when GPS ward search returns 0 results)
+  const [fallbackCity, setFallbackCity] = useState<string | null>(null);
+  const [originalWard, setOriginalWard] = useState<string | null>(null);
+  const [fallbackDismissed, setFallbackDismissed] = useState(false);
+
+  // Success banner state (when GPS ward search returns results)
+  const [gpsFoundLocation, setGpsFoundLocation] = useState<string | null>(null);
+  const [gpsFoundDismissed, setGpsFoundDismissed] = useState(false);
+
   // Close sort dropdown on outside click
   useEffect(() => {
     function handler(e: MouseEvent) {
@@ -158,6 +170,15 @@ export default function SearchCompanies() {
     document.addEventListener("mousedown", handler);
     return () => document.removeEventListener("mousedown", handler);
   }, []);
+
+  // Reset fallback when location changes
+  useEffect(() => {
+    setFallbackCity(null);
+    setOriginalWard(null);
+    setFallbackDismissed(false);
+    setGpsFoundLocation(null);
+    setGpsFoundDismissed(false);
+  }, [location]);
 
   // Load explore companies
   useEffect(() => {
@@ -186,10 +207,59 @@ export default function SearchCompanies() {
             })
           : await requestGetCompanies({ page: currentPage, limit: ITEMS_PER_PAGE });
 
-        if (mounted && res) {
-          setExploreCompanies(res.companies || []);
-          setTotalCount(res.totalCount || 0);
-          setTotalPagesState(res.totalPages || 1);
+        if (!mounted) return;
+
+        // ── GPS Fallback: if ward-level search returns 0, expand to city ──
+        const companies = res?.companies || [];
+        const hasWardAndCity = location.includes(",");
+        const noOtherFilters = tags.length === 0 && minPrice === undefined && maxPrice === undefined;
+
+        if (companies.length === 0 && hasWardAndCity && noOtherFilters && hasFilters && isGps) {
+          // Extract city name (everything after the last comma)
+          const parts = location.split(",");
+          const cityName = parts[parts.length - 1].trim();
+          const wardName = parts.slice(0, parts.length - 1).join(",").trim();
+
+          const cityRes = await requestGetCompanyFilters({
+            search: "",
+            location: cityName,
+            tags: [],
+            sortBy: sortBy === "all" ? "Đề xuất" : sortBy === "highest" ? "Đánh giá cao nhất" : "Đánh giá thấp nhất",
+            minPrice: undefined,
+            maxPrice: undefined,
+            page: currentPage,
+            limit: ITEMS_PER_PAGE,
+          });
+
+          if (mounted && cityRes) {
+            setExploreCompanies(cityRes.companies || []);
+            setTotalCount(cityRes.totalCount || 0);
+            setTotalPagesState(cityRes.totalPages || 1);
+            // Only show banner if city actually has results
+            if ((cityRes.totalCount || 0) > 0) {
+              setFallbackCity(cityName);
+              setOriginalWard(wardName);
+              setFallbackDismissed(false);
+            } else {
+              setFallbackCity(null);
+              setOriginalWard(null);
+            }
+            setGpsFoundLocation(null);
+          }
+        } else {
+          if (mounted && res) {
+            setExploreCompanies(companies);
+            setTotalCount(res.totalCount || 0);
+            setTotalPagesState(res.totalPages || 1);
+            setFallbackCity(null);
+            setOriginalWard(null);
+            // Show success banner when GPS ward-level search returns results
+            if (companies.length > 0 && hasWardAndCity && noOtherFilters && isGps) {
+              setGpsFoundLocation(location.trim());
+            } else {
+              setGpsFoundLocation(null);
+            }
+          }
         }
       } catch (e) {
         console.error(e);
@@ -291,6 +361,59 @@ export default function SearchCompanies() {
               )}
             </div>
           </div>
+
+          {/* ── GPS Success Banner ─────────────────────────────── */}
+          {gpsFoundLocation && !gpsFoundDismissed && (
+            <div className="mb-5 flex items-start gap-3 bg-emerald-50 border border-emerald-200/80 rounded-2xl px-4 py-3.5 shadow-sm">
+              <div className="shrink-0 mt-0.5 w-8 h-8 bg-emerald-100 rounded-full flex items-center justify-center">
+                <MapPin className="w-4 h-4 text-emerald-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-emerald-800">
+                  {dict.customer.search.gps_found_banner_title}
+                </p>
+                <p className="text-xs text-emerald-700 mt-0.5">
+                  {dict.customer.search.gps_found_banner_desc
+                    .replace("{count}", String(totalCount))
+                    .replace("{location}", gpsFoundLocation)}
+                </p>
+              </div>
+              <button
+                onClick={() => setGpsFoundDismissed(true)}
+                className="shrink-0 p-1 rounded-lg hover:bg-emerald-100 transition-colors text-emerald-600"
+                title={dict.customer.search.fallback_dismiss}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* ── Fallback Banner ───────────────────────────────────── */}
+          {fallbackCity && originalWard && !fallbackDismissed && (
+            <div className="mb-5 flex items-start gap-3 bg-amber-50 border border-amber-200/80 rounded-2xl px-4 py-3.5 shadow-sm">
+              <div className="shrink-0 mt-0.5 w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
+                <MapPinOff className="w-4 h-4 text-amber-600" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-bold text-amber-800">
+                  {dict.customer.search.fallback_ward_banner_title
+                    .replace("{ward}", originalWard)}
+                </p>
+                <p className="text-xs text-amber-700 mt-0.5">
+                  {dict.customer.search.fallback_ward_banner_desc
+                    .replace("{count}", String(totalCount))
+                    .replace("{city}", fallbackCity)}
+                </p>
+              </div>
+              <button
+                onClick={() => setFallbackDismissed(true)}
+                className="shrink-0 p-1 rounded-lg hover:bg-amber-100 transition-colors text-amber-600"
+                title={dict.customer.search.fallback_dismiss}
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* Grid — 4 cols × 5 rows = 20 cards */}
           {isLoadingExplore ? (
