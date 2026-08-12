@@ -265,12 +265,12 @@ export const updateBookingStatusAndPrice = async (
     hourly_rate?: number;
     monthly_rate?: number;
   }
-): Promise<{ booking: Booking; contract_id?: string }> => {
+): Promise<{ booking: Booking; contract_id?: string; contract_status?: string }> => {
   const supabase = await createClient();
 
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
-    .select("status, start_date, end_date")
+    .select("company_id, status, start_date, end_date")
     .eq("booking_id", bookingId)
     .maybeSingle();
 
@@ -339,6 +339,19 @@ export const updateBookingStatusAndPrice = async (
   let contractId: string | undefined = undefined;
 
   if (updates.status === "accepted") {
+    let signedCompanyName: string | null = null;
+    const companyId = data?.company_id || booking?.company_id;
+    if (companyId) {
+      const { data: companyData } = await supabase
+        .from("companies")
+        .select("company_name")
+        .eq("company_id", companyId)
+        .maybeSingle();
+      if (companyData) {
+        signedCompanyName = companyData.company_name;
+      }
+    }
+
     const { data: contract, error: contractError } = await supabase
       .from("contracts")
       .insert([
@@ -349,6 +362,7 @@ export const updateBookingStatusAndPrice = async (
           status: "pending_signatures",
           customer_agreed: false,
           company_agreed: false,
+          signed_company_name: signedCompanyName,
         }
       ])
       .select("contract_id")
@@ -362,7 +376,7 @@ export const updateBookingStatusAndPrice = async (
     contractId = contract?.contract_id;
   }
 
-  return { booking: data as Booking, contract_id: contractId };
+  return { booking: data as Booking, contract_id: contractId, contract_status: contractId ? "pending_signatures" : undefined };
 };
 
 export const getCustomerBookings = async (

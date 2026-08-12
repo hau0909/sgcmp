@@ -16,6 +16,7 @@ import { CustomerContractDocument } from "./CustomerContractDocument";
 import { CustomerHistoryLog } from "./CustomerHistoryLog";
 import { CustomerContractGuardsInfo } from "./CustomerContractGuardsInfo";
 import { CustomerQualityReviewModal } from "../../review/components/CustomerQualityReviewModal";
+import { ContractProgressBar } from "./ContractProgressBar";
 import { requestCreateReview } from "../../review/api/review.api";
 import {
   requestGetCustomerContractDetail,
@@ -237,6 +238,16 @@ export function CustomerContractDetailContainer({
         contract={contract}
       />
 
+      {contract.status === "active" && (
+        <div className="mb-6">
+          <ContractProgressBar
+            startDate={contract.start_date}
+            endDate={contract.end_date}
+            variant="card"
+          />
+        </div>
+      )}
+
       {/* Pending banner */}
       {isPendingAndCustomerNotSigned && (
         <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-5 py-4 text-sm text-amber-800">
@@ -259,6 +270,8 @@ export function CustomerContractDetailContainer({
           {/* Company info */}
           <CustomerCompanyInfo
             companyName={contract.company?.name || dict.contract.detail.not_updated}
+            signedCompanyName={contract.company?.signed_name || contract.signed_company_name}
+            isNameChanged={contract.company?.is_name_changed || contract.is_company_name_changed}
             phone={contract.company?.phone}
             email={contract.company?.email}
             address={contract.company?.address}
@@ -275,7 +288,10 @@ export function CustomerContractDetailContainer({
                 timeSlots={contract.time_slots}
                 description={contract.description}
               />
-              <CustomerPaymentInfo totalValue={contract.formatted_price} />
+              <CustomerPaymentInfo
+                totalValue={contract.formatted_price}
+                quotationType={contract.quotation_type}
+              />
             </div>
 
             <CustomerContractGuardsInfo contractId={contractId} />

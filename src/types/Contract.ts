@@ -17,4 +17,6 @@ export interface Contract {
   contract_code?: string;
   customer_name?: string;
   service_name?: string;
+  signed_company_name?: string | null;
+  is_company_name_changed?: boolean;
 }
