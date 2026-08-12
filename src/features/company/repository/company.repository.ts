@@ -24,6 +24,8 @@ export interface DbCompany {
   status: string;
   allowed_late_minutes?: number | null;
   allowed_absent_minutes?: number | null;
+  monthly_discount_percent?: number | null;
+  package_discount_percent?: number | null;
   created_at: string;
   company_imgs?: {
     image_url: string;
@@ -54,6 +56,8 @@ export const getAllActiveCompanies = async (): Promise<DbCompany[]> => {
       status,
       allowed_late_minutes,
       allowed_absent_minutes,
+      monthly_discount_percent,
+      package_discount_percent,
       created_at,
       company_imgs (
         image_url,
@@ -103,6 +107,8 @@ export interface DbCompanyDetail {
   status: string;
   allowed_late_minutes?: number | null;
   allowed_absent_minutes?: number | null;
+  monthly_discount_percent?: number | null;
+  package_discount_percent?: number | null;
   created_at: string;
   email: string;
   phone: string;
@@ -144,6 +150,8 @@ export const getCompanyByIdWithDetails = async (
       status,
       allowed_late_minutes,
       allowed_absent_minutes,
+      monthly_discount_percent,
+      package_discount_percent,
       created_at,
       email,
       phone,
@@ -215,6 +223,12 @@ export const updateCompanyprofile = async ({
   }
   if (input.allowed_absent_minutes !== undefined) {
     updatePayload.allowed_absent_minutes = input.allowed_absent_minutes;
+  }
+  if (input.monthly_discount_percent !== undefined) {
+    updatePayload.monthly_discount_percent = input.monthly_discount_percent;
+  }
+  if (input.package_discount_percent !== undefined) {
+    updatePayload.package_discount_percent = input.package_discount_percent;
   }
 
   const { data, error } = await supabase

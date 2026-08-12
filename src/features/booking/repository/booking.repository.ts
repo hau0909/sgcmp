@@ -121,7 +121,9 @@ export const getBookingDetail = async (id: string): Promise<any | null> => {
         company_name,
         email,
         phone,
-        address
+        address,
+        monthly_discount_percent,
+        package_discount_percent
       ),
       contracts (
         contract_id,

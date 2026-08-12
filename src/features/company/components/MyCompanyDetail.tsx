@@ -92,7 +92,9 @@ export default function MyCompanyDetail() {
 
   const [status, setStatus] = useState<CompanyStatus | "">("");
   const [rejectReason, setRejectReason] = useState<string | null>(null);
-  const [latestPublishRequest, setLatestPublishRequest] = useState<any | null>(null);
+  const [latestPublishRequest, setLatestPublishRequest] = useState<any | null>(
+    null,
+  );
   const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const [publishNote, setPublishNote] = useState("");
   const [submittingPublish, setSubmittingPublish] = useState(false);
@@ -124,8 +126,14 @@ export default function MyCompanyDetail() {
   const [phone, setPhone] = useState("");
   const [allowedLateMinutes, setAllowedLateMinutes] = useState<number>(5);
   const [allowedAbsentMinutes, setAllowedAbsentMinutes] = useState<number>(35);
-  const [allowedLateMinutesStr, setAllowedLateMinutesStr] = useState<string>("5");
-  const [allowedAbsentMinutesStr, setAllowedAbsentMinutesStr] = useState<string>("35");
+  const [allowedLateMinutesStr, setAllowedLateMinutesStr] =
+    useState<string>("5");
+  const [allowedAbsentMinutesStr, setAllowedAbsentMinutesStr] =
+    useState<string>("35");
+  const [monthlyDiscountPercent, setMonthlyDiscountPercent] =
+    useState<number>(10);
+  const [packageDiscountPercent, setPackageDiscountPercent] =
+    useState<number>(15);
 
   const [cities, setCities] = useState<City[]>([]);
   const [wards, setWards] = useState<Ward[]>([]);
@@ -145,7 +153,8 @@ export default function MyCompanyDetail() {
   const [toastVisible, setToastVisible] = useState(false);
 
   const [activeViewerImg, setActiveViewerImg] = useState<string | null>(null);
-  const [hasActiveSubscription, setHasActiveSubscription] = useState<boolean>(false);
+  const [hasActiveSubscription, setHasActiveSubscription] =
+    useState<boolean>(false);
 
   const [companyServices, setCompanyServices] = useState<CompanyServiceData[]>(
     [],
@@ -154,15 +163,23 @@ export default function MyCompanyDetail() {
 
   const [isAddServiceOpen, setIsAddServiceOpen] = useState(false);
   const [addingService, setAddingService] = useState(false);
-  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(null);
+  const [deletingServiceId, setDeletingServiceId] = useState<string | null>(
+    null,
+  );
   const [newServiceId, setNewServiceId] = useState("");
   const [newServiceDesc, setNewServiceDesc] = useState("");
   const [newServicePrice, setNewServicePrice] = useState("");
-  const [serviceFormErrors, setServiceFormErrors] = useState<{ serviceId?: string; desc?: string; price?: string }>({});
+  const [serviceFormErrors, setServiceFormErrors] = useState<{
+    serviceId?: string;
+    desc?: string;
+    price?: string;
+  }>({});
 
   const unaddedAvailableServices = React.useMemo(() => {
     const addedSet = new Set(companyServices.map((cs) => cs.serviceId));
-    return availableServices.filter((s) => s.is_active === true && !addedSet.has(s.service_id));
+    return availableServices.filter(
+      (s) => s.is_active === true && !addedSet.has(s.service_id),
+    );
   }, [availableServices, companyServices]);
 
   useEffect(() => {
@@ -357,18 +374,26 @@ export default function MyCompanyDetail() {
     const rawAbsentDigits = allowedAbsentMinutesStr.replace(/\D/g, "");
 
     const parsedLate = rawLateDigits !== "" ? parseInt(rawLateDigits, 10) : NaN;
-    const parsedAbsent = rawAbsentDigits !== "" ? parseInt(rawAbsentDigits, 10) : NaN;
+    const parsedAbsent =
+      rawAbsentDigits !== "" ? parseInt(rawAbsentDigits, 10) : NaN;
 
     if (isNaN(parsedLate) || parsedLate < 0) {
-      nextErrors.allowed_late_minutes = dict.company_detail.validation.allowed_late_invalid;
+      nextErrors.allowed_late_minutes =
+        dict.company_detail.validation.allowed_late_invalid;
     }
 
     if (isNaN(parsedAbsent) || parsedAbsent < 0) {
-      nextErrors.allowed_absent_minutes = dict.company_detail.validation.allowed_absent_invalid;
+      nextErrors.allowed_absent_minutes =
+        dict.company_detail.validation.allowed_absent_invalid;
     }
 
-    if (!isNaN(parsedLate) && !isNaN(parsedAbsent) && parsedLate > parsedAbsent) {
-      nextErrors.allowed_late_minutes = dict.company_detail.validation.late_greater_than_absent;
+    if (
+      !isNaN(parsedLate) &&
+      !isNaN(parsedAbsent) &&
+      parsedLate > parsedAbsent
+    ) {
+      nextErrors.allowed_late_minutes =
+        dict.company_detail.validation.late_greater_than_absent;
     }
 
     setFieldErrors(nextErrors);
@@ -399,19 +424,21 @@ export default function MyCompanyDetail() {
     setAllowedLateMinutesStr(String(allowedLateMinutes));
     setAllowedAbsentMinutesStr(String(allowedAbsentMinutes));
 
-    const parts = address.split(",").map(p => p.trim());
+    const parts = address.split(",").map((p) => p.trim());
     if (parts.length >= 3) {
       const parsedCity = parts[parts.length - 1];
       const parsedWard = parts[parts.length - 2];
       const parsedStreet = parts.slice(0, parts.length - 2).join(", ");
 
-      const foundCity = cities.find(c => c.city_name === parsedCity);
+      const foundCity = cities.find((c) => c.city_name === parsedCity);
       if (foundCity) {
         setEditCityId(foundCity.city_id);
-        requestGetWards(foundCity.city_id).then(res => {
+        requestGetWards(foundCity.city_id).then((res) => {
           if (res?.success && res.wards) {
             setWards(res.wards);
-            const foundWard = res.wards.find((w: Ward) => w.ward_name === parsedWard);
+            const foundWard = res.wards.find(
+              (w: Ward) => w.ward_name === parsedWard,
+            );
             if (foundWard) setEditWardId(foundWard.ward_id);
           }
         });
@@ -446,11 +473,11 @@ export default function MyCompanyDetail() {
       setAllActivityImgs(imageUrls);
     } catch (err) {
       console.error("Lỗi khi lấy hình ảnh hoạt động:", err);
-      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.activity_error;
-      showToast(
-        "error",
-        errMsg,
-      );
+      const errMsg =
+        err instanceof Error
+          ? err.message
+          : dict.company_detail.messages.activity_error;
+      showToast("error", errMsg);
     } finally {
       setLoadingActivityGallery(false);
     }
@@ -504,7 +531,10 @@ export default function MyCompanyDetail() {
       showToast("success", dict.company_detail.messages.logo_success);
     } catch (err) {
       console.error("Lỗi khi upload logo:", err);
-      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.logo_error;
+      const errMsg =
+        err instanceof Error
+          ? err.message
+          : dict.company_detail.messages.logo_error;
       showToast("error", errMsg);
     } finally {
       setUploadingLogo(false);
@@ -539,7 +569,10 @@ export default function MyCompanyDetail() {
       showToast("success", dict.company_detail.messages.banner_success);
     } catch (err) {
       console.error("Lỗi khi upload banner:", err);
-      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.banner_error;
+      const errMsg =
+        err instanceof Error
+          ? err.message
+          : dict.company_detail.messages.banner_error;
       showToast("error", errMsg);
     } finally {
       setUploadingBanner(false);
@@ -582,11 +615,17 @@ export default function MyCompanyDetail() {
 
       showToast(
         "success",
-        dict.company_detail.messages.activity_success.replace("{0}", imageUrls.length.toString()),
+        dict.company_detail.messages.activity_success.replace(
+          "{0}",
+          imageUrls.length.toString(),
+        ),
       );
     } catch (err) {
       console.error("Lỗi khi upload hình ảnh hoạt động:", err);
-      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.activity_error;
+      const errMsg =
+        err instanceof Error
+          ? err.message
+          : dict.company_detail.messages.activity_error;
       showToast("error", errMsg);
     } finally {
       setUploadingActivity(false);
@@ -605,14 +644,14 @@ export default function MyCompanyDetail() {
       try {
         const urlObj = new URL(url);
         const pathname = urlObj.pathname;
-        const lastPart = pathname.substring(pathname.lastIndexOf('/') + 1);
-        if (lastPart.includes('.')) {
-          extension = lastPart.split('.').pop() || "pdf";
+        const lastPart = pathname.substring(pathname.lastIndexOf("/") + 1);
+        if (lastPart.includes(".")) {
+          extension = lastPart.split(".").pop() || "pdf";
         }
       } catch (err) {
         console.error("Lỗi khi phân tích định dạng file:", err);
       }
-      
+
       const filename = `giay-phep-kinh-doanh.${extension}`;
 
       const response = await fetch(url);
@@ -642,15 +681,22 @@ export default function MyCompanyDetail() {
       return;
     }
 
-    const selectedCity = cities.find(c => c.city_id === Number(editCityId))?.city_name || "";
-    const selectedWard = wards.find(w => w.ward_id === Number(editWardId))?.ward_name || "";
-    const newAddressStr = [editStreet.trim(), selectedWard, selectedCity].filter(Boolean).join(", ");
+    const selectedCity =
+      cities.find((c) => c.city_id === Number(editCityId))?.city_name || "";
+    const selectedWard =
+      wards.find((w) => w.ward_id === Number(editWardId))?.ward_name || "";
+    const newAddressStr = [editStreet.trim(), selectedWard, selectedCity]
+      .filter(Boolean)
+      .join(", ");
 
     try {
       setSaving(true);
 
       const parsedLate = parseInt(allowedLateMinutesStr.replace(/\D/g, ""), 10);
-      const parsedAbsent = parseInt(allowedAbsentMinutesStr.replace(/\D/g, ""), 10);
+      const parsedAbsent = parseInt(
+        allowedAbsentMinutesStr.replace(/\D/g, ""),
+        10,
+      );
 
       const finalLate = isNaN(parsedLate) ? 5 : parsedLate;
       const finalAbsent = isNaN(parsedAbsent) ? 35 : parsedAbsent;
@@ -663,6 +709,8 @@ export default function MyCompanyDetail() {
         address: newAddressStr,
         allowed_late_minutes: finalLate,
         allowed_absent_minutes: finalAbsent,
+        monthly_discount_percent: monthlyDiscountPercent,
+        package_discount_percent: packageDiscountPercent,
       });
 
       setCompanyName(fullName.trim());
@@ -685,11 +733,11 @@ export default function MyCompanyDetail() {
       showToast("success", dict.company_detail.messages.update_success);
     } catch (err) {
       console.error("Lỗi khi cập nhật công ty:", err);
-      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.update_error;
-      showToast(
-        "error",
-        errMsg,
-      );
+      const errMsg =
+        err instanceof Error
+          ? err.message
+          : dict.company_detail.messages.update_error;
+      showToast("error", errMsg);
     } finally {
       setSaving(false);
     }
@@ -722,7 +770,8 @@ export default function MyCompanyDetail() {
     const rawDigits = e.target.value.replace(/\D/g, "");
     if (!rawDigits) {
       setNewServicePrice("");
-      if (serviceFormErrors.price) setServiceFormErrors((prev) => ({ ...prev, price: undefined }));
+      if (serviceFormErrors.price)
+        setServiceFormErrors((prev) => ({ ...prev, price: undefined }));
       return;
     }
     const num = parseInt(rawDigits, 10);
@@ -731,7 +780,8 @@ export default function MyCompanyDetail() {
     } else {
       setNewServicePrice(num.toLocaleString("vi-VN"));
     }
-    if (serviceFormErrors.price) setServiceFormErrors((prev) => ({ ...prev, price: undefined }));
+    if (serviceFormErrors.price)
+      setServiceFormErrors((prev) => ({ ...prev, price: undefined }));
   };
 
   const handleAddService = async (e: React.FormEvent) => {
@@ -740,12 +790,15 @@ export default function MyCompanyDetail() {
     // Inline validation
     const errors: { serviceId?: string; desc?: string; price?: string } = {};
     if (!newServiceId) errors.serviceId = "Vui lòng chọn dịch vụ";
-    if (newServiceDesc.trim().length > 150) errors.desc = `Mô tả tối đa 150 ký tự (hiện: ${newServiceDesc.trim().length})`;
+    if (newServiceDesc.trim().length > 150)
+      errors.desc = `Mô tả tối đa 150 ký tự (hiện: ${newServiceDesc.trim().length})`;
     const rawPriceDigits = newServicePrice.replace(/\D/g, "");
     const numericPrice = parseInt(rawPriceDigits, 10);
     if (!rawPriceDigits) errors.price = "Vui lòng nhập giá";
-    else if (isNaN(numericPrice) || numericPrice <= 0) errors.price = "Giá phải là số lớn hơn 0";
-    else if (numericPrice > 1000000) errors.price = "Giá tối đa là 1.000.000 VND";
+    else if (isNaN(numericPrice) || numericPrice <= 0)
+      errors.price = "Giá phải là số lớn hơn 0";
+    else if (numericPrice > 1000000)
+      errors.price = "Giá tối đa là 1.000.000 VND";
 
     if (Object.keys(errors).length > 0) {
       setServiceFormErrors(errors);
@@ -774,10 +827,17 @@ export default function MyCompanyDetail() {
       setNewServicePrice("");
       setServiceFormErrors({});
       setIsAddServiceOpen(false);
-      showToast("success", dict.company_detail.messages.service_add_success ?? "Thêm dịch vụ thành công!");
+      showToast(
+        "success",
+        dict.company_detail.messages.service_add_success ??
+          "Thêm dịch vụ thành công!",
+      );
     } catch (err) {
       console.error("Lỗi khi thêm dịch vụ:", err);
-      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.service_add_error;
+      const errMsg =
+        err instanceof Error
+          ? err.message
+          : dict.company_detail.messages.service_add_error;
       showToast("error", errMsg);
     } finally {
       setAddingService(false);
@@ -799,7 +859,10 @@ export default function MyCompanyDetail() {
       showToast("success", "Đã xóa dịch vụ thành công");
     } catch (err) {
       console.error("Lỗi khi xóa dịch vụ:", err);
-      const errMsg = err instanceof Error ? err.message : dict.company_detail.messages.service_delete_error;
+      const errMsg =
+        err instanceof Error
+          ? err.message
+          : dict.company_detail.messages.service_delete_error;
       showToast("error", errMsg);
     } finally {
       setDeletingServiceId(null);
@@ -826,7 +889,11 @@ export default function MyCompanyDetail() {
           requestGetAvailableServices(),
           requestCheckSubscription(company_id).catch((err) => {
             console.error("Lỗi khi kiểm tra gói dịch vụ:", err);
-            return { isActive: false, subscription: null, hasSubscription: false };
+            return {
+              isActive: false,
+              subscription: null,
+              hasSubscription: false,
+            };
           }),
         ]);
 
@@ -845,6 +912,8 @@ export default function MyCompanyDetail() {
           setAllowedAbsentMinutes(absent);
           setAllowedLateMinutesStr(String(late));
           setAllowedAbsentMinutesStr(String(absent));
+          setMonthlyDiscountPercent(data.monthlyDiscountPercent ?? 10);
+          setPackageDiscountPercent(data.packageDiscountPercent ?? 15);
 
           if (data.logoUrl) setLogoUrl(data.logoUrl);
           if (data.bannerUrl) setBannerUrl(data.bannerUrl);
@@ -853,7 +922,8 @@ export default function MyCompanyDetail() {
           if (data.services) setCompanyServices(data.services);
           if (data.status) setStatus(data.status);
           if (data.rejectReason) setRejectReason(data.rejectReason);
-          if (data.latestPublishRequest) setLatestPublishRequest(data.latestPublishRequest);
+          if (data.latestPublishRequest)
+            setLatestPublishRequest(data.latestPublishRequest);
         }
 
         if (servs) {
@@ -879,7 +949,11 @@ export default function MyCompanyDetail() {
   const hasServices = companyServices && companyServices.length >= 1;
 
   const isProfileComplete =
-    hasLogo && hasBanner && hasOtherImages && hasServices && hasActiveSubscription;
+    hasLogo &&
+    hasBanner &&
+    hasOtherImages &&
+    hasServices &&
+    hasActiveSubscription;
 
   if (loading) {
     return (
@@ -940,7 +1014,8 @@ export default function MyCompanyDetail() {
                 disabled={saving}
                 className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface-variant hover:bg-surface-container-low active:bg-surface-container-high transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                <X className="w-3.5 h-3.5 text-on-surface-variant" /> {dict.company_detail.buttons.cancel}
+                <X className="w-3.5 h-3.5 text-on-surface-variant" />{" "}
+                {dict.company_detail.buttons.cancel}
               </button>
 
               <button
@@ -950,7 +1025,9 @@ export default function MyCompanyDetail() {
                 className="px-4 py-2 bg-primary hover:bg-primary/95 text-on-primary transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
                 <Save className="w-3.5 h-3.5" />
-                {saving ? dict.company_detail.buttons.saving : dict.company_detail.buttons.save}
+                {saving
+                  ? dict.company_detail.buttons.saving
+                  : dict.company_detail.buttons.save}
               </button>
             </>
           ) : (
@@ -959,223 +1036,287 @@ export default function MyCompanyDetail() {
               onClick={handleStartEdit}
               className="px-4 py-2 border border-outline-variant bg-surface-container-lowest text-on-surface hover:bg-surface-container-low active:bg-surface-container-high transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer"
             >
-              <Edit className="w-3.5 h-3.5 text-on-surface-variant" /> {dict.company_detail.buttons.edit}
+              <Edit className="w-3.5 h-3.5 text-on-surface-variant" />{" "}
+              {dict.company_detail.buttons.edit}
             </button>
           )}
         </div>
       </div>
 
-      {status && (() => {
-        const isRejected = status === "rejected" || latestPublishRequest?.status === "REJECTED";
-        const isPendingPublish = status === "pending_publish";
-        const isPublished = status === "published";
-        const isActiveOrRejected = status === "active" || isRejected;
+      {status &&
+        (() => {
+          const isRejected =
+            status === "rejected" ||
+            latestPublishRequest?.status === "REJECTED";
+          const isPendingPublish = status === "pending_publish";
+          const isPublished = status === "published";
+          const isActiveOrRejected = status === "active" || isRejected;
 
-        return (
-          <>
-            <div
-              className={`p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs ${isPublished
-                ? "bg-emerald-50 border-emerald-200 text-emerald-800"
-                : isPendingPublish
-                  ? "bg-amber-50 border-amber-200 text-amber-800"
-                  : isRejected
-                    ? "bg-red-50 border-red-200 text-red-900"
-                    : status === "active"
-                      ? "bg-blue-50 border-blue-200 text-blue-800"
-                      : status === "pending_register"
-                        ? "bg-purple-50 border-purple-200 text-purple-800"
-                        : "bg-slate-50 border-slate-200 text-slate-800"
-                }`}
-            >
-              <div className="flex items-start gap-3">
-                <div
-                  className={`p-2 rounded-xl mt-0.5 ${isPublished
-                    ? "bg-emerald-100 text-emerald-600"
+          return (
+            <>
+              <div
+                className={`p-4 rounded-2xl border flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-xs ${
+                  isPublished
+                    ? "bg-emerald-50 border-emerald-200 text-emerald-800"
                     : isPendingPublish
-                      ? "bg-amber-100 text-amber-600"
+                      ? "bg-amber-50 border-amber-200 text-amber-800"
                       : isRejected
-                        ? "bg-red-100 text-red-600"
+                        ? "bg-red-50 border-red-200 text-red-900"
                         : status === "active"
-                          ? "bg-blue-100 text-blue-600"
+                          ? "bg-blue-50 border-blue-200 text-blue-800"
                           : status === "pending_register"
-                            ? "bg-purple-100 text-purple-600"
-                            : "bg-slate-100 text-slate-600"
-                    }`}
-                >
-                  {isRejected ? <AlertOctagon className="w-5 h-5" /> : <ShieldCheck className="w-5 h-5" />}
-                </div>
-                <div className="space-y-2">
-                  <h3 className="text-sm font-bold">
-                    {dict.company_detail.status.title}{" "}
-                    {isPublished
-                      ? dict.company_detail.status.published
-                      : isPendingPublish
-                        ? dict.company_detail.status.pending_publish
-                        : isRejected
-                          ? dict.company_detail.status.rejected
-                          : status === "active"
-                            ? dict.company_detail.status.active
-                            : status === "pending_register"
-                              ? dict.company_detail.status.pending_register
-                              : dict.company_detail.status.draft}
-                  </h3>
-                  <p className="text-xs opacity-90 leading-relaxed">
-                    {isPublished
-                      ? dict.company_detail.status.published_desc
-                      : isPendingPublish
-                        ? dict.company_detail.status.pending_publish_desc
-                        : isRejected
-                          ? dict.company_detail.status.rejected_desc
-                          : status === "active"
-                            ? dict.company_detail.status.active_desc
-                            : status === "pending_register"
-                              ? dict.company_detail.status.pending_register_desc
-                              : dict.company_detail.status.draft_desc}
-                  </p>
-
-                  {isActiveOrRejected && (
-                    <div className={`border rounded-xl p-3 mt-2 space-y-2 text-xs font-semibold max-w-xl ${
-                      isRejected
-                        ? "bg-red-100/60 border-red-200/80 text-red-950"
-                        : "bg-blue-100/50 border-blue-200/60 text-blue-900"
-                    }`}>
-                      <h4 className={`font-bold text-[13px] ${isRejected ? "text-red-950" : "text-blue-950"}`}>
-                        {dict.company_detail.status.checklist_title}
-                      </h4>
-                      <ul className="space-y-1.5">
-                        <li className="flex items-center gap-2">
-                          <span
-                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                              hasLogo ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
-                            }`}
-                          >
-                            {hasLogo ? "✓" : "○"}
-                          </span>
-                          <span>
-                            {hasLogo ? dict.company_detail.status.logo_done : dict.company_detail.status.logo_pending}
-                          </span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span
-                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                              hasBanner ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
-                            }`}
-                          >
-                            {hasBanner ? "✓" : "○"}
-                          </span>
-                          <span>
-                            {hasBanner ? dict.company_detail.status.banner_done : dict.company_detail.status.banner_pending}
-                          </span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span
-                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                              hasOtherImages ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
-                            }`}
-                          >
-                            {hasOtherImages ? "✓" : "○"}
-                          </span>
-                          <span>
-                            {hasOtherImages
-                              ? dict.company_detail.status.activities_done.replace("{0}", companyImgs.length.toString())
-                              : dict.company_detail.status.activities_pending.replace("{0}", companyImgs.length.toString())}
-                          </span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span
-                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                              hasServices ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
-                            }`}
-                          >
-                            {hasServices ? "✓" : "○"}
-                          </span>
-                          <span>
-                            {hasServices
-                              ? dict.company_detail.status.services_done.replace("{0}", companyServices.length.toString())
-                              : dict.company_detail.status.services_pending}
-                          </span>
-                        </li>
-                        <li className="flex items-center gap-2">
-                          <span
-                            className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
-                              hasActiveSubscription ? "bg-emerald-500 text-white" : isRejected ? "bg-red-200 text-red-800" : "bg-blue-200 text-blue-800"
-                            }`}
-                          >
-                            {hasActiveSubscription ? "✓" : "○"}
-                          </span>
-                          <span>
-                            {hasActiveSubscription ? (
-                              dict.company_detail.status.sub_done
-                            ) : (
-                              <span>
-                                {dict.company_detail.status.sub_pending}
-                                <Link href="/billing" className={`${isRejected ? "text-red-700" : "text-blue-600"} hover:underline font-bold`}>
-                                  {dict.company_detail.status.sub_link}
-                                </Link>
-                              </span>
-                            )}
-                          </span>
-                        </li>
-                      </ul>
-                    </div>
-                  )}
-                </div>
-              </div>
-              {isActiveOrRejected && (
-                <button
-                  type="button"
-                  disabled={!isProfileComplete}
-                  onClick={() => setIsConfirmModalOpen(true)}
-                  className={`lg:self-center px-4 py-2 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap self-start cursor-pointer ${
-                    isProfileComplete
-                      ? isRejected
-                        ? "bg-red-600 hover:bg-red-700 text-white"
-                        : "bg-blue-600 hover:bg-blue-700 text-white"
-                      : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
-                  }`}
-                >
-                  <Upload className="w-3.5 h-3.5" />{" "}
-                  {isRejected
-                    ? dict.company_detail?.status?.resubmit_publish || "Gửi lại yêu cầu công khai"
-                    : dict.company_detail.status.submit_publish}
-                </button>
-              )}
-            </div>
-
-            {/* Rejection Reason Card displayed when request is rejected */}
-            {isRejected && (
-              <div className="p-4 md:p-5 rounded-2xl border border-red-200 bg-red-50 text-red-900 shadow-xs space-y-3 font-sans">
+                            ? "bg-purple-50 border-purple-200 text-purple-800"
+                            : "bg-slate-50 border-slate-200 text-slate-800"
+                }`}
+              >
                 <div className="flex items-start gap-3">
-                  <div className="p-2 rounded-xl bg-red-100 text-red-600 shrink-0 mt-0.5">
-                    <AlertOctagon className="w-5 h-5" />
+                  <div
+                    className={`p-2 rounded-xl mt-0.5 ${
+                      isPublished
+                        ? "bg-emerald-100 text-emerald-600"
+                        : isPendingPublish
+                          ? "bg-amber-100 text-amber-600"
+                          : isRejected
+                            ? "bg-red-100 text-red-600"
+                            : status === "active"
+                              ? "bg-blue-100 text-blue-600"
+                              : status === "pending_register"
+                                ? "bg-purple-100 text-purple-600"
+                                : "bg-slate-100 text-slate-600"
+                    }`}
+                  >
+                    {isRejected ? (
+                      <AlertOctagon className="w-5 h-5" />
+                    ) : (
+                      <ShieldCheck className="w-5 h-5" />
+                    )}
                   </div>
-                  <div className="flex-1 space-y-1">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <h4 className="text-sm font-extrabold text-red-950 uppercase tracking-wide">
-                        {dict.company_detail?.status?.reject_reason_box_title || "Thông báo lý do từ chối yêu cầu công khai"}
-                      </h4>
-                      {latestPublishRequest?.processed_at && (
-                        <span className="text-[11px] font-medium text-red-700 font-mono">
-                          {dict.company_detail?.status?.processed_at || "Thời gian xử lý: "}
-                          {new Date(latestPublishRequest.processed_at).toLocaleString(locale === 'vi' ? 'vi-VN' : 'en-US')}
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="text-xs text-red-800 font-medium">
-                      {dict.company_detail?.status?.reject_reason_box_subtitle || "Ban quản trị hệ thống đã từ chối yêu cầu công khai doanh nghiệp của bạn với nội dung lý do sau:"}
+                  <div className="space-y-2">
+                    <h3 className="text-sm font-bold">
+                      {dict.company_detail.status.title}{" "}
+                      {isPublished
+                        ? dict.company_detail.status.published
+                        : isPendingPublish
+                          ? dict.company_detail.status.pending_publish
+                          : isRejected
+                            ? dict.company_detail.status.rejected
+                            : status === "active"
+                              ? dict.company_detail.status.active
+                              : status === "pending_register"
+                                ? dict.company_detail.status.pending_register
+                                : dict.company_detail.status.draft}
+                    </h3>
+                    <p className="text-xs opacity-90 leading-relaxed">
+                      {isPublished
+                        ? dict.company_detail.status.published_desc
+                        : isPendingPublish
+                          ? dict.company_detail.status.pending_publish_desc
+                          : isRejected
+                            ? dict.company_detail.status.rejected_desc
+                            : status === "active"
+                              ? dict.company_detail.status.active_desc
+                              : status === "pending_register"
+                                ? dict.company_detail.status
+                                    .pending_register_desc
+                                : dict.company_detail.status.draft_desc}
                     </p>
 
-                    <div className="mt-2.5 p-3.5 bg-white border border-red-200/90 rounded-xl text-sm font-semibold text-red-900 font-sans leading-relaxed whitespace-pre-wrap shadow-2xs">
-                      {rejectReason || latestPublishRequest?.reject_reason || dict.company_detail?.status?.no_reject_reason || "Không có nội dung lý do từ chối chi tiết."}
+                    {isActiveOrRejected && (
+                      <div
+                        className={`border rounded-xl p-3 mt-2 space-y-2 text-xs font-semibold max-w-xl ${
+                          isRejected
+                            ? "bg-red-100/60 border-red-200/80 text-red-950"
+                            : "bg-blue-100/50 border-blue-200/60 text-blue-900"
+                        }`}
+                      >
+                        <h4
+                          className={`font-bold text-[13px] ${isRejected ? "text-red-950" : "text-blue-950"}`}
+                        >
+                          {dict.company_detail.status.checklist_title}
+                        </h4>
+                        <ul className="space-y-1.5">
+                          <li className="flex items-center gap-2">
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                                hasLogo
+                                  ? "bg-emerald-500 text-white"
+                                  : isRejected
+                                    ? "bg-red-200 text-red-800"
+                                    : "bg-blue-200 text-blue-800"
+                              }`}
+                            >
+                              {hasLogo ? "✓" : "○"}
+                            </span>
+                            <span>
+                              {hasLogo
+                                ? dict.company_detail.status.logo_done
+                                : dict.company_detail.status.logo_pending}
+                            </span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                                hasBanner
+                                  ? "bg-emerald-500 text-white"
+                                  : isRejected
+                                    ? "bg-red-200 text-red-800"
+                                    : "bg-blue-200 text-blue-800"
+                              }`}
+                            >
+                              {hasBanner ? "✓" : "○"}
+                            </span>
+                            <span>
+                              {hasBanner
+                                ? dict.company_detail.status.banner_done
+                                : dict.company_detail.status.banner_pending}
+                            </span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                                hasOtherImages
+                                  ? "bg-emerald-500 text-white"
+                                  : isRejected
+                                    ? "bg-red-200 text-red-800"
+                                    : "bg-blue-200 text-blue-800"
+                              }`}
+                            >
+                              {hasOtherImages ? "✓" : "○"}
+                            </span>
+                            <span>
+                              {hasOtherImages
+                                ? dict.company_detail.status.activities_done.replace(
+                                    "{0}",
+                                    companyImgs.length.toString(),
+                                  )
+                                : dict.company_detail.status.activities_pending.replace(
+                                    "{0}",
+                                    companyImgs.length.toString(),
+                                  )}
+                            </span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                                hasServices
+                                  ? "bg-emerald-500 text-white"
+                                  : isRejected
+                                    ? "bg-red-200 text-red-800"
+                                    : "bg-blue-200 text-blue-800"
+                              }`}
+                            >
+                              {hasServices ? "✓" : "○"}
+                            </span>
+                            <span>
+                              {hasServices
+                                ? dict.company_detail.status.services_done.replace(
+                                    "{0}",
+                                    companyServices.length.toString(),
+                                  )
+                                : dict.company_detail.status.services_pending}
+                            </span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <span
+                              className={`w-4 h-4 rounded-full flex items-center justify-center text-[10px] ${
+                                hasActiveSubscription
+                                  ? "bg-emerald-500 text-white"
+                                  : isRejected
+                                    ? "bg-red-200 text-red-800"
+                                    : "bg-blue-200 text-blue-800"
+                              }`}
+                            >
+                              {hasActiveSubscription ? "✓" : "○"}
+                            </span>
+                            <span>
+                              {hasActiveSubscription ? (
+                                dict.company_detail.status.sub_done
+                              ) : (
+                                <span>
+                                  {dict.company_detail.status.sub_pending}
+                                  <Link
+                                    href="/billing"
+                                    className={`${isRejected ? "text-red-700" : "text-blue-600"} hover:underline font-bold`}
+                                  >
+                                    {dict.company_detail.status.sub_link}
+                                  </Link>
+                                </span>
+                              )}
+                            </span>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+                  </div>
+                </div>
+                {isActiveOrRejected && (
+                  <button
+                    type="button"
+                    disabled={!isProfileComplete}
+                    onClick={() => setIsConfirmModalOpen(true)}
+                    className={`lg:self-center px-4 py-2 font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 whitespace-nowrap self-start cursor-pointer ${
+                      isProfileComplete
+                        ? isRejected
+                          ? "bg-red-600 hover:bg-red-700 text-white"
+                          : "bg-blue-600 hover:bg-blue-700 text-white"
+                        : "bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300"
+                    }`}
+                  >
+                    <Upload className="w-3.5 h-3.5" />{" "}
+                    {isRejected
+                      ? dict.company_detail?.status?.resubmit_publish ||
+                        "Gửi lại yêu cầu công khai"
+                      : dict.company_detail.status.submit_publish}
+                  </button>
+                )}
+              </div>
+
+              {/* Rejection Reason Card displayed when request is rejected */}
+              {isRejected && (
+                <div className="p-4 md:p-5 rounded-2xl border border-red-200 bg-red-50 text-red-900 shadow-xs space-y-3 font-sans">
+                  <div className="flex items-start gap-3">
+                    <div className="p-2 rounded-xl bg-red-100 text-red-600 shrink-0 mt-0.5">
+                      <AlertOctagon className="w-5 h-5" />
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <h4 className="text-sm font-extrabold text-red-950 uppercase tracking-wide">
+                          {dict.company_detail?.status
+                            ?.reject_reason_box_title ||
+                            "Thông báo lý do từ chối yêu cầu công khai"}
+                        </h4>
+                        {latestPublishRequest?.processed_at && (
+                          <span className="text-[11px] font-medium text-red-700 font-mono">
+                            {dict.company_detail?.status?.processed_at ||
+                              "Thời gian xử lý: "}
+                            {new Date(
+                              latestPublishRequest.processed_at,
+                            ).toLocaleString(
+                              locale === "vi" ? "vi-VN" : "en-US",
+                            )}
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs text-red-800 font-medium">
+                        {dict.company_detail?.status
+                          ?.reject_reason_box_subtitle ||
+                          "Ban quản trị hệ thống đã từ chối yêu cầu công khai doanh nghiệp của bạn với nội dung lý do sau:"}
+                      </p>
+
+                      <div className="mt-2.5 p-3.5 bg-white border border-red-200/90 rounded-xl text-sm font-semibold text-red-900 font-sans leading-relaxed whitespace-pre-wrap shadow-2xs">
+                        {rejectReason ||
+                          latestPublishRequest?.reject_reason ||
+                          dict.company_detail?.status?.no_reject_reason ||
+                          "Không có nội dung lý do từ chối chi tiết."}
+                      </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            )}
-          </>
-        );
-      })()}
+              )}
+            </>
+          );
+        })()}
 
       <div className="flex flex-col space-y-6">
         {/* Section 1: Branding Images (Ảnh đại diện & Ảnh bìa) */}
@@ -1302,9 +1443,15 @@ export default function MyCompanyDetail() {
               />
               <div className="flex items-center justify-between">
                 {renderFieldError("description")}
-                <span className={`text-[11px] ml-auto font-semibold ${
-                  description.length > 480 ? "text-red-500" : "text-on-surface-variant"
-                }`}>{description.length}/500</span>
+                <span
+                  className={`text-[11px] ml-auto font-semibold ${
+                    description.length > 480
+                      ? "text-red-500"
+                      : "text-on-surface-variant"
+                  }`}
+                >
+                  {description.length}/500
+                </span>
               </div>
             </div>
           ) : (
@@ -1323,7 +1470,8 @@ export default function MyCompanyDetail() {
           <div className="space-y-3.5">
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <Building2 className="w-4 h-4 text-outline" /> {dict.company_detail.sections.company_name}
+                <Building2 className="w-4 h-4 text-outline" />{" "}
+                {dict.company_detail.sections.company_name}
               </span>
 
               {isEditing ? (
@@ -1349,7 +1497,8 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <FileText className="w-4 h-4 text-outline" /> {dict.company_detail.sections.reg_code}
+                <FileText className="w-4 h-4 text-outline" />{" "}
+                {dict.company_detail.sections.reg_code}
               </span>
 
               {isEditing ? (
@@ -1371,7 +1520,8 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <Briefcase className="w-4 h-4 text-outline" /> {dict.company_detail.sections.license_code}
+                <Briefcase className="w-4 h-4 text-outline" />{" "}
+                {dict.company_detail.sections.license_code}
               </span>
 
               {isEditing ? (
@@ -1380,7 +1530,9 @@ export default function MyCompanyDetail() {
                     value={companyLicense}
                     readOnly
                     disabled
-                    placeholder={dict.company_detail.sections.license_code_empty}
+                    placeholder={
+                      dict.company_detail.sections.license_code_empty
+                    }
                     className={`${getEditControlClassName("registration_code")} bg-surface-variant/50 cursor-not-allowed opacity-60`}
                   />
                 </div>
@@ -1393,7 +1545,8 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <Mail className="w-4 h-4 text-outline" /> {dict.company_detail.sections.email}
+                <Mail className="w-4 h-4 text-outline" />{" "}
+                {dict.company_detail.sections.email}
               </span>
 
               {isEditing ? (
@@ -1420,7 +1573,8 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <Phone className="w-4 h-4 text-outline" /> {dict.company_detail.sections.phone}
+                <Phone className="w-4 h-4 text-outline" />{" "}
+                {dict.company_detail.sections.phone}
               </span>
 
               {isEditing ? (
@@ -1446,7 +1600,8 @@ export default function MyCompanyDetail() {
 
             <div className="grid grid-cols-12 gap-2 text-sm items-start">
               <span className="col-span-4 font-bold text-on-surface-variant flex items-center gap-1.5 pt-2">
-                <MapPin className="w-4 h-4 text-outline" /> {dict.company_detail.sections.address}
+                <MapPin className="w-4 h-4 text-outline" />{" "}
+                {dict.company_detail.sections.address}
               </span>
 
               {isEditing ? (
@@ -1456,13 +1611,19 @@ export default function MyCompanyDetail() {
                       <select
                         value={editCityId}
                         onChange={(e) => {
-                          setEditCityId(e.target.value === "" ? "" : Number(e.target.value));
+                          setEditCityId(
+                            e.target.value === "" ? "" : Number(e.target.value),
+                          );
                           setEditWardId("");
                           clearFieldError("address");
                         }}
                         className={`${getEditControlClassName("address")} appearance-none`}
                       >
-                        <option value="" disabled className="text-slate-400 font-medium">
+                        <option
+                          value=""
+                          disabled
+                          className="text-slate-400 font-medium"
+                        >
                           {dict.company_detail.modals.city_placeholder}
                         </option>
                         {cities.map((city) => (
@@ -1476,13 +1637,19 @@ export default function MyCompanyDetail() {
                       <select
                         value={editWardId}
                         onChange={(e) => {
-                          setEditWardId(e.target.value === "" ? "" : Number(e.target.value));
+                          setEditWardId(
+                            e.target.value === "" ? "" : Number(e.target.value),
+                          );
                           clearFieldError("address");
                         }}
                         disabled={editCityId === ""}
                         className={`${getEditControlClassName("address")} appearance-none disabled:opacity-50`}
                       >
-                        <option value="" disabled className="text-slate-400 font-medium">
+                        <option
+                          value=""
+                          disabled
+                          className="text-slate-400 font-medium"
+                        >
                           {dict.company_detail.modals.ward_placeholder}
                         </option>
                         {wards.map((ward) => (
@@ -1501,7 +1668,9 @@ export default function MyCompanyDetail() {
                         setEditStreet(e.target.value);
                         clearFieldError("address");
                       }}
-                      placeholder={dict.company_detail.modals.street_placeholder}
+                      placeholder={
+                        dict.company_detail.modals.street_placeholder
+                      }
                       className={getEditControlClassName("address")}
                     />
                   </div>
@@ -1533,14 +1702,19 @@ export default function MyCompanyDetail() {
                           setAllowedLateMinutesStr(e.target.value);
                           clearFieldError("allowed_late_minutes");
                         }}
-                        className={getEditControlClassName("allowed_late_minutes")}
-                        placeholder={dict.company_detail.sections.placeholder_late}
+                        className={getEditControlClassName(
+                          "allowed_late_minutes",
+                        )}
+                        placeholder={
+                          dict.company_detail.sections.placeholder_late
+                        }
                       />
                       {renderFieldError("allowed_late_minutes")}
                     </>
                   ) : (
                     <span className="font-semibold text-on-surface font-mono">
-                      {allowedLateMinutes} {dict.company_detail.sections.minutes_unit}
+                      {allowedLateMinutes}{" "}
+                      {dict.company_detail.sections.minutes_unit}
                     </span>
                   )}
                 </div>
@@ -1558,14 +1732,19 @@ export default function MyCompanyDetail() {
                           setAllowedAbsentMinutesStr(e.target.value);
                           clearFieldError("allowed_absent_minutes");
                         }}
-                        className={getEditControlClassName("allowed_absent_minutes")}
-                        placeholder={dict.company_detail.sections.placeholder_absent}
+                        className={getEditControlClassName(
+                          "allowed_absent_minutes",
+                        )}
+                        placeholder={
+                          dict.company_detail.sections.placeholder_absent
+                        }
                       />
                       {renderFieldError("allowed_absent_minutes")}
                     </>
                   ) : (
                     <span className="font-semibold text-on-surface font-mono">
-                      {allowedAbsentMinutes} {dict.company_detail.sections.minutes_unit}
+                      {allowedAbsentMinutes}{" "}
+                      {dict.company_detail.sections.minutes_unit}
                     </span>
                   )}
                 </div>
@@ -1573,6 +1752,95 @@ export default function MyCompanyDetail() {
             </div>
           </div>
         </section>
+
+        {/* Section: Chính sách ưu đãi giá */}
+        <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="flex justify-between items-center border-b border-outline-variant/60 pb-3">
+            <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-widest border-l-3 border-primary pl-2.5">
+              Chính sách ưu đãi giá
+            </h2>
+          </div>
+          <p className="text-[12px] text-on-surface-variant font-medium">
+            Mức giảm giá áp dụng khi báo giá theo tháng hoặc trọn gói so với giá
+            tính theo giờ.
+          </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+            {/* Monthly discount */}
+            <div className="space-y-1">
+              <span className="font-bold text-on-surface-variant text-xs block">
+                Ưu đãi theo tháng
+              </span>
+              {isEditing ? (
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    step={1}
+                    value={monthlyDiscountPercent}
+                    onChange={(e) =>
+                      setMonthlyDiscountPercent(
+                        Math.min(50, Math.max(0, Number(e.target.value))),
+                      )
+                    }
+                    className="w-full pl-3 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest text-sm font-semibold font-mono text-on-surface focus:ring-2 focus:ring-primary/40 focus:border-primary/60 outline-none"
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">
+                    %
+                  </span>
+                </div>
+              ) : (
+                <span className="font-semibold text-on-surface font-mono">
+                  {monthlyDiscountPercent}%
+                  {monthlyDiscountPercent > 0 && (
+                    <span className="ml-2 text-[11px] font-normal text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5">
+                      Giảm {monthlyDiscountPercent}% theo tháng
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
+
+            {/* Package discount */}
+            <div className="space-y-1">
+              <span className="font-bold text-on-surface-variant text-xs block">
+                Ưu đãi trọn gói
+              </span>
+              {isEditing ? (
+                <div className="relative">
+                  <input
+                    type="number"
+                    min={0}
+                    max={50}
+                    step={1}
+                    value={packageDiscountPercent}
+                    onChange={(e) =>
+                      setPackageDiscountPercent(
+                        Math.min(50, Math.max(0, Number(e.target.value))),
+                      )
+                    }
+                    className="w-full pl-3 pr-10 py-2 border border-outline-variant rounded-lg bg-surface-container-lowest text-sm font-semibold font-mono text-on-surface focus:ring-2 focus:ring-primary/40 focus:border-primary/60 outline-none"
+                    placeholder="0"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-on-surface-variant">
+                    %
+                  </span>
+                </div>
+              ) : (
+                <span className="font-semibold text-on-surface font-mono">
+                  {packageDiscountPercent}%
+                  {packageDiscountPercent > 0 && (
+                    <span className="ml-2 text-[11px] font-normal text-green-700 bg-green-50 border border-green-200 rounded px-1.5 py-0.5">
+                      Giảm {packageDiscountPercent}% trọn gói
+                    </span>
+                  )}
+                </span>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Section 4: Giấy phép hoạt động (Business License Card Redesign) */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
           <div className="flex justify-between items-center border-b border-outline-variant/60 pb-3">
@@ -1644,7 +1912,9 @@ export default function MyCompanyDetail() {
                     onClick={() => setActiveViewerImg(licenseImg)}
                     className="w-16 h-20 shrink-0 border border-outline-variant rounded-lg overflow-hidden bg-surface-container-lowest shadow-3xs flex items-center justify-center relative group cursor-pointer hover:opacity-90"
                   >
-                    {licenseImg.toLowerCase().includes(".pdf") || licenseImg.includes("/pdf") || licenseImg.includes("application/pdf") ? (
+                    {licenseImg.toLowerCase().includes(".pdf") ||
+                    licenseImg.includes("/pdf") ||
+                    licenseImg.includes("application/pdf") ? (
                       <div className="flex flex-col items-center justify-center bg-red-50 text-red-600 w-full h-full p-1.5">
                         <FileText className="w-8 h-8" />
                         <span className="text-[10px] font-bold mt-1">PDF</span>
@@ -1663,11 +1933,22 @@ export default function MyCompanyDetail() {
 
                   {/* Name and format type description */}
                   <div className="space-y-1">
-                    <h4 className="text-sm font-bold text-on-surface truncate max-w-[200px]" title={licenseImg.split("/").pop()?.split("?")[0] || "Giay_Phep"}>
-                      {licenseImg.split("/").pop()?.split("?")[0] || "Giay_Phep"}
+                    <h4
+                      className="text-sm font-bold text-on-surface truncate max-w-[200px]"
+                      title={
+                        licenseImg.split("/").pop()?.split("?")[0] ||
+                        "Giay_Phep"
+                      }
+                    >
+                      {licenseImg.split("/").pop()?.split("?")[0] ||
+                        "Giay_Phep"}
                     </h4>
                     <p className="text-xs text-on-surface-variant font-medium">
-                      {licenseImg.toLowerCase().includes(".pdf") || licenseImg.includes("/pdf") || licenseImg.includes("application/pdf") ? "Tài liệu PDF" : "Hình ảnh"}
+                      {licenseImg.toLowerCase().includes(".pdf") ||
+                      licenseImg.includes("/pdf") ||
+                      licenseImg.includes("application/pdf")
+                        ? "Tài liệu PDF"
+                        : "Hình ảnh"}
                     </p>
                   </div>
                 </div>
@@ -1695,7 +1976,6 @@ export default function MyCompanyDetail() {
             </div>
           )}
         </section>
-
 
         {/* Section 5: Hình ảnh hoạt động */}
         <section className="bg-surface-container-lowest border border-outline-variant rounded-2xl p-6 shadow-sm space-y-4">
@@ -1783,7 +2063,8 @@ export default function MyCompanyDetail() {
               onClick={() => setIsAddServiceOpen(true)}
               className="px-3.5 py-1.5 border border-primary/20 bg-primary/10 hover:bg-primary/15 text-primary active:bg-primary/25 transition-all text-xs font-bold rounded-xl flex items-center gap-1.5 shadow-sm cursor-pointer font-sans"
             >
-              <Plus className="w-3.5 h-3.5" /> {dict.company_detail.sections.add_service}
+              <Plus className="w-3.5 h-3.5" />{" "}
+              {dict.company_detail.sections.add_service}
             </button>
           </div>
 
@@ -1834,7 +2115,9 @@ export default function MyCompanyDetail() {
                           disabled={deletingServiceId === service.serviceId}
                           onClick={() => handleRemoveService(service.serviceId)}
                           className={`p-1 text-on-surface-variant/40 hover:text-error rounded-md transition-colors cursor-pointer ${
-                            deletingServiceId === service.serviceId ? "opacity-100 text-error" : "opacity-0 group-hover:opacity-100"
+                            deletingServiceId === service.serviceId
+                              ? "opacity-100 text-error"
+                              : "opacity-0 group-hover:opacity-100"
                           }`}
                           title="Xóa dịch vụ"
                         >
@@ -1867,23 +2150,28 @@ export default function MyCompanyDetail() {
 
       {toast && (
         <div
-          className={`fixed bottom-6 right-6 z-[80] w-[320px] rounded-2xl border bg-white px-4 py-3 shadow-2xl transition-all duration-300 ease-out ${toastVisible
-            ? "translate-x-0 opacity-100"
-            : "translate-x-[120%] opacity-0"
-            } ${toast.type === "success" ? "border-green-200" : "border-red-200"}`}
+          className={`fixed bottom-6 right-6 z-[80] w-[320px] rounded-2xl border bg-white px-4 py-3 shadow-2xl transition-all duration-300 ease-out ${
+            toastVisible
+              ? "translate-x-0 opacity-100"
+              : "translate-x-[120%] opacity-0"
+          } ${toast.type === "success" ? "border-green-200" : "border-red-200"}`}
         >
           <div className="flex items-start gap-3">
             <div
-              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${toast.type === "success" ? "bg-green-500" : "bg-red-500"
-                }`}
+              className={`mt-1 h-2.5 w-2.5 shrink-0 rounded-full ${
+                toast.type === "success" ? "bg-green-500" : "bg-red-500"
+              }`}
             />
 
             <div className="flex-1">
               <p
-                className={`text-xs font-extrabold uppercase tracking-wide ${toast.type === "success" ? "text-green-700" : "text-red-600"
-                  }`}
+                className={`text-xs font-extrabold uppercase tracking-wide ${
+                  toast.type === "success" ? "text-green-700" : "text-red-600"
+                }`}
               >
-                {toast.type === "success" ? dict.company_detail.toast.success : dict.company_detail.toast.failed}
+                {toast.type === "success"
+                  ? dict.company_detail.toast.success
+                  : dict.company_detail.toast.failed}
               </p>
 
               <p className="mt-1 text-sm font-semibold text-slate-700 leading-relaxed">
@@ -1912,7 +2200,10 @@ export default function MyCompanyDetail() {
                 </h3>
 
                 <p className="mt-0.5 text-xs font-medium text-slate-400">
-                  {dict.company_detail.modals.gallery_count.replace("{0}", allActivityImgs.length.toString())}
+                  {dict.company_detail.modals.gallery_count.replace(
+                    "{0}",
+                    allActivityImgs.length.toString(),
+                  )}
                 </p>
               </div>
 
@@ -1994,7 +2285,9 @@ export default function MyCompanyDetail() {
                     {dict.company_detail.modals.service_name}
                   </label>
                   {serviceFormErrors.serviceId && (
-                    <span className="text-[11px] font-semibold text-red-500">{serviceFormErrors.serviceId}</span>
+                    <span className="text-[11px] font-semibold text-red-500">
+                      {serviceFormErrors.serviceId}
+                    </span>
                   )}
                 </div>
 
@@ -2012,7 +2305,8 @@ export default function MyCompanyDetail() {
                       className="text-slate-400 font-medium"
                     >
                       {unaddedAvailableServices.length === 0
-                        ? dict.company_detail?.modals?.all_services_added || "Tất cả dịch vụ đã được thêm"
+                        ? dict.company_detail?.modals?.all_services_added ||
+                          "Tất cả dịch vụ đã được thêm"
                         : dict.company_detail.modals.select_service}
                     </option>
 
@@ -2052,7 +2346,9 @@ export default function MyCompanyDetail() {
                     {dict.company_detail.modals.service_desc_label}
                   </label>
                   {serviceFormErrors.desc && (
-                    <span className="text-[11px] font-semibold text-red-500">{serviceFormErrors.desc}</span>
+                    <span className="text-[11px] font-semibold text-red-500">
+                      {serviceFormErrors.desc}
+                    </span>
                   )}
                 </div>
 
@@ -2062,15 +2358,27 @@ export default function MyCompanyDetail() {
                   maxLength={150}
                   onChange={(e) => {
                     setNewServiceDesc(e.target.value);
-                    if (serviceFormErrors.desc) setServiceFormErrors(prev => ({ ...prev, desc: undefined }));
+                    if (serviceFormErrors.desc)
+                      setServiceFormErrors((prev) => ({
+                        ...prev,
+                        desc: undefined,
+                      }));
                   }}
-                  placeholder={dict.company_detail.modals.service_desc_placeholder}
+                  placeholder={
+                    dict.company_detail.modals.service_desc_placeholder
+                  }
                   className="w-full text-sm border border-slate-200 rounded-xl px-3.5 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium resize-none"
                 />
                 <div className="flex justify-end">
-                  <span className={`text-[11px] font-semibold ${
-                    newServiceDesc.length > 140 ? "text-red-500" : "text-slate-400"
-                  }`}>{newServiceDesc.length}/150</span>
+                  <span
+                    className={`text-[11px] font-semibold ${
+                      newServiceDesc.length > 140
+                        ? "text-red-500"
+                        : "text-slate-400"
+                    }`}
+                  >
+                    {newServiceDesc.length}/150
+                  </span>
                 </div>
               </div>
 
@@ -2081,7 +2389,9 @@ export default function MyCompanyDetail() {
                   </label>
                   <div className="flex items-center gap-2">
                     {serviceFormErrors.price && (
-                      <span className="text-[11px] font-semibold text-red-500">{serviceFormErrors.price}</span>
+                      <span className="text-[11px] font-semibold text-red-500">
+                        {serviceFormErrors.price}
+                      </span>
                     )}
                     {newServicePrice && (
                       <span className="text-xs font-bold text-blue-600">
@@ -2098,7 +2408,9 @@ export default function MyCompanyDetail() {
                     required
                     value={newServicePrice}
                     onChange={handlePriceChange}
-                    placeholder={dict.company_detail.modals.service_price_placeholder}
+                    placeholder={
+                      dict.company_detail.modals.service_price_placeholder
+                    }
                     className="w-full text-sm border border-slate-200 rounded-xl pl-3.5 pr-14 py-2.5 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/20 outline-hidden font-medium"
                   />
                   <div className="absolute right-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400 pointer-events-none select-none">
@@ -2119,13 +2431,18 @@ export default function MyCompanyDetail() {
 
                 <button
                   type="submit"
-                  disabled={addingService || unaddedAvailableServices.length === 0}
+                  disabled={
+                    addingService || unaddedAvailableServices.length === 0
+                  }
                   className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs rounded-xl shadow-xs transition-all cursor-pointer flex items-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {addingService ? (
                     <>
                       <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>{dict.company_detail?.modals?.adding_service || "Đang thêm..."}</span>
+                      <span>
+                        {dict.company_detail?.modals?.adding_service ||
+                          "Đang thêm..."}
+                      </span>
                     </>
                   ) : (
                     dict.company_detail.modals.add_service_btn
@@ -2142,11 +2459,13 @@ export default function MyCompanyDetail() {
           onClick={() => setActiveViewerImg(null)}
           className="fixed inset-0 z-[90] bg-slate-950/90 backdrop-blur-xs flex items-center justify-center p-4 cursor-zoom-out animate-fade-in"
         >
-          <div 
-            onClick={(e) => e.stopPropagation()} 
+          <div
+            onClick={(e) => e.stopPropagation()}
             className="relative max-w-4xl max-h-[85vh] w-full flex items-center justify-center"
           >
-            {activeViewerImg.toLowerCase().includes(".pdf") || activeViewerImg.includes("/pdf") || activeViewerImg.includes("application/pdf") ? (
+            {activeViewerImg.toLowerCase().includes(".pdf") ||
+            activeViewerImg.includes("/pdf") ||
+            activeViewerImg.includes("application/pdf") ? (
               <iframe
                 src={activeViewerImg}
                 className="w-[90vw] max-w-4xl h-[80vh] rounded-xl border border-white/10 shadow-2xl bg-white"
@@ -2222,7 +2541,9 @@ export default function MyCompanyDetail() {
                 disabled={submittingPublish}
                 className="px-4 py-2 bg-primary hover:bg-primary/95 text-on-primary font-bold text-xs rounded-xl shadow-xs transition-all flex items-center gap-1.5 cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed"
               >
-                {submittingPublish ? dict.company_detail.modals.sending : dict.company_detail.modals.confirm_send}
+                {submittingPublish
+                  ? dict.company_detail.modals.sending
+                  : dict.company_detail.modals.confirm_send}
               </button>
             </div>
           </div>

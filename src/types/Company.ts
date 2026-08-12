@@ -15,5 +15,7 @@ export interface Company {
   status: CompanyStatus;
   allowed_late_minutes?: number | null;
   allowed_absent_minutes?: number | null;
+  monthly_discount_percent?: number | null;
+  package_discount_percent?: number | null;
   created_at: string;
 }

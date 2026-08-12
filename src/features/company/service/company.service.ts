@@ -429,6 +429,8 @@ export const getCompanyByIdServiceInCustomer = async (
     createdYear,
     allowed_late_minutes: dbCompany.allowed_late_minutes ?? 5,
     allowed_absent_minutes: dbCompany.allowed_absent_minutes ?? 35,
+    monthlyDiscountPercent: dbCompany.monthly_discount_percent ?? 10,
+    packageDiscountPercent: dbCompany.package_discount_percent ?? 15,
     rejectReason: latestPublishRequest?.reject_reason || null,
     latestPublishRequest,
   };
