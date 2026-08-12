@@ -144,6 +144,12 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
       : (company?.email || "Chưa cập nhật"),
     company_contact_person: companyContactPerson,
     company_address: companyAddressFormatted,
+    monthly_discount_percent: Array.isArray(company)
+      ? (company[0]?.monthly_discount_percent ?? 10)
+      : (company?.monthly_discount_percent ?? 10),
+    package_discount_percent: Array.isArray(company)
+      ? (company[0]?.package_discount_percent ?? 15)
+      : (company?.package_discount_percent ?? 15),
     contract_id: Array.isArray(item.contracts)
       ? (item.contracts[0]?.contract_id || null)
       : (item.contracts?.contract_id || null),
@@ -238,7 +244,7 @@ export const updateBookingStatusAndPriceService = async (
     hourly_rate?: number;
     monthly_rate?: number;
   }
-): Promise<{ booking: Booking; contract_id?: string }> => {
+): Promise<{ booking: Booking; contract_id?: string; contract_status?: string }> => {
   validateBookingUpdateStatusData(updates.status, updates.quoted_price);
   return await updateBookingStatusAndPrice(bookingId, updates);
 };

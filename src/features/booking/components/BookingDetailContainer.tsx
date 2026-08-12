@@ -76,6 +76,8 @@ export function BookingDetailContainer({
     client_company_name?: string;
     company_scope?: string;
     company_position?: string;
+    monthly_discount_percent?: number | null;
+    package_discount_percent?: number | null;
   } | null>(null);
 
   const [isLoading, setIsLoading] = useState(true);
@@ -130,6 +132,8 @@ export function BookingDetailContainer({
             client_company_name: b.client_company_name,
             company_scope: b.company_scope,
             company_position: b.company_position,
+            monthly_discount_percent: b.monthly_discount_percent ?? 10,
+            package_discount_percent: b.package_discount_percent ?? 15,
           });
           if (b.contract_id) {
             setContractId(b.contract_id);
@@ -316,6 +320,7 @@ export function BookingDetailContainer({
         });
         if (res.contract_id) {
           setContractId(res.contract_id);
+          setContractStatus(res.contract_status || "pending_signatures");
         }
         setToastType("success");
         setToastMessage(
@@ -567,6 +572,8 @@ export function BookingDetailContainer({
               startDate={booking.start_date}
               endDate={booking.end_date}
               basePricePerHour={booking.service_price}
+              monthlyDiscountPercent={booking.monthly_discount_percent}
+              packageDiscountPercent={booking.package_discount_percent}
               status={booking.status}
               onQuote={handleQuote}
               onReject={handleReject}

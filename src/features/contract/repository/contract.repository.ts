@@ -64,25 +64,57 @@ export const getContracts = async (
     query = query.lte("created_at", end.toISOString());
   }
 
-  if (search) {
-    const searchLower = `%${search.toLowerCase()}%`;
-    query = query.or(
-      `bookings.profiles.full_name.ilike.${searchLower},bookings.services.name.ilike.${searchLower}`,
-    );
+  query = query.order("created_at", { ascending: false });
+
+  if (!search || !search.trim()) {
+    const from = (page - 1) * limit;
+    const to = from + limit - 1;
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
+    if (error) {
+      throw error;
+    }
+    return {
+      data: data || [],
+      count: count || 0,
+    };
   }
 
-  query = query.order("created_at", { ascending: false });
-  query = query.range(from, to);
-
-  const { data, error, count } = await query;
-
+  const { data, error } = await query;
   if (error) {
     throw error;
   }
 
+  const searchClean = search.trim().toLowerCase().replace(/^hd-/i, "");
+
+  const filtered = (data || []).filter((item: any) => {
+    const contractId = (item.contract_id || "").toLowerCase();
+    const contractCode = `hd-${contractId.slice(0, 8)}`.toLowerCase();
+    const customerName = (item.bookings?.profiles?.full_name || "").toLowerCase();
+    const companyName = (
+      item.signed_company_name ||
+      item.bookings?.company_name ||
+      item.bookings?.companies?.company_name ||
+      ""
+    ).toLowerCase();
+    const serviceName = (item.bookings?.services?.name || "").toLowerCase();
+
+    return (
+      contractId.includes(searchClean) ||
+      contractCode.includes(searchClean) ||
+      customerName.includes(searchClean) ||
+      companyName.includes(searchClean) ||
+      serviceName.includes(searchClean)
+    );
+  });
+
+  const totalCount = filtered.length;
+  const pagedData = filtered.slice(from, from + limit);
+
   return {
-    data: data || [],
-    count: count || 0,
+    data: pagedData,
+    count: totalCount,
   };
 };
 
@@ -104,6 +136,7 @@ export const getContractDetail = async (id: string): Promise<any | null> => {
       created_at,
       updated_at,
       guard_assigned,
+      signed_company_name,
       bookings!inner (
         booking_id,
         company_id,
@@ -217,23 +250,53 @@ export const getCustomerContracts = async (customerId: string, page: number, lim
     query = query.lte("created_at", end.toISOString());
   }
 
-  if (search) {
-    const searchLower = `%${search.toLowerCase()}%`;
-    query = query.or(`bookings.services.name.ilike.${searchLower}`);
+  query = query.order("created_at", { ascending: false });
+
+  if (!search || !search.trim()) {
+    query = query.range(from, to);
+
+    const { data, error, count } = await query;
+    if (error) {
+      throw error;
+    }
+    return {
+      data: data || [],
+      count: count || 0,
+    };
   }
 
-  query = query.order("created_at", { ascending: false });
-  query = query.range(from, to);
-
-  const { data, error, count } = await query;
-
+  const { data, error } = await query;
   if (error) {
     throw error;
   }
 
+  const searchClean = search.trim().toLowerCase().replace(/^hd-/i, "");
+
+  const filtered = (data || []).filter((item: any) => {
+    const contractId = (item.contract_id || "").toLowerCase();
+    const contractCode = `hd-${contractId.slice(0, 8)}`.toLowerCase();
+    const companyName = (
+      item.signed_company_name ||
+      item.bookings?.company_name ||
+      item.bookings?.companies?.company_name ||
+      ""
+    ).toLowerCase();
+    const serviceName = (item.bookings?.services?.name || "").toLowerCase();
+
+    return (
+      contractId.includes(searchClean) ||
+      contractCode.includes(searchClean) ||
+      companyName.includes(searchClean) ||
+      serviceName.includes(searchClean)
+    );
+  });
+
+  const totalCount = filtered.length;
+  const pagedData = filtered.slice(from, from + limit);
+
   return {
-    data: data || [],
-    count: count || 0,
+    data: pagedData,
+    count: totalCount,
   };
 };
 
@@ -255,6 +318,7 @@ export const getCustomerContractDetail = async (id: string, customerId: string):
       created_at,
       updated_at,
       guard_assigned,
+      signed_company_name,
       reviews (
         rating,
         comment

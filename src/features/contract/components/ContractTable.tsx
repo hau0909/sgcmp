@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { ContractProgressBar } from "./ContractProgressBar";
 
 interface ContractTableProps {
   contracts: Contract[];
@@ -28,7 +29,7 @@ export function ContractTable({
   const startIdx = totalCount === 0 ? 0 : (page - 1) * limit + 1;
   const endIdx = Math.min(page * limit, totalCount);
 
-  function getStatusBadge(status: ContractStatus) {
+  function getStatusBadge(status: ContractStatus, startDate?: string | null, endDate?: string | null) {
     switch (status) {
       case "pending_signatures":
         return (
@@ -38,9 +39,12 @@ export function ContractTable({
         );
       case "active":
         return (
-          <span className="inline-block text-[10px] font-bold px-2 py-0.5 rounded border uppercase tracking-wider bg-blue-50 text-blue-700 border-blue-200">
-            {dict.company_contracts?.status_active || "Đang hoạt động"}
-          </span>
+          <ContractProgressBar
+            startDate={startDate}
+            endDate={endDate}
+            variant="table"
+            statusText={dict.company_contracts?.status_active || "Đang hoạt động"}
+          />
         );
       case "completed":
         return (
@@ -65,28 +69,28 @@ export function ContractTable({
         <table className="w-full text-left border-collapse">
           <thead>
             <tr className="bg-[#C4E2F5] border-b border-outline-variant">
-              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap w-16 text-center">
+              <th className="py-2.5 px-3 font-label-md text-label-md text-on-surface-variant whitespace-nowrap w-12 text-center">
                 {dict.company_contracts?.table_stt || "STT"}
               </th>
-              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
+              <th className="py-2.5 px-3 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
                 {dict.company_contracts?.table_code || "Mã Hợp Đồng"}
               </th>
-              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
+              <th className="py-2.5 px-3 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
                 {dict.company_contracts?.table_customer || "Khách Hàng"}
               </th>
-              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
+              <th className="py-2.5 px-3 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
                 {dict.company_contracts?.table_service || "Dịch Vụ"}
               </th>
-              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
+              <th className="py-2.5 px-3 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
                 {dict.company_contracts?.table_created || "Ngày Tạo"}
               </th>
-              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
+              <th className="py-2.5 px-3 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
                 {dict.company_contracts?.table_duration || "Thời Hạn"}
               </th>
-              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
+              <th className="py-2.5 px-3 font-label-md text-label-md text-on-surface-variant whitespace-nowrap">
                 {dict.company_contracts?.table_status || "Trạng Thái"}
               </th>
-              <th className="py-2.5 px-4 font-label-md text-label-md text-on-surface-variant whitespace-nowrap text-right w-32">
+              <th className="py-2.5 px-3 font-label-md text-label-md text-on-surface-variant whitespace-nowrap text-right w-24">
                 {dict.company_contracts?.table_actions || "Hành Động"}
               </th>
             </tr>
@@ -102,30 +106,30 @@ export function ContractTable({
               contracts.map((contract, index) => (
                 <tr
                   key={contract.contract_id}
-                  className="border-b border-outline-variant/30 hover:bg-primary-fixed/30 transition-colors h-[40px]"
+                  className="border-b border-outline-variant/30 hover:bg-primary-fixed/30 transition-colors"
                 >
-                  <td className="px-4 py-1.5 whitespace-nowrap text-on-surface-variant text-center font-mono">
+                  <td className="px-3 py-2 whitespace-nowrap text-on-surface-variant text-center font-mono">
                     {startIdx + index}
                   </td>
-                  <td className="px-4 py-1.5 whitespace-nowrap font-mono font-bold text-primary">
+                  <td className="px-3 py-2 whitespace-nowrap font-mono font-bold text-primary">
                     {contract.contract_code}
                   </td>
-                  <td className="px-4 py-1.5 whitespace-nowrap font-semibold text-on-surface">
+                  <td className="px-3 py-2 whitespace-nowrap font-semibold text-on-surface max-w-[180px] truncate" title={contract.customer_name}>
                     {contract.customer_name}
                   </td>
-                  <td className="px-4 py-1.5 whitespace-nowrap text-on-surface-variant">
+                  <td className="px-3 py-2 whitespace-nowrap text-on-surface-variant max-w-[160px] truncate" title={contract.service_name}>
                     {contract.service_name}
                   </td>
-                  <td className="px-4 py-1.5 whitespace-nowrap font-mono text-on-surface-variant">
+                  <td className="px-3 py-2 whitespace-nowrap font-mono text-on-surface-variant">
                     {contract.created_at ? new Date(contract.created_at).toLocaleDateString(dateLocale) : ""}
                   </td>
-                  <td className="px-4 py-1.5 whitespace-nowrap font-mono text-on-surface-variant">
+                  <td className="px-3 py-2 whitespace-nowrap font-mono text-on-surface-variant">
                     {contract.start_date ? new Date(contract.start_date).toLocaleDateString(dateLocale) : "-"} 
                     {" - "}
                     {contract.end_date ? new Date(contract.end_date).toLocaleDateString(dateLocale) : "-"}
                   </td>
-                  <td className="px-4 py-1.5 whitespace-nowrap">{getStatusBadge(contract.status)}</td>
-                  <td className="px-4 py-1.5 whitespace-nowrap text-right">
+                  <td className="px-3 py-2 whitespace-nowrap">{getStatusBadge(contract.status, contract.start_date, contract.end_date)}</td>
+                  <td className="px-3 py-2 whitespace-nowrap text-right">
                     <button
                       onClick={() => onViewDetails?.(contract.contract_id)}
                       className="text-xs font-semibold text-secondary hover:text-primary transition-colors cursor-pointer"

@@ -81,13 +81,15 @@ export const checkEmailExists = async (email: string) => {
 };
 
 export const validatePassword = (password: string) => {
-  if (!password) {
+  const trimmed = password.trim();
+
+  if (!trimmed) {
     return "Vui lòng nhập mật khẩu";
   }
 
   const passwordRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 
-  if (!passwordRegex.test(password)) {
+  if (!passwordRegex.test(trimmed)) {
     return "Mật khẩu phải có ít nhất 8 ký tự, gồm chữ hoa, chữ thường và số";
   }
 
@@ -95,7 +97,9 @@ export const validatePassword = (password: string) => {
 };
 
 export const validatePasswordLogin = (password: string) => {
-  if (!password) {
+  const trimmed = password.trim();
+
+  if (!trimmed) {
     return "Vui lòng nhập mật khẩu";
   }
 
@@ -106,11 +110,14 @@ export const validateConfirmPassword = (
   password: string,
   confirmPassword: string,
 ) => {
-  if (!confirmPassword) {
+  const trimmedConfirm = confirmPassword.trim();
+  const trimmedPassword = password.trim();
+
+  if (!trimmedConfirm) {
     return "Vui lòng xác nhận mật khẩu";
   }
 
-  if (password !== confirmPassword) {
+  if (trimmedPassword !== trimmedConfirm) {
     return "Mật khẩu xác nhận không khớp";
   }
 
