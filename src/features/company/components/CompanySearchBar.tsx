@@ -6,7 +6,8 @@ import {
   MapPin, 
   ChevronDown, 
   SlidersHorizontal,
-  Navigation
+  Navigation,
+  X
 } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Service, City, Ward } from "../types";
@@ -24,6 +25,74 @@ function normalizeText(text: string): string {
     .replace(/[đĐ]/g, "d")
     .trim();
 }
+
+function cleanName(name: string): string {
+  let normalized = normalizeText(name);
+  // remove prefixes like "thanh pho", "tinh", "quan", "huyen", "phuong", "xa", "thi tran", "thi xa"
+  normalized = normalized
+    .replace(/^(thanh pho|tinh|quan|huyen|phuong|xa|thi tran|thi xa)\s+/i, "")
+    .trim();
+  return normalized;
+}
+
+function matchCity(rawCity: string, cities: City[]): City | null {
+  const normRaw = normalizeText(rawCity);
+  const cleanRaw = cleanName(rawCity);
+
+  if (!normRaw) return null;
+
+  // 1. Exact match normalized
+  let found = cities.find(c => normalizeText(c.city_name) === normRaw);
+  if (found) return found;
+
+  // 2. Exact match clean
+  found = cities.find(c => cleanName(c.city_name) === cleanRaw);
+  if (found) return found;
+
+  // 3. Normalized inclusion
+  found = cities.find(c => {
+    const normCity = normalizeText(c.city_name);
+    return normCity.includes(normRaw) || normRaw.includes(normCity);
+  });
+  if (found) return found;
+
+  // 4. Cleaned inclusion
+  found = cities.find(c => {
+    const cleanCity = cleanName(c.city_name);
+    return cleanCity.includes(cleanRaw) || cleanRaw.includes(cleanCity);
+  });
+  return found || null;
+}
+
+function matchWard(rawWard: string, wardsList: Ward[]): Ward | null {
+  const normRaw = normalizeText(rawWard);
+  const cleanRaw = cleanName(rawWard);
+
+  if (!normRaw) return null;
+
+  // 1. Exact match normalized
+  let found = wardsList.find(w => normalizeText(w.ward_name) === normRaw);
+  if (found) return found;
+
+  // 2. Exact match clean
+  found = wardsList.find(w => cleanName(w.ward_name) === cleanRaw);
+  if (found) return found;
+
+  // 3. Normalized inclusion
+  found = wardsList.find(w => {
+    const normW = normalizeText(w.ward_name);
+    return normW.includes(normRaw) || normRaw.includes(normW);
+  });
+  if (found) return found;
+
+  // 4. Cleaned inclusion
+  found = wardsList.find(w => {
+    const cleanW = cleanName(w.ward_name);
+    return cleanW.includes(cleanRaw) || cleanRaw.includes(cleanW);
+  });
+  return found || null;
+}
+
 
 // ── Custom Dual-Thumb Range Slider ────────────────────────────────────────────
 function DualRangeSlider({
@@ -129,6 +198,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
 
   // Local state
   const [cityInput, setCityInput] = useState("");
+  const [wardInput, setWardInput] = useState("");
   const [availableServices, setAvailableServices] = useState<Service[]>([]);
   const [availableCities, setAvailableCities] = useState<City[]>([]);
   
@@ -185,6 +255,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
       if (matchedCity) {
         setSelectedCity(matchedCity);
         if (wName) {
+          setWardInput(wName);
           requestGetWards(matchedCity.city_id).then((res) => {
             if (res?.success && res.wards) {
               setWards(res.wards);
@@ -198,15 +269,18 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
           });
         } else {
           setSelectedWard(null);
+          setWardInput("");
         }
       } else {
         setSelectedCity(null);
         setSelectedWard(null);
+        setWardInput("");
       }
     } else {
       setCityInput("");
       setSelectedCity(null);
       setSelectedWard(null);
+      setWardInput("");
       setWards([]);
     }
     
@@ -236,7 +310,8 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
     newLoc = selectedWard && selectedCity ? `${selectedWard.ward_name}, ${selectedCity.city_name}` : selectedCity ? selectedCity.city_name : cityInput,
     newSvcs = selectedServices,
     newMin = minPriceInput,
-    newMax = maxPriceInput
+    newMax = maxPriceInput,
+    isGps = false
   ) => {
     const params = new URLSearchParams();
     if (newLoc.trim()) {
@@ -251,6 +326,9 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
     if (newMax !== undefined && newMax < 500000) {
       params.set("maxPrice", newMax.toString());
     }
+    if (isGps) {
+      params.set("isGps", "true");
+    }
     router.push(`/companies?${params.toString()}`);
   };
 
@@ -259,6 +337,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
     setCityInput(city.city_name);
     setCityDropdownOpen(false);
     setSelectedWard(null);
+    setWardInput("");
     setWards([]);
     
     try {
@@ -279,6 +358,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
 
   const handleWardSelect = (ward: Ward) => {
     setSelectedWard(ward);
+    setWardInput(ward.ward_name);
     setWardDropdownOpen(false);
     const locString = selectedCity ? `${ward.ward_name}, ${selectedCity.city_name}` : ward.ward_name;
     handleSearchSubmit(locString, selectedServices, minPriceInput, maxPriceInput);
@@ -300,31 +380,57 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
           );
           const data = await res.json();
           if (data && data.address) {
-            const city = data.address.city || data.address.state || data.address.town || data.address.quarter || "";
-            const cleanedCity = city
-              .replace("Thành phố ", "")
-              .replace("Tỉnh ", "")
-              .trim();
-            
-            if (cleanedCity) {
-              const matched = availableCities.find(
-                (c) => normalizeText(c.city_name).includes(normalizeText(cleanedCity))
-              );
-              if (matched) {
-                handleCitySelect(matched);
+            const addr = data.address;
+            const rawCity = addr.city || addr.province || addr.state || addr.municipality || "";
+            const rawWard = addr.suburb || addr.quarter || addr.village || addr.commune || addr.town || "";
+
+            const matchedCity = matchCity(rawCity, availableCities);
+
+            if (matchedCity) {
+              setSelectedCity(matchedCity);
+              setCityInput(matchedCity.city_name);
+
+              setIsLoadingWards(true);
+              const wardsRes = await requestGetWards(matchedCity.city_id);
+              if (wardsRes?.success && wardsRes.wards) {
+                setWards(wardsRes.wards);
+                
+                const matchedWard = matchWard(rawWard, wardsRes.wards);
+                if (matchedWard) {
+                  setSelectedWard(matchedWard);
+                  setWardInput(matchedWard.ward_name);
+                  const searchVal = `${matchedWard.ward_name}, ${matchedCity.city_name}`;
+                  handleSearchSubmit(searchVal, selectedServices, minPriceInput, maxPriceInput, true);
+                } else {
+                  setSelectedWard(null);
+                  setWardInput("");
+                  handleSearchSubmit(matchedCity.city_name, selectedServices, minPriceInput, maxPriceInput, true);
+                }
               } else {
-                setCityInput(cleanedCity);
-                handleSearchSubmit(cleanedCity, selectedServices, minPriceInput, maxPriceInput);
+                setSelectedWard(null);
+                setWardInput("");
+                setWards([]);
+                handleSearchSubmit(matchedCity.city_name, selectedServices, minPriceInput, maxPriceInput, true);
               }
+              setIsLoadingWards(false);
             } else {
-              setCityInput("Đà Nẵng");
-              handleSearchSubmit("Đà Nẵng", selectedServices, minPriceInput, maxPriceInput);
+              const fallbackVal = rawCity || "Đà Nẵng";
+              setCityInput(fallbackVal);
+              setSelectedCity(null);
+              setSelectedWard(null);
+              setWardInput("");
+              setWards([]);
+              handleSearchSubmit(fallbackVal, selectedServices, minPriceInput, maxPriceInput, true);
             }
           }
         } catch (error) {
           console.error("Lỗi định vị:", error);
           setCityInput("Đà Nẵng");
-          handleSearchSubmit("Đà Nẵng", selectedServices, minPriceInput, maxPriceInput);
+          setSelectedCity(null);
+          setSelectedWard(null);
+          setWardInput("");
+          setWards([]);
+          handleSearchSubmit("Đà Nẵng", selectedServices, minPriceInput, maxPriceInput, true);
         } finally {
           setIsLocating(false);
         }
@@ -358,6 +464,14 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
       bgColor: string;
       isNearby: boolean;
     }> = [];
+
+    options.push({
+      name: locale === "vi" ? "Gần bạn (Định vị GPS)" : "Nearby (GPS Location)",
+      icon: Navigation,
+      iconColor: "text-primary",
+      bgColor: "bg-primary/5",
+      isNearby: true
+    });
 
     const query = cityInput.trim().toLowerCase();
     const filteredCities = availableCities.filter(c => 
@@ -408,6 +522,38 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
             disabled={isLocating}
             className="w-full text-[11px] bg-transparent outline-none placeholder:text-outline font-medium truncate"
           />
+          {(cityInput || selectedCity) && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setCityInput("");
+                setSelectedCity(null);
+                setSelectedWard(null);
+                setWards([]);
+                setWardInput("");
+                handleSearchSubmit("");
+              }}
+              className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0 mr-1"
+            >
+              <X className="w-3.5 h-3.5 text-outline-variant" />
+            </button>
+          )}
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleNearbySelect();
+            }}
+            title={locale === "vi" ? "Gần bạn" : "Nearby"}
+            className="p-1 hover:bg-slate-100 rounded-full transition-colors flex items-center gap-1 shrink-0 ml-1"
+            disabled={isLocating}
+          >
+            <Navigation className="w-3.5 h-3.5 text-primary shrink-0" />
+            {isLocating && (
+              <span className="w-2.5 h-2.5 border border-primary border-t-transparent rounded-full animate-spin shrink-0" />
+            )}
+          </button>
           {cityDropdownOpen && (
             <div className="absolute top-full left-0 mt-1.5 w-60 bg-white border border-outline-variant/40 rounded-xl shadow-xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto">
               <div className="px-3 py-1.5 text-[9px] font-bold text-outline uppercase tracking-wider bg-surface-container-low/50">
@@ -426,10 +572,12 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                         if (matched) handleCitySelect(matched);
                       }
                     }}
-                    className="w-full text-left px-3 py-1.5 hover:bg-surface-container-low transition-colors flex items-center gap-2 border-b border-outline-variant/10 last:border-b-0"
+                    className={`w-full text-left px-3 py-1.5 hover:bg-surface-container-low transition-colors flex items-center gap-2 border-b border-outline-variant/10 last:border-b-0 ${
+                      dest.isNearby ? "bg-primary/5 text-primary hover:bg-primary/10" : ""
+                    }`}
                   >
-                    <IconComponent className="w-3.5 h-3.5 text-outline shrink-0" />
-                    <div className="text-[11px] font-semibold text-on-surface truncate">{dest.name}</div>
+                    <IconComponent className={`w-3.5 h-3.5 shrink-0 ${dest.isNearby ? "text-primary animate-pulse" : "text-outline"}`} />
+                    <div className={`text-[11px] font-semibold truncate ${dest.isNearby ? "text-primary" : "text-on-surface"}`}>{dest.name}</div>
                   </button>
                 );
               })}
@@ -439,20 +587,35 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
 
         {/* Ward Input & Dropdown */}
         <div ref={wardRef} className="relative flex-1 flex items-center px-3 py-1 min-w-0">
-          <button
-            onClick={() => {
-              setWardDropdownOpen(!wardDropdownOpen);
+          <input
+            value={wardInput}
+            onFocus={() => {
+              setWardDropdownOpen(true);
               setCityDropdownOpen(false);
               setFilterDropdownOpen(false);
             }}
-            className="w-full text-left text-[11px] font-medium bg-transparent outline-none truncate"
-          >
-            {selectedWard ? (
-              <span className="text-on-surface font-medium">{selectedWard.ward_name}</span>
-            ) : (
-              <span className="text-outline">{dict.customer.search.bar_ward}</span>
-            )}
-          </button>
+            onChange={(e) => {
+              setWardInput(e.target.value);
+              setWardDropdownOpen(true);
+            }}
+            placeholder={dict.customer.search.bar_ward}
+            disabled={!selectedCity}
+            className="w-full text-[11px] bg-transparent outline-none placeholder:text-outline font-medium truncate"
+          />
+          {(wardInput || selectedWard) && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                setWardInput("");
+                setSelectedWard(null);
+                handleSearchSubmit(selectedCity ? selectedCity.city_name : "");
+              }}
+              className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0 mr-1"
+            >
+              <X className="w-3.5 h-3.5 text-outline-variant" />
+            </button>
+          )}
           {wardDropdownOpen && (
             <div className="absolute top-full left-0 mt-1.5 w-60 bg-white border border-outline-variant/40 rounded-xl shadow-xl z-50 overflow-hidden py-1 max-h-60 overflow-y-auto">
               {!selectedCity ? (
@@ -469,16 +632,18 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                   </div>
                   {isLoadingWards ? (
                     <div className="px-3.5 py-2 text-xs text-on-surface-variant">{dict.customer.search.bar_loading_wards}</div>
-                  ) : wards.length > 0 ? (
-                    wards.map((ward) => (
-                      <button
-                        key={ward.ward_id}
-                        onClick={() => handleWardSelect(ward)}
-                        className="w-full text-left px-3.5 py-2 hover:bg-surface-container-low transition-colors text-xs font-medium border-b border-outline-variant/10 last:border-b-0"
-                      >
-                        {ward.ward_name}
-                      </button>
-                    ))
+                  ) : wards.filter(w => w.ward_name.toLowerCase().includes(wardInput.toLowerCase())).length > 0 ? (
+                    wards
+                      .filter(w => w.ward_name.toLowerCase().includes(wardInput.toLowerCase()))
+                      .map((ward) => (
+                        <button
+                          key={ward.ward_id}
+                          onClick={() => handleWardSelect(ward)}
+                          className="w-full text-left px-3.5 py-2 hover:bg-surface-container-low transition-colors text-xs font-medium border-b border-outline-variant/10 last:border-b-0"
+                        >
+                          {ward.ward_name}
+                        </button>
+                      ))
                   ) : (
                     <div className="px-3.5 py-2 text-xs text-on-surface-variant">{dict.customer.search.bar_no_wards}</div>
                   )}
@@ -613,6 +778,39 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
           disabled={isLocating}
           className="flex-1 text-sm bg-transparent outline-none placeholder:text-slate-400 font-medium text-on-surface"
         />
+        {(cityInput || selectedCity) && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setCityInput("");
+              setSelectedCity(null);
+              setSelectedWard(null);
+              setWards([]);
+              setWardInput("");
+              handleSearchSubmit("");
+            }}
+            className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0 mr-1"
+          >
+            <X className="w-4 h-4 text-outline-variant" />
+          </button>
+        )}
+        {/* GPS Locator button */}
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            handleNearbySelect();
+          }}
+          title={locale === "vi" ? "Gần bạn (GPS)" : "Nearby (GPS)"}
+          disabled={isLocating}
+          className="p-1.5 hover:bg-primary/10 rounded-full transition-colors flex items-center gap-1 shrink-0"
+        >
+          <Navigation className={`w-4 h-4 text-primary shrink-0 transition-opacity ${isLocating ? "opacity-50" : ""}`} />
+          {isLocating && (
+            <span className="w-3 h-3 border-2 border-primary border-t-transparent rounded-full animate-spin shrink-0" />
+          )}
+        </button>
         {cityDropdownOpen && (
           <div className="absolute top-full left-0 mt-2.5 w-80 bg-white border border-outline-variant/50 rounded-2xl shadow-xl z-[9999] overflow-hidden py-1.5 max-h-80 overflow-y-auto">
             <div className="px-4.5 py-2.5 text-xs font-bold text-outline uppercase tracking-wider bg-surface-container-low/50">
@@ -631,10 +829,12 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                       if (matched) handleCitySelect(matched);
                     }
                   }}
-                  className="w-full text-left px-4.5 py-2.5 hover:bg-surface-container-low transition-colors flex items-center gap-3 border-b border-outline-variant/10 last:border-b-0"
+                  className={`w-full text-left px-4.5 py-2.5 hover:bg-surface-container-low transition-colors flex items-center gap-3 border-b border-outline-variant/10 last:border-b-0 ${
+                    dest.isNearby ? "bg-primary/5 hover:bg-primary/10" : ""
+                  }`}
                 >
-                  <IconComponent className="w-4.5 h-4.5 text-outline shrink-0 ml-1" />
-                  <div className="text-sm font-semibold text-on-surface leading-tight">{dest.name}</div>
+                  <IconComponent className={`w-4.5 h-4.5 shrink-0 ml-1 ${dest.isNearby ? "text-primary animate-pulse" : "text-outline"}`} />
+                  <div className={`text-sm font-semibold leading-tight ${dest.isNearby ? "text-primary" : "text-on-surface"}`}>{dest.name}</div>
                 </button>
               );
             })}
@@ -645,20 +845,35 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
       {/* Ward select field & Dropdown */}
       <div ref={wardRef} className="relative flex-1 h-full flex items-center gap-2 px-3 border-r border-slate-200/70">
         <MapPin className="w-4.5 h-4.5 text-primary shrink-0" />
-        <button
-          onClick={() => {
-            setWardDropdownOpen(!wardDropdownOpen);
+        <input
+          value={wardInput}
+          onFocus={() => {
+            setWardDropdownOpen(true);
             setCityDropdownOpen(false);
             setFilterDropdownOpen(false);
           }}
-          className="flex-1 text-left text-sm bg-transparent outline-none font-medium truncate"
-        >
-          {selectedWard ? (
-            <span className="text-on-surface font-medium">{selectedWard.ward_name}</span>
-          ) : (
-            <span className="text-slate-400">{dict.customer.search.bar_ward}</span>
-          )}
-        </button>
+          onChange={(e) => {
+            setWardInput(e.target.value);
+            setWardDropdownOpen(true);
+          }}
+          placeholder={dict.customer.search.bar_ward}
+          disabled={!selectedCity}
+          className="flex-1 text-sm bg-transparent outline-none placeholder:text-slate-400 font-medium text-on-surface"
+        />
+        {(wardInput || selectedWard) && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              setWardInput("");
+              setSelectedWard(null);
+              handleSearchSubmit(selectedCity ? selectedCity.city_name : "");
+            }}
+            className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0 mr-1"
+          >
+            <X className="w-4 h-4 text-outline-variant" />
+          </button>
+        )}
         <ChevronDown className={`w-3.5 h-3.5 text-slate-400 shrink-0 ml-auto transition-transform duration-200 ${wardDropdownOpen ? "rotate-180" : ""}`} />
         
         {wardDropdownOpen && (
@@ -682,18 +897,20 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                 </div>
                 {isLoadingWards ? (
                   <div className="px-4 py-4 text-xs text-on-surface-variant">{dict.customer.search.bar_loading_wards}</div>
-                ) : wards.length > 0 ? (
-                  wards.map((ward) => (
-                    <button
-                      key={ward.ward_id}
-                      onClick={() => handleWardSelect(ward)}
-                      className={`w-full text-left px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium border-b border-outline-variant/10 last:border-b-0 ${
-                        selectedWard?.ward_id === ward.ward_id ? "text-primary font-bold bg-primary/5" : "text-on-surface"
-                      }`}
-                    >
-                      {ward.ward_name}
-                    </button>
-                  ))
+                ) : wards.filter(w => w.ward_name.toLowerCase().includes(wardInput.toLowerCase())).length > 0 ? (
+                  wards
+                    .filter(w => w.ward_name.toLowerCase().includes(wardInput.toLowerCase()))
+                    .map((ward) => (
+                      <button
+                        key={ward.ward_id}
+                        onClick={() => handleWardSelect(ward)}
+                        className={`w-full text-left px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium border-b border-outline-variant/10 last:border-b-0 ${
+                          selectedWard?.ward_id === ward.ward_id ? "text-primary font-bold bg-primary/5" : "text-on-surface"
+                        }`}
+                      >
+                        {ward.ward_name}
+                      </button>
+                    ))
                 ) : (
                   <div className="px-4 py-4 text-xs text-on-surface-variant">{dict.customer.search.bar_no_wards}</div>
                 )}
