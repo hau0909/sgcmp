@@ -9,6 +9,7 @@ import {
   X,
   AlertTriangle,
   PenTool,
+  Building2,
 } from "lucide-react";
 import { ContractDetailHeader } from "./ContractDetailHeader";
 import { ContractPartnerInfo } from "./ContractPartnerInfo";
@@ -17,6 +18,7 @@ import { ContractPaymentInfo } from "./ContractPaymentInfo";
 import { ContractDocuments } from "./ContractDocuments";
 import { ContractHistoryLog } from "./ContractHistoryLog";
 import { ContractGuardsInfo } from "./ContractGuardsInfo";
+import { ContractProgressBar } from "./ContractProgressBar";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 import {
@@ -167,6 +169,7 @@ export function ContractDetailContainer({
     }
 
     const totalValue =
+      currentContract.formatted_price ||
       booking?.formatted_price ||
       (rawPrice
         ? `${formatPrice(rawPrice)} VNĐ`
@@ -344,12 +347,53 @@ export function ContractDetailContainer({
         }
         onSignCompany={() => setIsSignModalOpen(true)}
         contract={contract}
+        onContractUpdated={() => fetchDetail(false)}
       />
+
+      {contract.status === "active" && (
+        <div className="mb-6">
+          <ContractProgressBar
+            startDate={contract.start_date}
+            endDate={contract.end_date}
+            variant="card"
+          />
+        </div>
+      )}
 
       {/* Bento Grid Layout */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column (Main Details & Documents) */}
         <div className="xl:col-span-2 flex flex-col gap-6">
+          {/* Company Name Change Notice for Provider Company */}
+          {(contract?.is_company_name_changed || contract?.company?.is_name_changed) && (
+            <div className="flex flex-col bg-amber-50/70 border border-amber-200/80 rounded-xl p-4 space-y-2 font-body">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800 uppercase tracking-wider">
+                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
+                <span>Thay đổi tên doanh nghiệp bảo vệ</span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-amber-200/50">
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-bold text-amber-700/90 uppercase tracking-wider">
+                    Tên công ty hiện tại
+                  </span>
+                  <span className="text-sm font-bold text-amber-950 flex items-center gap-1.5 mt-0.5">
+                    <Building2 className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    {contract?.company?.name || contract?.company_name}
+                  </span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[11px] font-bold text-amber-700/90 uppercase tracking-wider">
+                    Tên công ty lúc ký hợp đồng
+                  </span>
+                  <span className="text-sm font-bold text-amber-950 flex items-center gap-1.5 mt-0.5">
+                    <Building2 className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                    {contract?.company?.signed_name || contract?.signed_company_name}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Partner Info */}
           <ContractPartnerInfo
             customerName={contract.customer_name || ""}

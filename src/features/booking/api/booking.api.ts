@@ -53,7 +53,7 @@ export async function requestUpdateBookingQuotation(
     hourly_rate?: number;
     monthly_rate?: number;
   }
-): Promise<{ booking: Booking; contract_id?: string }> {
+): Promise<{ booking: Booking; contract_id?: string; contract_status?: string }> {
   const res = await fetcher(`/api/bookings/${id}`, {
     method: "PATCH",
     headers: {

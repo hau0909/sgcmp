@@ -84,14 +84,31 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
   const company = booking?.companies;
   const serviceName = service?.name || "Dịch vụ chưa xác định";
 
-  // Format price to VND currency string
+  // Helper function to format package price per user requirement:
+  // theo giờ: 30.000 đ/giờ
+  // theo tháng: 3.000.000 đ/tháng
+  // theo gói: 30.000.000 đ
+  const quotationType = booking?.quotation_type || "monthly";
+  const rawPrice = Number(booking?.quoted_price || 0);
+  const hourlyRate = booking?.hourly_rate ? Number(booking.hourly_rate) : null;
+  const monthlyRate = booking?.monthly_rate ? Number(booking.monthly_rate) : null;
+
+  const formatVND = (num: number) => new Intl.NumberFormat("vi-VN").format(num);
+
   let formattedPrice = "";
-  if (booking?.quoted_price !== undefined && booking?.quoted_price !== null) {
-    formattedPrice = new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(Number(booking.quoted_price));
+  if (quotationType === "hourly") {
+    const rate = hourlyRate || rawPrice;
+    formattedPrice = `${formatVND(rate)} đ/giờ`;
+  } else if (quotationType === "monthly") {
+    const rate = monthlyRate || rawPrice;
+    formattedPrice = `${formatVND(rate)} đ/tháng`;
+  } else {
+    formattedPrice = `${formatVND(rawPrice)} đ`;
   }
+
+  const currentCompanyName = company?.company_name || "Công ty chưa xác định";
+  const signedCompanyName = item.signed_company_name || null;
+  const isCompanyNameChanged = !!signedCompanyName && signedCompanyName !== currentCompanyName;
 
   // Fetch company owner (representative) profile
   let ownerName = "Chưa cập nhật";
@@ -188,7 +205,9 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
 
     // Compiled company, customer, and guard fields for contract exporting
     company: {
-      name: company?.company_name || "Công ty chưa xác định",
+      name: currentCompanyName,
+      signed_name: signedCompanyName || currentCompanyName,
+      is_name_changed: isCompanyNameChanged,
       phone: company?.phone || "Chưa cập nhật",
       email: company?.email || "Chưa cập nhật",
       address: formattedCompanyAddress || "Chưa cập nhật",
@@ -196,6 +215,10 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
       representative: ownerName,
       position: "Đại diện pháp luật",
     },
+    signed_company_name: signedCompanyName,
+    is_company_name_changed: isCompanyNameChanged,
+    quotation_type: quotationType,
+    formatted_price: formattedPrice,
     customer: {
       company_name: booking?.company_name || "",
       address: booking?.address || profile?.address || "Chưa cập nhật",
@@ -431,14 +454,27 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
 
   const reviewData = item.reviews?.[0] || null;
 
-  // Format price to VND currency string
+  const quotationType = booking?.quotation_type || "monthly";
+  const rawPrice = Number(booking?.quoted_price || 0);
+  const hourlyRate = booking?.hourly_rate ? Number(booking.hourly_rate) : null;
+  const monthlyRate = booking?.monthly_rate ? Number(booking.monthly_rate) : null;
+
+  const formatVND = (num: number) => new Intl.NumberFormat("vi-VN").format(num);
+
   let formattedPrice = "";
-  if (booking?.quoted_price !== undefined && booking?.quoted_price !== null) {
-    formattedPrice = new Intl.NumberFormat("vi-VN", {
-      style: "currency",
-      currency: "VND",
-    }).format(Number(booking.quoted_price));
+  if (quotationType === "hourly") {
+    const rate = hourlyRate || rawPrice;
+    formattedPrice = `${formatVND(rate)} đ/giờ`;
+  } else if (quotationType === "monthly") {
+    const rate = monthlyRate || rawPrice;
+    formattedPrice = `${formatVND(rate)} đ/tháng`;
+  } else {
+    formattedPrice = `${formatVND(rawPrice)} đ`;
   }
+
+  const currentCompanyName = company?.company_name || "Công ty chưa xác định";
+  const signedCompanyName = item.signed_company_name || null;
+  const isCompanyNameChanged = !!signedCompanyName && signedCompanyName !== currentCompanyName;
 
   // Fetch company owner (representative) profile
   let ownerName = "Chưa cập nhật";
@@ -506,7 +542,9 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
     formatted_price: formattedPrice || "Chưa báo giá",
 
     company: {
-      name: companyName,
+      name: currentCompanyName,
+      signed_name: signedCompanyName || currentCompanyName,
+      is_name_changed: isCompanyNameChanged,
       phone: company?.phone || "Chưa cập nhật",
       email: company?.email || "Chưa cập nhật",
       address: formattedCompanyAddress || "Chưa cập nhật",
@@ -514,6 +552,9 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
       representative: ownerName,
       position: "Đại diện pháp luật",
     },
+    signed_company_name: signedCompanyName,
+    is_company_name_changed: isCompanyNameChanged,
+    quotation_type: quotationType,
     customer: {
       company_name: booking?.company_name || "",
       address: booking?.address || profile?.address || "Chưa cập nhật",
@@ -588,3 +629,26 @@ export const assignGuardsToContractService = async (
     guard_assigned: guardIds,
   });
 };
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const updateContractDatesService = async (
+  id: string,
+  startDate?: string | null,
+  endDate?: string | null,
+): Promise<any> => {
+  const contract = await getContractDetail(id);
+  if (!contract) {
+    throw new Error("Không tìm thấy hợp đồng");
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const payload: any = {};
+  if (startDate !== undefined && startDate !== null) {
+    payload.start_date = startDate ? new Date(startDate).toISOString() : null;
+  }
+  if (endDate !== undefined && endDate !== null) {
+    payload.end_date = endDate ? new Date(endDate).toISOString() : null;
+  }
+
+  return await updateContract(id, payload);
+};

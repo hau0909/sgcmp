@@ -238,7 +238,7 @@ export const updateBookingStatusAndPriceService = async (
     hourly_rate?: number;
     monthly_rate?: number;
   }
-): Promise<{ booking: Booking; contract_id?: string }> => {
+): Promise<{ booking: Booking; contract_id?: string; contract_status?: string }> => {
   validateBookingUpdateStatusData(updates.status, updates.quoted_price);
   return await updateBookingStatusAndPrice(bookingId, updates);
 };

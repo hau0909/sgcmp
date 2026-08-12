@@ -110,12 +110,12 @@ export function BookingProgress({
   let step4Desc = dict.booking.detail.progress.desc_contract_upcoming || "Chưa có hợp đồng";
   
   if (hasContract) {
-    if (contractStatus === "pending_signatures") {
-      step4State = "in-progress";
-      step4Desc = dict.booking.detail.progress.desc_contract_pending || "Đã khởi tạo";
-    } else {
+    if (contractStatus === "active" || contractStatus === "completed") {
       step4State = "completed";
       step4Desc = dict.booking.detail.progress.desc_contract_done || "Đã ký hợp đồng";
+    } else {
+      step4State = "in-progress";
+      step4Desc = dict.booking.detail.progress.desc_contract_pending || "Đã khởi tạo";
     }
   }
 

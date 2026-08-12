@@ -316,6 +316,7 @@ export function BookingDetailContainer({
         });
         if (res.contract_id) {
           setContractId(res.contract_id);
+          setContractStatus(res.contract_status || "pending_signatures");
         }
         setToastType("success");
         setToastMessage(

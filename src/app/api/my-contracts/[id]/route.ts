@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse, connection } from "next/server";
-import { handleGetCustomerContractDetail, handleSignContractCustomer, handleCompleteContractCustomer } from "@/features/contract/controller/contract.controller";
+import { handleGetCustomerContractDetail, handleSignContractCustomer, handleCompleteContractCustomer, handleUpdateContractDates } from "@/features/contract/controller/contract.controller";
+
 
 interface RouteParams {
   params: Promise<{
@@ -73,6 +74,12 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
       );
     } else if (body.action === "complete") {
       const result = await handleCompleteContractCustomer(id, customerId);
+      return NextResponse.json(
+        { success: true, contract: result },
+        { status: 200 }
+      );
+    } else if (body.action === "update_dates") {
+      const result = await handleUpdateContractDates(id, body.startDate, body.endDate);
       return NextResponse.json(
         { success: true, contract: result },
         { status: 200 }
