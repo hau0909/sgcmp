@@ -21,6 +21,7 @@ import {
   validateCustomerSignatureEligibility 
 } from "../validator/contract.validator";
 import { calculateHoursFromSlot } from "@/utils/calcTime";
+
 export const getContractsService = async (
   page: number,
   limit: number,
@@ -651,4 +652,4 @@ export const updateContractDatesService = async (
   }
 
   return await updateContract(id, payload);
-};
+};
