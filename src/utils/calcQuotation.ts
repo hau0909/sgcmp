@@ -5,6 +5,8 @@
 const DAY_MAP: Record<string, number> = {
   // Standard English abbreviations
   SUN: 0, MON: 1, TUE: 2, WED: 3, THU: 4, FRI: 5, SAT: 6,
+  // Full English names (used by booking UI/DB: "Monday", "Tuesday", ...)
+  SUNDAY: 0, MONDAY: 1, TUESDAY: 2, WEDNESDAY: 3, THURSDAY: 4, FRIDAY: 5, SATURDAY: 6,
   // Vietnamese abbreviations
   CN: 0, T2: 1, T3: 2, T4: 3, T5: 4, T6: 5, T7: 6,
   // Numeric strings
@@ -168,9 +170,11 @@ export interface QuotationCalculationResult {
   // Option 2: Monthly (per position / guard)
   suggestedMonthlyRate: number;
   monthlyTotalPrice: number;
+  monthlyDiscountPercent: number;
   
   // Option 3: Package
   packageTotalPrice: number;
+  packageDiscountPercent: number;
 }
 
 export function calculateQuotationSuggestions(params: {
@@ -180,6 +184,8 @@ export function calculateQuotationSuggestions(params: {
   daysPerWeek: string[];
   startDate: string;
   endDate: string;
+  monthlyDiscountPercent?: number | null;
+  packageDiscountPercent?: number | null;
 }): QuotationCalculationResult {
   const guardsCount = Math.max(1, params.guardsPerSlot || 1);
   const hoursPerDay = calculateHoursPerDay(params.timeSlots);
@@ -198,14 +204,16 @@ export function calculateQuotationSuggestions(params: {
   const hourlyTotalPrice = Math.round(suggestedHourlyRate * totalGuardHours);
 
   // Option 2: Monthly Rate (Per position/guard per month)
-  // Total Monthly Price = monthly_rate * guardsCount * totalMonths
+  // Apply monthly discount on top of hourly total
+  const mDiscountPct = params.monthlyDiscountPercent ?? 10;
+  const monthlyTotalPrice = Math.round(hourlyTotalPrice * (1 - mDiscountPct / 100));
   const suggestedMonthlyRate = (totalMonths > 0 && guardsCount > 0)
-    ? Math.round(hourlyTotalPrice / (totalMonths * guardsCount))
-    : hourlyTotalPrice;
-  const monthlyTotalPrice = Math.round(suggestedMonthlyRate * guardsCount * totalMonths);
+    ? Math.round(monthlyTotalPrice / (totalMonths * guardsCount))
+    : monthlyTotalPrice;
 
-  // Option 3: Package Price (Defaults to exact hourly total)
-  const packageTotalPrice = hourlyTotalPrice;
+  // Option 3: Package Price — apply package discount on top of hourly total
+  const pDiscountPct = params.packageDiscountPercent ?? 15;
+  const packageTotalPrice = Math.round(hourlyTotalPrice * (1 - pDiscountPct / 100));
 
   return {
     hoursPerDay,
@@ -217,6 +225,8 @@ export function calculateQuotationSuggestions(params: {
     hourlyTotalPrice,
     suggestedMonthlyRate,
     monthlyTotalPrice,
+    monthlyDiscountPercent: mDiscountPct,
     packageTotalPrice,
+    packageDiscountPercent: pDiscountPct,
   };
 }

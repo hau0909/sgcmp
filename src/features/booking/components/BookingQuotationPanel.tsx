@@ -41,6 +41,8 @@ interface BookingQuotationPanelProps {
   startDate?: string;
   endDate?: string;
   basePricePerHour?: number | null;
+  monthlyDiscountPercent?: number | null;
+  packageDiscountPercent?: number | null;
   status: BookingStatus;
   onQuote: (params: {
     quoted_price: number;
@@ -68,6 +70,8 @@ export function BookingQuotationPanel({
   startDate = "",
   endDate = "",
   basePricePerHour = null,
+  monthlyDiscountPercent = null,
+  packageDiscountPercent = null,
   status,
   onQuote,
   onReject,
@@ -94,6 +98,8 @@ export function BookingQuotationPanel({
   const calcSuggestions = useMemo(() => {
     return calculateQuotationSuggestions({
       basePricePerHour: basePricePerHour || null,
+      monthlyDiscountPercent: monthlyDiscountPercent ?? undefined,
+      packageDiscountPercent: packageDiscountPercent ?? undefined,
       guardsPerSlot: guardsCount,
       timeSlots,
       daysPerWeek,
@@ -144,6 +150,9 @@ export function BookingQuotationPanel({
     }
     if (quotationType === "monthly") {
       const mRate = parseCleanNumber(monthlyRateStr);
+      if (mRate === calcSuggestions.suggestedMonthlyRate) {
+        return calcSuggestions.monthlyTotalPrice;
+      }
       return Math.round(mRate * guardsCount * calcSuggestions.totalMonths);
     }
     return parseCleanNumber(packagePriceStr);
@@ -278,70 +287,94 @@ export function BookingQuotationPanel({
       <form onSubmit={handleSubmitQuote} className="space-y-4">
         {/* 3 Quotation Options Tab Selector */}
         {!isInputsDisabled && viewMode === "company" && (
-          <div>
-            <div className="flex items-center justify-between mb-2">
-              <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
-                {qp.quotation_method || "Phương thức báo giá"}
-              </label>
-              {isRejected && (
-                <span className="text-[10.5px] font-semibold text-red-600 italic">
-                  {qp.prev_quote_rejected || "* Báo giá trước đó đã bị từ chối"}
+          <>
+            <div>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-[10px] font-bold text-on-surface-variant uppercase tracking-wider">
+                  {qp.quotation_method || "Phương thức báo giá"}
+                </label>
+                {isRejected && (
+                  <span className="text-[10.5px] font-semibold text-red-600 italic">
+                    {qp.prev_quote_rejected || "* Báo giá trước đó đã bị từ chối"}
+                  </span>
+                )}
+              </div>
+              <div
+                className={`grid grid-cols-3 gap-1.5 p-1 rounded-lg border ${
+                  isRejected
+                    ? "bg-red-50/40 border-red-300"
+                    : "bg-surface-container border-outline-variant/40"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setQuotationType("hourly")}
+                  className={`py-2 px-1 text-center rounded-md text-xs font-semibold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    quotationType === "hourly"
+                      ? isRejected
+                        ? "bg-white text-red-700 font-bold border-2 border-red-500 shadow-sm"
+                        : "bg-white text-primary shadow-sm font-bold border border-primary/20"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>{qp.type_hourly || "Theo Giờ"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setQuotationType("monthly")}
+                  className={`py-2 px-1 text-center rounded-md text-xs font-semibold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    quotationType === "monthly"
+                      ? isRejected
+                        ? "bg-white text-red-700 font-bold border-2 border-red-500 shadow-sm"
+                        : "bg-white text-primary shadow-sm font-bold border border-primary/20"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>{qp.type_monthly || "Theo Tháng"}</span>
+                  {calcSuggestions.monthlyDiscountPercent > 0 && (
+                    <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-green-500/15 text-green-700 leading-none">
+                      -{calcSuggestions.monthlyDiscountPercent}%
+                    </span>
+                  )}
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setQuotationType("package")}
+                  className={`py-2 px-1 text-center rounded-md text-xs font-semibold flex flex-col items-center gap-1 transition-all cursor-pointer ${
+                    quotationType === "package"
+                      ? isRejected
+                        ? "bg-white text-red-700 font-bold border-2 border-red-500 shadow-sm"
+                        : "bg-white text-primary shadow-sm font-bold border border-primary/20"
+                      : "text-on-surface-variant hover:text-on-surface"
+                  }`}
+                >
+                  <PackageCheck className="w-3.5 h-3.5" />
+                  <span>{qp.type_package || "Trọn Gói"}</span>
+                  {calcSuggestions.packageDiscountPercent > 0 && (
+                    <span className="text-[9px] font-bold px-1 py-0.5 rounded bg-green-500/15 text-green-700 leading-none">
+                      -{calcSuggestions.packageDiscountPercent}%
+                    </span>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Discount info banner */}
+            {(quotationType === "monthly" || quotationType === "package") && (
+              <div className="flex items-center gap-1.5 text-[11px] text-green-700 font-semibold bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+                <span>🏷️</span>
+                <span>
+                  {quotationType === "monthly"
+                    ? `Ưu đãi ${calcSuggestions.monthlyDiscountPercent}% so với giá theo giờ`
+                    : `Ưu đãi ${calcSuggestions.packageDiscountPercent}% so với giá theo giờ`}
                 </span>
-              )}
-            </div>
-            <div
-              className={`grid grid-cols-3 gap-1.5 p-1 rounded-lg border ${
-                isRejected
-                  ? "bg-red-50/40 border-red-300"
-                  : "bg-surface-container border-outline-variant/40"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={() => setQuotationType("hourly")}
-                className={`py-2 px-1 text-center rounded-md text-xs font-semibold flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                  quotationType === "hourly"
-                    ? isRejected
-                      ? "bg-white text-red-700 font-bold border-2 border-red-500 shadow-sm"
-                      : "bg-white text-primary shadow-sm font-bold border border-primary/20"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <Clock className="w-3.5 h-3.5" />
-                <span>{qp.type_hourly || "Theo Giờ"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setQuotationType("monthly")}
-                className={`py-2 px-1 text-center rounded-md text-xs font-semibold flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                  quotationType === "monthly"
-                    ? isRejected
-                      ? "bg-white text-red-700 font-bold border-2 border-red-500 shadow-sm"
-                      : "bg-white text-primary shadow-sm font-bold border border-primary/20"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                <span>{qp.type_monthly || "Theo Tháng"}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => setQuotationType("package")}
-                className={`py-2 px-1 text-center rounded-md text-xs font-semibold flex flex-col items-center gap-1 transition-all cursor-pointer ${
-                  quotationType === "package"
-                    ? isRejected
-                      ? "bg-white text-red-700 font-bold border-2 border-red-500 shadow-sm"
-                      : "bg-white text-primary shadow-sm font-bold border border-primary/20"
-                    : "text-on-surface-variant hover:text-on-surface"
-                }`}
-              >
-                <PackageCheck className="w-3.5 h-3.5" />
-                <span>{qp.type_package || "Trọn Gói"}</span>
-              </button>
-            </div>
-          </div>
+              </div>
+            )}
+          </>
         )}
 
         {/* Selected Option Badge in Customer / ReadOnly Mode */}
@@ -480,6 +513,12 @@ export function BookingQuotationPanel({
                 </span>
               </div>
               <div className="flex justify-between items-center py-0.5">
+                <span>{qp.hours_per_day_label || "Số giờ trực / ngày:"}</span>
+                <span className="font-bold text-on-surface font-mono">
+                  {formatHours(calcSuggestions.hoursPerDay)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-0.5">
                 <span>{qp.contract_duration_label || "Thời hạn hợp đồng:"}</span>
                 <span className="font-bold text-on-surface font-mono">
                   {calcSuggestions.totalMonths} {qp.months_suffix || "tháng"} ({calcSuggestions.totalWorkingDays} {qp.days_suffix || "ngày"})
@@ -539,6 +578,12 @@ export function BookingQuotationPanel({
                 <span>{qp.guards_count_label || "Số lượng nhân sự:"}</span>
                 <span className="font-bold text-on-surface font-mono">
                   {guardsCount} {qp.guards_suffix || "bảo vệ"}
+                </span>
+              </div>
+              <div className="flex justify-between items-center py-0.5">
+                <span>{qp.hours_per_day_label || "Số giờ trực / ngày:"}</span>
+                <span className="font-bold text-on-surface font-mono">
+                  {formatHours(calcSuggestions.hoursPerDay)}
                 </span>
               </div>
               <div className="flex justify-between items-center py-0.5">

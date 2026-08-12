@@ -104,7 +104,10 @@ export interface CompanyDetailData {
   createdYear?: number;
   rejectReason?: string | null;
   latestPublishRequest?: any;
+  monthlyDiscountPercent?: number | null;
+  packageDiscountPercent?: number | null;
 }
+
 
 export type UpdateCompanyProfileInput = {
   company_name: string;
@@ -116,6 +119,8 @@ export type UpdateCompanyProfileInput = {
   registration_code?: string;
   allowed_late_minutes?: number | null;
   allowed_absent_minutes?: number | null;
+  monthly_discount_percent?: number | null;
+  package_discount_percent?: number | null;
 };
 
 export type UpdateCompanyProfileControllerParams = {
