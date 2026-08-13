@@ -42,6 +42,25 @@ import { getRelativeTimeString } from "../utils/dashboard.utils";
 import { getCurrentActivePlan } from "@/features/subscription/repository/subscription.repository";
 import { getGuardCountByCompanyId } from "@/features/guards/repository/guard.repository";
 import { getCoordinatorCountByCompanyId } from "@/features/coordinator/repository/coordinator.repository";
+import { getCurrentUserProfileService } from "@/features/auth/service/auth.service";
+import { getCompanyByOwnerIdService, getCoordinatorByCompanyIdService } from "@/features/guards/service/guard.service";
+
+const resolveCompanyId = async (companyId?: string): Promise<string | undefined> => {
+  if (companyId) return companyId;
+  try {
+    const profile = await getCurrentUserProfileService();
+    if (!profile) return undefined;
+    const role = profile.role?.trim().toLowerCase();
+    if (role === "company-admin") {
+      return (await getCompanyByOwnerIdService(profile.user_id)) || undefined;
+    } else if (role === "coordinator") {
+      return (await getCoordinatorByCompanyIdService(profile.user_id)) || undefined;
+    }
+  } catch (err) {
+    console.error("[resolveCompanyId] Error:", err);
+  }
+  return undefined;
+};
 
 // ─────────────────────────────────────────────────────────────
 // Shared helper
@@ -1446,6 +1465,8 @@ export interface CurrentUpcomingShiftItem {
   location: string;
   statusText: string;
   startTime?: string;
+  isOvertime?: boolean;
+  overtimeMinutes?: number;
 }
 
 export const getCurrentUpcomingShiftsTodayService = async (
@@ -1453,14 +1474,15 @@ export const getCurrentUpcomingShiftsTodayService = async (
   timeFilter?: string,
   clientDate?: string
 ): Promise<CurrentUpcomingShiftItem[]> => {
-  if (!companyId) {
+  const resolvedCompanyId = await resolveCompanyId(companyId);
+  if (!resolvedCompanyId) {
     return [];
   }
   const now = clientDate && !Number.isNaN(new Date(clientDate).getTime()) ? new Date(clientDate) : new Date();
   const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
 
   // Always query shifts active right now or starting from current time 'now' until end of today
-  const rawShifts = await getTodayGuardsStatusList(companyId, now.toISOString(), endOfToday);
+  const rawShifts = await getTodayGuardsStatusList(resolvedCompanyId, now.toISOString(), endOfToday);
 
   // Collect all guard IDs
   const guardIds = new Set<string>();
@@ -1529,7 +1551,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
         timeText = `Kết thúc lúc: ${formatHHMM(s.end_time)}`;
       } else if (st === "late") {
         type = "LATE";
-        statusText = "ĐI TRỄ";
+        statusText = sa.check_in_time ? "ĐIỂM DANH TRỄ" : "ĐI TRỄ CHƯA ĐIỂM DANH";
         timeText = `Trễ ca (Bắt đầu ${formatHHMM(s.start_time)})`;
       } else if (st === "absent") {
         type = "ABSENT";
@@ -1551,6 +1573,8 @@ export const getCurrentUpcomingShiftsTodayService = async (
         location: locationName,
         statusText,
         startTime: s.start_time,
+        isOvertime: sa.is_overtime || (Number(sa.overtime_minutes) > 0),
+        overtimeMinutes: sa.overtime_minutes,
       });
 
       if (hasRep) {
@@ -1587,8 +1611,9 @@ export const getCoordinatorReportStatsService = async (
   filter: string = "hientai",
   clientDate?: string
 ): Promise<{ totalReports: number; unresolvedReports: number; currentUpcomingShifts: CurrentUpcomingShiftItem[]; filter: string }> => {
-  const stats = await getCoordinatorReportStats(companyId, filter);
-  const currentUpcomingShifts = await getCurrentUpcomingShiftsTodayService(companyId, filter, clientDate);
+  const resolvedCompanyId = await resolveCompanyId(companyId);
+  const stats = await getCoordinatorReportStats(resolvedCompanyId, filter);
+  const currentUpcomingShifts = await getCurrentUpcomingShiftsTodayService(resolvedCompanyId, filter, clientDate);
   return {
     ...stats,
     currentUpcomingShifts,
@@ -1606,14 +1631,23 @@ export interface PastShiftItem {
   contractName: string;
   status: string;
   startTime?: string;
+  isOvertime?: boolean;
+  overtimeMinutes?: number;
 }
 
 export interface AvailableGuardItem {
   id: string;
+  user_id?: string;
+  guard_id?: string;
   name: string;
   certs: string;
   phone: string;
   avatar: string;
+  email?: string;
+  cccd?: string;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  notable_skills?: string[];
 }
 
 export interface GuardPerformanceRadarItem {
@@ -1628,8 +1662,9 @@ export const getPastShiftsService = async (
   filter: string = "hientai",
   clientDate?: string
 ): Promise<PastShiftItem[]> => {
-  if (!companyId) return [];
-  const data = await getPastShiftsRepository(companyId, filter, clientDate);
+  const resolvedCompanyId = await resolveCompanyId(companyId);
+  if (!resolvedCompanyId) return [];
+  const data = await getPastShiftsRepository(resolvedCompanyId, filter, clientDate);
   if (!data || data.length === 0) return [];
 
   const guardIds = Array.from(
@@ -1673,7 +1708,7 @@ export const getPastShiftsService = async (
       const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
       const p = getProfile(sa.guard_id);
       let statusLabel = "HOÀN THÀNH";
-      if (sa.status === "late") statusLabel = "ĐI TRỄ";
+      if (sa.status === "late") statusLabel = sa.check_in_time ? "ĐIỂM DANH TRỄ" : "ĐI TRỄ CHƯA ĐIỂM DANH";
       else if (sa.status === "absent") statusLabel = "VẮNG MẶT";
       else if (sa.status === "assigned" || sa.status === "upcoming") statusLabel = "PHÂN CÔNG";
       else if (sa.status === "completed" || sa.status === "ongoing") statusLabel = "ĐANG TRỰC";
@@ -1688,6 +1723,8 @@ export const getPastShiftsService = async (
         contractName: contractName,
         status: statusLabel,
         startTime: s.start_time,
+        isOvertime: sa.is_overtime || (Number(sa.overtime_minutes) > 0),
+        overtimeMinutes: sa.overtime_minutes,
       });
 
       if (hasRep) {
@@ -1703,6 +1740,8 @@ export const getPastShiftsService = async (
             contractName: contractName,
             status: "THAY CA",
             startTime: s.start_time,
+            isOvertime: sa.is_overtime || (Number(sa.overtime_minutes) > 0),
+            overtimeMinutes: sa.overtime_minutes,
           });
         });
       }
@@ -1723,17 +1762,33 @@ export const getAvailableGuardsService = async (
   companyId?: string,
   clientDate?: string
 ): Promise<AvailableGuardItem[]> => {
-  if (!companyId) return [];
-  const data = await getAvailableGuardsRepository(companyId, clientDate);
+  const resolvedCompanyId = await resolveCompanyId(companyId);
+  if (!resolvedCompanyId) return [];
+  const data = await getAvailableGuardsRepository(resolvedCompanyId, clientDate);
   if (!data || data.length === 0) return [];
 
-  return data.map((g: any) => ({
-    id: `#B-${g.user_id.slice(0, 4).toUpperCase()}`,
-    name: g.profiles?.full_name || "Bảo vệ",
-    certs: "CN: Tuần tra, Sơ cứu",
-    phone: g.profiles?.phone_number || "",
-    avatar: g.profiles?.avatar_url || "",
-  }));
+  return data.map((g: any) => {
+    const cccd = Array.isArray(g.profiles?.identities)
+      ? g.profiles?.identities[0]?.identity_id || ""
+      : g.profiles?.identities?.identity_id || "";
+    const skills = Array.isArray(g.notable_skills) ? g.notable_skills : [];
+    const certsStr = skills.length > 0 ? `CN: ${skills.slice(0, 2).join(", ")}` : "CN: Tuần tra, Sơ cứu";
+
+    return {
+      id: `#B-${g.user_id ? g.user_id.slice(0, 4).toUpperCase() : "0000"}`,
+      user_id: g.user_id,
+      guard_id: g.guard_id,
+      name: g.profiles?.full_name || "Bảo vệ",
+      certs: certsStr,
+      phone: g.profiles?.phone_number || "",
+      avatar: g.profiles?.avatar_url || "",
+      email: g.profiles?.email || "",
+      cccd: cccd,
+      height_cm: g.height_cm,
+      weight_kg: g.weight_kg,
+      notable_skills: skills,
+    };
+  });
 };
 
 export const getGuardPerformanceRadarService = async (
@@ -1741,9 +1796,10 @@ export const getGuardPerformanceRadarService = async (
   filter: string = "hientai",
   clientDate?: string
 ): Promise<GuardPerformanceRadarItem[]> => {
-  const counts = await getGuardPerformanceRadarRepository(companyId, filter, clientDate);
+  const resolvedCompanyId = await resolveCompanyId(companyId);
+  const counts = await getGuardPerformanceRadarRepository(resolvedCompanyId, filter, clientDate);
 
-  const maxVal = Math.max(counts.onDutyCount, counts.completedCount, counts.lateCount, counts.absentCount, counts.replacementCount, 1);
+  const maxVal = Math.max(counts.onDutyCount, counts.overtimeCount, counts.lateCount, counts.absentCount, counts.replacementCount, 1);
   const calcScore = (val: number) => Math.min(100, Math.round((val / maxVal) * 90) + 10);
 
   return [
@@ -1754,10 +1810,10 @@ export const getGuardPerformanceRadarService = async (
       badgeBg: "bg-blue-50 text-blue-700 border-blue-200/80",
     },
     {
-      subject: "Hoàn thành",
-      score: counts.completedCount > 0 ? calcScore(counts.completedCount) : 0,
-      count: `${counts.completedCount}`,
-      badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200/80",
+      subject: "TĂNG CA",
+      score: counts.overtimeCount > 0 ? calcScore(counts.overtimeCount) : 0,
+      count: `${counts.overtimeCount}`,
+      badgeBg: "bg-amber-50 text-amber-700 border-amber-200/80",
     },
     {
       subject: "Đi trễ",

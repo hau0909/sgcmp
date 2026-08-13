@@ -87,15 +87,15 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
     );
 
   const getStatusLabel = (assign: ShiftAssignment) => {
-    if (assign.status === "assigned") return dict?.coor_schedules?.assigned || "Đã phân công";
-    if (assign.status === "completed") return dict?.coor_schedules?.on_duty || dict?.coor_schedules?.completed || "Đang trực";
-    if (assign.status === "checkout") return dict?.coor_schedules?.checkout || "Hoàn thành";
+    if (assign.status === "assigned") return (dict?.coor_schedules?.assigned || "ĐÃ PHÂN CÔNG").toUpperCase();
+    if (assign.status === "completed") return (dict?.coor_schedules?.on_duty || dict?.coor_schedules?.completed || "ĐANG TRỰC").toUpperCase();
+    if (assign.status === "checkout") return (dict?.coor_schedules?.checkout || "HOÀN THÀNH").toUpperCase();
     if (assign.status === "late") {
       return assign.check_in_time
-        ? (dict?.shift_detail_modal?.checked_in_late || "Đã điểm danh trễ")
-        : (dict?.shift_detail_modal?.late_not_checked_in || "Đi trễ - chưa điểm danh");
+        ? (dict?.shift_detail_modal?.checked_in_late || "ĐIỂM DANH TRỄ").toUpperCase()
+        : (dict?.shift_detail_modal?.late_not_checked_in || "ĐI TRỄ CHƯA ĐIỂM DANH").toUpperCase();
     }
-    return dict?.coor_schedules?.absent || "Vắng mặt";
+    return (dict?.coor_schedules?.absent || "VẮNG MẶT").toUpperCase();
   };
 
   const getStatusStyle = (assign: ShiftAssignment) => {

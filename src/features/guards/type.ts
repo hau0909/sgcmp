@@ -1,4 +1,5 @@
 import { IdentityDetail } from "../identity/type";
+import { GuardStatus } from "@/types/Enum";
 
 export type gender = "male" | "female";
 
@@ -57,6 +58,30 @@ export type InsertGuardInformationInput = {
   back_url?: string | null;
 };
 
+export type CompleteGuardProfileInput = {
+  date_of_birth: string;
+  gender: gender;
+  address: string;
+  avatar_url?: string | null;
+
+  identity_id: string;
+  identity_issue_date: string;
+  identity_issue_place: string;
+  front_url?: string | null;
+  back_url?: string | null;
+
+  height_cm: number;
+  weight_kg: number;
+  notable_skills: string[];
+  health_certificate_path: string;
+  skill_certificate_paths: string[];
+};
+
+export type ApproveGuardInput = {
+  action: "approve" | "reject";
+  rejection_note?: string;
+};
+
 export type InsertGuardInformationRepositoryParams =
   InsertGuardInformationInput & {
     company_id: string;
@@ -92,7 +117,7 @@ export type CreateGuardAccountInput = {
   email: string;
   full_name: string;
   phone_number: string;
-  identity_id: string;
+  identity_id?: string;
 };
 
 export type CreateGuardAccountResponse = {
@@ -128,10 +153,21 @@ export type GuardProfileItem = {
   email: string | null;
   status: string | null;
   gender: string | null;
+  identities?: { identity_id: string }[] | { identity_id: string } | null;
 };
 
 export type GuardListItem = {
   guard_id: string;
+  user_id?: string;
+  company_id?: string;
+  approval_status?: GuardStatus;
+  rejection_note?: string | null;
+  verified_at?: string | null;
+  verified_by?: string | null;
+  created_at?: string;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  notable_skills?: string[] | null;
   profiles: GuardProfileItem | GuardProfileItem[] | null;
   conflictInfo?: {
     hasConflict: boolean;
@@ -159,6 +195,7 @@ export type GetAllGuardsRepositoryParams = {
   search?: string;
   gender?: string;
   status?: string;
+  approvalStatus?: string;
   workStatus?: string;
   timeZone?: string;
   checkContractId?: string;
@@ -176,6 +213,7 @@ export type GetAllGuardsServiceParams = {
   search?: string;
   gender?: string;
   status?: string;
+  approvalStatus?: string;
   workStatus?: string;
   timeZone?: string;
   checkContractId?: string;
@@ -187,6 +225,7 @@ export type HandleGetAllGuardsInput = {
   search?: string | null;
   gender?: string | null;
   status?: string | null;
+  approvalStatus?: string | null;
   workStatus?: string | null;
   timeZone?: string | null;
   checkContractId?: string | null;
@@ -198,6 +237,7 @@ export interface GetAllGuardsParams {
   search?: string;
   gender?: string;
   status?: string;
+  approvalStatus?: string;
   workStatus?: string;
   timeZone?: string;
   checkContractId?: string;
@@ -236,6 +276,16 @@ export type GuardDetailDatabase = {
   guard_id: string;
   user_id: string;
   company_id: string;
+  approval_status: GuardStatus;
+  rejection_note: string | null;
+  verified_at: string | null;
+  verified_by: string | null;
+  created_at: string;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  health_certificate_path?: string | null;
+  skill_certificate_paths?: string[] | null;
+  notable_skills?: string[] | null;
   profiles: GuardDetailProfile | GuardDetailProfile[] | null;
 };
 
@@ -309,6 +359,11 @@ export type GuardPerformanceSummaryData = {
     percentage: number;
     count: number;
   };
+  overtime_summary?: {
+    total_overtime_minutes: number;
+    total_overtime_hours: number;
+    overtime_shifts_count: number;
+  };
 };
 
 export type GetGuardPerformanceSummaryParams = {
@@ -335,6 +390,9 @@ export type GuardPerformanceListItem = {
   performanceScore: number;
   rating: number;
   category: "XUẤT SẮC" | "TIÊU CHUẨN" | "CẦN CẢI THIỆN" | "CHƯA PHÂN CÔNG";
+  overtimeHours?: number;
+  overtimeMinutes?: number;
+  overtimeShiftsCount?: number;
 };
 
 export type GetGuardPerformanceListParams = {

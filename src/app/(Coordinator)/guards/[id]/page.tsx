@@ -3,11 +3,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
-import { ArrowLeft, CheckCircle, Edit, Mail, Phone, User, UserRound, X, IdCard } from "lucide-react";
+import { ArrowLeft, CheckCircle, CheckCircle2, Edit, Mail, Phone, User, UserRound, X, XCircle, IdCard, AlertTriangle, Activity, FileCheck, FileText, Award, ExternalLink } from "lucide-react";
 import { requestGetCities, requestGetWards } from "@/features/address";
 import type { City, Ward } from "@/features/address/types";
 
-import { requestGetGuardDetail, requestUploadGuardFile, requestUpdateGuardProfile } from "@/features/guards/api/guard.api";
+import {
+  requestGetGuardDetail,
+  requestUploadGuardFile,
+  requestUpdateGuardProfile,
+  requestApproveRejectGuard,
+} from "@/features/guards/api/guard.api";
 import type { GuardDetail, GuardDetailProfile, gender } from "@/features/guards/type";
 
 const getProfile = (
@@ -73,6 +78,13 @@ export default function GuardDetailPage() {
   const [editError, setEditError] = useState("");
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
+
+  // Approval & Rejection states
+  const [isRejectModalOpen, setIsRejectModalOpen] = useState(false);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [isApproving, setIsApproving] = useState(false);
+  const [isRejecting, setIsRejecting] = useState(false);
+  const [approvalError, setApprovalError] = useState("");
 
   const avatarInputRef = useRef<HTMLInputElement>(null);
   const cccdFrontInputRef = useRef<HTMLInputElement>(null);
@@ -252,6 +264,54 @@ export default function GuardDetailPage() {
     setFieldErrors({});
     setEditError("");
     setIsEditing(false);
+  };
+
+  const handleApprove = async () => {
+    if (!guardId || isApproving || isRejecting) return;
+    try {
+      setIsApproving(true);
+      setApprovalError("");
+      const res = await requestApproveRejectGuard(guardId, { action: "approve" });
+      if (!res.success) {
+        throw new Error(res.message || (dict.guard_detail?.error_approve_failed ?? "Duyệt hồ sơ thất bại."));
+      }
+      setToastMessage(dict.guard_detail?.toast_approved ?? "Duyệt hồ sơ bảo vệ thành công!");
+      await fetchGuardDetail(true);
+    } catch (err: any) {
+      console.error("Approve guard error:", err);
+      setApprovalError(err.message || (dict.guard_detail?.error_approve_generic ?? "Không thể duyệt hồ sơ."));
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const handleReject = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!guardId || isApproving || isRejecting) return;
+    if (!rejectionReason.trim()) {
+      setApprovalError(dict.guard_detail?.error_reject_required ?? "Vui lòng nhập lý do từ chối.");
+      return;
+    }
+    try {
+      setIsRejecting(true);
+      setApprovalError("");
+      const res = await requestApproveRejectGuard(guardId, {
+        action: "reject",
+        rejection_note: rejectionReason.trim(),
+      });
+      if (!res.success) {
+        throw new Error(res.message || (dict.guard_detail?.error_reject_failed ?? "Từ chối hồ sơ thất bại."));
+      }
+      setToastMessage(dict.guard_detail?.toast_rejected ?? "Đã từ chối hồ sơ bảo vệ!");
+      setIsRejectModalOpen(false);
+      setRejectionReason("");
+      await fetchGuardDetail(true);
+    } catch (err: any) {
+      console.error("Reject guard error:", err);
+      setApprovalError(err.message || (dict.guard_detail?.error_reject_generic ?? "Không thể từ chối hồ sơ."));
+    } finally {
+      setIsRejecting(false);
+    }
   };
 
   const validateForm = (): boolean => {
@@ -554,38 +614,144 @@ export default function GuardDetailPage() {
             </p>
           </div>
         </div>
+      </div>
 
-        {isEditing ? (
-          <div className="flex items-center gap-3">
-            <button
-              type="button"
-              disabled={saving}
-              onClick={handleCancel}
-              className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:opacity-50"
-            >
-              {dict.guard_detail?.cancel}
-            </button>
+      {/* Approval Status Banner & Action Buttons */}
+      <div className="mb-6">
+        {guard?.approval_status === "pending_approval" ? (
+          <div className="rounded-xl border border-amber-300 bg-linear-to-r from-amber-50 to-orange-50 p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white shadow-xs">
+                  <AlertTriangle className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-amber-950">
+                      {dict.guard_detail?.banner_pending_approval_title ?? "Hồ sơ bảo vệ đang chờ xét duyệt"}
+                    </h3>
+                    <span className="inline-flex items-center rounded-full bg-amber-200/80 px-2.5 py-0.5 text-xs font-bold text-amber-900">
+                      {dict.guard_detail?.banner_pending_approval_badge ?? "CHỜ DUYỆT"}
+                    </span>
+                  </div>
+                  <p className="mt-1 text-xs text-amber-800">
+                    {dict.guard_detail?.banner_pending_approval_desc ?? "Nhân viên bảo vệ đã hoàn thiện thông tin cá nhân và ảnh CCCD. Vui lòng đối soát kỹ trước khi phê duyệt."}
+                  </p>
+                </div>
+              </div>
 
-            <button
-              type="button"
-              disabled={saving}
-              onClick={handleSave}
-              className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded bg-blue-800 px-4 text-sm font-bold text-white shadow-sm transition hover:bg-blue-900 disabled:opacity-50"
-            >
-              {saving ? dict.guard_detail?.saving : dict.guard_detail?.save}
-            </button>
+              <div className="flex items-center gap-2.5 shrink-0">
+                <button
+                  type="button"
+                  disabled={isApproving || isRejecting}
+                  onClick={() => {
+                    setRejectionReason("");
+                    setApprovalError("");
+                    setIsRejectModalOpen(true);
+                  }}
+                  className="flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-red-300 bg-white px-4 text-sm font-bold text-red-700 shadow-xs transition hover:bg-red-50 disabled:opacity-50"
+                >
+                  <XCircle className="h-4 w-4" />
+                  <span>{dict.guard_detail?.btn_reject ?? "Từ chối"}</span>
+                </button>
+
+                <button
+                  type="button"
+                  disabled={isApproving || isRejecting}
+                  onClick={handleApprove}
+                  className="flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-emerald-700 px-5 text-sm font-bold text-white shadow-sm transition hover:bg-emerald-800 disabled:opacity-50"
+                >
+                  {isApproving ? (
+                    <span>{dict.guard_detail?.btn_approving ?? "Đang duyệt..."}</span>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4" />
+                      <span>{dict.guard_detail?.btn_approve ?? "Duyệt hồ sơ"}</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        ) : guard?.approval_status === "rejected" ? (
+          <div className="rounded-xl border border-rose-300 bg-rose-50/80 p-5 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-rose-500 text-white shadow-xs">
+                  <XCircle className="h-5 w-5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base font-bold text-rose-950">
+                      {dict.guard_detail?.banner_rejected_title ?? "Hồ sơ đã bị từ chối"}
+                    </h3>
+                    <span className="inline-flex items-center rounded-full bg-rose-200 px-2.5 py-0.5 text-xs font-bold text-rose-900">
+                      {dict.guard_detail?.banner_rejected_badge ?? "ĐÃ TỪ CHỐI"}
+                    </span>
+                  </div>
+                  {guard.rejection_note && (
+                    <div className="mt-2 rounded-lg bg-white/80 border border-rose-200 p-3 text-xs text-rose-900">
+                      <span className="font-bold">{dict.guard_detail?.rejection_reason_label ?? "Lý do từ chối: "}</span>
+                      <span>{guard.rejection_note}</span>
+                    </div>
+                  )}
+                  {guard.verified_at && (
+                    <p className="mt-1.5 text-[11px] text-rose-600">
+                      {dict.guard_detail?.rejection_time_label ?? "Thời gian từ chối: "}{formatDate(guard.verified_at?.split("T")[0], "")}
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : guard?.approval_status === "approved" ? (
+          <div className="rounded-xl border border-emerald-300 bg-emerald-50/70 p-4 shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-600 text-white">
+                <CheckCircle className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-emerald-950">
+                  {dict.guard_detail?.banner_approved_title ?? "Hồ sơ bảo vệ đã được phê duyệt hợp lệ"}
+                </h3>
+                <p className="text-xs text-emerald-700">
+                  {dict.guard_detail?.banner_approved_desc ?? "Nhân viên có thể nhận ca trực và thực hiện các nhiệm vụ an ninh."}
+                </p>
+              </div>
+            </div>
+
+            <span className="inline-flex items-center rounded-full bg-emerald-200 px-3 py-1 text-xs font-bold text-emerald-900">
+              {dict.guard_detail?.banner_approved_badge ?? "ĐÃ DUYỆT"}
+            </span>
           </div>
         ) : (
-          <button
-            type="button"
-            onClick={() => setIsEditing(true)}
-            className="flex h-10 cursor-pointer items-center justify-center gap-2 rounded border border-slate-300 bg-white px-4 text-sm font-bold text-blue-800 shadow-sm transition hover:bg-blue-50"
-          >
-            <Edit className="h-4 w-4" />
-            {dict.guard_detail?.edit_profile}
-          </button>
+          <div className="rounded-xl border border-slate-300 bg-slate-100 p-4 shadow-sm flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-slate-400 text-white">
+                <UserRound className="h-5 w-5" />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-slate-900">
+                  {dict.guard_detail?.banner_pending_profile_title ?? "Chờ bảo vệ điền hồ sơ"}
+                </h3>
+                <p className="text-xs text-slate-600">
+                  {dict.guard_detail?.banner_pending_profile_desc ?? "Bảo vệ cần xác thực email và nộp các thông tin chi tiết (CCCD, địa chỉ, ảnh...)."}
+                </p>
+              </div>
+            </div>
+
+            <span className="inline-flex items-center rounded-full bg-slate-200 px-3 py-1 text-xs font-bold text-slate-700">
+              {dict.guard_detail?.banner_pending_profile_badge ?? "CHỜ ĐIỀN HỒ SƠ"}
+            </span>
+          </div>
         )}
       </div>
+
+      {approvalError && (
+        <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
+          <p className="text-sm font-medium text-red-800">{approvalError}</p>
+        </div>
+      )}
 
       {editError && (
         <div className="mb-4 rounded-md bg-red-50 p-4 border border-red-200">
@@ -951,6 +1117,121 @@ export default function GuardDetailPage() {
               className="hidden"
             />
           </section>
+
+          {/* Section: Physical Info & Notable Skills */}
+          <section className="rounded-md border border-slate-300 bg-white p-5 shadow-sm">
+            <div className="mb-4 flex items-center gap-2 border-b border-slate-300 pb-3">
+              <Activity className="h-4 w-4 text-blue-800" />
+              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
+                {dict.guard_complete_profile?.section_physical_skills ?? "Thông tin Thể chất & Kỹ năng"}
+              </h2>
+            </div>
+
+            <div className="grid gap-x-12 gap-y-5 md:grid-cols-2">
+              <InfoItem
+                label={dict.guard_complete_profile?.field_height ?? "Chiều cao"}
+                value={guard?.height_cm ? `${guard.height_cm} cm` : notUpdatedLabel}
+              />
+              <InfoItem
+                label={dict.guard_complete_profile?.field_weight ?? "Cân nặng"}
+                value={guard?.weight_kg ? `${guard.weight_kg} kg` : notUpdatedLabel}
+              />
+
+              <div className="md:col-span-2">
+                <p className="text-sm font-medium text-slate-500 mb-1.5">
+                  {dict.guard_complete_profile?.field_notable_skills ?? "Kỹ năng nổi bật"}
+                </p>
+                {Array.isArray(guard?.notable_skills) && guard.notable_skills.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {guard.notable_skills.map((skill, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 rounded-md bg-blue-50 border border-blue-200 px-2.5 py-1 text-xs font-semibold text-blue-900"
+                      >
+                        <Award className="h-3.5 w-3.5 text-blue-700" />
+                        <span>{skill}</span>
+                      </span>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-400 italic">{notUpdatedLabel}</p>
+                )}
+              </div>
+            </div>
+          </section>
+
+          {/* Section: Health Certificate & Skill Certificates */}
+          <section className="rounded-md border border-slate-300 bg-white p-5 shadow-sm space-y-4">
+            <div className="mb-4 flex items-center gap-2 border-b border-slate-300 pb-3">
+              <FileCheck className="h-4 w-4 text-blue-800" />
+              <h2 className="text-sm font-bold uppercase tracking-wide text-slate-700">
+                {dict.guard_complete_profile?.section_certificates ?? "Giấy khám sức khỏe & Chứng chỉ"}
+              </h2>
+            </div>
+
+            {/* Health Certificate */}
+            <div>
+              <p className="text-sm font-medium text-slate-500 mb-2">
+                {dict.guard_complete_profile?.field_health_cert ?? "Giấy khám sức khỏe"}
+              </p>
+              {guard?.health_certificate_path ? (
+                <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 flex items-center justify-between gap-3 max-w-md">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <FileText className="h-5 w-5 text-rose-600 shrink-0" />
+                    <span className="truncate text-xs font-semibold text-slate-800">
+                      {guard.health_certificate_path.split("/").pop() || "Giấy khám sức khỏe"}
+                    </span>
+                  </div>
+                  <a
+                    href={guard.health_certificate_path}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 rounded bg-white border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 shadow-2xs"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span>Xem file</span>
+                  </a>
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 italic">{notUpdatedLabel}</p>
+              )}
+            </div>
+
+            {/* Skill Certificates */}
+            <div className="pt-3 border-t border-slate-200">
+              <p className="text-sm font-medium text-slate-500 mb-2">
+                {dict.guard_complete_profile?.field_skill_certs ?? "Chứng chỉ kỹ năng / nghiệp vụ"}
+              </p>
+              {Array.isArray(guard?.skill_certificate_paths) && guard.skill_certificate_paths.length > 0 ? (
+                <div className="grid gap-2.5 sm:grid-cols-2">
+                  {guard.skill_certificate_paths.map((certUrl, idx) => (
+                    <div
+                      key={idx}
+                      className="rounded-lg border border-slate-200 bg-slate-50 p-3 flex items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <FileText className="h-4 w-4 text-blue-600 shrink-0" />
+                        <span className="truncate text-xs font-semibold text-slate-800">
+                          {certUrl.split("/").pop() || `Chứng chỉ ${idx + 1}`}
+                        </span>
+                      </div>
+                      <a
+                        href={certUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1 rounded bg-white border border-slate-300 px-2.5 py-1 text-xs font-semibold text-slate-700 hover:bg-slate-100 shadow-2xs"
+                      >
+                        <ExternalLink className="h-3.5 w-3.5" />
+                        <span>Xem file</span>
+                      </a>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-400 italic">{notUpdatedLabel}</p>
+              )}
+            </div>
+          </section>
         </div>
 
         <div className="space-y-5">
@@ -1030,7 +1311,7 @@ export default function GuardDetailPage() {
                     <Mail className="mt-0.5 h-4 w-4 text-slate-500" />
 
                     <div className="min-w-0">
-                      <p className="text-sm font-medium text-slate-500">Email</p>
+                      <p className="text-sm font-medium text-slate-500">{dict.guard_detail?.field_email ?? "Email"}</p>
 
                       <p className="mt-1 break-all text-sm font-bold text-slate-950">
                         {profile?.email ?? notUpdatedLabel}
@@ -1057,6 +1338,20 @@ export default function GuardDetailPage() {
           </button>
         </div>
       )}
+
+      {/* Reject Modal */}
+      <RejectGuardModal
+        isOpen={isRejectModalOpen}
+        onClose={() => {
+          setIsRejectModalOpen(false);
+          setApprovalError("");
+        }}
+        reason={rejectionReason}
+        setReason={setRejectionReason}
+        onSubmit={handleReject}
+        isSubmitting={isRejecting}
+        error={approvalError}
+      />
     </div>
   );
 }
@@ -1138,6 +1433,102 @@ function CccdPreviewBox({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+
+// Reject Modal Component
+function RejectGuardModal({
+  isOpen,
+  onClose,
+  reason,
+  setReason,
+  onSubmit,
+  isSubmitting,
+  error,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  reason: string;
+  setReason: (val: string) => void;
+  onSubmit: (e: React.FormEvent) => void;
+  isSubmitting: boolean;
+  error?: string;
+}) {
+  const { dict } = useTranslation();
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/50 backdrop-blur-xs animate-in fade-in duration-200">
+      <div className="relative w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200">
+        <div className="flex items-center justify-between border-b border-slate-200 px-6 py-4 bg-red-50/70">
+          <div className="flex items-center gap-3">
+            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-red-100 text-red-700">
+              <XCircle className="h-5 w-5" />
+            </div>
+            <div>
+              <h3 className="text-base font-bold text-slate-900">
+                {dict.guard_detail?.modal_reject_title ?? "Từ chối hồ sơ bảo vệ"}
+              </h3>
+              <p className="text-xs text-slate-500">
+                {dict.guard_detail?.modal_reject_desc ?? "Nhập lý do để bảo vệ biết và chỉnh sửa lại"}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={isSubmitting}
+            className="rounded-lg p-1 text-slate-400 hover:bg-slate-200/70 hover:text-slate-600 transition cursor-pointer"
+          >
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <form onSubmit={onSubmit} className="p-6 space-y-4">
+          {error && (
+            <div className="rounded-lg bg-red-50 p-3 border border-red-200 text-xs font-medium text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div>
+            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
+              {dict.guard_detail?.modal_reject_label ?? "Lý do từ chối"} <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder={dict.guard_detail?.modal_reject_placeholder ?? "VD: Ảnh CCCD mặt trước bị mờ, vui lòng chụp lại rõ nét hơn..."}
+              rows={4}
+              required
+              disabled={isSubmitting}
+              className="w-full rounded-lg border border-slate-300 bg-slate-50/50 p-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:border-red-500 focus:bg-white focus:ring-2 focus:ring-red-100"
+            />
+          </div>
+
+          <div className="flex items-center justify-end gap-3 pt-2">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={isSubmitting}
+              className="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer disabled:opacity-50"
+            >
+              {dict.guard_detail?.modal_reject_cancel ?? "Hủy"}
+            </button>
+
+            <button
+              type="submit"
+              disabled={isSubmitting || !reason.trim()}
+              className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:bg-red-700 transition cursor-pointer disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {isSubmitting ? (dict.guard_detail?.modal_reject_submitting ?? "Đang xử lý...") : (dict.guard_detail?.modal_reject_submit ?? "Xác nhận từ chối")}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

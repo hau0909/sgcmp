@@ -383,14 +383,14 @@ export const handleCreateWorkShift = async (request: Request) => {
     }
 
     for (const [gid, totalMinutes] of Object.entries(guardDailyMinutes)) {
-      if (totalMinutes > 8 * 60) {
+      if (totalMinutes > 12 * 60) {
         const guardName = profileMap[gid]?.full_name || "Bảo vệ";
         const [yr, mo, dy] = dateStr.split("-");
         const formattedDate = `${dy}/${mo}/${yr}`;
         return Response.json(
           {
             success: false,
-            message: `Bảo vệ ${guardName} sẽ làm tổng cộng ${(totalMinutes / 60).toFixed(1)} giờ trong ngày ${formattedDate}, vượt quá giới hạn 8 giờ.`,
+            message: `Bảo vệ ${guardName} sẽ làm tổng cộng ${(totalMinutes / 60).toFixed(1)} giờ trong ngày ${formattedDate}, vượt quá giới hạn 12 giờ làm việc tối đa trong ngày.`,
           },
           { status: 400 },
         );
@@ -1021,6 +1021,8 @@ export const handleGetGuardShiftDetail = async ({
     company_name: (booking as any)?.company_name || undefined,
     status: assignment.status,
     check_in_time: assignment.check_in_time,
+    is_overtime: assignment.is_overtime,
+    overtime_minutes: assignment.overtime_minutes,
     start_time: shift.start_time,
     end_time: shift.end_time,
     required_guards: shift.required_guards,
@@ -1324,6 +1326,9 @@ export const handleGetGuardAvailability = async (request: Request) => {
       assignedMinutesThisWeek: number;
       totalMinutesWeekAfterAssign: number;
       exceedsWeeklyLimit: boolean;
+      isOvertime?: boolean;
+      overtimeMinutes?: number;
+      hasOvertimeWarning?: boolean;
       reason: string;
     }> = {};
 
@@ -1333,6 +1338,8 @@ export const handleGetGuardAvailability = async (request: Request) => {
       let firstConflictDate: string | null = null;
       let firstExceedsDailyDate: string | null = null;
       let firstExceedsWeeklyDate: string | null = null;
+      let firstOvertimeDate: string | null = null;
+      let maxOvertimeMinutes = 0;
 
       let firstBackToBackWarningDate: string | null = null;
       let firstBackToBackWarningTime: string | null = null;
@@ -1342,6 +1349,45 @@ export const handleGetGuardAvailability = async (request: Request) => {
       let lastTotalMinutesAfterAssign = 0;
       let lastAssignedMinutesThisWeek = 0;
       let lastTotalMinutesWeekAfterAssign = 0;
+
+      // Pre-calculate cumulative proposed duration per date & per week for this guard
+      const totalProposedMinutesByDate: Record<string, number> = {};
+      const totalProposedMinutesByWeek: Record<string, number> = {};
+
+      for (const ps of proposedShifts) {
+        const startProposed = new Date(ps.startTime).getTime();
+        const endProposed = new Date(ps.endTime).getTime();
+        const proposedDuration = Math.max(0, (endProposed - startProposed) / (1000 * 60));
+
+        const localProp = new Date(ps.startTime);
+        localProp.setUTCHours(localProp.getUTCHours() + 7);
+        const propDateStr = localProp.toISOString().split("T")[0];
+        const propWeekKey = getStartOfWeekKey(propDateStr);
+
+        totalProposedMinutesByDate[propDateStr] =
+          (totalProposedMinutesByDate[propDateStr] || 0) + proposedDuration;
+        totalProposedMinutesByWeek[propWeekKey] =
+          (totalProposedMinutesByWeek[propWeekKey] || 0) + proposedDuration;
+      }
+
+      // Check conflicts between proposed shifts themselves
+      for (let i = 0; i < proposedShifts.length; i++) {
+        for (let j = i + 1; j < proposedShifts.length; j++) {
+          const s1 = new Date(proposedShifts[i].startTime).getTime();
+          const e1 = new Date(proposedShifts[i].endTime).getTime();
+          const s2 = new Date(proposedShifts[j].startTime).getTime();
+          const e2 = new Date(proposedShifts[j].endTime).getTime();
+
+          if (s1 < e2 && e1 > s2) {
+            const localP = new Date(proposedShifts[i].startTime);
+            localP.setUTCHours(localP.getUTCHours() + 7);
+            const pDateStr = localP.toISOString().split("T")[0];
+            if (!firstConflictDate) {
+              firstConflictDate = pDateStr;
+            }
+          }
+        }
+      }
 
       for (const ps of proposedShifts) {
         const startProposed = new Date(ps.startTime).getTime();
@@ -1412,21 +1458,27 @@ export const handleGetGuardAvailability = async (request: Request) => {
           }
         }
 
-        const totalToday = assignedToday + proposedDuration;
-        const totalWeek = assignedThisWeek + proposedDuration;
+        const cumulativeProposedToday = totalProposedMinutesByDate[propDateStr] || proposedDuration;
+        const cumulativeProposedWeek = totalProposedMinutesByWeek[propWeekKey] || proposedDuration;
+
+        const totalToday = assignedToday + cumulativeProposedToday;
+        const totalWeek = assignedThisWeek + cumulativeProposedWeek;
 
         if (hasConflict && !firstConflictDate) {
           firstConflictDate = propDateStr;
         }
-        if (totalToday > 8 * 60 && !firstExceedsDailyDate) {
+        if (totalToday > 12 * 60 && !firstExceedsDailyDate) {
           firstExceedsDailyDate = propDateStr;
+        } else if (totalToday > 8 * 60 && !firstOvertimeDate) {
+          firstOvertimeDate = propDateStr;
+          maxOvertimeMinutes = Math.max(maxOvertimeMinutes, totalToday - 480);
         }
         if (totalWeek > 48 * 60 && !firstExceedsWeeklyDate) {
           firstExceedsWeeklyDate = propDateStr;
         }
 
         // Keep last checked stats to return in map
-        lastProposedMinutes = proposedDuration;
+        lastProposedMinutes = cumulativeProposedToday;
         lastAssignedMinutesToday = assignedToday;
         lastTotalMinutesAfterAssign = totalToday;
         lastAssignedMinutesThisWeek = assignedThisWeek;
@@ -1437,6 +1489,8 @@ export const handleGetGuardAvailability = async (request: Request) => {
       let hasConflict = false;
       let exceedsDailyLimit = false;
       let exceedsWeeklyLimit = false;
+      let isOvertime = false;
+      let hasOvertimeWarning = false;
 
       const formatDateStrVN = (ds: string) => {
         const [yr, mo, dy] = ds.split("-");
@@ -1448,12 +1502,16 @@ export const handleGetGuardAvailability = async (request: Request) => {
         reason = `Trùng lịch ngày ${formatDateStrVN(firstConflictDate)}`;
       } else if (firstExceedsDailyDate) {
         exceedsDailyLimit = true;
-        reason = `Vượt quá 8 giờ ngày ${formatDateStrVN(firstExceedsDailyDate)}`;
+        reason = `Vượt quá 12 giờ ngày ${formatDateStrVN(firstExceedsDailyDate)}`;
       } else if (firstExceedsWeeklyDate) {
         exceedsWeeklyLimit = true;
         const weekMon = getStartOfWeekKey(firstExceedsWeeklyDate);
         const weekSun = addDaysToDateKey(weekMon, 6);
         reason = `Vượt quá 48 giờ tuần ${formatDateStrVN(weekMon)} - ${formatDateStrVN(weekSun)}`;
+      } else if (firstOvertimeDate) {
+        isOvertime = true;
+        hasOvertimeWarning = true;
+        reason = `Tăng ca ngày ${formatDateStrVN(firstOvertimeDate)} (${(lastTotalMinutesAfterAssign / 60).toFixed(1)}h)`;
       }
 
       let hasBackToBackWarning = false;
@@ -1462,6 +1520,9 @@ export const handleGetGuardAvailability = async (request: Request) => {
       if (!hasConflict && !exceedsDailyLimit && !exceedsWeeklyLimit && firstBackToBackWarningDate && firstBackToBackWarningTime) {
         hasBackToBackWarning = true;
         warningReason = `Bảo vệ có ca trực nối tiếp sát giờ (${firstBackToBackWarningTime}) tại địa điểm khác`;
+        if (!firstOvertimeDate) {
+          reason = warningReason;
+        }
       }
 
       availabilityMap[guardId] = {
@@ -1476,6 +1537,9 @@ export const handleGetGuardAvailability = async (request: Request) => {
         assignedMinutesThisWeek: lastAssignedMinutesThisWeek,
         totalMinutesWeekAfterAssign: lastTotalMinutesWeekAfterAssign,
         exceedsWeeklyLimit,
+        isOvertime,
+        overtimeMinutes: maxOvertimeMinutes,
+        hasOvertimeWarning,
         reason,
       };
     }
@@ -1626,7 +1690,7 @@ export const handleGetReplacementGuards = async (
       return Response.json({ message: "Không tìm thấy thông tin phân công gốc" }, { status: 404 });
     }
 
-    // Fetch all active guards of the company
+    // Fetch all approved guards of the company from guards table
     const supabase = await createClient();
     const { data: allCompanyGuards, error: guardsError } = await supabase
       .from("guards")
@@ -1634,6 +1698,7 @@ export const handleGetReplacementGuards = async (
         guard_id,
         user_id,
         company_id,
+        approval_status,
         profiles!guards_user_id_fkey (
           user_id,
           full_name,
@@ -1650,6 +1715,7 @@ export const handleGetReplacementGuards = async (
     }
 
     const activeGuards = (allCompanyGuards || [])
+      .filter((g: any) => !g.approval_status || g.approval_status === "approved")
       .map((g: any) => {
         const profile = Array.isArray(g.profiles) ? g.profiles[0] : g.profiles;
         return {
@@ -1659,10 +1725,11 @@ export const handleGetReplacementGuards = async (
           phone_number: profile?.phone_number ?? "",
           avatar_url: profile?.avatar_url ?? null,
           email: profile?.email ?? "",
-          status: profile?.status ?? "unactive"
+          status: profile?.status ?? "active",
+          approval_status: g.approval_status ?? "approved",
         };
       })
-      .filter(g => g.status === "active");
+      .filter((g) => g.status !== "unactive" && g.status !== "rejected");
 
     // Filter out original guard of target assignment
     const originalGuardUserId = assignment.guard_id;

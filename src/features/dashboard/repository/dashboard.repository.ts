@@ -440,7 +440,9 @@ export const getTodayGuardsStatusList = async (
         guard_id,
         check_in_time,
         updated_at,
-        replacement_guard_ids
+        replacement_guard_ids,
+        is_overtime,
+        overtime_minutes
       )
     `)
     .eq("contracts.bookings.company_id", companyId)
@@ -1138,7 +1140,9 @@ export const getPastShiftsRepository = async (
         status,
         guard_id,
         check_in_time,
-        replacement_guard_ids
+        replacement_guard_ids,
+        is_overtime,
+        overtime_minutes
       )
     `)
     .eq("contracts.bookings.company_id", companyId);
@@ -1205,21 +1209,34 @@ export const getAvailableGuardsRepository = async (
     }
   }
 
-  // 2. Lấy danh sách toàn bộ bảo vệ đang hoạt động của công ty
+  // 2. Lấy danh sách toàn bộ bảo vệ đã duyệt và đang hoạt động của công ty
   const { data, error } = await supabase
     .from("guards")
     .select(`
       guard_id,
       user_id,
-      profiles!inner (
+      approval_status,
+      height_cm,
+      weight_kg,
+      notable_skills,
+      profiles!guards_user_id_fkey!inner (
         full_name,
         phone_number,
         avatar_url,
-        status
+        email,
+        status,
+        identities (
+          identity_id
+        )
       )
     `)
     .eq("company_id", companyId)
+    .eq("approval_status", "approved")
     .eq("profiles.status", "active");
+
+  if (error) {
+    console.error("[getAvailableGuardsRepository] Error:", error);
+  }
 
   if (error || !data) return [];
 
@@ -1239,9 +1256,9 @@ export const getGuardPerformanceRadarRepository = async (
   companyId?: string,
   filter: string = "hientai",
   clientDate?: string
-): Promise<{ onDutyCount: number; completedCount: number; lateCount: number; absentCount: number; replacementCount: number }> => {
+): Promise<{ onDutyCount: number; completedCount: number; overtimeCount: number; lateCount: number; absentCount: number; replacementCount: number }> => {
   if (!companyId) {
-    return { onDutyCount: 0, completedCount: 0, lateCount: 0, absentCount: 0, replacementCount: 0 };
+    return { onDutyCount: 0, completedCount: 0, overtimeCount: 0, lateCount: 0, absentCount: 0, replacementCount: 0 };
   }
 
   const supabase = await createClient();
@@ -1299,7 +1316,9 @@ export const getGuardPerformanceRadarRepository = async (
       shift_assignments (
         status,
         check_in_time,
-        replacement_guard_ids
+        replacement_guard_ids,
+        is_overtime,
+        overtime_minutes
       )
     `)
     .eq("contracts.bookings.company_id", companyId);
@@ -1314,11 +1333,12 @@ export const getGuardPerformanceRadarRepository = async (
   const { data, error } = await query;
 
   if (error || !data) {
-    return { onDutyCount: 0, completedCount: 0, lateCount: 0, absentCount: 0, replacementCount: 0 };
+    return { onDutyCount: 0, completedCount: 0, overtimeCount: 0, lateCount: 0, absentCount: 0, replacementCount: 0 };
   }
 
   let onDutyCount = 0;
   let completedCount = 0;
+  let overtimeCount = 0;
   let lateCount = 0;
   let absentCount = 0;
   let replacementCount = 0;
@@ -1332,6 +1352,10 @@ export const getGuardPerformanceRadarRepository = async (
       const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
       if (hasRep) {
         replacementCount += sa.replacement_guard_ids.length;
+      }
+
+      if (sa.is_overtime || (Number(sa.overtime_minutes) > 0)) {
+        overtimeCount++;
       }
 
       const st = sa.status;
@@ -1359,7 +1383,7 @@ export const getGuardPerformanceRadarRepository = async (
     }
   }
 
-  return { onDutyCount, completedCount, lateCount, absentCount, replacementCount };
+  return { onDutyCount, completedCount, overtimeCount, lateCount, absentCount, replacementCount };
 };
 
 

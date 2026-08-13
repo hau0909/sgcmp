@@ -17,6 +17,10 @@ import {
     CheckCircle2,
     Phone,
     MapPin,
+    Award,
+    IdCard,
+    Mail,
+    Activity,
 } from "lucide-react";
 import {
     Radar,
@@ -49,6 +53,8 @@ export default function CoordinatorDashboardPage() {
     const getTranslatedStatusText = (statusText: string) => {
         if (!statusText) return "";
         const s = statusText.toUpperCase();
+        if (s.includes("ĐIỂM DANH TRỄ")) return isEn ? "LATE CHECK-IN" : "ĐIỂM DANH TRỄ";
+        if (s.includes("ĐI TRỄ CHƯA ĐIỂM DANH") || s.includes("CHƯA ĐIỂM DANH")) return isEn ? "LATE - NOT CHECKED IN" : "ĐI TRỄ CHƯA ĐIỂM DANH";
         if (s.includes("ĐANG TRỰC") || s.includes("ONGOING") || s.includes("ON DUTY")) return t.status_ongoing || "ĐANG TRỰC";
         if (s.includes("PHÂN CÔNG") || s.includes("ASSIGNED")) return t.status_assigned || "PHÂN CÔNG";
         if (s.includes("ĐI TRỄ") || s.includes("LATE")) return t.status_late || "ĐI TRỄ";
@@ -103,9 +109,14 @@ export default function CoordinatorDashboardPage() {
     const [currentUpcomingShiftsList, setCurrentUpcomingShiftsList] = useState<CurrentUpcomingShiftItem[]>([]);
     const [pastShiftsList, setPastShiftsList] = useState<PastShiftItem[]>([]);
     const [availableGuardsList, setAvailableGuardsList] = useState<AvailableGuardItem[]>([]);
+    const [hoveredGuardInfo, setHoveredGuardInfo] = useState<{
+        guard: AvailableGuardItem;
+        x: number;
+        y: number;
+    } | null>(null);
     const [performanceRadarData, setPerformanceRadarData] = useState<GuardPerformanceRadarItem[]>([
         { subject: t.status_ongoing || (isEn ? "ON DUTY" : "Đang trực"), score: 0, count: "0 ca", badgeBg: "bg-blue-50 text-blue-700 border-blue-200/80" },
-        { subject: t.status_checkout || (isEn ? "COMPLETED" : "Hoàn thành"), score: 0, count: "0 ca", badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200/80" },
+        { subject: dict?.common?.overtime || (isEn ? "OVERTIME" : "TĂNG CA"), score: 0, count: "0 ca", badgeBg: "bg-amber-50 text-amber-700 border-amber-200/80" },
         { subject: t.status_late || (isEn ? "LATE" : "Đi trễ"), score: 0, count: "0 ca", badgeBg: "bg-amber-50 text-amber-700 border-amber-200/80" },
         { subject: t.status_absent || (isEn ? "ABSENT" : "Vắng mặt"), score: 0, count: "0 ca", badgeBg: "bg-rose-50 text-rose-700 border-rose-200/80" },
         { subject: t.status_replacement || (isEn ? "REPLACEMENT" : "Thay ca"), score: 0, count: "0 ca", badgeBg: "bg-purple-50 text-purple-700 border-purple-200/80" },
@@ -131,8 +142,11 @@ export default function CoordinatorDashboardPage() {
         if (s.includes("VẮNG MẶT") || s.includes("CHƯA GIẢI QUYẾT") || s.includes("ABSENT")) {
             return "bg-rose-100 text-rose-700 border-rose-200/80"; // Red (Màu đỏ)
         }
+        if (s.includes("ĐIỂM DANH TRỄ")) {
+            return "bg-yellow-100 text-yellow-800 border-yellow-300"; // Vibrant Yellow (Màu vàng)
+        }
         if (s.includes("ĐI TRỄ") || s.includes("LATE")) {
-            return "bg-amber-100 text-amber-700 border-amber-200/80"; // Yellow/Amber (Màu vàng)
+            return "bg-amber-100 text-amber-800 border-amber-300"; // Amber (Màu cam/amber)
         }
         if (s.includes("THAY CA") || s.includes("THAY THẾ") || s.includes("REPLACEMENT") || s.includes("SHIFT CHANGE")) {
             return "bg-purple-100 text-purple-700 border-purple-200/80"; // Purple (Màu tím)
@@ -213,7 +227,7 @@ export default function CoordinatorDashboardPage() {
                 const translatedRadar = radarData.map((item) => {
                     let sub = item.subject;
                     if (sub === "Đang trực") sub = t.status_ongoing || (isEn ? "ON DUTY" : "Đang trực");
-                    else if (sub === "Hoàn thành") sub = t.status_checkout || (isEn ? "COMPLETED" : "Hoàn thành");
+                    else if (sub === "TĂNG CA" || sub === "Tăng ca") sub = dict?.common?.overtime || (isEn ? "OVERTIME" : "TĂNG CA");
                     else if (sub === "Đi trễ") sub = t.status_late || (isEn ? "LATE" : "Đi trễ");
                     else if (sub === "Vắng mặt") sub = t.status_absent || (isEn ? "ABSENT" : "Vắng mặt");
                     else if (sub === "Thay ca") sub = t.status_replacement || (isEn ? "REPLACEMENT" : "Thay ca");
@@ -270,7 +284,7 @@ export default function CoordinatorDashboardPage() {
     };
 
     const sortedPastShifts = [...pastShiftsList].sort(
-        (a, b) => getShiftTimeValue(a) - getShiftTimeValue(b)
+        (a, b) => getShiftTimeValue(b) - getShiftTimeValue(a)
     );
 
     const filteredPastShifts = sortedPastShifts.filter((shift) => {
@@ -516,7 +530,6 @@ export default function CoordinatorDashboardPage() {
                                                         {shift.name}
                                                     </h3>
 
-                                                    {/* Icon nhỏ hiện ngay trước chữ mô tả thời gian tương ứng với từng status */}
                                                     <span className="flex items-center gap-1.5 text-xs shrink-0">
                                                         {renderStatusIcon(shift.statusText, shift.timeText)}
                                                         <span className={shift.type === "ONGOING" ? "text-emerald-700 font-extrabold" : "text-slate-600 font-semibold"}>
@@ -541,11 +554,18 @@ export default function CoordinatorDashboardPage() {
                                                     )}
                                                 </p>
                                                 <div className="flex items-center justify-between mt-3">
-                                                    <span
-                                                        className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.statusText)}`}
-                                                    >
-                                                        {getTranslatedStatusText(shift.statusText)}
-                                                    </span>
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span
+                                                            className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.statusText)}`}
+                                                        >
+                                                            {getTranslatedStatusText(shift.statusText)}
+                                                        </span>
+                                                        {(shift.isOvertime || (Number(shift.overtimeMinutes) > 0)) && (
+                                                            <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border border-amber-300 bg-amber-100/90 text-amber-800">
+                                                                {dict?.common?.overtime || "TĂNG CA"}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <span className="text-[11px] text-slate-400 font-mono">
                                                         ID: {shift.id}
                                                     </span>
@@ -656,10 +676,17 @@ export default function CoordinatorDashboardPage() {
                                                         </>
                                                     )}
                                                 </p>
-                                                <div className="flex items-center gap-2 mt-2">
-                                                    <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.status)}`}>
-                                                        {getTranslatedStatusText(shift.status)}
-                                                    </span>
+                                                <div className="flex items-center justify-between mt-2">
+                                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                                        <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.status)}`}>
+                                                            {getTranslatedStatusText(shift.status)}
+                                                        </span>
+                                                        {(shift.isOvertime || (Number(shift.overtimeMinutes) > 0)) && (
+                                                            <span className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border border-amber-300 bg-amber-100/90 text-amber-800">
+                                                                {dict?.common?.overtime || "TĂNG CA"}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <span className="text-[11px] text-slate-400 font-mono">
                                                         ID: {shift.id}
                                                     </span>
@@ -719,7 +746,15 @@ export default function CoordinatorDashboardPage() {
                                 ))
                             ) : (
                                 availableGuardsList.slice(0, 5).map((guard, idx) => (
-                                    <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 transition-colors">
+                                    <div
+                                        key={idx}
+                                        onMouseEnter={(e) => {
+                                            const rect = e.currentTarget.getBoundingClientRect();
+                                            setHoveredGuardInfo({ guard, x: rect.left, y: rect.top });
+                                        }}
+                                        onMouseLeave={() => setHoveredGuardInfo(null)}
+                                        className="flex items-center justify-between p-2.5 rounded-xl hover:bg-slate-50 border border-slate-100 transition-colors cursor-pointer group"
+                                    >
                                         <div className="flex items-center gap-3">
                                             <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300 flex items-center justify-center text-slate-600">
                                                 {guard.avatar ? (
@@ -738,16 +773,29 @@ export default function CoordinatorDashboardPage() {
                                                 <User className={`w-5 h-5 text-slate-500 ${guard.avatar ? "hidden" : ""}`} />
                                             </div>
                                             <div>
-                                                <h3 className="text-sm font-bold text-slate-900 leading-snug">
+                                                <h3 className="text-sm font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
                                                     {guard.name}
                                                 </h3>
                                                 <p className="text-[11px] text-slate-500 font-medium flex items-center gap-1 mt-0.5">
                                                     <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                                                     <span>{guard.phone || (isEn ? "No phone" : "Chưa có SĐT")}</span>
                                                 </p>
+                                                {Array.isArray(guard.notable_skills) && guard.notable_skills.length > 0 && (
+                                                    <div className="mt-1 flex items-center gap-1 flex-wrap">
+                                                        <span className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200/80 px-1.5 py-0.5 text-[10px] font-semibold text-blue-800">
+                                                            <Award size={10} className="text-blue-600 shrink-0" />
+                                                            <span className="truncate max-w-[100px]">{guard.notable_skills[0]}</span>
+                                                        </span>
+                                                        {guard.notable_skills.length > 1 && (
+                                                            <span className="inline-flex items-center rounded bg-slate-100 border border-slate-200 px-1 py-0.5 text-[10px] font-bold text-slate-700">
+                                                                +{guard.notable_skills.length - 1}
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
-                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200/60">
+                                        <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200/60 shrink-0">
                                             {t.status_available || "ĐANG RẢNH"}
                                         </span>
                                     </div>
@@ -955,11 +1003,18 @@ export default function CoordinatorDashboardPage() {
                                                 {getTranslatedTimeText(shift.timeText)}
                                             </span>
                                         </span>
-                                        <span
-                                            className={`inline-block mt-1 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.statusText)}`}
-                                        >
-                                            {getTranslatedStatusText(shift.statusText)}
-                                        </span>
+                                        <div className="flex items-center justify-end gap-1.5 flex-wrap mt-1">
+                                            <span
+                                                className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.statusText)}`}
+                                            >
+                                                {getTranslatedStatusText(shift.statusText)}
+                                            </span>
+                                            {(shift.isOvertime || (Number(shift.overtimeMinutes) > 0)) && (
+                                                <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border border-amber-300 bg-amber-100/90 text-amber-800">
+                                                    {dict?.common?.overtime || "TĂNG CA"}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -1078,9 +1133,16 @@ export default function CoordinatorDashboardPage() {
                                             {renderStatusIcon(shift.status)}
                                             <span>{shift.time}</span>
                                         </span>
-                                        <span className={`inline-block mt-1 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.status)}`}>
-                                            {getTranslatedStatusText(shift.status)}
-                                        </span>
+                                        <div className="flex items-center justify-end gap-1.5 flex-wrap mt-1">
+                                            <span className={`inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.status)}`}>
+                                                {getTranslatedStatusText(shift.status)}
+                                            </span>
+                                            {(shift.isOvertime || (Number(shift.overtimeMinutes) > 0)) && (
+                                                <span className="inline-block px-2.5 py-0.5 rounded text-[10px] font-bold uppercase tracking-wide border border-amber-300 bg-amber-100/90 text-amber-800">
+                                                    {dict?.common?.overtime || "TĂNG CA"}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             ))}
@@ -1148,7 +1210,12 @@ export default function CoordinatorDashboardPage() {
                             {filteredAvailableGuards.map((guard, idx) => (
                                 <div
                                     key={idx}
-                                    className="bg-slate-50/80 hover:bg-slate-100/90 rounded-xl p-3.5 border border-slate-100 transition-all flex items-center justify-between"
+                                    onMouseEnter={(e) => {
+                                        const rect = e.currentTarget.getBoundingClientRect();
+                                        setHoveredGuardInfo({ guard, x: rect.left, y: rect.top });
+                                    }}
+                                    onMouseLeave={() => setHoveredGuardInfo(null)}
+                                    className="bg-slate-50/80 hover:bg-slate-100/90 rounded-xl p-3.5 border border-slate-100 transition-all flex items-center justify-between cursor-pointer group"
                                 >
                                     <div className="flex items-center gap-3">
                                         <div className="w-10 h-10 rounded-full bg-slate-200 overflow-hidden shrink-0 border border-slate-300 flex items-center justify-center text-slate-600">
@@ -1169,7 +1236,7 @@ export default function CoordinatorDashboardPage() {
                                         </div>
                                         <div>
                                             <div className="flex items-center gap-2">
-                                                <h4 className="text-sm font-bold text-slate-900 leading-snug">
+                                                <h4 className="text-sm font-bold text-slate-900 leading-snug group-hover:text-blue-600 transition-colors">
                                                     {guard.name}
                                                 </h4>
                                                 <span className="text-[10px] font-mono text-slate-400">
@@ -1180,10 +1247,23 @@ export default function CoordinatorDashboardPage() {
                                                 <Phone className="w-3 h-3 text-slate-400 shrink-0" />
                                                 <span>{guard.phone || (isEn ? "No phone" : "Chưa có SĐT")}</span>
                                             </p>
+                                            {Array.isArray(guard.notable_skills) && guard.notable_skills.length > 0 && (
+                                                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                                    <span className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200/80 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
+                                                        <Award size={11} className="text-blue-600 shrink-0" />
+                                                        <span className="truncate max-w-[130px]">{guard.notable_skills[0]}</span>
+                                                    </span>
+                                                    {guard.notable_skills.length > 1 && (
+                                                        <span className="inline-flex items-center rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[11px] font-bold text-slate-700">
+                                                            +{guard.notable_skills.length - 1}
+                                                        </span>
+                                                    )}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
 
-                                    <div className="flex items-center gap-3">
+                                    <div className="flex items-center gap-3 shrink-0">
                                         <span className="px-2.5 py-1 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-700 border border-emerald-200/80 uppercase tracking-wide">
                                             {t.status_available || "ĐANG RẢNH"}
                                         </span>
@@ -1222,6 +1302,113 @@ export default function CoordinatorDashboardPage() {
                     handleRefresh();
                 }}
             />
+
+            {/* Floating Hover Details Popover Card for Available Guards */}
+            {hoveredGuardInfo && (
+                <div
+                    className="fixed z-[99999] w-80 rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-2xl backdrop-blur-md pointer-events-none transition-all duration-150 animate-in fade-in zoom-in-95 text-left"
+                    style={{
+                        top: `${Math.max(16, Math.min(typeof window !== "undefined" ? window.innerHeight - 380 : 500, hoveredGuardInfo.y - 15))}px`,
+                        left: `${hoveredGuardInfo.x > 340 ? hoveredGuardInfo.x - 332 : hoveredGuardInfo.x + 360}px`,
+                    }}
+                >
+                    {(() => {
+                        const g = hoveredGuardInfo.guard;
+                        const skills = Array.isArray(g.notable_skills) ? g.notable_skills : [];
+                        const unupdatedText = isEn ? "Not updated" : "Chưa cập nhật";
+                        return (
+                            <div className="space-y-3">
+                                {/* Header with Avatar & Name */}
+                                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                                    <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-blue-600 bg-slate-100 shadow-sm">
+                                        {g.avatar ? (
+                                            <img
+                                                src={g.avatar}
+                                                alt={g.name || "Guard"}
+                                                className="h-full w-full object-cover"
+                                            />
+                                        ) : (
+                                            <div className="flex h-full w-full items-center justify-center text-slate-400">
+                                                <User className="w-6 h-6" />
+                                            </div>
+                                        )}
+                                    </div>
+                                    <div className="min-w-0 flex-1">
+                                        <h4 className="truncate font-bold text-sm text-slate-900">
+                                            {g.name || unupdatedText}
+                                        </h4>
+                                        <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-0.5 border border-emerald-200/60">
+                                            {isEn ? "Approved Guard" : "Bảo vệ đã duyệt"}
+                                        </span>
+                                    </div>
+                                </div>
+
+                                {/* Contact & CCCD Info */}
+                                <div className="space-y-1.5 text-xs text-slate-600">
+                                    <div className="flex items-center gap-2">
+                                        <IdCard size={14} className="text-blue-700 shrink-0" />
+                                        <span className="text-slate-500 font-medium">
+                                            {isEn ? "ID Card:" : "CCCD:"}
+                                        </span>
+                                        <span className="font-semibold text-slate-900">{g.cccd || unupdatedText}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Phone size={14} className="text-blue-700 shrink-0" />
+                                        <span className="text-slate-500 font-medium">
+                                            {isEn ? "Phone:" : "SĐT:"}
+                                        </span>
+                                        <span className="font-medium text-slate-900">{g.phone || unupdatedText}</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <Mail size={14} className="text-blue-700 shrink-0" />
+                                        <span className="text-slate-500 font-medium">
+                                            Email:
+                                        </span>
+                                        <span className="truncate font-medium text-slate-900">{g.email || unupdatedText}</span>
+                                    </div>
+                                    {(g.height_cm || g.weight_kg) && (
+                                        <div className="flex items-center gap-2">
+                                            <Activity size={14} className="text-blue-700 shrink-0" />
+                                            <span className="text-slate-500 font-medium">
+                                                {isEn ? "Physical:" : "Thể chất:"}
+                                            </span>
+                                            <span className="font-medium text-slate-900">
+                                                {g.height_cm ? `${g.height_cm} cm` : "—"} · {g.weight_kg ? `${g.weight_kg} kg` : "—"}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
+
+                                {/* Notable Skills */}
+                                <div className="border-t border-slate-100 pt-2.5">
+                                    <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-1.5">
+                                        <Award size={13} className="text-blue-700" />
+                                        <span>
+                                            {isEn ? `Notable Skills (${skills.length}):` : `Kỹ năng nổi bật (${skills.length}):`}
+                                        </span>
+                                    </div>
+                                    {skills.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                                            {skills.map((skill, sIdx) => (
+                                                <span
+                                                    key={sIdx}
+                                                    className="inline-flex items-center rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[11px] font-semibold text-blue-900"
+                                                >
+                                                    {skill}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <p className="text-[11px] text-slate-400 italic">
+                                            {isEn ? "No notable skills updated." : "Chưa cập nhật kỹ năng."}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        );
+                    })()}
+                </div>
+            )}
         </div>
     );
 }
