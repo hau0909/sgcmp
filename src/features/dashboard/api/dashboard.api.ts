@@ -336,6 +336,8 @@ export type CurrentUpcomingShiftItem = {
   location: string;
   statusText: string;
   startTime?: string;
+  isOvertime?: boolean;
+  overtimeMinutes?: number;
 };
 
 /**
@@ -388,14 +390,23 @@ export type PastShiftItem = {
   contractName?: string;
   status: string;
   startTime?: string;
+  isOvertime?: boolean;
+  overtimeMinutes?: number;
 };
 
 export type AvailableGuardItem = {
   id: string;
+  user_id?: string;
+  guard_id?: string;
   name: string;
   certs: string;
   phone: string;
   avatar: string;
+  email?: string;
+  cccd?: string;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  notable_skills?: string[];
 };
 
 export type GuardPerformanceRadarItem = {

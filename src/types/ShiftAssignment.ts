@@ -8,6 +8,8 @@ export interface Shift_Assignment {
   status: ShiftAssignmentStatus;
   check_in_time: string | null;
   replacement_guard_ids: string[];
+  is_overtime?: boolean;
+  overtime_minutes?: number;
   created_at: string;
   updated_at: string;
 };

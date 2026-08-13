@@ -65,7 +65,9 @@ const getStatusStyle = (
 ) => {
   if (status === "completed") return "bg-emerald-100 text-emerald-700";
   if (status === "late") {
-    return checkInTime ? "bg-orange-100 text-orange-700" : "bg-amber-100 text-amber-700";
+    return checkInTime
+      ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
+      : "bg-amber-100 text-amber-800 border border-amber-300";
   }
   if (status === "absent") return "bg-red-100 text-red-700";
   const isStarted = new Date().getTime() >= new Date(startTime).getTime();
@@ -81,8 +83,8 @@ const getGuardStatusStyle = (
   if (status === "completed") return "bg-emerald-50 text-emerald-700 border border-emerald-200";
   if (status === "late") {
     return checkInTime
-      ? "bg-orange-50 text-orange-700 border border-orange-200"
-      : "bg-amber-50 text-amber-700 border-amber-200";
+      ? "bg-yellow-100 text-yellow-800 border border-yellow-300"
+      : "bg-amber-100 text-amber-800 border border-amber-300";
   }
   if (status === "absent") return "bg-red-50 text-red-700 border border-red-200";
   const isStarted = new Date().getTime() >= new Date(startTime).getTime();
@@ -95,7 +97,8 @@ export default function GuardShiftDetailPage() {
   const params = useParams();
   const searchParams = useSearchParams();
   const userId = useAuthStore((state) => state.user_id);
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
+  const isEn = locale === "en";
   const t = dict.layout_guard.guard_shift_detail;
 
   const shiftId = Array.isArray(params.shiftId)
@@ -126,13 +129,18 @@ export default function GuardShiftDetailPage() {
     checkInTime: string | null | undefined,
     startTime: string
   ) => {
-    if (status === "checkout") return "Hoàn thành";
-    if (status === "completed") return t.status_on_duty;
-    if (status === "late") return checkInTime ? t.status_late_checked : t.status_late;
-    if (status === "absent") return t.status_absent;
+    if (status === "checkout") return "HOÀN THÀNH";
+    if (status === "completed") return (t.status_on_duty || "ĐANG TRỰC").toUpperCase();
+    if (status === "late") {
+      if (checkInTime) {
+        return (dict?.shift_detail_modal?.checked_in_late || (isEn ? "LATE CHECK-IN" : "ĐIỂM DANH TRỄ")).toUpperCase();
+      }
+      return (dict?.shift_detail_modal?.late_not_checked_in || (isEn ? "LATE - NOT CHECKED IN" : "ĐI TRỄ CHƯA ĐIỂM DANH")).toUpperCase();
+    }
+    if (status === "absent") return (t.status_absent || "VẮNG MẶT").toUpperCase();
     const isStarted = new Date().getTime() >= new Date(startTime).getTime();
-    if (isStarted) return t.status_not_checked;
-    return t.status_assigned;
+    if (isStarted) return (t.status_not_checked || "CHƯA ĐIỂM DANH").toUpperCase();
+    return (t.status_assigned || "PHÂN CÔNG").toUpperCase();
   };
 
   const getGuardStatusLabel = (
@@ -140,13 +148,18 @@ export default function GuardShiftDetailPage() {
     checkInTime: string | null | undefined,
     startTime: string
   ) => {
-    if (status === "checkout") return "Hoàn thành";
-    if (status === "completed") return t.guard_status_on_duty;
-    if (status === "late") return checkInTime ? t.guard_status_late_checked : t.guard_status_late;
-    if (status === "absent") return t.guard_status_absent;
+    if (status === "checkout") return "HOÀN THÀNH";
+    if (status === "completed") return (t.guard_status_on_duty || "ĐANG TRỰC").toUpperCase();
+    if (status === "late") {
+      if (checkInTime) {
+        return (dict?.shift_detail_modal?.checked_in_late || (isEn ? "LATE CHECK-IN" : "ĐIỂM DANH TRỄ")).toUpperCase();
+      }
+      return (dict?.shift_detail_modal?.late_not_checked_in || (isEn ? "LATE - NOT CHECKED IN" : "ĐI TRỄ CHƯA ĐIỂM DANH")).toUpperCase();
+    }
+    if (status === "absent") return (t.guard_status_absent || "VẮNG MẶT").toUpperCase();
     const isStarted = new Date().getTime() >= new Date(startTime).getTime();
-    if (isStarted) return t.guard_status_not_checked;
-    return t.guard_status_assigned;
+    if (isStarted) return (t.guard_status_not_checked || "CHƯA ĐIỂM DANH").toUpperCase();
+    return (t.guard_status_assigned || "PHÂN CÔNG").toUpperCase();
   };
 
   const handleOpenCheckinPage = () => {
@@ -253,15 +266,22 @@ export default function GuardShiftDetailPage() {
             </p>
           </div>
 
-          <span
-            className={`rounded-full px-3 py-1.5 text-[10px] font-black ${
-              isReplacement
-                ? "bg-purple-100 text-purple-700"
-                : getStatusStyle(shift.status, shift.check_in_time, shift.start_time)
-            }`}
-          >
-            {isReplacement ? t.replacement : getStatusLabel(shift.status, shift.check_in_time, shift.start_time)}
-          </span>
+          <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+            <span
+              className={`rounded-full px-3 py-1.5 text-[10px] font-black ${
+                isReplacement
+                  ? "bg-purple-100 text-purple-700"
+                  : getStatusStyle(shift.status, shift.check_in_time, shift.start_time)
+              }`}
+            >
+              {isReplacement ? t.replacement : getStatusLabel(shift.status, shift.check_in_time, shift.start_time)}
+            </span>
+            {(shift.is_overtime || (Number(shift.overtime_minutes) > 0)) && (
+              <span className="rounded-full border border-amber-300 bg-amber-100/90 px-2.5 py-1.5 text-[10px] font-black tracking-[0.1em] text-amber-800">
+                {dict?.common?.overtime || "TĂNG CA"}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="grid grid-cols-2 gap-4">
@@ -392,7 +412,7 @@ export default function GuardShiftDetailPage() {
               <p className="text-xs font-bold text-slate-500">{t.checkin_image_label}</p>
 
               {shift.checkin_image ? (
-                <div className="mt-2 relative aspect-video w-full overflow-hidden rounded-xl border border-slate-200">
+                <div className="mt-2 relative aspect-video w-full max-w-sm overflow-hidden rounded-xl border border-slate-200 shadow-xs">
                   <img
                     src={shift.checkin_image.image_url}
                     alt={t.checkin_image_alt}
@@ -400,9 +420,9 @@ export default function GuardShiftDetailPage() {
                   />
                 </div>
               ) : (
-                <div className="mt-2 flex aspect-video w-full flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-400">
-                  <Camera className="h-8 w-8 text-slate-300" />
-                  <span className="mt-2 text-xs font-bold text-slate-500">{t.no_checkin_image}</span>
+                <div className="mt-2 flex aspect-video w-full max-w-sm flex-col items-center justify-center rounded-xl border border-dashed border-slate-200 bg-slate-50 text-slate-400">
+                  <Camera className="h-7 w-7 text-slate-300" />
+                  <span className="mt-1.5 text-xs font-bold text-slate-500">{t.no_checkin_image}</span>
                 </div>
               )}
             </div>

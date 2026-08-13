@@ -64,3 +64,10 @@ export type ReportStatus = "PENDING" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
 
 export type QuotationType = "hourly" | "monthly" | "package";
 
+export type GuardStatus = "pending_profile" | "pending_approval" | "approved" | "rejected";
+
+export type ShiftSwapRequestStatus =
+  | "PENDING"
+  | "APPROVED"
+  | "REJECTED"
+  | "CANCELLED";

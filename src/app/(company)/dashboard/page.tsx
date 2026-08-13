@@ -6,7 +6,6 @@ import {
   Users,
   ReceiptText,
   AlertTriangle,
-  Star,
   TrendingUp,
   TrendingDown,
   Minus,
@@ -40,18 +39,14 @@ import {
   requestGetActiveGuardsOnShift,
   requestGetActiveContracts,
   requestGetPendingReports,
-  requestGetRating,
   requestGetDashboardSubscription,
   requestGetWeeklyShifts,
   requestGetShiftStatusToday,
-  requestGetTodayGuards,
   requestGetRecentActivities,
   type MetricWithTrend,
-  type RatingWithTrend,
   type DashboardSubscriptionResult,
   type WeeklyShiftsResultItem,
   type ShiftStatusResultItem,
-  type TodayGuardListItem,
   type RecentActivityItem,
 } from "@/features/dashboard/api/dashboard.api";
 import {
@@ -92,17 +87,6 @@ type EmployeeStatus =
   | "Thay ca"
   | "Điểm danh trễ"
   | "Phân công"
-  | "Chưa điểm danh";
-interface Employee {
-  id: string;
-  name: string;
-  avatar: string | null;
-  branch: string;
-  contractCode?: string;
-  contractName?: string;
-  status: EmployeeStatus;
-}
-
 type ChartView = "line" | "radar";
 
 const getFormattedDate = (locale: string) => {
@@ -249,27 +233,6 @@ const getEmployeeStatusLabel = (status: string, dict: any) => {
     "Not Checked-in": dict?.company_dashboard?.employee_status?.not_checked_in || "Chưa điểm danh",
   };
   return statusKeyMap[status] || status;
-};
-
-const formatTimeRange = (timeRange: string | undefined | null, locale: string, dict: any) => {
-  if (!timeRange) return dict?.company_dashboard?.guards_table?.unknown || "Chưa rõ";
-  if (locale === "en") {
-    return timeRange
-      .replace("Check-in lúc ", "Checked in at ")
-      .replace("Điểm danh lúc ", "Checked in at ")
-      .replace("Kết thúc lúc ", "Ended at ");
-  }
-  return timeRange;
-};
-
-const formatBranchName = (branchName: string | undefined | null, locale: string) => {
-  if (!branchName) return "";
-  if (locale === "en") {
-    return branchName
-      .replace("(Thay ca)", "(Replacement)")
-      .replace("(Thay thế)", "(Replacement)");
-  }
-  return branchName.replace("(Thay thế)", "(Thay ca)");
 };
 
 const formatActivity = (act: RecentActivityItem, locale: string) => {
@@ -465,7 +428,6 @@ export default function CompanyDashboardPage() {
       color: "#6495ED", // Xanh nước biển
     },
   } satisfies ChartConfig;
-  const [searchQuery, setSearchQuery] = useState("");
   const [chartView, setChartView] = useState<ChartView>("line");
   const [animateChart, setAnimateChart] = useState(false);
 
@@ -482,6 +444,16 @@ export default function CompanyDashboardPage() {
   const [pendingReports, setPendingReports] = useState<MetricWithTrend | null>(null);
   const [pendingReportsLoading, setPendingReportsLoading] = useState(false);
 
+  // Fetch báo cáo sự cố chờ xử lý
+  useEffect(() => {
+    if (!company_id) return;
+    setPendingReportsLoading(true);
+    requestGetPendingReports(company_id)
+      .then(setPendingReports)
+      .catch((err) => console.error("[dashboard] pendingReports:", err))
+      .finally(() => setPendingReportsLoading(false));
+  }, [company_id]);
+
   // Dữ liệu biểu đồ ca trực 7 ngày
   const [weeklyShiftData, setWeeklyShiftData] = useState<WeeklyShiftsResultItem[]>([]);
   const [weeklyShiftDataLoading, setWeeklyShiftDataLoading] = useState(false);
@@ -497,16 +469,9 @@ export default function CompanyDashboardPage() {
     }));
   }, [shiftStatusData, dict]);
 
-  // Dữ liệu bảng trạng thái bảo vệ hôm nay
-  const [todayGuards, setTodayGuards] = useState<TodayGuardListItem[]>([]);
-  const [todayGuardsLoading, setTodayGuardsLoading] = useState(false);
-
   // Dữ liệu hoạt động gần đây
   const [recentActivities, setRecentActivities] = useState<RecentActivityItem[]>([]);
   const [recentActivitiesLoading, setRecentActivitiesLoading] = useState(false);
-
-  // Trạng thái mở modal xem toàn bộ bảo vệ
-  const [isGuardsModalOpen, setIsGuardsModalOpen] = useState(false);
 
   // Trạng thái mở modal xem toàn bộ hoạt động gần đây
   const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
@@ -523,33 +488,27 @@ export default function CompanyDashboardPage() {
       setActiveGuardsLoading(true);
       setActiveContractsLoading(true);
       setPendingReportsLoading(true);
-      setRatingLoading(true);
       setSubInfoLoading(true);
       setWeeklyShiftDataLoading(true);
       setShiftStatusDataLoading(true);
-      setTodayGuardsLoading(true);
       setRecentActivitiesLoading(true);
 
       await Promise.all([
         requestGetActiveGuardsOnShift(company_id).then(setActiveGuards).catch((err) => console.error(err)),
         requestGetActiveContracts(company_id).then(setActiveContracts).catch((err) => console.error(err)),
         requestGetPendingReports(company_id).then(setPendingReports).catch((err) => console.error(err)),
-        requestGetRating(company_id).then(setRating).catch((err) => console.error(err)),
         requestGetDashboardSubscription(company_id).then(setSubInfo).catch((err) => console.error(err)),
         requestGetWeeklyShifts(company_id).then(setWeeklyShiftData).catch((err) => console.error(err)),
         requestGetShiftStatusToday(company_id).then(setShiftStatusData).catch((err) => console.error(err)),
-        requestGetTodayGuards(company_id).then(setTodayGuards).catch((err) => console.error(err)),
         requestGetRecentActivities(company_id).then(setRecentActivities).catch((err) => console.error(err)),
       ]);
     } finally {
       setActiveGuardsLoading(false);
       setActiveContractsLoading(false);
       setPendingReportsLoading(false);
-      setRatingLoading(false);
       setSubInfoLoading(false);
       setWeeklyShiftDataLoading(false);
       setShiftStatusDataLoading(false);
-      setTodayGuardsLoading(false);
       setRecentActivitiesLoading(false);
       setTimeout(() => setIsRefreshing(false), 300);
     }
@@ -579,30 +538,6 @@ export default function CompanyDashboardPage() {
       .then(setActiveContracts)
       .catch((err) => console.error("[dashboard] activeContracts:", err))
       .finally(() => setActiveContractsLoading(false));
-  }, [company_id]);
-
-  // Dữ liệu metric: điểm đánh giá
-  const [rating, setRating] = useState<RatingWithTrend | null>(null);
-  const [ratingLoading, setRatingLoading] = useState(false);
-
-  // Fetch báo cáo sự cố chờ xử lý
-  useEffect(() => {
-    if (!company_id) return;
-    setPendingReportsLoading(true);
-    requestGetPendingReports(company_id)
-      .then(setPendingReports)
-      .catch((err) => console.error("[dashboard] pendingReports:", err))
-      .finally(() => setPendingReportsLoading(false));
-  }, [company_id]);
-
-  // Fetch điểm đánh giá trung bình
-  useEffect(() => {
-    if (!company_id) return;
-    setRatingLoading(true);
-    requestGetRating(company_id)
-      .then(setRating)
-      .catch((err) => console.error("[dashboard] rating:", err))
-      .finally(() => setRatingLoading(false));
   }, [company_id]);
 
   // Dữ liệu gói dịch vụ hiện tại
@@ -637,16 +572,6 @@ export default function CompanyDashboardPage() {
       .then(setShiftStatusData)
       .catch((err) => console.error("[dashboard] shiftStatusData:", err))
       .finally(() => setShiftStatusDataLoading(false));
-  }, [company_id]);
-
-  // Fetch dữ liệu danh sách bảo vệ hôm nay
-  useEffect(() => {
-    if (!company_id) return;
-    setTodayGuardsLoading(true);
-    requestGetTodayGuards(company_id)
-      .then(setTodayGuards)
-      .catch((err) => console.error("[dashboard] todayGuards:", err))
-      .finally(() => setTodayGuardsLoading(false));
   }, [company_id]);
 
   // Fetch dữ liệu hoạt động gần đây
@@ -760,24 +685,7 @@ export default function CompanyDashboardPage() {
     },
   };
 
-  const normalizedSearchQuery = searchQuery.trim().toLowerCase();
-
-  const filteredEmployees = todayGuards.filter((emp) => {
-    if (!normalizedSearchQuery) return true;
-
-    return [
-      emp.id,
-      emp.name,
-      emp.branch,
-      emp.contractCode ?? "",
-      emp.contractName ?? "",
-      emp.status,
-    ].some((value) => value.toLowerCase().includes(normalizedSearchQuery));
-  });
-
-  const displayedEmployees = filteredEmployees.slice(0, 5);
-
-  const displayedActivities = displayedEmployees.length >= 0 ? recentActivities.slice(0, 5) : [];
+  const displayedActivities = recentActivities.slice(0, 8);
 
   const filteredActivities = recentActivities.filter((act) => {
     if (activityFilter === "all") return true;
@@ -808,7 +716,7 @@ export default function CompanyDashboardPage() {
       </div>
 
       {/* Key Metrics Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1 – Bảo vệ đang trực */}
         <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-4 shadow-sm hover:border-outline transition-all">
           <div className="flex justify-between items-start">
@@ -932,54 +840,6 @@ export default function CompanyDashboardPage() {
               <div className="flex items-center gap-1 text-sm text-on-surface-variant font-medium">
                 <Minus className="w-4 h-4" />
                 <span>{dict.company_dashboard.no_pending_reports}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* Card 4 – Điểm đánh giá */}
-        <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-5 flex flex-col gap-4 shadow-sm hover:border-outline transition-all">
-          <div className="flex justify-between items-start">
-            <span className="text-xs uppercase tracking-wider text-on-surface-variant font-bold">
-              {dict.company_dashboard.avg_rating}
-            </span>
-            <div className="w-8 h-8 rounded bg-surface-container-low flex items-center justify-center text-primary">
-              <Star className="w-5 h-5" />
-            </div>
-          </div>
-          <div>
-            <div className="text-3xl leading-tight font-bold text-on-surface mb-1">
-              {ratingLoading ? (
-                <span className="inline-block w-20 h-8 bg-surface-container rounded animate-pulse" />
-              ) : rating?.averageRating != null ? (
-                `${rating.averageRating.toFixed(1)}/5`
-              ) : (
-                "--/5"
-              )}
-            </div>
-            {ratingLoading ? (
-              <span className="inline-block w-32 h-4 bg-surface-container rounded animate-pulse" />
-            ) : rating?.percentChange !== null && rating?.percentChange !== undefined ? (
-              <div
-                className={`flex items-center gap-1 text-sm font-semibold ${rating.trend === "up"
-                  ? "text-emerald-700"
-                  : rating.trend === "down"
-                    ? "text-red-600"
-                    : "text-on-surface-variant"
-                  }`}
-              >
-                {rating.trend === "up" && <TrendingUp className="w-4 h-4" />}
-                {rating.trend === "down" && <TrendingDown className="w-4 h-4" />}
-                {rating.trend === "neutral" && <Minus className="w-4 h-4" />}
-                <span>
-                  {rating.trend === "up" ? "+" : ""}
-                  {rating.percentChange}% {dict.company_dashboard.compared_last_month}
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-sm text-on-surface-variant font-medium">
-                <Minus className="w-4 h-4" />
-                <span>{dict.company_dashboard.no_data_last_month}</span>
               </div>
             )}
           </div>
@@ -1295,422 +1155,71 @@ export default function CompanyDashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Section: Guard Status Table & Activity Feed */}
-      <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        {/* Guard Availability/Status Table */}
-        <div className="xl:col-span-8 bg-surface-container-lowest border border-outline-variant rounded-xl overflow-hidden flex flex-col shadow-sm">
-          <div className="p-6 border-b border-outline-variant flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 bg-surface-container-lowest">
-            <h3 className="text-base font-bold text-on-surface">
-              {dict.company_dashboard.guards_table.title}
-            </h3>
-            <div className="flex items-center gap-2 border border-outline-variant rounded px-3 py-1.5 bg-surface-container-lowest w-full sm:w-80 focus-within:border-secondary transition-all">
-              <Search className="w-4 h-4 text-on-surface-variant" />
-              <input
-                type="text"
-                placeholder={dict.company_dashboard.guards_table.search}
-                className="bg-transparent border-none p-0 text-xs focus:ring-0 outline-none w-full placeholder-on-surface-variant"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[700px]">
-              <thead>
-                <tr className="bg-surface-container-low/50 border-b border-outline-variant">
-                  <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    {dict.company_dashboard.guards_table.no}
-                  </th>
-
-                  <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    {dict.company_dashboard.guards_table.fullname}
-                  </th>
-
-                  <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    {dict.company_dashboard.guards_table.branch}
-                  </th>
-
-                  <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    {dict.company_dashboard.guards_table.time}
-                  </th>
-
-                  <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    {dict.company_dashboard.guards_table.service}
-                  </th>
-
-                  <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                    {dict.company_dashboard.guards_table.status}
-                  </th>
-                </tr>
-              </thead>
-
-              <tbody className="text-sm">
-                {todayGuardsLoading ? (
-                  Array.from({ length: 5 }).map((_, idx) => (
-                    <tr
-                      key={idx}
-                      className="border-b border-outline-variant/30 animate-pulse"
-                    >
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-6 bg-surface-container rounded" />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <div className="w-7 h-7 rounded-full bg-surface-container" />
-                          <div className="h-4 w-28 bg-surface-container rounded" />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-32 bg-surface-container rounded" />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-4 w-16 bg-surface-container rounded" />
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="space-y-2">
-                          <div className="h-4 w-20 bg-surface-container rounded" />
-                          <div className="h-3 w-36 bg-surface-container rounded" />
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="h-6 w-20 bg-surface-container rounded-full" />
-                      </td>
-                    </tr>
-                  ))
-                ) : displayedEmployees.length > 0 ? (
-                  displayedEmployees.map((emp, idx) => {
-                    const statusConfig = employeeStatusConfig[emp.status as EmployeeStatus] || { badgeClass: "bg-surface-container text-on-surface-variant border-outline-variant", dotClass: "bg-outline", animate: false };
-
-                    return (
-                      <tr
-                        key={`${emp.id}-${idx}`}
-                        className="border-b border-outline-variant/30 hover:bg-surface-container-low/40 transition-colors group"
-                      >
-                        <td className="px-6 py-4 font-mono text-primary font-semibold text-xs">
-                          {idx + 1}
-                        </td>
-
-                        <td className="px-6 py-4 text-on-surface font-semibold">
-                          <div className="flex items-center gap-3">
-                            <div className="w-7 h-7 rounded-full bg-surface-container overflow-hidden shrink-0 border border-outline-variant/30">
-                              {emp.avatar ? (
-                                <img
-                                  src={emp.avatar}
-                                  alt={`Ảnh đại diện của ${emp.name}`}
-                                  className="w-full h-full object-cover"
-                                />
-                              ) : (
-                                <div className="w-full h-full bg-primary-container text-primary flex items-center justify-center text-xs font-bold uppercase">
-                                  {emp.name.split(" ").pop()?.substring(0, 2)}
-                                </div>
-                              )}
-                            </div>
-
-                            <span>{emp.name}</span>
-                          </div>
-                        </td>
-
-                        <td className="px-6 py-4 text-on-surface-variant text-xs font-medium">
-                          {formatBranchName(emp.branch, locale)}
-                        </td>
-
-                        <td className="px-6 py-4 text-on-surface-variant text-xs font-semibold whitespace-nowrap">
-                          {formatTimeRange(emp.timeRange, locale, dict)}
-                        </td>
-
-                        <td className="px-6 py-4">
-                          {emp.contractCode ? (
-                            <div className="flex flex-col gap-1">
-                              <span className="text-xs font-bold text-on-surface">
-                                {emp.contractCode}
-                              </span>
-
-                              {emp.contractName && (
-                                <span
-                                  className="max-w-[220px] truncate text-[11px] text-on-surface-variant"
-                                  title={emp.contractName}
-                                >
-                                  {emp.contractName}
-                                </span>
-                              )}
-                            </div>
-                          ) : (
-                            <span className="text-xs text-on-surface-variant/60">
-                              {dict.company_dashboard.guards_table.no_service}
-                            </span>
-                          )}
-                        </td>
-
-                        <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusConfig.badgeClass}`}
-                          >
-                            <span
-                              className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${statusConfig.animate ? "animate-pulse" : ""
-                                }`}
-                            />
-                            {getEmployeeStatusLabel(emp.status, dict)}
-                          </span>
-                        </td>
-                      </tr>
-                    );
-                  })
-                ) : (
-                  <tr>
-                    <td
-                      colSpan={6}
-                      className="px-6 py-8 text-center text-on-surface-variant font-medium"
-                    >
-                      {dict.company_dashboard.guards_table.no_data}
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
-          <div className="p-4 border-t border-outline-variant bg-surface-container-low/20 flex justify-center">
-            <button
-              onClick={() => setIsGuardsModalOpen(true)}
-              className="text-secondary cursor-pointer font-bold text-xs hover:underline"
-            >
-              {dict.company_dashboard.guards_table.view_all}
-            </button>
-          </div>
-        </div>
-
-        {/* Recent Activity Feed */}
-        <div className="xl:col-span-4 bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col shadow-sm">
-          <div className="flex justify-between items-center mb-6">
-            <h3 className="text-base font-bold text-on-surface">
-              {dict.company_dashboard.activities.title}
-            </h3>
-            <button className="text-on-surface-variant hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container-low">
-              <Filter className="w-4 h-4" />
-            </button>
-          </div>
-
-          <div className="flex flex-col gap-6 relative flex-1">
-            {/* Connecting line for timeline */}
-            <div className="absolute left-[15px] top-4 bottom-4 w-[1px] bg-outline-variant/60" />
-
-            {recentActivitiesLoading ? (
-              Array.from({ length: 4 }).map((_, idx) => (
-                <div key={idx} className="flex gap-4 relative z-10 animate-pulse">
-                  <div className="w-8 h-8 rounded-full bg-surface-container shrink-0 mt-0.5" />
-                  <div className="space-y-2 flex-1">
-                    <div className="h-4 bg-surface-container rounded w-3/4" />
-                    <div className="h-3 bg-surface-container rounded w-1/2" />
-                  </div>
-                </div>
-              ))
-            ) : displayedActivities.length > 0 ? (
-              displayedActivities.map((rawAct) => {
-                const act = formatActivity(rawAct, locale);
-                const config = getActivityConfig(act.subType);
-
-                return (
-                  <div key={act.id} className="flex gap-4 relative z-10">
-                    <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 mt-0.5 shadow-sm ${config.className}`}>
-                      {config.icon}
-                    </div>
-                    <div>
-                      <p className="text-xs text-on-surface font-medium leading-relaxed">
-                        {act.boldText && (
-                          <span className={`font-bold ${act.type === "report" && act.status === "PENDING" ? "text-red-600" : ""}`}>
-                            {act.boldText}
-                          </span>
-                        )}
-                        {act.normalText}
-                      </p>
-                      <p className="text-[10px] text-on-surface-variant/80 mt-1 font-mono">
-                        {act.timeLabel}
-                        {act.metaLabel && ` • ${act.metaLabel}`}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })
-            ) : (
-              <div className="text-xs text-on-surface-variant/60 text-center py-8">
-                {dict.company_dashboard.activities.no_data}
-              </div>
-            )}
-          </div>
-          <button
-            onClick={() => setIsActivitiesModalOpen(true)}
-            className="mt-6 pt-4 cursor-pointer border-t border-outline-variant/40 text-secondary font-bold text-xs text-center hover:underline"
-          >
-            {dict.company_dashboard.activities.view_more}
+      {/* Bottom Section: Recent Activity Feed */}
+      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col shadow-sm">
+        <div className="flex justify-between items-center mb-6">
+          <h3 className="text-base font-bold text-on-surface">
+            {dict.company_dashboard.activities.title}
+          </h3>
+          <button className="text-on-surface-variant hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container-low">
+            <Filter className="w-4 h-4" />
           </button>
         </div>
-      </div>
 
-      {/* Modal xem toàn bộ danh sách bảo vệ hôm nay */}
-      {isGuardsModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl w-full max-w-5xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="p-6 border-b border-outline-variant flex items-center justify-between bg-surface-container-low/20">
-              <div>
-                <h3 className="text-lg font-bold text-on-surface">
-                  {dict.company_dashboard.modals.guards_title}
-                </h3>
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                  {dict.company_dashboard.modals.guards_desc}
-                </p>
+        <div className="flex flex-col gap-6 relative flex-1">
+          {/* Connecting line for timeline */}
+          <div className="absolute left-[15px] top-4 bottom-4 w-[1px] bg-outline-variant/60" />
+
+          {recentActivitiesLoading ? (
+            Array.from({ length: 4 }).map((_, idx) => (
+              <div key={idx} className="flex gap-4 relative z-10 animate-pulse">
+                <div className="w-8 h-8 rounded-full bg-surface-container shrink-0 mt-0.5" />
+                <div className="space-y-2 flex-1">
+                  <div className="h-4 bg-surface-container rounded w-3/4" />
+                  <div className="h-3 bg-surface-container rounded w-1/2" />
+                </div>
               </div>
-              <button
-                onClick={() => setIsGuardsModalOpen(false)}
-                className="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-high"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+            ))
+          ) : displayedActivities.length > 0 ? (
+            displayedActivities.map((rawAct) => {
+              const act = formatActivity(rawAct, locale);
+              const config = getActivityConfig(act.subType);
 
-            {/* Search filter in modal */}
-            <div className="p-6 border-b border-outline-variant/40 bg-surface-container-lowest flex flex-col sm:flex-row gap-4 items-center justify-between">
-              <div className="flex items-center gap-2 border border-outline-variant rounded px-3 py-1.5 bg-surface-container-lowest w-full sm:w-80 focus-within:border-secondary transition-all">
-                <Search className="w-4 h-4 text-on-surface-variant" />
-                <input
-                  type="text"
-                  placeholder={dict.company_dashboard.guards_table.search}
-                  className="bg-transparent border-none p-0 text-xs focus:ring-0 outline-none w-full placeholder-on-surface-variant"
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                />
-              </div>
-              <div className="text-xs text-on-surface-variant font-semibold">
-                {dict.company_dashboard.guards_table.showing.replace("{0}", filteredEmployees.length.toString())}
-              </div>
+              return (
+                <div key={act.id} className="flex gap-4 relative z-10">
+                  <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 mt-0.5 shadow-sm ${config.className}`}>
+                    {config.icon}
+                  </div>
+                  <div>
+                    <p className="text-xs text-on-surface font-medium leading-relaxed">
+                      {act.boldText && (
+                        <span className={`font-bold ${act.type === "report" && act.status === "PENDING" ? "text-red-600" : ""}`}>
+                          {act.boldText}
+                        </span>
+                      )}
+                      {act.normalText}
+                    </p>
+                    <p className="text-[10px] text-on-surface-variant/80 mt-1 font-mono">
+                      {act.timeLabel}
+                      {act.metaLabel && ` • ${act.metaLabel}`}
+                    </p>
+                  </div>
+                </div>
+              );
+            })
+          ) : (
+            <div className="text-xs text-on-surface-variant/60 text-center py-8">
+              {dict.company_dashboard.activities.no_data}
             </div>
-
-            {/* Table Area (Scrollable) */}
-            <div className="overflow-auto flex-1">
-              <table className="w-full text-left border-collapse min-w-[800px]">
-                <thead className="sticky top-0 z-10 bg-surface-container-lowest border-b border-outline-variant">
-                  <tr className="bg-surface-container-low/80 backdrop-blur-md">
-                    <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      {dict.company_dashboard.guards_table.no}
-                    </th>
-                    <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      {dict.company_dashboard.guards_table.fullname}
-                    </th>
-                    <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      {dict.company_dashboard.guards_table.branch}
-                    </th>
-                    <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      {dict.company_dashboard.guards_table.time}
-                    </th>
-                    <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      {dict.company_dashboard.guards_table.service}
-                    </th>
-                    <th className="px-6 py-3 text-xs uppercase text-on-surface-variant font-bold tracking-wider">
-                      {dict.company_dashboard.guards_table.status}
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm">
-                  {filteredEmployees.length > 0 ? (
-                    filteredEmployees.map((emp, idx) => {
-                      const statusConfig = employeeStatusConfig[emp.status as EmployeeStatus] || {
-                        badgeClass: "bg-surface-container text-on-surface-variant border-outline-variant",
-                        dotClass: "bg-outline",
-                        animate: false,
-                      };
-
-                      return (
-                        <tr
-                          key={`${emp.id}-${idx}`}
-                          className="border-b border-outline-variant/30 hover:bg-surface-container-low/40 transition-colors group"
-                        >
-                          <td className="px-6 py-4 font-mono text-primary font-semibold text-xs">
-                            {idx + 1}
-                          </td>
-                          <td className="px-6 py-4 text-on-surface font-semibold">
-                            <div className="flex items-center gap-3">
-                              <div className="w-7 h-7 rounded-full bg-surface-container overflow-hidden shrink-0 border border-outline-variant/30">
-                                {emp.avatar ? (
-                                  <img
-                                    src={emp.avatar}
-                                    alt={`Ảnh đại diện của ${emp.name}`}
-                                    className="w-full h-full object-cover"
-                                  />
-                                ) : (
-                                  <div className="w-full h-full bg-primary-container text-primary flex items-center justify-center text-xs font-bold uppercase">
-                                    {emp.name.split(" ").pop()?.substring(0, 2)}
-                                  </div>
-                                )}
-                              </div>
-                              <span>{emp.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-6 py-4 text-on-surface-variant text-xs font-medium">
-                            {formatBranchName(emp.branch, locale)}
-                          </td>
-                          <td className="px-6 py-4 text-on-surface-variant text-xs font-semibold whitespace-nowrap">
-                            {formatTimeRange(emp.timeRange, locale, dict)}
-                          </td>
-                          <td className="px-6 py-4">
-                            {emp.contractCode ? (
-                              <div className="flex flex-col gap-1">
-                                <span className="text-xs font-bold text-on-surface">
-                                  {emp.contractCode}
-                                </span>
-                                {emp.contractName && (
-                                  <span
-                                    className="max-w-[250px] truncate text-[11px] text-on-surface-variant"
-                                    title={emp.contractName}
-                                  >
-                                    {emp.contractName}
-                                  </span>
-                                )}
-                              </div>
-                            ) : (
-                              <span className="text-xs text-on-surface-variant/60">
-                                {dict.company_dashboard.guards_table.no_service}
-                              </span>
-                            )}
-                          </td>
-                          <td className="px-6 py-4">
-                            <span
-                              className={`inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold ${statusConfig.badgeClass}`}
-                            >
-                              <span
-                                className={`h-1.5 w-1.5 shrink-0 rounded-full ${statusConfig.dotClass} ${statusConfig.animate ? "animate-pulse" : ""
-                                  }`}
-                              />
-                              {getEmployeeStatusLabel(emp.status, dict)}
-                            </span>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  ) : (
-                    <tr>
-                      <td
-                        colSpan={6}
-                        className="px-6 py-8 text-center text-on-surface-variant font-medium"
-                      >
-                        {dict.company_dashboard.guards_table.no_data}
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-outline-variant bg-surface-container-low/30 flex justify-end gap-2">
-              <button
-                onClick={() => setIsGuardsModalOpen(false)}
-                className="px-4 py-2 border border-outline-variant rounded-md text-xs font-bold text-on-surface hover:bg-surface-container-high transition-colors"
-              >
-                {dict.company_dashboard.modals.close}
-              </button>
-            </div>
-          </div>
+          )}
         </div>
-      )}
+        <button
+          onClick={() => setIsActivitiesModalOpen(true)}
+          className="mt-6 pt-4 cursor-pointer border-t border-outline-variant/40 text-secondary font-bold text-xs text-center hover:underline"
+        >
+          {dict.company_dashboard.activities.view_more}
+        </button>
+      </div>
       {/* Modal xem toàn bộ hoạt động gần đây */}
       {isActivitiesModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">

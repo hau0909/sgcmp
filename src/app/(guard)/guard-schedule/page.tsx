@@ -180,7 +180,10 @@ export default function GuardSchedulePage() {
             address: s.address,
             company_name: s.company_name,
             status: s.status,
+            check_in_time: s.check_in_time,
             is_replacement: s.guard_id ? s.guard_id !== userId : false,
+            is_overtime: s.is_overtime || (Number(s.overtime_minutes) > 0),
+            overtime_minutes: s.overtime_minutes,
           }));
         });
 

@@ -143,13 +143,34 @@ function VerifyEmailContent() {
       company_id: profile.company_id,
     });
 
-    const redirectPath = getRedirectPathByRole(profile.role);
+    let redirectPath = getRedirectPathByRole(profile.role);
+
+    // For guards: check approval_status and redirect to complete-profile if needed
+    if (profile.role === "guard") {
+      try {
+        const guardRes = await fetch("/api/guard/my-profile", {
+          method: "GET",
+          credentials: "include",
+          cache: "no-store",
+        });
+        if (guardRes.ok) {
+          const guardPayload = await guardRes.json();
+          const approvalStatus = guardPayload?.data?.guard?.approval_status;
+          if (approvalStatus === "pending_profile") {
+            redirectPath = "/complete-profile";
+          }
+        }
+      } catch {
+        // silently ignore — fallback to default role path
+      }
+    }
 
     setTimeout(() => {
       router.refresh();
       router.replace(redirectPath);
     }, 2000);
   }, [router, setAuth]);
+
 
   useEffect(() => {
     if (hasVerified.current) {

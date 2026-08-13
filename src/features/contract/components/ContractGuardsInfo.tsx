@@ -78,6 +78,7 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
           page: modalPage,
           limit: MODAL_PAGE_SIZE,
           status: "active",
+          approvalStatus: "approved",
           search: searchKeyword,
           checkContractId: contractId,
         });

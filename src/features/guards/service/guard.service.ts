@@ -1,5 +1,6 @@
 import {
   insertGuardInformation,
+  insertGuardRecord,
   getCoordinatorCompanyId,
   getAllGuards,
   getCompanyByOwnerId,
@@ -8,6 +9,10 @@ import {
   updateGuardDetail,
   getGuardPerformanceSummary,
   getGuardPerformanceList,
+  approveGuardRepository,
+  rejectGuardRepository,
+  completeGuardProfileRepository,
+  getGuardDetailByUserId,
 } from "../repository/guard.repository";
 import { getCurrentActivePlanService } from "@/features/subscription/service/subscription.service";
 import type {
@@ -34,6 +39,53 @@ const ACCEPTED_IMAGE_TYPES = ["image/jpeg", "image/png"];
 
 const MAXIMUM_IMAGE_SIZE = 2 * 1024 * 1024;
 
+export const insertGuardRecordService = async (params: {
+  user_id: string;
+  company_id: string;
+  approval_status?: string;
+}) => {
+  return insertGuardRecord(params);
+};
+
+export const approveGuardService = async (params: {
+  guard_id: string;
+  coordinator_id: string;
+}) => {
+  return approveGuardRepository(params);
+};
+
+export const rejectGuardService = async (params: {
+  guard_id: string;
+  coordinator_id: string;
+  rejection_note: string;
+}) => {
+  return rejectGuardRepository(params);
+};
+
+export const completeGuardProfileService = async (params: {
+  user_id: string;
+  date_of_birth: string;
+  gender: string;
+  address: string;
+  avatar_url?: string | null;
+  identity_id: string;
+  identity_issue_date: string;
+  identity_issue_place: string;
+  front_url?: string | null;
+  back_url?: string | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  notable_skills?: string[] | null;
+  health_certificate_path?: string | null;
+  skill_certificate_paths?: string[] | null;
+}) => {
+  return completeGuardProfileRepository(params);
+};
+
+export const getGuardDetailByUserIdService = async (user_id: string) => {
+  return getGuardDetailByUserId(user_id);
+};
+
 export const insertGuardInformationService = async (
   input: InsertGuardInformationRepositoryParams,
 ) => {
@@ -51,6 +103,7 @@ export const getAllGuardService = async ({
   search,
   gender,
   status,
+  approvalStatus,
   workStatus,
   timeZone,
   checkContractId,
@@ -62,6 +115,7 @@ export const getAllGuardService = async ({
     search,
     gender,
     status,
+    approvalStatus,
     workStatus,
     timeZone,
     checkContractId,
@@ -117,7 +171,7 @@ export const uploadGuardFileService = async ({
 }: {
   user_id: string;
   file: File;
-  type: "avatar" | "cccd_front" | "cccd_back";
+  type: "avatar" | "cccd_front" | "cccd_back" | "health_certificate" | "skill_certificate";
 }) => {
   const normalizedUserId = user_id.trim();
 
@@ -126,19 +180,25 @@ export const uploadGuardFileService = async ({
   }
 
   if (!(file instanceof File)) {
-    throw new Error("Vui lòng chọn file ảnh.");
+    throw new Error("Vui lòng chọn file tải lên.");
   }
 
   if (file.size <= 0) {
-    throw new Error("File ảnh không hợp lệ.");
+    throw new Error("File không hợp lệ.");
   }
 
-  if (!ACCEPTED_IMAGE_TYPES.includes(file.type)) {
-    throw new Error("Ảnh chỉ hỗ trợ định dạng JPG hoặc PNG.");
+  const allowedTypes = [...ACCEPTED_IMAGE_TYPES, "image/webp", "application/pdf"];
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  if (!allowedTypes.includes(file.type) && ext !== "webp" && ext !== "pdf") {
+    throw new Error("File chỉ hỗ trợ định dạng JPG, PNG, WEBP hoặc PDF.");
   }
 
   if (type === "avatar" && file.size > MAXIMUM_IMAGE_SIZE) {
     throw new Error("Kích thước ảnh tối đa là 2MB.");
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error("Kích thước file tối đa là 10MB.");
   }
 
   return uploadGuardFile({

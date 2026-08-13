@@ -38,6 +38,8 @@ export type ShiftAssignment = {
     phone_number: string | null;
     avatar_url: string | null;
   }[];
+  is_overtime?: boolean;
+  overtime_minutes?: number;
 };
 
 export type ShiftWithAssignments = Shift & {
@@ -142,6 +144,9 @@ export type GuardAvailabilityInfo = {
   assignedMinutesThisWeek: number;
   totalMinutesWeekAfterAssign: number;
   exceedsWeeklyLimit: boolean;
+  isOvertime?: boolean;
+  overtimeMinutes?: number;
+  hasOvertimeWarning?: boolean;
   reason: string;
 };
 
@@ -415,10 +420,13 @@ export type GuardShiftItem = {
   company_name?: string;
 
   status: ShiftAssignmentStatus;
+  check_in_time?: string | null;
   guard_id?: string;
   replacement_guard_ids?: string[];
   /** True when this guard is listed as a replacement for another guard's assignment */
   is_replacement?: boolean;
+  is_overtime?: boolean;
+  overtime_minutes?: number;
 };
 
 export type GuardShiftGroupedByDate = Record<string, GuardShiftItem[]>;
@@ -438,7 +446,10 @@ export type ShiftRow = {
   guard_id: string;
   assigned_by: string | null;
   status: ShiftAssignmentStatus;
+  check_in_time?: string | null;
   replacement_guard_ids: string[] | null;
+  is_overtime?: boolean;
+  overtime_minutes?: number;
   created_at: string;
   updated_at: string;
   shifts:
@@ -543,6 +554,8 @@ export type GuardShiftDetailItem = {
   company_name?: string;
   status: ShiftAssignmentStatus;
   check_in_time: string | null;
+  is_overtime?: boolean;
+  overtime_minutes?: number;
   start_time: string;
   end_time: string;
   required_guards: number;
