@@ -16,7 +16,9 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { MarketplaceCompany } from "../types";
 import { requestGetCompanies, requestGetCompanyFilters } from "../api/company.api";
 import CompanySearchBar from "./CompanySearchBar";
+import CompareFloatingBar from "./CompareFloatingBar";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { useCompareStore } from "@/store/compare.store";
 
 // ─── Price Display Helper ─────────────────────────────────────────────────────
 function PriceDisplay({ company, contactLabel, className = "" }: { company: MarketplaceCompany; contactLabel: string; className?: string }) {
@@ -43,10 +45,23 @@ function PriceDisplay({ company, contactLabel, className = "" }: { company: Mark
 function ExploreCompanyCard({ company }: { company: MarketplaceCompany }) {
   const isNew = company.rating === null;
   const { dict } = useTranslation();
+  const { selectedIds, toggleCompany } = useCompareStore();
+  const isSelected = selectedIds.includes(company.id);
+  const compareText = dict.customer?.compare?.checkbox_label || "So sánh";
+
+  const handleToggleCompare = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    toggleCompany(company.id);
+  };
+
   return (
     <Link
       href={`/companies/${company.id}`}
-      className="group bg-surface-container-lowest border border-outline-variant/40 rounded-xl overflow-hidden flex flex-col hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5 transition-all duration-200 cursor-pointer"
+      className={`group bg-surface-container-lowest border rounded-xl overflow-hidden flex flex-col transition-all duration-200 cursor-pointer ${isSelected
+          ? "border-primary ring-2 ring-primary/30 shadow-md"
+          : "border-outline-variant/40 hover:shadow-lg hover:border-primary/30 hover:-translate-y-0.5"
+        }`}
     >
       {/* Thumbnail */}
       <div className="relative h-28 bg-surface-container-high overflow-hidden">
@@ -64,7 +79,26 @@ function ExploreCompanyCard({ company }: { company: MarketplaceCompany }) {
           </div>
         )}
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-        {/* Rating pill */}
+
+        {/* Compare Checkbox Pill (Top Left) */}
+        <button
+          type="button"
+          onClick={handleToggleCompare}
+          className={`absolute top-2 left-2 flex items-center gap-1.5 px-2 py-1 rounded-lg text-[11px] font-bold z-10 shadow-sm transition-all cursor-pointer ${isSelected
+              ? "bg-primary text-white"
+              : "bg-white/90 backdrop-blur-sm text-on-surface hover:bg-white border border-outline-variant/40"
+            }`}
+        >
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={() => { }}
+            className="w-3.5 h-3.5 accent-primary rounded cursor-pointer pointer-events-none"
+          />
+          <span>{compareText}</span>
+        </button>
+
+        {/* Rating pill (Top Right) */}
         <div className="absolute top-2 right-2 flex items-center gap-0.5 bg-black/60 backdrop-blur-sm text-amber-400 text-[10px] font-bold px-1.5 py-0.5 rounded-full z-10 shadow-sm">
           <Star className="w-2.5 h-2.5 fill-amber-400" />
           <span>{isNew ? dict.customer.search.new : company.rating?.toFixed(1)}</span>
@@ -196,15 +230,15 @@ export default function SearchCompanies() {
 
         const res = hasFilters
           ? await requestGetCompanyFilters({
-              search: "",
-              location,
-              tags,
-              sortBy: sortBy === "all" ? "Đề xuất" : sortBy === "highest" ? "Đánh giá cao nhất" : "Đánh giá thấp nhất",
-              minPrice,
-              maxPrice,
-              page: currentPage,
-              limit: ITEMS_PER_PAGE,
-            })
+            search: "",
+            location,
+            tags,
+            sortBy: sortBy === "all" ? "Đề xuất" : sortBy === "highest" ? "Đánh giá cao nhất" : "Đánh giá thấp nhất",
+            minPrice,
+            maxPrice,
+            page: currentPage,
+            limit: ITEMS_PER_PAGE,
+          })
           : await requestGetCompanies({ page: currentPage, limit: ITEMS_PER_PAGE });
 
         if (!mounted) return;
@@ -336,7 +370,7 @@ export default function SearchCompanies() {
                 <span>
                   {sortBy === "all" ? dict.customer.search.suggest_all
                     : sortBy === "highest" ? dict.customer.search.suggest_highest
-                    : dict.customer.search.suggest_lowest}
+                      : dict.customer.search.suggest_lowest}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-outline" />
               </button>
@@ -350,9 +384,8 @@ export default function SearchCompanies() {
                     <button
                       key={opt.value}
                       onClick={() => { setSortBy(opt.value); setCurrentPage(1); setSortDropdownOpen(false); }}
-                      className={`w-full text-left px-4 py-2.5 text-xs hover:bg-surface-container-low transition-colors ${
-                        sortBy === opt.value ? "text-primary font-bold" : "text-on-surface font-medium"
-                      }`}
+                      className={`w-full text-left px-4 py-2.5 text-xs hover:bg-surface-container-low transition-colors ${sortBy === opt.value ? "text-primary font-bold" : "text-on-surface font-medium"
+                        }`}
                     >
                       {opt.label}
                     </button>
@@ -450,11 +483,10 @@ export default function SearchCompanies() {
               <button
                 onClick={() => handlePageChange(currentPage - 1)}
                 disabled={currentPage === 1}
-                className={`w-9 h-9 rounded-lg border flex items-center justify-center text-xs font-semibold transition-all ${
-                  currentPage === 1
+                className={`w-9 h-9 rounded-lg border flex items-center justify-center text-xs font-semibold transition-all ${currentPage === 1
                     ? "opacity-30 cursor-not-allowed border-outline-variant bg-surface-container-lowest"
                     : "bg-white border-outline-variant hover:border-primary hover:text-primary cursor-pointer shadow-sm"
-                }`}
+                  }`}
               >
                 <ChevronLeft className="w-4 h-4" />
               </button>
@@ -468,11 +500,10 @@ export default function SearchCompanies() {
                   <button
                     key={page}
                     onClick={() => handlePageChange(page as number)}
-                    className={`w-9 h-9 rounded-lg text-xs font-bold transition-all cursor-pointer ${
-                      currentPage === page
+                    className={`w-9 h-9 rounded-lg text-xs font-bold transition-all cursor-pointer ${currentPage === page
                         ? "bg-primary text-white shadow-md"
                         : "bg-white border border-outline-variant text-on-surface hover:border-primary hover:text-primary"
-                    }`}
+                      }`}
                   >
                     {page}
                   </button>
@@ -482,11 +513,10 @@ export default function SearchCompanies() {
               <button
                 onClick={() => handlePageChange(currentPage + 1)}
                 disabled={currentPage === totalPagesState}
-                className={`w-9 h-9 rounded-lg border flex items-center justify-center text-xs font-semibold transition-all ${
-                  currentPage === totalPagesState
+                className={`w-9 h-9 rounded-lg border flex items-center justify-center text-xs font-semibold transition-all ${currentPage === totalPagesState
                     ? "opacity-30 cursor-not-allowed border-outline-variant bg-surface-container-lowest"
                     : "bg-white border-outline-variant hover:border-primary hover:text-primary cursor-pointer shadow-sm"
-                }`}
+                  }`}
               >
                 <ChevronRight className="w-4 h-4" />
               </button>
@@ -494,6 +524,9 @@ export default function SearchCompanies() {
           )}
         </section>
       </div>
+
+      {/* Floating Compare Bar */}
+      <CompareFloatingBar companies={exploreCompanies} />
     </div>
   );
 }
