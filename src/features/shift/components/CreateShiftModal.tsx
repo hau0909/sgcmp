@@ -892,21 +892,21 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     let reason = translateAvailabilityReason(availData?.reason);
     let isDisabled = false;
 
-    if (isSelected) {
-      status = "selected";
-      reason = dict?.create_shift_modal?.status_selected || "Đã chọn";
-    } else if (hasDbConflict || hasHardReasonConflict) {
+    if (hasDbConflict || hasHardReasonConflict) {
       status = "conflict";
       reason = translateAvailabilityReason(availData?.reason) || (dict?.create_shift_modal?.status_db_conflict || "Trùng với ca trực khác");
       isDisabled = true;
     } else if (exceedsHardDaily) {
       status = "conflict";
       reason = `${dict?.create_shift_modal?.status_exceeds_max_daily || "Vượt quá 12 giờ làm việc tối đa trong ngày"} (${(totalAfterActiveSeg / 60).toFixed(1)}h)`;
-      isDisabled = true;
+      isDisabled = false;
     } else if (exceedsWeekly) {
       status = "conflict";
       reason = translateAvailabilityReason(availData?.reason) || (dict?.create_shift_modal?.status_exceeds_weekly || "Vượt quá 48 giờ làm việc trong tuần");
-      isDisabled = true;
+      isDisabled = false;
+    } else if (isSelected) {
+      status = "selected";
+      reason = dict?.create_shift_modal?.status_selected || "Đã chọn";
     } else if (hasOvertimeWarning) {
       status = "warning";
       reason = `${dict?.create_shift_modal?.status_overtime_badge || "Tăng ca"} (${(totalAfterActiveSeg / 60).toFixed(1)}h)`;
@@ -918,6 +918,19 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       reason = (dict?.create_shift_modal?.status_back_to_back_warning || "Bảo vệ có ca trực nối tiếp sát giờ tại địa điểm khác ({0})")
         .replace("{0}", timeStr || "sát giờ");
       isDisabled = false;
+    }
+
+    if (isSelected) {
+      if (exceedsWeekly) {
+        status = "conflict";
+        reason = `⚠️ ${dict?.create_shift_modal?.status_selected || "Đã chọn"} (${translateAvailabilityReason(availData?.reason) || "Vượt 48h/tuần"})`;
+      } else if (exceedsHardDaily) {
+        status = "conflict";
+        reason = `⚠️ ${dict?.create_shift_modal?.status_selected || "Đã chọn"} (Vượt 12h/ngày)`;
+      } else {
+        status = "selected";
+        reason = dict?.create_shift_modal?.status_selected || "Đã chọn";
+      }
     }
 
     if (isCheckingConflicts || (!isSelected && (!activeSegment?.endTime || activeSegment.endTime === ""))) {
@@ -1235,21 +1248,27 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
       const proposedShifts: { startTime: string; endTime: string }[] = [];
 
-      if (freeTimeMode === "shift" && generatedDates.length > 0 && activeSlot) {
-        const origStartMin = toMinutes(activeSlot.bookingStart);
-        const segSMin = toMinutes(activeStart);
-        const segDur = calculateDurationMinutes(activeStart, activeEnd);
-        const segStartRel = (segSMin - origStartMin + 24 * 60) % (24 * 60);
+      if (freeTimeMode === "shift" && generatedDates.length > 0 && slots.length > 0) {
+        for (const slot of slots) {
+          const origStartMin = toMinutes(slot.bookingStart);
+          const segments = slot.segments || [];
 
-        const startOffsetDays = Math.floor((origStartMin + segStartRel) / (24 * 60));
-        const endOffsetDays = Math.floor((origStartMin + segStartRel + segDur) / (24 * 60));
+          for (const seg of segments) {
+            const segSMin = toMinutes(seg.startTime);
+            const segDur = calculateDurationMinutes(seg.startTime, seg.endTime);
+            const segStartRel = (segSMin - origStartMin + 24 * 60) % (24 * 60);
 
-        for (const date of generatedDates) {
-          const segStartDate = addDays(date, startOffsetDays);
-          const segEndDate = addDays(date, endOffsetDays);
-          const segStartISO = toISO(segStartDate, activeStart);
-          const segEndISO = toISO(segEndDate, activeEnd);
-          proposedShifts.push({ startTime: segStartISO, endTime: segEndISO });
+            const startOffsetDays = Math.floor((origStartMin + segStartRel) / (24 * 60));
+            const endOffsetDays = Math.floor((origStartMin + segStartRel + segDur) / (24 * 60));
+
+            for (const date of generatedDates) {
+              const segStartDate = addDays(date, startOffsetDays);
+              const segEndDate = addDays(date, endOffsetDays);
+              const segStartISO = toISO(segStartDate, seg.startTime);
+              const segEndISO = toISO(segEndDate, seg.endTime);
+              proposedShifts.push({ startTime: segStartISO, endTime: segEndISO });
+            }
+          }
         }
       } else {
         let targetDates: string[] = [];
@@ -1303,16 +1322,98 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
       try {
         setIsCheckingConflicts(true);
-        const res = await requestGetGuardAvailability({
-          guardIds: allIds,
-          proposedShifts: proposedShifts.map((ps) => ({
-            ...ps,
-            location,
-            contractId,
-          })),
-        });
 
-        if (res.data) setGuardAvailabilityMap(res.data);
+        if (freeTimeMode === "shift" && generatedDates.length > 0 && slots.length > 0) {
+          const guardGroupMap = new Map<
+            string,
+            { guardIds: string[]; proposedShifts: { startTime: string; endTime: string; location?: string; contractId?: string }[] }
+          >();
+
+          allIds.forEach((guardId) => {
+            const shiftsList: { startTime: string; endTime: string; location?: string; contractId?: string }[] = [];
+
+            // 1. Active segment for current configuration
+            if (activeSlot && activeSegment) {
+              const origStartMin = toMinutes(activeSlot.bookingStart);
+              const segSMin = toMinutes(activeStart);
+              const segDur = calculateDurationMinutes(activeStart, activeEnd);
+              const segStartRel = (segSMin - origStartMin + 24 * 60) % (24 * 60);
+
+              const startOffsetDays = Math.floor((origStartMin + segStartRel) / (24 * 60));
+              const endOffsetDays = Math.floor((origStartMin + segStartRel + segDur) / (24 * 60));
+
+              for (const date of generatedDates) {
+                const segStartDate = addDays(date, startOffsetDays);
+                const segEndDate = addDays(date, endOffsetDays);
+                shiftsList.push({
+                  startTime: toISO(segStartDate, activeStart),
+                  endTime: toISO(segEndDate, activeEnd),
+                  location,
+                  contractId,
+                });
+              }
+            }
+
+            // 2. All OTHER segments in the modal where this guard is already assigned
+            for (const slot of slots) {
+              const origStartMin = toMinutes(slot.bookingStart);
+              for (const seg of slot.segments || []) {
+                if (seg.id !== activeSegmentId && seg.assignedGuardIds?.includes(guardId)) {
+                  const segSMin = toMinutes(seg.startTime);
+                  const segDur = calculateDurationMinutes(seg.startTime, seg.endTime);
+                  const segStartRel = (segSMin - origStartMin + 24 * 60) % (24 * 60);
+
+                  const startOffsetDays = Math.floor((origStartMin + segStartRel) / (24 * 60));
+                  const endOffsetDays = Math.floor((origStartMin + segStartRel + segDur) / (24 * 60));
+
+                  for (const date of generatedDates) {
+                    const segStartDate = addDays(date, startOffsetDays);
+                    const segEndDate = addDays(date, endOffsetDays);
+                    shiftsList.push({
+                      startTime: toISO(segStartDate, seg.startTime),
+                      endTime: toISO(segEndDate, seg.endTime),
+                      location: seg.location || location,
+                      contractId,
+                    });
+                  }
+                }
+              }
+            }
+
+            const key = JSON.stringify(shiftsList.sort((a, b) => a.startTime.localeCompare(b.startTime)));
+            if (!guardGroupMap.has(key)) {
+              guardGroupMap.set(key, { guardIds: [guardId], proposedShifts: shiftsList });
+            } else {
+              guardGroupMap.get(key)!.guardIds.push(guardId);
+            }
+          });
+
+          const newAvailMap: Record<string, GuardAvailabilityInfo> = {};
+          await Promise.all(
+            Array.from(guardGroupMap.values()).map(async ({ guardIds: gIds, proposedShifts: pShifts }) => {
+              if (pShifts.length === 0) return;
+              const res = await requestGetGuardAvailability({
+                guardIds: gIds,
+                proposedShifts: pShifts,
+              });
+              if (res.data) {
+                Object.assign(newAvailMap, res.data);
+              }
+            })
+          );
+
+          setGuardAvailabilityMap(newAvailMap);
+        } else {
+          const res = await requestGetGuardAvailability({
+            guardIds: allIds,
+            proposedShifts: proposedShifts.map((ps) => ({
+              ...ps,
+              location,
+              contractId,
+            })),
+          });
+          if (res.data) setGuardAvailabilityMap(res.data);
+        }
       } catch {
         // best-effort
       } finally {
