@@ -714,6 +714,29 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                       })}
                     </div>
                   </div>
+
+                  <div>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-outline mb-1.5">
+                      {dict.customer.search.bar_price_range}
+                    </label>
+                    <div className="flex justify-between text-[11px] font-bold text-primary bg-primary/5 rounded-lg px-2.5 py-1.5 mb-2">
+                      <span>{(minPriceInput ?? 10000).toLocaleString(locale === "vi" ? "vi-VN" : "en-US")}đ</span>
+                      <span className="text-outline">–</span>
+                      <span>{maxPriceInput !== undefined && maxPriceInput < 500000 ? `${maxPriceInput.toLocaleString(locale === "vi" ? "vi-VN" : "en-US")}đ` : dict.customer.search.bar_unlimited}</span>
+                    </div>
+                    <DualRangeSlider
+                      min={10000} max={500000} step={10000}
+                      minVal={minPriceInput ?? 10000}
+                      maxVal={maxPriceInput ?? 500000}
+                      onChange={(lo, hi) => {
+                        setMinPriceInput(lo > 10000 ? lo : undefined);
+                        setMaxPriceInput(hi < 500000 ? hi : undefined);
+                      }}
+                    />
+                    <div className="flex justify-between text-[9px] text-outline mt-1 font-medium">
+                      <span>10.000đ</span><span>500.000đ+</span>
+                    </div>
+                  </div>
                 </>
               )}
 
@@ -986,7 +1009,30 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                     })}
                   </div>
                 </div>
-              </>
+
+                <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-outline mb-2">
+                      {dict.customer.search.bar_price_range}
+                    </label>
+                    <div className="flex justify-between text-xs font-bold text-primary bg-primary/5 rounded-lg px-3 py-2 mb-3">
+                      <span>{(minPriceInput ?? 10000).toLocaleString(locale === "vi" ? "vi-VN" : "en-US")}đ</span>
+                      <span className="text-outline">–</span>
+                      <span>{maxPriceInput !== undefined && maxPriceInput < 500000 ? `${maxPriceInput.toLocaleString(locale === "vi" ? "vi-VN" : "en-US")}đ` : dict.customer.search.bar_unlimited}</span>
+                    </div>
+                    <DualRangeSlider
+                      min={10000} max={500000} step={10000}
+                      minVal={minPriceInput ?? 10000}
+                      maxVal={maxPriceInput ?? 500000}
+                      onChange={(lo, hi) => {
+                        setMinPriceInput(lo > 10000 ? lo : undefined);
+                        setMaxPriceInput(hi < 500000 ? hi : undefined);
+                      }}
+                    />
+                    <div className="flex justify-between text-[10px] text-outline mt-1 font-medium">
+                      <span>10.000đ</span><span>500.000đ+</span>
+                    </div>
+                  </div>
+                </>
             )}
 
             <div className="flex justify-end gap-2 border-t border-outline-variant/30 pt-3">
