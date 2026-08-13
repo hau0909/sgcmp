@@ -7,6 +7,7 @@ import { createIdentityService } from "@/features/identity/service/identity.serv
 import { validateIdentityExists } from "@/features/identity/validator/identity.validator";
 import {
   insertGuardInformationService,
+  insertGuardRecordService,
   uploadGuardAvatarService,
   getCoordinatorByCompanyIdService,
   getAllGuardService,
@@ -18,6 +19,10 @@ import {
   updateGuardDetailService,
   getGuardPerformanceSummaryService,
   getGuardPerformanceListService,
+  approveGuardService,
+  rejectGuardService,
+  completeGuardProfileService,
+  getGuardDetailByUserIdService,
 } from "../service/guard.service";
 
 import { getIdentityByUserIdService } from "@/features/identity/service/identity.service";
@@ -25,6 +30,7 @@ import { getIdentityByUserIdService } from "@/features/identity/service/identity
 import {
   validateCreateGuardAccount,
   validateCreateGuardInput,
+  validateCompleteGuardProfileInput,
   checkGuardExistsByUserId,
   checkPhoneNumberExists,
   checkEmailExists,
@@ -37,6 +43,8 @@ import {
 import type {
   CreateGuardAccountBody,
   CreateGuardAccountInput,
+  CompleteGuardProfileInput,
+  ApproveGuardInput,
   gender,
   InsertGuardInformationBody,
   InsertGuardInformationInput,
@@ -137,13 +145,15 @@ export const handleCreateGuardAccount = async (
       };
     }
 
-    const identity_exists = await validateIdentityExists(input.identity_id);
+    if (input.identity_id) {
+      const identity_exists = await validateIdentityExists(input.identity_id);
 
-    if (identity_exists) {
-      return {
-        success: false,
-        message: "Số CCCD/CMND đã được sử dụng.",
-      };
+      if (identity_exists) {
+        return {
+          success: false,
+          message: "Số CCCD/CMND đã được sử dụng.",
+        };
+      }
     }
 
     const phone_number_exists = await checkPhoneNumberExists(input.phone_number);
@@ -177,6 +187,13 @@ export const handleCreateGuardAccount = async (
         message: "Không lấy được ID tài khoản bảo vệ.",
       };
     }
+
+    // Insert guard record with 'pending_profile' status
+    await insertGuardRecordService({
+      user_id,
+      company_id,
+      approval_status: "pending_profile",
+    });
 
     return {
       success: true,
@@ -216,14 +233,39 @@ export const handleCreateGuardAccount = async (
 
 export const handleUploadGuardAvatar = async (form_data: FormData) => {
   try {
-    await checkCoordinatorPermission();
+    const current_profile = await getCurrentUserProfileService();
 
-    const user_id = String(form_data.get("user_id") ?? "").trim();
+    if (!current_profile) {
+      return {
+        success: false,
+        message: "Bạn chưa đăng nhập.",
+      };
+    }
+
+    const role = current_profile.role?.toLowerCase();
+    if (role !== "coordinator" && role !== "company-admin" && role !== "guard") {
+      return {
+        success: false,
+        message: "Bạn không có quyền thực hiện chức năng này.",
+      };
+    }
+
+    let user_id = String(form_data.get("user_id") ?? "").trim();
+    if (!user_id && role === "guard") {
+      user_id = current_profile.user_id;
+    }
 
     if (!user_id) {
       return {
         success: false,
         message: "Không tìm thấy ID tài khoản bảo vệ.",
+      };
+    }
+
+    if (role === "guard" && user_id !== current_profile.user_id) {
+      return {
+        success: false,
+        message: "Bạn chỉ có thể tải ảnh cho tài khoản của chính mình.",
       };
     }
 
@@ -259,9 +301,27 @@ export const handleUploadGuardAvatar = async (form_data: FormData) => {
 
 export const handleUploadGuardFile = async (form_data: FormData) => {
   try {
-    await checkCoordinatorPermission();
+    const current_profile = await getCurrentUserProfileService();
 
-    const user_id = String(form_data.get("user_id") ?? "").trim();
+    if (!current_profile) {
+      return {
+        success: false,
+        message: "Bạn chưa đăng nhập.",
+      };
+    }
+
+    const role = current_profile.role?.toLowerCase();
+    if (role !== "coordinator" && role !== "company-admin" && role !== "guard") {
+      return {
+        success: false,
+        message: "Bạn không có quyền thực hiện chức năng này.",
+      };
+    }
+
+    let user_id = String(form_data.get("user_id") ?? "").trim();
+    if (!user_id && role === "guard") {
+      user_id = current_profile.user_id;
+    }
 
     if (!user_id) {
       return {
@@ -270,13 +330,25 @@ export const handleUploadGuardFile = async (form_data: FormData) => {
       };
     }
 
-    const type = String(form_data.get("type") ?? "avatar").trim() as "avatar" | "cccd_front" | "cccd_back";
+    if (role === "guard" && user_id !== current_profile.user_id) {
+      return {
+        success: false,
+        message: "Bạn chỉ có thể tải ảnh cho tài khoản của chính mình.",
+      };
+    }
+
+    const type = String(form_data.get("type") ?? "avatar").trim() as
+      | "avatar"
+      | "cccd_front"
+      | "cccd_back"
+      | "health_certificate"
+      | "skill_certificate";
     const file_entry = form_data.get("file") || form_data.get("avatar_file");
 
     if (!(file_entry instanceof File) || file_entry.size <= 0) {
       return {
         success: false,
-        message: type === "avatar" ? "Vui lòng chọn ảnh bảo vệ." : "Vui lòng chọn ảnh CCCD.",
+        message: "Vui lòng chọn file tải lên.",
       };
     }
 
@@ -288,7 +360,7 @@ export const handleUploadGuardFile = async (form_data: FormData) => {
 
     return {
       success: true,
-      message: type === "avatar" ? "Tải ảnh bảo vệ thành công." : "Tải ảnh CCCD thành công.",
+      message: "Tải file thành công.",
       data: result,
     };
   } catch (error) {
@@ -420,6 +492,7 @@ export const handleGetAllGuards = async ({
   search,
   gender,
   status,
+  approvalStatus,
   workStatus,
   timeZone,
   checkContractId,
@@ -487,6 +560,7 @@ export const handleGetAllGuards = async ({
     const keyword = search?.trim() ?? "";
     const genderVal = gender?.trim() ?? "";
     const statusVal = status?.trim() ?? "";
+    const approvalStatusVal = approvalStatus?.trim() ?? "";
     const workStatusVal = workStatus?.trim() ?? "";
     const checkContractIdVal = checkContractId?.trim() || undefined;
 
@@ -497,8 +571,9 @@ export const handleGetAllGuards = async ({
       search: keyword,
       gender: genderVal,
       status: statusVal,
+      approvalStatus: approvalStatusVal || undefined,
       workStatus: workStatusVal,
-      timeZone: timeZone || undefined,
+      timeZone: timeZone ?? undefined,
       checkContractId: checkContractIdVal,
     });
 
@@ -1079,4 +1154,193 @@ export const handleGetGuardPerformanceList = async (request: Request) => {
     };
   }
 };
+
+export const handleApproveRejectGuard = async (
+  guard_id: string,
+  body: ApproveGuardInput,
+) => {
+  try {
+    const current_profile = await checkCoordinatorPermission();
+
+    if (!guard_id) {
+      return {
+        success: false,
+        message: "Không tìm thấy mã bảo vệ.",
+      };
+    }
+
+    const action = body.action;
+    if (action !== "approve" && action !== "reject") {
+      return {
+        success: false,
+        message: "Hành động không hợp lệ. Chỉ chấp nhận 'approve' hoặc 'reject'.",
+      };
+    }
+
+    if (action === "reject") {
+      const rejection_note = (body.rejection_note || "").trim();
+      if (!rejection_note) {
+        return {
+          success: false,
+          message: "Vui lòng nhập lý do từ chối hồ sơ bảo vệ.",
+        };
+      }
+
+      const result = await rejectGuardService({
+        guard_id,
+        coordinator_id: current_profile.user_id,
+        rejection_note,
+      });
+
+      return {
+        success: true,
+        message: "Đã từ chối hồ sơ bảo vệ.",
+        data: result,
+      };
+    }
+
+    // Approve
+    const result = await approveGuardService({
+      guard_id,
+      coordinator_id: current_profile.user_id,
+    });
+
+    return {
+      success: true,
+      message: "Duyệt hồ sơ bảo vệ thành công.",
+      data: result,
+    };
+  } catch (error) {
+    console.error("handleApproveRejectGuard error:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Không thể xử lý duyệt/từ chối hồ sơ bảo vệ.",
+    };
+  }
+};
+
+export const handleCompleteGuardProfile = async (
+  body: any,
+) => {
+  try {
+    const profile = await getCurrentUserProfileService();
+
+    if (!profile) {
+      return {
+        success: false,
+        message: "Bạn chưa đăng nhập.",
+      };
+    }
+
+    if (profile.role?.toLowerCase() !== "guard") {
+      return {
+        success: false,
+        message: "Chỉ tài khoản bảo vệ mới có quyền hoàn thiện hồ sơ.",
+      };
+    }
+
+    const input = {
+      date_of_birth: String(body.date_of_birth ?? "").trim(),
+      gender: String(body.gender ?? "").trim(),
+      address: String(body.address ?? "").trim(),
+      identity_id: String(body.identity_id ?? "").trim(),
+      identity_issue_date: String(body.identity_issue_date ?? "").trim(),
+      identity_issue_place: String(body.identity_issue_place ?? "").trim(),
+      avatar_url: typeof body.avatar_url === "string" ? body.avatar_url.trim() || null : null,
+      front_url: typeof body.front_url === "string" ? body.front_url.trim() || null : null,
+      back_url: typeof body.back_url === "string" ? body.back_url.trim() || null : null,
+      height_cm: typeof body.height_cm === "number" ? body.height_cm : Number(body.height_cm) || null,
+      weight_kg: typeof body.weight_kg === "number" ? body.weight_kg : Number(body.weight_kg) || null,
+      notable_skills: Array.isArray(body.notable_skills)
+        ? body.notable_skills.map((s: any) => String(s).trim()).filter(Boolean)
+        : [],
+      health_certificate_path:
+        typeof body.health_certificate_path === "string" ? body.health_certificate_path.trim() || null : null,
+      skill_certificate_paths: Array.isArray(body.skill_certificate_paths)
+        ? body.skill_certificate_paths.map((s: any) => String(s).trim()).filter(Boolean)
+        : [],
+    };
+
+    const validateError = validateCompleteGuardProfileInput(input);
+    if (validateError) {
+      return {
+        success: false,
+        message: validateError,
+      };
+    }
+
+    // Check if identity exists for other user
+    const identityExists = await checkIdentityExistsForOtherUser(
+      input.identity_id,
+      profile.user_id,
+    );
+    if (identityExists) {
+      return {
+        success: false,
+        message: "Số CCCD/CMND đã được sử dụng bởi tài khoản khác.",
+      };
+    }
+
+    const result = await completeGuardProfileService({
+      user_id: profile.user_id,
+      ...input,
+    });
+
+    return {
+      success: true,
+      message: "Nộp hồ sơ thành công. Vui lòng chờ Điều phối viên xét duyệt.",
+      data: result,
+    };
+  } catch (error) {
+    console.error("handleCompleteGuardProfile error:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Không thể hoàn thiện hồ sơ bảo vệ.",
+    };
+  }
+};
+
+export const handleGetGuardMyProfile = async () => {
+  try {
+    const profile = await getCurrentUserProfileService();
+
+    if (!profile) {
+      return {
+        success: false,
+        message: "Bạn chưa đăng nhập.",
+        data: null,
+      };
+    }
+
+    const guardDetail = await getGuardDetailByUserIdService(profile.user_id);
+    const identity = await getIdentityByUserIdService(profile.user_id);
+
+    return {
+      success: true,
+      message: "Lấy thông tin hồ sơ bảo vệ thành công.",
+      data: {
+        profile,
+        guard: guardDetail,
+        identity,
+      },
+    };
+  } catch (error) {
+    console.error("handleGetGuardMyProfile error:", error);
+    return {
+      success: false,
+      message:
+        error instanceof Error
+          ? error.message
+          : "Không thể lấy thông tin hồ sơ bảo vệ.",
+      data: null,
+    };
+  }
+};
+
 

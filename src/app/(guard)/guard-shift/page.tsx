@@ -41,11 +41,14 @@ const formatDateTitle = (date: Date) => {
   });
 };
 
-const getStatusStyle = (status: ShiftItem["status"], isReplacement?: boolean) => {
+const getStatusStyle = (status: ShiftItem["status"], isReplacement?: boolean, checkInTime?: string | null) => {
   if (isReplacement) return "bg-purple-100 text-purple-700";
   if (status === "assigned") return "bg-blue-100 text-blue-700";
   if (status === "completed") return "bg-emerald-100 text-emerald-700";
-  if (status === "late") return "bg-amber-100 text-amber-700";
+  if (status === "late") {
+    if (checkInTime) return "bg-yellow-100 text-yellow-800 border border-yellow-300";
+    return "bg-amber-100 text-amber-800 border border-amber-300";
+  }
   return "bg-red-100 text-red-700";
 };
 
@@ -58,7 +61,10 @@ const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
     address: shift.address,
     company_name: shift.company_name,
     status: shift.status,
+    check_in_time: shift.check_in_time,
     is_replacement: shift.is_replacement,
+    is_overtime: shift.is_overtime || (Number(shift.overtime_minutes) > 0),
+    overtime_minutes: shift.overtime_minutes,
   };
 };
 
@@ -97,7 +103,8 @@ const ShiftDetailSkeleton = () => {
 export default function GuardShiftPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
+  const isEn = locale === "en";
   const t = dict.layout_guard.guard_shift;
   const card = dict.layout_guard.shift_card;
 
@@ -140,12 +147,17 @@ export default function GuardShiftPage() {
     fetchGuardShiftsByDay();
   }, [selectedDateKey, t.fetch_error]);
 
-  const getStatusLabel = (status: ShiftItem["status"], isReplacement?: boolean) => {
-    if (isReplacement) return card.status_replacement;
-    if (status === "assigned") return card.status_assigned;
-    if (status === "completed") return card.guard_status_on_duty || card.status_completed || "Đang trực";
-    if (status === "checkout") return card.guard_status_checkout || card.status_checkout || "Hoàn thành";
-    if (status === "late") return card.status_late;
+  const getStatusLabel = (shiftItem: ShiftItem) => {
+    if (shiftItem.is_replacement) return card.status_replacement;
+    if (shiftItem.status === "assigned") return card.status_assigned;
+    if (shiftItem.status === "completed") return card.guard_status_on_duty || card.status_completed || "Đang trực";
+    if (shiftItem.status === "checkout") return card.guard_status_checkout || card.status_checkout || "Hoàn thành";
+    if (shiftItem.status === "late") {
+      if (shiftItem.check_in_time) {
+        return (dict?.shift_detail_modal?.checked_in_late || (isEn ? "LATE CHECK-IN" : "ĐIỂM DANH TRỄ")).toUpperCase();
+      }
+      return (dict?.shift_detail_modal?.late_not_checked_in || (isEn ? "LATE - NOT CHECKED IN" : "ĐI TRỄ CHƯA ĐIỂM DANH")).toUpperCase();
+    }
     return card.status_absent;
   };
 
@@ -184,7 +196,11 @@ export default function GuardShiftPage() {
               <article
                 key={shift.id}
                 onClick={() => handleOpenShiftDetail(shift.id)}
-                className="w-full cursor-pointer rounded-2xl border border-slate-200 bg-white p-4 text-left shadow-sm transition-all active:scale-[0.98]"
+                className={`w-full cursor-pointer rounded-2xl border p-4 text-left shadow-sm transition-all active:scale-[0.98] ${
+                  shift.is_overtime
+                    ? "border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100/80"
+                    : "border-slate-200 bg-white"
+                }`}
               >
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
@@ -197,14 +213,22 @@ export default function GuardShiftPage() {
                     </p>
                   </div>
 
-                  <span
-                    className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold ${getStatusStyle(
-                      shift.status,
-                      shift.is_replacement,
-                    )}`}
-                  >
-                    {getStatusLabel(shift.status, shift.is_replacement)}
-                  </span>
+                  <div className="flex items-center gap-1.5 flex-wrap shrink-0">
+                    <span
+                      className={`rounded-full px-3 py-1.5 text-[10px] font-extrabold ${getStatusStyle(
+                        shift.status,
+                        shift.is_replacement,
+                        shift.check_in_time,
+                      )}`}
+                    >
+                      {getStatusLabel(shift)}
+                    </span>
+                    {shift.is_overtime && (
+                      <span className="rounded-full border border-amber-300 bg-amber-100/90 px-2.5 py-1 text-[10px] font-extrabold tracking-[0.1em] text-amber-800">
+                        {dict?.common?.overtime || "TĂNG CA"}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div className="space-y-3">

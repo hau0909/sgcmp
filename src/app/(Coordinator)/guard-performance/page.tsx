@@ -21,7 +21,6 @@ import {
     ChevronDown,
     X,
     ScrollText,
-    CircleCheckBig,
     Phone,
 } from "lucide-react";
 import {
@@ -162,16 +161,22 @@ export default function GuardPerformancePage() {
     }, [selectedGuardId, startDate, endDate]);
 
     const currentRadarData = [
-        { subject: dict.coor_guard_performance?.on_time || (isEn ? "On Time" : "Đúng giờ"), score: summaryData?.on_time_rate.percentage ?? 0, fullMark: 100 },
-        { subject: dict.coor_guard_performance?.completed || (isEn ? "Completed" : "Hoàn thành"), score: summaryData?.completed_rate?.percentage ?? (summaryData?.on_time_rate.percentage ?? 0), fullMark: 100 },
-        { subject: dict.coor_guard_performance?.absent || (isEn ? "Absent" : "Vắng mặt"), score: summaryData?.attendance_rate.absent_percentage ?? 0, fullMark: 100 },
-        { subject: dict.coor_guard_performance?.late || (isEn ? "Late Check-in" : "Điểm danh trễ"), score: summaryData?.late_check_in_rate.percentage ?? 0, fullMark: 100 },
-        { subject: dict.coor_guard_performance?.replacement || (isEn ? "Replacement" : "Thay ca"), score: summaryData?.replacement_rate.percentage ?? 0, fullMark: 100 },
+        { subject: dict.coor_guard_performance?.on_time ? String(dict.coor_guard_performance.on_time).toUpperCase() : (isEn ? "ON TIME" : "ĐÚNG GIỜ"), score: summaryData?.on_time_rate.percentage ?? 0, fullMark: 100 },
+        {
+            subject: dict.coor_guard_performance?.overtime ? String(dict.coor_guard_performance.overtime).toUpperCase() : (isEn ? "OVERTIME" : "TĂNG CA"),
+            score: summaryData?.attendance_rate?.total_assignments && summaryData.attendance_rate.total_assignments > 0
+                ? Math.min(100, Math.round(((summaryData?.overtime_summary?.overtime_shifts_count ?? 0) / summaryData.attendance_rate.total_assignments) * 100))
+                : (summaryData?.overtime_summary?.total_overtime_hours ? Math.min(100, Math.round(summaryData.overtime_summary.total_overtime_hours * 10)) : 0),
+            fullMark: 100
+        },
+        { subject: dict.coor_guard_performance?.absent ? String(dict.coor_guard_performance.absent).toUpperCase() : (isEn ? "ABSENT" : "VẮNG MẶT"), score: summaryData?.attendance_rate.absent_percentage ?? 0, fullMark: 100 },
+        { subject: dict.coor_guard_performance?.late ? String(dict.coor_guard_performance.late).toUpperCase() : (isEn ? "LATE CHECK-IN" : "ĐIỂM DANH TRỄ"), score: summaryData?.late_check_in_rate.percentage ?? 0, fullMark: 100 },
+        { subject: dict.coor_guard_performance?.replacement ? String(dict.coor_guard_performance.replacement).toUpperCase() : (isEn ? "REPLACEMENT" : "THAY CA"), score: summaryData?.replacement_rate.percentage ?? 0, fullMark: 100 },
     ];
 
     const currentAttendanceMetrics = [
         {
-            name: dict.coor_guard_performance?.on_time || (isEn ? "On Time" : "Đúng giờ"),
+            name: dict.coor_guard_performance?.on_time ? String(dict.coor_guard_performance.on_time).toUpperCase() : (isEn ? "ON TIME" : "ĐÚNG GIỜ"),
             value: summaryData?.on_time_rate.percentage ?? 0,
             count: summaryData?.on_time_rate.on_time_shift_count ?? 0,
             color: "#10b981",
@@ -179,15 +184,7 @@ export default function GuardPerformancePage() {
             badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
         },
         {
-            name: dict.coor_guard_performance?.completed || (isEn ? "Completed" : "Hoàn thành"),
-            value: summaryData?.completed_rate?.percentage ?? (summaryData?.on_time_rate.percentage ?? 0),
-            count: summaryData?.completed_rate?.count ?? (summaryData?.on_time_rate.on_time_shift_count ?? 0),
-            color: "#059669",
-            icon: CircleCheckBig,
-            badgeBg: "bg-emerald-50 text-emerald-700 border-emerald-200/60",
-        },
-        {
-            name: dict.coor_guard_performance?.late || "Điểm danh trễ",
+            name: dict.coor_guard_performance?.late ? String(dict.coor_guard_performance.late).toUpperCase() : (isEn ? "LATE CHECK-IN" : "ĐIỂM DANH TRỄ"),
             value: summaryData?.late_check_in_rate.percentage ?? 0,
             count: summaryData?.late_check_in_rate.count ?? 0,
             color: "#3b82f6",
@@ -195,7 +192,7 @@ export default function GuardPerformancePage() {
             badgeBg: "bg-blue-50 text-blue-700 border-blue-200/60",
         },
         {
-            name: dict.coor_guard_performance?.absent || "Vắng mặt",
+            name: dict.coor_guard_performance?.absent ? String(dict.coor_guard_performance.absent).toUpperCase() : (isEn ? "ABSENT" : "VẮNG MẶT"),
             value: summaryData?.attendance_rate.absent_percentage ?? 0,
             count: summaryData?.attendance_rate.absent_count ?? 0,
             color: "#e11d48",
@@ -203,12 +200,21 @@ export default function GuardPerformancePage() {
             badgeBg: "bg-rose-50 text-rose-700 border-rose-200/60",
         },
         {
-            name: dict.coor_guard_performance?.replacement || "Thay ca",
+            name: dict.coor_guard_performance?.replacement ? String(dict.coor_guard_performance.replacement).toUpperCase() : (isEn ? "REPLACEMENT" : "THAY CA"),
             value: summaryData?.replacement_rate.percentage ?? 0,
             count: summaryData?.replacement_rate.count ?? 0,
             color: "#8b5cf6",
             icon: RefreshCw,
             badgeBg: "bg-purple-50 text-purple-700 border-purple-200/60",
+        },
+        {
+            name: dict.coor_guard_performance?.overtime ? String(dict.coor_guard_performance.overtime).toUpperCase() : (isEn ? "OVERTIME" : "TĂNG CA"),
+            value: summaryData?.overtime_summary?.total_overtime_hours ?? 0,
+            count: summaryData?.overtime_summary?.overtime_shifts_count ?? 0,
+            isHours: true,
+            color: "#f59e0b",
+            icon: Clock,
+            badgeBg: "bg-amber-50 text-amber-700 border-amber-200/60",
         },
     ];
 
@@ -747,6 +753,38 @@ export default function GuardPerformancePage() {
                         </div>
                     </div>
                 </div>
+
+                {/* Card 5: Thời gian tăng ca (Overtime) */}
+                <div className="p-4 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-xs space-y-3">
+                    <div className="flex items-center justify-between">
+                        <div className="w-9 h-9 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+                            <Clock className="w-5 h-5" />
+                        </div>
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-on-surface-variant">
+                            {dict.coor_guard_performance?.total_overtime || (isEn ? "OVERTIME HOURS" : "TỔNG GIỜ TĂNG CA")}
+                        </span>
+                    </div>
+                    <div>
+                        <div className="flex items-baseline gap-2">
+                            {loadingSummary ? (
+                                <div className="h-7 w-20 bg-slate-200 animate-pulse rounded-md" />
+                            ) : (
+                                <>
+                                    <span className="text-2xl font-extrabold text-on-surface tracking-tight">
+                                        {summaryData?.overtime_summary?.total_overtime_hours ?? 0}{" "}
+                                        <span className="text-sm font-semibold text-on-surface-variant">h</span>
+                                    </span>
+                                    <span className="text-xs font-semibold text-on-surface-variant bg-surface-container px-2 py-0.5 rounded-md">
+                                        {summaryData?.overtime_summary?.overtime_shifts_count ?? 0} {dict.coor_guard_performance?.shift_unit || "ca"}
+                                    </span>
+                                </>
+                            )}
+                        </div>
+                        <p className="text-[11px] text-on-surface-variant/80 mt-1">
+                            {dict.coor_guard_performance?.total_overtime_desc || (isEn ? "Total overtime accumulated in period" : "Tổng thời gian làm thêm trong kỳ")}
+                        </p>
+                    </div>
+                </div>
             </div>
 
             {/* Main Content Layout Grid */}
@@ -795,13 +833,29 @@ export default function GuardPerformancePage() {
                                     <ScrollText className="w-4 h-4" />
                                 </button>
                                 {/* Tooltip */}
-                                <div className="absolute right-0 top-full mt-2 w-80 z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-                                    <div className="bg-on-surface text-surface text-[11px] leading-relaxed rounded-xl px-3 py-2.5 shadow-lg">
-                                        <p className="font-semibold mb-1">{dict.coor_guard_performance?.formula_title || "📊 Cách tính Hiệu suất & Xếp loại"}</p>
-                                        <p className="mb-1">{dict.coor_guard_performance?.formula_calc || "Hiệu suất = Ca có điểm danh / Ca phân công"}</p>
-                                        <p>{dict.coor_guard_performance?.formula_excellent || "🌟 Xuất sắc: Chuyên cần ≥ 95%, Vắng ≤ 2%, Trễ ≤ 3%"}</p>
-                                        <p>{dict.coor_guard_performance?.formula_standard || "🟢 Tiêu chuẩn: Chuyên cần ≥ 90%, Vắng ≤ 5%, Trễ ≤ 10%"}</p>
-                                        <p>{dict.coor_guard_performance?.formula_improvement || "🔴 Cần cải thiện: Không đáp ứng hai mức trên"}</p>
+                        <div className="absolute right-0 top-full mt-2 w-[340px] z-50 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                                    <div className="bg-on-surface text-surface text-[11px] leading-relaxed rounded-xl px-4 py-3 shadow-lg space-y-2.5">
+                                        <p className="font-bold text-[12px] border-b border-surface/20 pb-1.5">📊 Cách tính Điểm hiệu suất</p>
+
+                                        {/* Formula full */}
+                                        <div className="bg-surface/10 rounded-lg px-2.5 py-2 text-[10.5px] leading-[1.7] space-y-0.5">
+                                            <p className="font-bold text-[11px]">Điểm = 50 (điểm cơ bản)</p>
+                                            <p>✅ <strong>+ 50</strong> × (Số ca đúng giờ <strong>÷</strong> Tổng ca đánh giá)</p>
+                                            <p>⏰ <strong>− 15</strong> × (Số ca đi trễ <strong>÷</strong> Tổng ca đánh giá)</p>
+                                            <p>❌ <strong>− 30</strong> × (Số ca vắng mặt <strong>÷</strong> Tổng ca đánh giá)</p>
+                                            <p>💪 <strong>+ 5</strong> × min(1, Số ca tăng ca <strong>÷</strong> Tổng ca đánh giá)</p>
+                                        </div>
+
+                                        {/* Note */}
+                                        <p className="text-[9.5px] opacity-60">※ Tổng ca đánh giá = Tổng ca đã/đang diễn ra (không tính ca tương lai & ca đã có bảo vệ thay)</p>
+
+                                        {/* Classification */}
+                                        <div className="border-t border-surface/20 pt-1.5 space-y-0.5">
+                                            <p className="font-semibold text-surface/70 uppercase tracking-wide text-[9px]">Xếp loại:</p>
+                                            <p>🏆 <strong>Xuất sắc</strong>: Điểm ≥ 90</p>
+                                            <p>✅ <strong>Tiêu chuẩn</strong>: Điểm từ 70 đến 89</p>
+                                            <p>⚠️ <strong>Cần cải thiện</strong>: Điểm &lt; 70</p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -816,6 +870,7 @@ export default function GuardPerformancePage() {
                                     <th className="py-3.5 px-5">{dict.coor_guard_performance?.col_guard || "NHÂN VIÊN"}</th>
                                     <th className="py-3.5 px-4">{dict.coor_guard_performance?.col_target || "MỤC TIÊU"}</th>
                                     <th className="py-3.5 px-4">{dict.coor_guard_performance?.col_performance || "HIỆU SUẤT"}</th>
+                                    <th className="py-3.5 px-4 text-center">{dict.coor_guard_performance?.col_overtime || (isEn ? "OVERTIME" : "TĂNG CA")}</th>
                                     <th className="py-3.5 px-5 text-center">{dict.coor_guard_performance?.col_rating || "XẾP LOẠI"}</th>
                                 </tr>
                             </thead>
@@ -841,6 +896,9 @@ export default function GuardPerformancePage() {
                                             <td className="py-4 px-4">
                                                 <div className="h-4 w-28 bg-slate-200 rounded" />
                                             </td>
+                                            <td className="py-4 px-4 text-center">
+                                                <div className="h-6 w-16 bg-slate-200 rounded-full mx-auto" />
+                                            </td>
                                             <td className="py-4 px-5 text-center">
                                                 <div className="h-6 w-24 bg-slate-200 rounded-xl mx-auto" />
                                             </td>
@@ -848,7 +906,7 @@ export default function GuardPerformancePage() {
                                     ))
                                 ) : realGuards.length === 0 ? (
                                     <tr>
-                                        <td colSpan={4} className="py-8 text-center text-xs text-on-surface-variant">
+                                        <td colSpan={5} className="py-8 text-center text-xs text-on-surface-variant">
                                             {filterTab === "top10"
                                                 ? "Chưa có nhân viên bảo vệ nào đạt danh hiệu Xuất sắc trong khoảng thời gian này"
                                                 : "Không có bảo vệ nào trong danh sách"}
@@ -916,9 +974,9 @@ export default function GuardPerformancePage() {
                                                 <div className="space-y-1.5">
                                                     <div className="flex items-center gap-2">
                                                         <span
-                                                            className={`font-bold text-xs ${guard.performanceScore >= 95
+                                                            className={`font-bold text-xs ${guard.performanceScore >= 90
                                                                 ? "text-emerald-600"
-                                                                : guard.performanceScore >= 90
+                                                                : guard.performanceScore >= 70
                                                                     ? "text-blue-600"
                                                                     : "text-rose-600"
                                                                 }`}
@@ -930,9 +988,9 @@ export default function GuardPerformancePage() {
                                                     {/* Progress Bar */}
                                                     <div className="w-full bg-surface-container-high rounded-full h-1.5 overflow-hidden">
                                                         <div
-                                                            className={`h-full rounded-full transition-all duration-500 ${guard.performanceScore >= 95
+                                                            className={`h-full rounded-full transition-all duration-500 ${guard.performanceScore >= 90
                                                                 ? "bg-emerald-500"
-                                                                : guard.performanceScore >= 90
+                                                                : guard.performanceScore >= 70
                                                                     ? "bg-blue-500"
                                                                     : "bg-rose-500"
                                                                 }`}
@@ -942,6 +1000,18 @@ export default function GuardPerformancePage() {
                                                 </div>
                                             </td>
 
+                                            {/* Overtime Column */}
+                                            <td className="py-4 px-4 text-center">
+                                                {guard.overtimeHours && guard.overtimeHours > 0 ? (
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-800 border border-amber-200/80">
+                                                        <Clock className="w-3 h-3 text-amber-600 shrink-0" />
+                                                        <span>{guard.overtimeHours}h</span>
+                                                    </span>
+                                                ) : (
+                                                    <span className="text-xs text-on-surface-variant/50 font-medium">0h</span>
+                                                )}
+                                            </td>
+
                                             {/* Category Badge */}
                                             <td className="py-4 px-5 text-center">
                                                 <span
@@ -949,9 +1019,9 @@ export default function GuardPerformancePage() {
                                                         ? "bg-emerald-50 text-emerald-700 border border-emerald-200/60"
                                                         : guard.category === "TIÊU CHUẨN"
                                                             ? "bg-blue-50 text-blue-700 border border-blue-200/60"
-                                                            : guard.category === "CẦN CẢI THIỆN"
-                                                                ? "bg-rose-50 text-rose-700 border border-rose-200/60"
-                                                                : "bg-slate-100 text-slate-600 border border-slate-200/60"
+                                                            : guard.category === "CHƯA PHÂN CÔNG"
+                                                                ? "bg-surface-container text-on-surface-variant border border-outline-variant/40"
+                                                                : "bg-rose-50 text-rose-700 border border-rose-200/60"
                                                         }`}
                                                 >
                                                     {guard.category === "XUẤT SẮC"
@@ -1025,7 +1095,7 @@ export default function GuardPerformancePage() {
                                     {dict.coor_guard_performance?.attendance_chart_title || "Chỉ số chuyên cần"}
                                 </h2>
                                 <p className="text-[11px] text-on-surface-variant">
-                                    {dict.coor_guard_performance?.attendance_chart_desc || "Đúng giờ, Vắng mặt, Điểm danh trễ & Thay ca"}
+                                    {dict.coor_guard_performance?.attendance_chart_desc || "Đúng giờ, Tăng ca, Vắng mặt, Điểm danh trễ & Thay ca"}
                                 </p>
                             </div>
                         </div>
@@ -1091,7 +1161,7 @@ export default function GuardPerformancePage() {
                                             </span>
                                             <div className="flex items-baseline gap-1 mt-0.5">
                                                 <span className="text-xs font-bold text-on-surface">
-                                                    {item.value}%
+                                                    {(item as any).isHours ? `${item.value}h` : `${item.value}%`}
                                                 </span>
                                                 <span className="text-[10px] text-on-surface-variant/70 font-normal">
                                                     ({item.count})

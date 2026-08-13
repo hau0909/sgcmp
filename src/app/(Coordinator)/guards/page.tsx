@@ -16,6 +16,7 @@ import { requestGetAllGuards } from "@/features/guards/api/guard.api";
 import { requestGetGuardAvailability } from "@/features/shift/api/shift.api";
 import type { GuardListItem, GuardProfileItem } from "@/features/guards/type";
 import { getEndOfDayInTimeZone, getUserTimeZone } from "@/utils/dateTime";
+import AddGuardQuickModal from "@/features/guards/components/AddGuardQuickModal";
 
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
@@ -165,6 +166,14 @@ export default function GuardListScreen() {
     { value: "banned", label: dict.coor_guards?.status_banned || "Đã bị khóa" },
   ];
 
+  const approvalStatusOptions = [
+    { value: "", label: dict.coor_guards?.filter_approval || "Duyệt hồ sơ (Tất cả)" },
+    { value: "pending_profile", label: dict.coor_guards?.approval_pending_profile || "Chờ điền hồ sơ" },
+    { value: "pending_approval", label: dict.coor_guards?.approval_pending || "Chờ duyệt hồ sơ" },
+    { value: "approved", label: dict.coor_guards?.approval_approved || "Đã duyệt" },
+    { value: "rejected", label: dict.coor_guards?.approval_rejected || "Đã từ chối" },
+  ];
+
   const genderOptions = [
     { value: "", label: dict.coor_guards?.filter_gender || "Giới tính (Tất cả)" },
     { value: "male", label: dict.coor_guards?.gender_male || "Nam" },
@@ -174,7 +183,11 @@ export default function GuardListScreen() {
 
   const [workStatusFilter, setWorkStatusFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
+  const [approvalStatusFilter, setApprovalStatusFilter] = useState("");
   const [genderFilter, setGenderFilter] = useState("");
+
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalGuards, setTotalGuards] = useState(0);
@@ -199,7 +212,7 @@ export default function GuardListScreen() {
 
   useEffect(() => {
     setCurrentPage(1);
-  }, [genderFilter, statusFilter, workStatusFilter]);
+  }, [genderFilter, statusFilter, approvalStatusFilter, workStatusFilter]);
 
   useEffect(() => {
     let isCancelled = false;
@@ -215,6 +228,7 @@ export default function GuardListScreen() {
           search: debouncedSearchValue,
           gender: genderFilter,
           status: statusFilter,
+          approvalStatus: approvalStatusFilter,
           workStatus: workStatusFilter,
         });
 
@@ -255,7 +269,7 @@ export default function GuardListScreen() {
     return () => {
       isCancelled = true;
     };
-  }, [currentPage, debouncedSearchValue, genderFilter, statusFilter, workStatusFilter]);
+  }, [currentPage, debouncedSearchValue, genderFilter, statusFilter, approvalStatusFilter, workStatusFilter, refreshKey]);
 
   useEffect(() => {
     if (guards.length === 0) {
@@ -352,8 +366,8 @@ export default function GuardListScreen() {
 
         <button
           type="button"
-          onClick={() => router.push("/guards/add")}
-          className="flex h-10 cursor-pointer items-center gap-2 bg-blue-800 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900"
+          onClick={() => setIsAddModalOpen(true)}
+          className="flex h-10 cursor-pointer items-center gap-2 rounded-lg bg-blue-800 px-4 text-sm font-semibold text-white shadow-sm transition hover:bg-blue-900"
         >
           <Plus className="h-4 w-4" />
           {dict.coor_guards?.btn_add || "Thêm bảo vệ"}
@@ -362,7 +376,7 @@ export default function GuardListScreen() {
 
       <div className="rounded-md border border-slate-300 bg-white">
         <div className="relative z-30 border-b border-slate-300 p-3 flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="relative w-full md:max-w-[320px]">
+          <div className="relative w-full md:max-w-[280px]">
             <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
 
             <input
@@ -375,6 +389,13 @@ export default function GuardListScreen() {
           </div>
 
           <div className="flex flex-wrap items-center gap-3">
+            <CustomSelect
+              value={approvalStatusFilter}
+              onChange={setApprovalStatusFilter}
+              options={approvalStatusOptions}
+              placeholder={dict.coor_guards?.filter_approval || "Duyệt hồ sơ (Tất cả)"}
+            />
+
             <CustomSelect
               value={workStatusFilter}
               onChange={setWorkStatusFilter}
@@ -399,17 +420,18 @@ export default function GuardListScreen() {
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[750px] border-collapse text-left">
+          <table className="w-full min-w-[850px] border-collapse text-left">
             <thead>
               <tr className="bg-sky-200/80 text-xs font-bold uppercase text-slate-950">
-                <th className="w-[100px] px-4 py-3">STT</th>
-                <th className="w-[120px] px-4 py-3">{dict.coor_guards?.col_avatar || "Ảnh"}</th>
-                <th className="w-[240px] px-4 py-3">{dict.coor_guards?.col_name || "Họ và tên"}</th>
-                <th className="w-[120px] px-4 py-3">{dict.coor_guards?.col_gender || "Giới tính"}</th>
-                <th className="w-[180px] px-4 py-3">{dict.coor_guards?.col_phone || "Số điện thoại"}</th>
-                <th className="w-[180px] px-4 py-3">{dict.coor_guards?.col_today_schedule || "Lịch hôm nay"}</th>
-                <th className="w-[160px] px-4 py-3">{dict.coor_guards?.col_status || "Trạng thái"}</th>
-                <th className="w-[110px] px-4 py-3 text-center">{dict.coor_guards?.col_action || "Hành động"}</th>
+                <th className="w-[70px] px-4 py-3">STT</th>
+                <th className="w-[90px] px-4 py-3">{dict.coor_guards?.col_avatar || "Ảnh"}</th>
+                <th className="w-[200px] px-4 py-3">{dict.coor_guards?.col_name || "Họ và tên"}</th>
+                <th className="w-[90px] px-4 py-3">{dict.coor_guards?.col_gender || "Giới tính"}</th>
+                <th className="w-[140px] px-4 py-3">{dict.coor_guards?.col_phone || "Số điện thoại"}</th>
+                <th className="w-[150px] px-4 py-3">{dict.coor_guards?.col_approval || "Duyệt hồ sơ"}</th>
+                <th className="w-[150px] px-4 py-3">{dict.coor_guards?.col_today_schedule || "Lịch hôm nay"}</th>
+                <th className="w-[130px] px-4 py-3">{dict.coor_guards?.col_status || "Trạng thái"}</th>
+                <th className="w-[100px] px-4 py-3 text-center">{dict.coor_guards?.col_action || "Hành động"}</th>
               </tr>
             </thead>
 
@@ -454,21 +476,41 @@ export default function GuardListScreen() {
                       </td>
 
                       <td className="px-4 py-3 text-slate-950">
-                        <div className="font-semibold">{profile?.full_name ?? "Chưa cập nhật"}</div>
-                        <div className="text-xs text-slate-500 mt-0.5">{profile?.email ?? "Chưa cập nhật"}</div>
+                        <div className="font-semibold">{profile?.full_name ?? (dict.coor_guards?.not_updated || "Chưa cập nhật")}</div>
+                        <div className="text-xs text-slate-500 mt-0.5">{profile?.email ?? (dict.coor_guards?.not_updated || "Chưa cập nhật")}</div>
                       </td>
 
                       <td className="px-4 py-3 font-medium">
                         {(() => {
                           const g = profile?.gender?.trim().toLowerCase();
-                          if (g === "male" || g === "nam") return "Nam";
-                          if (g === "female" || g === "nữ" || g === "nu") return "Nữ";
-                          return profile?.gender ?? "Chưa cập nhật";
+                          if (g === "male" || g === "nam") return dict.coor_guards?.gender_male || "Nam";
+                          if (g === "female" || g === "nữ" || g === "nu") return dict.coor_guards?.gender_female || "Nữ";
+                          return profile?.gender ?? (dict.coor_guards?.not_updated || "Chưa cập nhật");
                         })()}
                       </td>
 
                       <td className="px-4 py-3 font-medium">
-                        {profile?.phone_number ?? "Chưa cập nhật"}
+                        {profile?.phone_number ?? (dict.coor_guards?.not_updated || "Chưa cập nhật")}
+                      </td>
+
+                      <td className="px-4 py-3">
+                        {guard.approval_status === "approved" ? (
+                          <span className="inline-flex items-center rounded-md bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/20">
+                            {dict.coor_guards?.badge_approved || "ĐÃ DUYỆT"}
+                          </span>
+                        ) : guard.approval_status === "pending_approval" ? (
+                          <span className="inline-flex items-center rounded-md bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-700 ring-1 ring-inset ring-amber-600/20">
+                            {dict.coor_guards?.badge_pending_approval || "CHỜ DUYỆT"}
+                          </span>
+                        ) : guard.approval_status === "rejected" ? (
+                          <span className="inline-flex items-center rounded-md bg-rose-50 px-2.5 py-1 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/20">
+                            {dict.coor_guards?.badge_rejected || "TỪ CHỐI"}
+                          </span>
+                        ) : (
+                          <span className="inline-flex items-center rounded-md bg-slate-100 px-2.5 py-1 text-xs font-semibold text-slate-600 ring-1 ring-inset ring-slate-500/20">
+                            {dict.coor_guards?.badge_pending_profile || "CHỜ ĐIỀN HỒ SƠ"}
+                          </span>
+                        )}
                       </td>
 
                       <td className="px-4 py-3">
@@ -586,6 +628,16 @@ export default function GuardListScreen() {
           </div>
         </div>
       </div>
+
+      {/* Quick Add Guard Modal */}
+      <AddGuardQuickModal
+        isOpen={isAddModalOpen}
+        onClose={() => setIsAddModalOpen(false)}
+        onSuccess={() => {
+          setRefreshKey((k) => k + 1);
+          setCurrentPage(1);
+        }}
+      />
     </div>
   );
 }

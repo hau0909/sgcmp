@@ -21,6 +21,7 @@ import type {
   ShiftWithAssignments,
 } from "../type";
 import { ShiftDetailModal } from "./ShiftDetailModal";
+import { getGroupedStatusBadges } from "./ShiftCard";
 
 
 type ShiftWeekScheduleTableProps = {
@@ -167,13 +168,21 @@ function GuardRow({
           </p>
         </div>
 
-        <span
-          className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusStyle(
-            assignment.status,
-          )}`}
-        >
-          {getStatusLabel(assignment.status, dict)}
-        </span>
+        <div className="flex items-center gap-1 shrink-0">
+          {assignment.is_overtime && (
+            <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
+              {String(dict?.common?.overtime || "TĂNG CA").toUpperCase()}
+            </span>
+          )}
+          <span
+            className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium ${getStatusStyle(
+              assignment.status,
+              assignment.check_in_time,
+            )}`}
+          >
+            {getStatusLabel(assignment.status, dict, assignment.check_in_time)}
+          </span>
+        </div>
       </div>
 
       {showSubTooltip && subTooltipPosition && (
@@ -242,11 +251,11 @@ function ReplacementGuardRow({
         <div className="flex min-w-0 items-center gap-2">
           <UserRound size={13} className="shrink-0 text-purple-600" />
           <p className="truncate text-xs font-semibold text-purple-900">
-            {repGuard.full_name}
+            {assignment.guard_name} ➔ {repGuard.full_name}
           </p>
         </div>
         <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[9px] font-bold text-purple-700">
-          {dict?.shift_week?.replacement || "Thay thế"}
+          {String(dict?.shift_week?.replacement || "THAY THẾ").toUpperCase()}
         </span>
       </div>
 
@@ -270,27 +279,34 @@ const getWeekDayLabels = (locale: string) => {
   });
 };
 
-const getStatusLabel = (status: ShiftAssignmentStatus, dict?: any) => {
+const getStatusLabel = (
+  status: ShiftAssignmentStatus,
+  dict?: any,
+  checkInTime?: string | null
+) => {
   if (status === "assigned") {
-    return dict?.coor_schedules?.assigned || "Đã phân công";
+    return (dict?.coor_schedules?.assigned || "ĐÃ PHÂN CÔNG").toUpperCase();
   }
 
   if (status === "completed") {
-    return dict?.coor_schedules?.on_duty || "Đang trực";
+    return (dict?.coor_schedules?.on_duty || "ĐANG TRỰC").toUpperCase();
   }
 
   if (status === "checkout") {
-    return dict?.coor_schedules?.checkout || "Hoàn thành";
+    return (dict?.coor_schedules?.checkout || "HOÀN THÀNH").toUpperCase();
   }
 
   if (status === "late") {
-    return dict?.coor_schedules?.late || "Đi trễ";
+    if (checkInTime) {
+      return (dict?.shift_detail_modal?.checked_in_late || dict?.coor_schedules?.late_checked_in || "ĐIỂM DANH TRỄ").toUpperCase();
+    }
+    return (dict?.shift_detail_modal?.late_not_checked_in || dict?.coor_schedules?.late_not_checked_in || "ĐI TRỄ CHƯA ĐIỂM DANH").toUpperCase();
   }
 
-  return dict?.coor_schedules?.absent || "Vắng mặt";
+  return (dict?.coor_schedules?.absent || "VẮNG MẶT").toUpperCase();
 };
 
-const getStatusStyle = (status: ShiftAssignmentStatus) => {
+const getStatusStyle = (status: ShiftAssignmentStatus, checkInTime?: string | null) => {
   if (status === "assigned") {
     return "bg-yellow-100 text-yellow-700 border-yellow-300";
   }
@@ -304,7 +320,10 @@ const getStatusStyle = (status: ShiftAssignmentStatus) => {
   }
 
   if (status === "late") {
-    return "bg-amber-100 text-amber-700 border-amber-300";
+    if (checkInTime) {
+      return "bg-yellow-100 text-yellow-800 border-yellow-300";
+    }
+    return "bg-amber-100 text-amber-800 border-amber-300";
   }
 
   return "bg-red-100 text-red-700 border-red-300";
@@ -396,7 +415,13 @@ const getShiftContractAddress = (shift: ShiftWithAssignments, dict?: any) => {
 };
 
 const getMainGuardName = (assignment: ShiftAssignment | undefined, dict?: any) => {
-  return assignment?.guard_name || (dict?.shift_week?.unupdated || "Chưa cập nhật");
+  if (!assignment) return dict?.shift_week?.unupdated || "Chưa cập nhật";
+  const origName = assignment.guard_name || (dict?.shift_week?.unupdated || "Chưa cập nhật");
+  if (assignment.replacement_guards && assignment.replacement_guards.length > 0) {
+    const repName = assignment.replacement_guards[0].full_name;
+    return `${origName} ➔ ${repName}`;
+  }
+  return origName;
 };
 
 const getTooltipPosition = (element: HTMLButtonElement): TooltipPosition => {
@@ -742,12 +767,15 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
 
   const firstAssignment = shift.assignments[0];
   const extraGuardCount = shift.assignments.length - 1;
+  const hasOvertime = shift.assignments.some(
+    (assign) => assign.is_overtime || (Number(assign.overtime_minutes) > 0)
+  );
   const hasReplacement = shift.assignments.some(
     (assign) =>
       (assign.replacement_guard_ids && assign.replacement_guard_ids.length > 0) ||
       (assign.replacement_guards && assign.replacement_guards.length > 0)
   );
-  const statusLabel = getStatusLabel(firstAssignment.status, dict);
+  const statusLabel = getStatusLabel(firstAssignment.status, dict, firstAssignment.check_in_time);
 
   const [showTooltip, setShowTooltip] = useState(false);
   const hoverTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -791,49 +819,65 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
         onClick={() => onShiftClick(shift)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className="w-full rounded-md border border-blue-200 bg-blue-100 px-3 py-2 text-left text-blue-900 shadow-sm transition-all duration-300 hover:bg-blue-200"
+        className={`w-full rounded-md border px-3 py-2 text-left shadow-sm transition-all duration-300 ${
+          hasOvertime
+            ? "border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100/80"
+            : "border-blue-200 bg-blue-100 text-blue-900 hover:bg-blue-200"
+        }`}
       >
         <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
-          <span
-            className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusStyle(
-              firstAssignment.status,
-            )}`}
-          >
-            {statusLabel}
-          </span>
-          {hasReplacement && (
-            <span className="shrink-0 rounded-full border border-purple-300 bg-purple-100 px-2 py-0.5 text-[10px] font-semibold text-purple-700">
-              {dict?.shift_week?.replacement || "Thay thế"}
+          {getGroupedStatusBadges(shift, dict).map((badge) => (
+            <span
+              key={badge.key}
+              className={`shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-semibold ${badge.style}`}
+            >
+              {badge.label}
             </span>
-          )}
+          ))}
         </div>
 
-        <div className="flex items-center gap-2 overflow-visible">
-          <UserRound size={14} className="shrink-0" />
+        <div className="space-y-1">
+          <div className="flex items-center gap-2 overflow-visible">
+            <UserRound size={14} className={`shrink-0 ${hasOvertime ? "text-amber-700" : ""}`} />
+            <p className={`whitespace-nowrap text-sm font-bold leading-5 ${hasOvertime ? "text-amber-950" : "text-blue-900"}`}>
+              {getMainGuardName(firstAssignment, dict)}
+              {extraGuardCount > 0 ? (
+                <span className={`ml-1 font-bold ${hasOvertime ? "text-amber-800" : "text-blue-700"}`}>
+                  +{extraGuardCount}
+                </span>
+              ) : null}
+            </p>
+          </div>
 
-          <p className="whitespace-nowrap text-sm font-bold leading-5 text-blue-900">
-            {getMainGuardName(firstAssignment, dict)}
-            {extraGuardCount > 0 ? (
-              <span className="ml-1 font-bold text-blue-700">
-                +{extraGuardCount}
-              </span>
-            ) : null}
-          </p>
+          {shift.assignments.slice(1).map((sa, idx) => {
+            if (!sa.replacement_guards || sa.replacement_guards.length === 0) return null;
+            const rep = sa.replacement_guards[0];
+            const origName = sa.guard_name || (dict?.shift_week?.unupdated || "Chưa cập nhật");
+            const repStr = `${origName} ➔ ${rep.full_name}`;
+            return (
+              <div key={sa.assignment_id || idx} className="flex items-center gap-1.5 min-w-0 text-xs font-extrabold text-purple-900">
+                <UserRound size={13} className="shrink-0 text-purple-600" />
+                <span className="truncate" title={repStr}>
+                  {repStr}
+                </span>
+              </div>
+            );
+          })}
         </div>
 
-        <div className="mt-1.5 flex items-center gap-1.5 text-sm font-medium text-blue-800">
+        <div className={`mt-1.5 flex items-center gap-1.5 text-sm font-medium ${hasOvertime ? "text-amber-900" : "text-blue-800"}`}>
           <Clock size={13} className="shrink-0" />
           <span className="whitespace-nowrap">
             {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
           </span>
         </div>
 
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-700">
+        <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-semibold ${hasOvertime ? "text-amber-800" : "text-blue-700"}`}>
           <SquarePen size={12} className="shrink-0" />
           <span className="whitespace-nowrap">{shift.shift_name}</span>
         </div>
 
-        <div className="mt-1.5 flex items-center gap-1.5 text-xs font-semibold text-blue-700 min-w-0">
+        <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-semibold ${hasOvertime ? "text-amber-800" : "text-blue-700"} min-w-0`}>
           <MapPin size={12} className="shrink-0" />
           <span className="truncate" title={shift.location}>{shift.location}</span>
         </div>

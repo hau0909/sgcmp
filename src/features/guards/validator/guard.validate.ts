@@ -206,12 +206,105 @@ export const validateCreateGuardAccount = (
     return "Email không hợp lệ.";
   }
 
-  if (!input.identity_id.trim()) {
+  if (input.identity_id && input.identity_id.trim()) {
+    if (!IDENTITY_REGEX.test(input.identity_id.trim())) {
+      return "CCCD/CMND phải gồm 9 hoặc 12 chữ số.";
+    }
+  }
+
+  return null;
+};
+
+export const validateCompleteGuardProfileInput = (
+  input: {
+    date_of_birth: string;
+    gender: string;
+    address: string;
+    identity_id: string;
+    identity_issue_date: string;
+    identity_issue_place: string;
+    avatar_url?: string | null;
+    front_url?: string | null;
+    back_url?: string | null;
+    height_cm?: number | null;
+    weight_kg?: number | null;
+    notable_skills?: string[] | null;
+    health_certificate_path?: string | null;
+    skill_certificate_paths?: string[] | null;
+  }
+): string | null => {
+  if (!input.date_of_birth) {
+    return "Vui lòng chọn ngày sinh.";
+  }
+
+  const dobDate = new Date(input.date_of_birth);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  dobDate.setHours(0, 0, 0, 0);
+
+  if (dobDate > today) {
+    return "Ngày sinh không được ở tương lai.";
+  }
+
+  let age = today.getFullYear() - dobDate.getFullYear();
+  const monthDiff = today.getMonth() - dobDate.getMonth();
+  if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dobDate.getDate())) {
+    age--;
+  }
+
+  if (age < 18) {
+    return "Nhân viên bảo vệ phải từ 18 tuổi trở lên.";
+  }
+
+  if (!input.gender) {
+    return "Vui lòng chọn giới tính.";
+  }
+
+  if (!input.identity_id?.trim()) {
     return "Vui lòng nhập số CCCD/CMND.";
   }
 
   if (!IDENTITY_REGEX.test(input.identity_id.trim())) {
     return "CCCD/CMND phải gồm 9 hoặc 12 chữ số.";
+  }
+
+  if (!input.identity_issue_date) {
+    return "Vui lòng chọn ngày cấp CCCD/CMND.";
+  }
+
+  const issueDate = new Date(input.identity_issue_date);
+  issueDate.setHours(0, 0, 0, 0);
+
+  if (issueDate > today) {
+    return "Ngày cấp CCCD/CMND không được ở tương lai.";
+  }
+
+  if (!input.identity_issue_place?.trim()) {
+    return "Vui lòng nhập nơi cấp CCCD/CMND.";
+  }
+
+  if (!input.address?.trim()) {
+    return "Vui lòng nhập địa chỉ thường trú.";
+  }
+
+  if (!input.height_cm || input.height_cm < 100 || input.height_cm > 250) {
+    return "Vui lòng nhập chiều cao hợp lệ (100 - 250 cm).";
+  }
+
+  if (!input.weight_kg || input.weight_kg < 30 || input.weight_kg > 200) {
+    return "Vui lòng nhập cân nặng hợp lệ (30 - 200 kg).";
+  }
+
+  if (!Array.isArray(input.notable_skills) || input.notable_skills.length === 0) {
+    return "Vui lòng chọn hoặc nhập ít nhất một kỹ năng nổi bật.";
+  }
+
+  if (!input.health_certificate_path?.trim()) {
+    return "Vui lòng tải lên giấy khám sức khỏe.";
+  }
+
+  if (!Array.isArray(input.skill_certificate_paths) || input.skill_certificate_paths.length === 0) {
+    return "Vui lòng tải lên ít nhất một chứng chỉ kỹ năng.";
   }
 
   return null;

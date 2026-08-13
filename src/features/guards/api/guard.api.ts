@@ -80,6 +80,7 @@ export const requestGetAllGuards = ({
   search = "",
   gender = "",
   status = "",
+  approvalStatus = "",
   workStatus = "",
   checkContractId = "",
 }: GetAllGuardsParams = {}) => {
@@ -100,6 +101,10 @@ export const requestGetAllGuards = ({
     searchParams.set("status", status);
   }
 
+  if (approvalStatus) {
+    searchParams.set("approvalStatus", approvalStatus);
+  }
+
   if (workStatus) {
     searchParams.set("workStatus", workStatus);
   }
@@ -109,6 +114,55 @@ export const requestGetAllGuards = ({
   }
 
   return fetcher(`/api/guard?${searchParams.toString()}`, {
+    method: "GET",
+  });
+};
+
+export const requestApproveRejectGuard = async (
+  guardId: string,
+  data: {
+    action: "approve" | "reject";
+    rejection_note?: string;
+  }
+) => {
+  return fetcher(`/api/guard/${encodeURIComponent(guardId)}/approval`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+};
+
+export const requestCompleteGuardProfile = async (
+  data: {
+    date_of_birth: string;
+    gender: string;
+    address: string;
+    avatar_url?: string | null;
+    identity_id: string;
+    identity_issue_date: string;
+    identity_issue_place: string;
+    front_url?: string | null;
+    back_url?: string | null;
+    height_cm: number;
+    weight_kg: number;
+    notable_skills: string[];
+    health_certificate_path: string;
+    skill_certificate_paths: string[];
+  }
+) => {
+  return fetcher("/api/guard/profile", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(data),
+  });
+};
+
+export const requestGetGuardMyProfile = async () => {
+  return fetcher("/api/guard/my-profile", {
     method: "GET",
   });
 };
@@ -175,7 +229,7 @@ export const requestGetCustomerGuardsByContract = ({
 export const requestUploadGuardFile = async (
   file: File,
   user_id: string,
-  type: "avatar" | "cccd_front" | "cccd_back",
+  type: "avatar" | "cccd_front" | "cccd_back" | "health_certificate" | "skill_certificate",
 ): Promise<UploadGuardAvatarResponse> => {
   const form_data = new FormData();
 
