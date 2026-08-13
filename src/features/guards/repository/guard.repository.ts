@@ -69,6 +69,34 @@ export const insertGuardInformation = async ({
   };
 };
 
+export const insertGuardRecord = async ({
+  user_id,
+  company_id,
+  approval_status = "pending_profile",
+}: {
+  user_id: string;
+  company_id: string;
+  approval_status?: string;
+}) => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("guards")
+    .insert({
+      user_id,
+      company_id,
+      approval_status,
+    })
+    .select("guard_id, user_id, company_id, approval_status, created_at")
+    .single();
+
+  if (error) {
+    throw new Error(error.message || "Không thể tạo bản ghi bảo vệ.");
+  }
+
+  return data;
+};
+
 export const getCoordinatorCompanyId = async (
   user_id: string,
 ): Promise<string> => {
@@ -117,8 +145,13 @@ export const uploadGuardAvatar = async ({
     throw new Error("Không tìm thấy hồ sơ người dùng hiện tại.");
   }
 
-  if (currentProfile.role !== "coordinator" && currentProfile.role !== "company-admin") {
+  const role = currentProfile.role?.toLowerCase();
+  if (role !== "coordinator" && role !== "company-admin" && role !== "guard") {
     throw new Error("Bạn không có quyền tải ảnh bảo vệ.");
+  }
+
+  if (role === "guard" && user_id !== currentProfile.user_id) {
+    throw new Error("Bạn chỉ có thể tải ảnh cho tài khoản của chính mình.");
   }
 
   const bucket_name = "profiles";
@@ -178,7 +211,7 @@ export const uploadGuardFile = async ({
 }: {
   user_id: string;
   file: File;
-  type: "avatar" | "cccd_front" | "cccd_back";
+  type: "avatar" | "cccd_front" | "cccd_back" | "health_certificate" | "skill_certificate";
 }): Promise<UploadGuardAvatarResult> => {
   const authSupabase = await createClient();
 
@@ -201,8 +234,13 @@ export const uploadGuardFile = async ({
     throw new Error("Không tìm thấy hồ sơ người dùng hiện tại.");
   }
 
-  if (currentProfile.role !== "coordinator" && currentProfile.role !== "company-admin") {
-    throw new Error("Bạn không có quyền tải ảnh bảo vệ.");
+  const role = currentProfile.role?.toLowerCase();
+  if (role !== "coordinator" && role !== "company-admin" && role !== "guard") {
+    throw new Error("Bạn không có quyền tải ảnh/tài liệu bảo vệ.");
+  }
+
+  if (role === "guard" && user_id !== currentProfile.user_id) {
+    throw new Error("Bạn chỉ có thể tải tài liệu cho tài khoản của chính mình.");
   }
 
   const bucket_name = "profiles";
@@ -210,21 +248,25 @@ export const uploadGuardFile = async ({
   const file_extension = file.name.split(".").pop()?.toLowerCase();
 
   if (!file_extension) {
-    throw new Error("Không xác định được định dạng ảnh.");
+    throw new Error("Không xác định được định dạng file.");
   }
 
-  const allowedExtensions = ["jpg", "jpeg", "png"];
+  const allowedExtensions = ["jpg", "jpeg", "png", "webp", "pdf"];
 
   if (!allowedExtensions.includes(file_extension)) {
-    throw new Error("Chỉ hỗ trợ ảnh JPG, JPEG hoặc PNG.");
+    throw new Error("Chỉ hỗ trợ file JPG, JPEG, PNG, WEBP hoặc PDF.");
   }
 
-  if (!file.type.startsWith("image/")) {
-    throw new Error("File tải lên không phải là ảnh.");
+  if (!file.type.startsWith("image/") && file.type !== "application/pdf" && file_extension !== "pdf") {
+    throw new Error("File tải lên không hợp lệ (chỉ hỗ trợ hình ảnh hoặc PDF).");
   }
 
   if (type === "avatar" && file.size > 2 * 1024 * 1024) {
-    throw new Error("Ảnh không được vượt quá 2MB.");
+    throw new Error("Ảnh chân dung không được vượt quá 2MB.");
+  }
+
+  if (file.size > 10 * 1024 * 1024) {
+    throw new Error("File tải lên không được vượt quá 10MB.");
   }
 
   let file_name = "";
@@ -239,6 +281,12 @@ export const uploadGuardFile = async ({
   } else if (type === "cccd_back") {
     file_name = `cccd-back-${Date.now()}.${file_extension}`;
     file_path = `${user_id}/identity/${file_name}`;
+  } else if (type === "health_certificate") {
+    file_name = `health-cert-${Date.now()}.${file_extension}`;
+    file_path = `${user_id}/health_certificate/${file_name}`;
+  } else if (type === "skill_certificate") {
+    file_name = `skill-cert-${Date.now()}-${Math.random().toString(36).substring(2, 7)}.${file_extension}`;
+    file_path = `${user_id}/skill_certificate/${file_name}`;
   }
 
   const supabase = await createClient();
@@ -351,6 +399,7 @@ export const getAllGuards = async ({
   search,
   gender,
   status,
+  approvalStatus,
   workStatus,
   timeZone,
   checkContractId,
@@ -544,6 +593,16 @@ export const getAllGuards = async ({
     .select(
       `
       guard_id,
+      user_id,
+      company_id,
+      approval_status,
+      rejection_note,
+      verified_at,
+      verified_by,
+      created_at,
+      height_cm,
+      weight_kg,
+      notable_skills,
       profiles!guards_user_id_fkey!inner (
         user_id,
         full_name,
@@ -551,7 +610,10 @@ export const getAllGuards = async ({
         avatar_url,
         email,
         status,
-        gender
+        gender,
+        identities (
+          identity_id
+        )
       )
     `,
       {
@@ -566,6 +628,10 @@ export const getAllGuards = async ({
       ascending: false,
     })
     .range(from, to);
+
+  if (approvalStatus) {
+    query = query.eq("approval_status", approvalStatus);
+  }
 
   if (matchedUserIds) {
     query = query.in("user_id", matchedUserIds);
@@ -755,6 +821,16 @@ export const getGuardDetail = async (
       guard_id,
       user_id,
       company_id,
+      approval_status,
+      rejection_note,
+      verified_at,
+      verified_by,
+      created_at,
+      height_cm,
+      weight_kg,
+      health_certificate_path,
+      skill_certificate_paths,
+      notable_skills,
 
       profiles!guards_user_id_fkey (
         full_name,
@@ -770,6 +846,233 @@ export const getGuardDetail = async (
     )
     .eq("guard_id", guard_id)
     .eq("company_id", company_id)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return data as unknown as GuardDetailDatabase | null;
+};
+
+export const approveGuardRepository = async ({
+  guard_id,
+  coordinator_id,
+}: {
+  guard_id: string;
+  coordinator_id: string;
+}) => {
+  const supabase = await createClient();
+
+  const { data: guard, error: guardError } = await supabase
+    .from("guards")
+    .update({
+      approval_status: "approved",
+      rejection_note: null,
+      verified_at: new Date().toISOString(),
+      verified_by: coordinator_id,
+    })
+    .eq("guard_id", guard_id)
+    .select("guard_id, user_id, approval_status")
+    .single();
+
+  if (guardError) {
+    throw new Error(guardError.message || "Không thể duyệt hồ sơ bảo vệ.");
+  }
+
+  if (guard?.user_id) {
+    await supabase
+      .from("profiles")
+      .update({
+        status: "active",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("user_id", guard.user_id);
+  }
+
+  return guard;
+};
+
+export const rejectGuardRepository = async ({
+  guard_id,
+  coordinator_id,
+  rejection_note,
+}: {
+  guard_id: string;
+  coordinator_id: string;
+  rejection_note: string;
+}) => {
+  const supabase = await createClient();
+
+  const { data: guard, error: guardError } = await supabase
+    .from("guards")
+    .update({
+      approval_status: "rejected",
+      rejection_note,
+      verified_at: new Date().toISOString(),
+      verified_by: coordinator_id,
+    })
+    .eq("guard_id", guard_id)
+    .select("guard_id, user_id, approval_status, rejection_note")
+    .single();
+
+  if (guardError) {
+    throw new Error(guardError.message || "Không thể từ chối hồ sơ bảo vệ.");
+  }
+
+  return guard;
+};
+
+export const completeGuardProfileRepository = async ({
+  user_id,
+  date_of_birth,
+  gender,
+  address,
+  avatar_url,
+  identity_id,
+  identity_issue_date,
+  identity_issue_place,
+  front_url,
+  back_url,
+  height_cm,
+  weight_kg,
+  notable_skills,
+  health_certificate_path,
+  skill_certificate_paths,
+}: {
+  user_id: string;
+  date_of_birth: string;
+  gender: string;
+  address: string;
+  avatar_url?: string | null;
+  identity_id: string;
+  identity_issue_date: string;
+  identity_issue_place: string;
+  front_url?: string | null;
+  back_url?: string | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  notable_skills?: string[] | null;
+  health_certificate_path?: string | null;
+  skill_certificate_paths?: string[] | null;
+}) => {
+  const supabase = await createClient();
+
+  // 1. Update profile
+  const profileUpdates: Record<string, any> = {
+    date_of_birth,
+    gender,
+    address,
+    updated_at: new Date().toISOString(),
+  };
+  if (avatar_url) {
+    profileUpdates.avatar_url = avatar_url;
+  }
+
+  const { error: profileError } = await supabase
+    .from("profiles")
+    .update(profileUpdates)
+    .eq("user_id", user_id);
+
+  if (profileError) {
+    throw new Error(profileError.message || "Không thể cập nhật hồ sơ cá nhân.");
+  }
+
+  // 2. Upsert identity
+  const { data: existingIdentity } = await supabase
+    .from("identities")
+    .select("identity_id")
+    .eq("user_id", user_id)
+    .maybeSingle();
+
+  if (existingIdentity) {
+    const identityUpdates: Record<string, any> = {
+      identity_id,
+      issue_date: identity_issue_date,
+      issue_place: identity_issue_place,
+      updated_at: new Date().toISOString(),
+    };
+    if (front_url) identityUpdates.front_url = front_url;
+    if (back_url) identityUpdates.back_url = back_url;
+
+    await supabase
+      .from("identities")
+      .update(identityUpdates)
+      .eq("user_id", user_id);
+  } else {
+    await supabase
+      .from("identities")
+      .insert({
+        user_id,
+        identity_id,
+        issue_date: identity_issue_date,
+        issue_place: identity_issue_place,
+        front_url: front_url || null,
+        back_url: back_url || null,
+      });
+  }
+
+  // 3. Update guard approval_status to 'pending_approval' and save physical, skills & certificates
+  const guardUpdates: Record<string, any> = {
+    approval_status: "pending_approval",
+    rejection_note: null,
+  };
+  if (height_cm !== undefined) guardUpdates.height_cm = height_cm;
+  if (weight_kg !== undefined) guardUpdates.weight_kg = weight_kg;
+  if (notable_skills !== undefined) guardUpdates.notable_skills = notable_skills;
+  if (health_certificate_path !== undefined) guardUpdates.health_certificate_path = health_certificate_path;
+  if (skill_certificate_paths !== undefined) guardUpdates.skill_certificate_paths = skill_certificate_paths;
+
+  const { data: guard, error: guardError } = await supabase
+    .from("guards")
+    .update(guardUpdates)
+    .eq("user_id", user_id)
+    .select()
+    .single();
+
+  if (guardError) {
+    throw new Error(guardError.message || "Không thể gửi hồ sơ duyệt.");
+  }
+
+  return guard;
+};
+
+export const getGuardDetailByUserId = async (
+  user_id: string,
+): Promise<GuardDetailDatabase | null> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("guards")
+    .select(
+      `
+      guard_id,
+      user_id,
+      company_id,
+      approval_status,
+      rejection_note,
+      verified_at,
+      verified_by,
+      created_at,
+      height_cm,
+      weight_kg,
+      health_certificate_path,
+      skill_certificate_paths,
+      notable_skills,
+
+      profiles!guards_user_id_fkey (
+        full_name,
+        phone_number,
+        email,
+        gender,
+        date_of_birth,
+        address,
+        avatar_url,
+        status
+      )
+    `,
+    )
+    .eq("user_id", user_id)
     .maybeSingle();
 
   if (error) {
@@ -919,6 +1222,12 @@ export const getGuardsByContract = async ({
     .select(
       `
       guard_id,
+      user_id,
+      company_id,
+      approval_status,
+      height_cm,
+      weight_kg,
+      notable_skills,
       profiles!guards_user_id_fkey (
         user_id,
         full_name,
@@ -926,7 +1235,10 @@ export const getGuardsByContract = async ({
         avatar_url,
         email,
         status,
-        gender
+        gender,
+        identities (
+          identity_id
+        )
       )
     `,
       {
@@ -935,6 +1247,7 @@ export const getGuardsByContract = async ({
     )
     .in("guard_id", guardAssigned)
     .eq("company_id", company_id)
+    .eq("approval_status", "approved")
     .order("created_at", {
       ascending: false,
     })
@@ -1051,7 +1364,9 @@ export const getGuardPerformanceSummary = async ({
       guard_id,
       status,
       check_in_time,
-      replacement_guard_ids
+      replacement_guard_ids,
+      is_overtime,
+      overtime_minutes
     )
   `);
 
@@ -1100,6 +1415,11 @@ export const getGuardPerformanceSummary = async ({
         percentage: 0.0,
         count: 0,
       },
+      overtime_summary: {
+        total_overtime_minutes: 0,
+        total_overtime_hours: 0,
+        overtime_shifts_count: 0,
+      },
     };
   }
 
@@ -1111,6 +1431,8 @@ export const getGuardPerformanceSummary = async ({
   let absentShifts = 0;
   let lateCheckInTimeShifts = 0;
   let replacementShifts = 0;
+  let totalOvertimeMinutes = 0;
+  let overtimeShiftsCount = 0;
   const guardShiftsSet = new Set<string>();
   const nowMs = new Date().getTime();
 
@@ -1128,6 +1450,21 @@ export const getGuardPerformanceSummary = async ({
 
       const isReplacement = Array.isArray(assignment.replacement_guard_ids) && assignment.replacement_guard_ids.length > 0;
       const isFutureUnstarted = status === "assigned" && shiftStartTime !== null && shiftStartTime > nowMs;
+      const isAttended = Boolean(
+        checkInTime ||
+        status === "completed" ||
+        status === "checkout" ||
+        status === "present" ||
+        status === "late" ||
+        status === "trễ" ||
+        status === "ontime" ||
+        status === "đúng giờ"
+      );
+
+      if ((assignment.is_overtime || (Number(assignment.overtime_minutes) > 0)) && isAttended) {
+        overtimeShiftsCount += 1;
+        totalOvertimeMinutes += Number(assignment.overtime_minutes) || 0;
+      }
 
       if (isReplacement) {
         replacementShifts += 1;
@@ -1224,6 +1561,11 @@ export const getGuardPerformanceSummary = async ({
       percentage: replacementPercentage,
       count: replacementShifts,
     },
+    overtime_summary: {
+      total_overtime_minutes: totalOvertimeMinutes,
+      total_overtime_hours: Number((totalOvertimeMinutes / 60).toFixed(1)),
+      overtime_shifts_count: overtimeShiftsCount,
+    },
   };
 };
 
@@ -1242,8 +1584,11 @@ export const getGuardPerformanceList = async ({
 }> => {
   const supabase = await createClient();
 
-  // 1. Fetch guards belonging to company
-  let guardsQuery = supabase.from("guards").select("guard_id, user_id, company_id");
+  // 1. Fetch approved guards belonging to company
+  let guardsQuery = supabase
+    .from("guards")
+    .select("guard_id, user_id, company_id, approval_status")
+    .eq("approval_status", "approved");
   if (company_id) {
     guardsQuery = guardsQuery.eq("company_id", company_id);
   }
@@ -1284,6 +1629,8 @@ export const getGuardPerformanceList = async ({
     status,
     check_in_time,
     replacement_guard_ids,
+    is_overtime,
+    overtime_minutes,
     shifts!inner (
       start_time
     )
@@ -1319,6 +1666,8 @@ export const getGuardPerformanceList = async ({
     let absent = 0;
     let late = 0;
     let onTime = 0;
+    let guardOvertimeMinutes = 0;
+    let guardOvertimeShiftsCount = 0;
     const nowMs = new Date().getTime();
 
     list.forEach((assignment: any) => {
@@ -1328,6 +1677,21 @@ export const getGuardPerformanceList = async ({
       const checkInTime = assignment.check_in_time ? new Date(assignment.check_in_time).getTime() : null;
       const isReplacement = Array.isArray(assignment.replacement_guard_ids) && assignment.replacement_guard_ids.length > 0;
       const isFutureUnstarted = status === "assigned" && shiftStartTime !== null && shiftStartTime > nowMs;
+      const isAttended = Boolean(
+        checkInTime ||
+        status === "completed" ||
+        status === "checkout" ||
+        status === "present" ||
+        status === "late" ||
+        status === "trễ" ||
+        status === "ontime" ||
+        status === "đúng giờ"
+      );
+
+      if ((assignment.is_overtime || (Number(assignment.overtime_minutes) > 0)) && isAttended) {
+        guardOvertimeShiftsCount += 1;
+        guardOvertimeMinutes += Number(assignment.overtime_minutes) || 0;
+      }
 
       if (isReplacement) {
         // Replacement shift - no check-in, do not count as absent, late, or onTime
@@ -1377,18 +1741,35 @@ export const getGuardPerformanceList = async ({
       ? Number(((late / effectiveAssigned) * 100).toFixed(1))
       : 0.0;
 
-    const performanceScore = attendancePercentage;
+    // ─── NEW: Weighted Composite Performance Score (0–100) ───
+    // Base 50 + 50 × onTimeRate − 15 × lateRate − 30 × absentRate + 5 × min(1, overtimeRate)
+    const onTimeRate = effectiveAssigned > 0 ? onTime / effectiveAssigned : (totalAssigned > 0 && absent === 0 ? 1 : 0);
+    const lateRateVal = effectiveAssigned > 0 ? late / effectiveAssigned : 0;
+    const absentRateVal = effectiveAssigned > 0 ? absent / effectiveAssigned : 0;
+    const overtimeRate = effectiveAssigned > 0
+      ? Math.min(1, guardOvertimeShiftsCount / effectiveAssigned)
+      : 0;
+
+    const rawScore = 50
+      + 50 * onTimeRate
+      - 15 * lateRateVal
+      - 30 * absentRateVal
+      + 5 * overtimeRate;
+
+    const performanceScore = totalAssigned > 0
+      ? Number(Math.max(0, Math.min(100, rawScore)).toFixed(1))
+      : 0;
 
     const rating = totalAssigned > 0
-      ? Number((4.0 + (performanceScore / 100) * 1.0).toFixed(1))
+      ? Number((3.0 + (performanceScore / 100) * 2.0).toFixed(1))
       : 0.0;
 
     let category: "XUẤT SẮC" | "TIÊU CHUẨN" | "CẦN CẢI THIỆN" | "CHƯA PHÂN CÔNG" = "CHƯA PHÂN CÔNG";
     if (totalAssigned === 0) {
       category = "CHƯA PHÂN CÔNG";
-    } else if (attendancePercentage >= 95.0 && absentRate <= 2.0 && lateRate <= 3.0) {
+    } else if (performanceScore >= 90) {
       category = "XUẤT SẮC";
-    } else if (attendancePercentage >= 90.0 && absentRate <= 5.0 && lateRate <= 10.0) {
+    } else if (performanceScore >= 70) {
       category = "TIÊU CHUẨN";
     } else {
       category = "CẦN CẢI THIỆN";
@@ -1406,6 +1787,9 @@ export const getGuardPerformanceList = async ({
       performanceScore,
       rating,
       category,
+      overtimeHours: Number((guardOvertimeMinutes / 60).toFixed(1)),
+      overtimeMinutes: guardOvertimeMinutes,
+      overtimeShiftsCount: guardOvertimeShiftsCount,
     };
   });
 

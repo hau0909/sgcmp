@@ -136,6 +136,12 @@ export default function CoordinatorLayout({
       active: pathname === "/schedules" || pathname.startsWith("/schedules/"),
     },
     {
+      name: (dict.layout_coordinator as any)?.shift_swap || "Yêu cầu đổi ca",
+      href: "/shift-requests",
+      icon: ArrowRightLeft,
+      active: pathname === "/shift-requests" || pathname.startsWith("/shift-requests/"),
+    },
+    {
       name: dict.layout_coordinator.bookings,
       href: "/bookings",
       icon: FileText,
@@ -283,10 +289,14 @@ export default function CoordinatorLayout({
                 <h1 className="text-sm font-bold text-on-surface tracking-tight leading-tight truncate max-w-[280px]" title={companyInfo?.name || ""}>
                   {companyInfo ? companyInfo.name : dict.common.loading}
                 </h1>
-                {companyInfo?.ownerName && (
+                {(role === "company-admin" ? (companyInfo?.ownerName || userProfile?.full_name) : userProfile?.full_name) && (
                   <p className="text-[10px] text-on-surface-variant font-semibold uppercase tracking-widest">
-                    {role === "company-admin" ? "Giám đốc" : "Điều phối viên"}:{" "}
-                    {companyInfo.ownerName}
+                    {role === "company-admin"
+                      ? (dict.layout_coordinator.director || "Giám đốc")
+                      : (dict.layout_coordinator.role || "Điều phối viên")}:{" "}
+                    {role === "company-admin"
+                      ? (companyInfo?.ownerName || userProfile?.full_name)
+                      : userProfile?.full_name}
                   </p>
                 )}
               </div>
