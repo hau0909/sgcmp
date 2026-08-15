@@ -9,6 +9,7 @@ export interface EligibleShiftForSwap {
   end_time: string;
   location: string | null;
   contract_id: string | null;
+  company_name?: string | null;
 }
 
 export interface ShiftSwapRequestWithDetails extends ShiftSwapRequest {
@@ -21,6 +22,7 @@ export interface ShiftSwapRequestWithDetails extends ShiftSwapRequest {
     start_time: string;
     end_time: string;
     location: string | null;
+    company_name?: string | null;
   }>;
   replacement_guards_details?: Record<string, {
     guard_id: string;
@@ -61,7 +63,12 @@ export const getGuardEligibleShiftsForSwapRepository = async (
         start_time,
         end_time,
         location,
-        contract_id
+        contract_id,
+        contract:contracts (
+          booking:bookings (
+            company_name
+          )
+        )
       )
     `)
     .in("guard_id", guardIdsToMatch)
@@ -86,15 +93,21 @@ export const getGuardEligibleShiftsForSwapRepository = async (
       const shiftStartMs = new Date(item.shift.start_time).getTime();
       return shiftStartMs >= minTimeMs;
     })
-    .map((item: any) => ({
-      assignment_id: item.assignment_id,
-      shift_id: item.shift.shift_id,
-      shift_name: item.shift.shift_name,
-      start_time: item.shift.start_time,
-      end_time: item.shift.end_time,
-      location: item.shift.location,
-      contract_id: item.shift.contract_id,
-    }));
+    .map((item: any) => {
+      const contractObj = Array.isArray(item.shift?.contract) ? item.shift.contract[0] : item.shift?.contract;
+      const bookingObj = Array.isArray(contractObj?.booking) ? contractObj.booking[0] : contractObj?.booking;
+
+      return {
+        assignment_id: item.assignment_id,
+        shift_id: item.shift.shift_id,
+        shift_name: item.shift.shift_name,
+        start_time: item.shift.start_time,
+        end_time: item.shift.end_time,
+        location: item.shift.location,
+        contract_id: item.shift.contract_id,
+        company_name: bookingObj?.company_name || null,
+      };
+    });
 };
 
 /**
@@ -428,20 +441,35 @@ async function enrichSwapRequestsWithDetails(
   }
 
   // Fetch shift details
-  const shiftsMap: Record<string, { shift_id: string; shift_name: string | null; start_time: string; end_time: string; location: string | null }> = {};
+  const shiftsMap: Record<string, { shift_id: string; shift_name: string | null; start_time: string; end_time: string; location: string | null; company_name?: string | null }> = {};
   if (shiftIdsArr.length > 0) {
     const { data: shiftsData } = await supabase
       .from("shifts")
-      .select("shift_id, shift_name, start_time, end_time, location")
+      .select(`
+        shift_id,
+        shift_name,
+        start_time,
+        end_time,
+        location,
+        contract:contracts (
+          booking:bookings (
+            company_name
+          )
+        )
+      `)
       .in("shift_id", shiftIdsArr);
 
     (shiftsData || []).forEach((s: any) => {
+      const contractObj = Array.isArray(s.contract) ? s.contract[0] : s.contract;
+      const bookingObj = Array.isArray(contractObj?.booking) ? contractObj.booking[0] : contractObj?.booking;
+
       shiftsMap[s.shift_id] = {
         shift_id: s.shift_id,
         shift_name: s.shift_name,
         start_time: s.start_time,
         end_time: s.end_time,
         location: s.location,
+        company_name: bookingObj?.company_name || null,
       };
     });
   }

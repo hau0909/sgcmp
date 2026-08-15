@@ -821,12 +821,12 @@ export default function CoordinatorDashboardPage() {
                         </div>
                     </div>
 
-                    {/* Card 2: Biểu đồ Hiệu suất Bảo vệ (Gọn gàng compact height) */}
+                    {/* Card 2: Biểu đồ phân bổ ca trực bảo vệ (Gọn gàng compact height) */}
                     <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-xs">
                         <div className="flex items-center justify-between pb-2.5 border-b border-slate-100 mb-2">
                             <div>
                                 <h2 className="text-sm font-bold text-slate-900">
-                                    {t.card_radar_title || "Biểu đồ Hiệu suất Bảo vệ"}
+                                    {t.card_radar_title || "Biểu đồ phân bổ ca trực bảo vệ"}
                                 </h2>
                                 <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">
                                     {t.card_radar_subtitle || "RADAR HIỆU SUẤT"} ({getTimeFilterLabel(timeFilter).toUpperCase()})
