@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import { Users, Search, X, Loader2, UserRound, Phone, Mail, Check, Lock, Plus, ChevronLeft, ChevronRight, Info } from "lucide-react";
+import { Users, Search, X, Loader2, UserRound, Phone, Mail, Check, Lock, Plus, ChevronLeft, ChevronRight, Info, Award, IdCard, Activity } from "lucide-react";
 import { requestGetAllGuards, requestGetGuardsByContract } from "@/features/guards/api/guard.api";
 import { requestAssignGuardsToContract } from "../api/contract.api";
 import type { GuardListItem } from "@/features/guards/type";
@@ -36,6 +36,12 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
   const [selectedGuardIds, setSelectedGuardIds] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [toastMessage, setToastMessage] = useState<{ text: string; type: "success" | "error" } | null>(null);
+
+  const [hoveredGuardInfo, setHoveredGuardInfo] = useState<{
+    guard: GuardListItem;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // Pagination for all guards selection in modal
   const [modalPage, setModalPage] = useState(1);
@@ -141,6 +147,18 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
     return Array.isArray(profiles) ? (profiles[0] ?? null) : profiles;
   };
 
+  const getIdentityId = (profiles: GuardListItem["profiles"]): string => {
+    const p = getGuardProfile(profiles);
+    if (!p) return "";
+    if (Array.isArray(p.identities) && p.identities.length > 0) {
+      return p.identities[0].identity_id;
+    }
+    if (p.identities && typeof p.identities === "object" && "identity_id" in p.identities) {
+      return (p.identities as any).identity_id || "";
+    }
+    return "";
+  };
+
   return (
     <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-6 shadow-sm relative flex-grow flex-shrink min-w-0">
       {/* Toast Notification */}
@@ -214,7 +232,16 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
             return (
               <div
                 key={guard.guard_id}
-                className="flex items-center gap-3.5 p-3 rounded-lg border border-outline-variant/60 bg-surface-container-low/40 hover:bg-surface-container-low transition-colors"
+                onMouseEnter={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  setHoveredGuardInfo({
+                    guard,
+                    x: rect.left,
+                    y: rect.top,
+                  });
+                }}
+                onMouseLeave={() => setHoveredGuardInfo(null)}
+                className="flex items-center gap-3.5 p-3 rounded-lg border border-outline-variant/60 bg-surface-container-low/40 hover:bg-surface-container-low transition-colors cursor-pointer"
               >
                 {profile.avatar_url ? (
                   <Image
@@ -248,6 +275,20 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                       </span>
                     )}
                   </div>
+                  {/* Notable Skills Chip */}
+                  {Array.isArray(guard.notable_skills) && guard.notable_skills.length > 0 && (
+                    <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                      <span className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200/80 px-2 py-0.5 text-[11px] font-semibold text-blue-800 dark:bg-blue-950/40 dark:border-blue-900/50 dark:text-blue-300">
+                        <Award className="w-3 h-3 text-blue-600 dark:text-blue-400 shrink-0" />
+                        <span className="truncate max-w-[130px]">{guard.notable_skills[0]}</span>
+                      </span>
+                      {guard.notable_skills.length > 1 && (
+                        <span className="inline-flex items-center rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[11px] font-bold text-slate-700 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300">
+                          +{guard.notable_skills.length - 1}
+                        </span>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="shrink-0 text-right">
@@ -326,6 +367,15 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                           if (isConflicted) return;
                           handleToggleGuard(guard.guard_id);
                         }}
+                        onMouseEnter={(e) => {
+                          const rect = e.currentTarget.getBoundingClientRect();
+                          setHoveredGuardInfo({
+                            guard,
+                            x: rect.left,
+                            y: rect.top,
+                          });
+                        }}
+                        onMouseLeave={() => setHoveredGuardInfo(null)}
                         className={`flex items-center gap-3 p-3 rounded-lg border transition-all select-none ${isConflicted
                             ? "border-slate-100 bg-slate-50/40 opacity-60 cursor-not-allowed"
                             : isSelected
@@ -369,6 +419,20 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
                               <span className="text-[11px] text-slate-400 font-mono truncate">
                                 {profile.email}
                               </span>
+                            )}
+                            {/* Notable Skills Chip */}
+                            {Array.isArray(guard.notable_skills) && guard.notable_skills.length > 0 && (
+                              <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                <span className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200/80 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
+                                  <Award className="w-3 h-3 text-blue-600 shrink-0" />
+                                  <span className="truncate max-w-[130px]">{guard.notable_skills[0]}</span>
+                                </span>
+                                {guard.notable_skills.length > 1 && (
+                                  <span className="inline-flex items-center rounded bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[11px] font-bold text-slate-700">
+                                    +{guard.notable_skills.length - 1}
+                                  </span>
+                                )}
+                              </div>
                             )}
                             {guard.conflictInfo && (
                               <div className="mt-0.5">
@@ -442,6 +506,118 @@ export function ContractGuardsInfo({ contractId, customerAgreed, onGuardsUpdated
               </div>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Floating Hover Details Popover Card */}
+      {hoveredGuardInfo && (
+        <div
+          className="fixed z-[99999] w-80 rounded-2xl border border-slate-200/90 bg-white/95 p-4 shadow-2xl backdrop-blur-md pointer-events-none transition-all duration-150 animate-in fade-in zoom-in-95 text-left"
+          style={{
+            top: `${Math.max(16, Math.min(window.innerHeight - 380, hoveredGuardInfo.y - 15))}px`,
+            left: `${hoveredGuardInfo.x > 340 ? hoveredGuardInfo.x - 332 : hoveredGuardInfo.x + 360}px`,
+          }}
+        >
+          {(() => {
+            const p = getGuardProfile(hoveredGuardInfo.guard.profiles);
+            const cccd = getIdentityId(hoveredGuardInfo.guard.profiles);
+            const skills = Array.isArray(hoveredGuardInfo.guard.notable_skills)
+              ? hoveredGuardInfo.guard.notable_skills
+              : [];
+            const unupdatedText =
+              dict?.create_shift_modal?.guard_tooltip_unupdated ||
+              (dict?.coor_guards?.unupdated || "Chưa cập nhật");
+            return (
+              <div className="space-y-3">
+                {/* Header with Avatar & Name */}
+                <div className="flex items-center gap-3 border-b border-slate-100 pb-3">
+                  <div className="h-12 w-12 shrink-0 overflow-hidden rounded-full border-2 border-blue-600 bg-slate-100 shadow-sm">
+                    {p?.avatar_url ? (
+                      <img
+                        src={p.avatar_url}
+                        alt={p.full_name || "Guard"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-slate-400">
+                        <UserRound size={24} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="truncate font-bold text-sm text-slate-900">
+                      {p?.full_name || unupdatedText}
+                    </h4>
+                    <span className="text-[11px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-0.5 border border-emerald-200/60">
+                      {dict?.create_shift_modal?.guard_tooltip_approved || "Bảo vệ đã duyệt"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Contact & CCCD Info */}
+                <div className="space-y-1.5 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <IdCard size={14} className="text-blue-700 shrink-0" />
+                    <span className="text-slate-500 font-medium">
+                      {dict?.create_shift_modal?.guard_tooltip_cccd || "CCCD:"}
+                    </span>
+                    <span className="font-semibold text-slate-900">{cccd || unupdatedText}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone size={14} className="text-blue-700 shrink-0" />
+                    <span className="text-slate-500 font-medium">
+                      {dict?.create_shift_modal?.guard_tooltip_phone || "SĐT:"}
+                    </span>
+                    <span className="font-medium text-slate-900">{p?.phone_number || unupdatedText}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail size={14} className="text-blue-700 shrink-0" />
+                    <span className="text-slate-500 font-medium">
+                      {dict?.create_shift_modal?.guard_tooltip_email || "Email:"}
+                    </span>
+                    <span className="truncate font-medium text-slate-900">{p?.email || unupdatedText}</span>
+                  </div>
+                  {(hoveredGuardInfo.guard.height_cm || hoveredGuardInfo.guard.weight_kg) && (
+                    <div className="flex items-center gap-2">
+                      <Activity size={14} className="text-blue-700 shrink-0" />
+                      <span className="text-slate-500 font-medium">
+                        {dict?.create_shift_modal?.guard_tooltip_physical || "Thể chất:"}
+                      </span>
+                      <span className="font-medium text-slate-900">
+                        {hoveredGuardInfo.guard.height_cm ? `${hoveredGuardInfo.guard.height_cm} cm` : "—"} · {hoveredGuardInfo.guard.weight_kg ? `${hoveredGuardInfo.guard.weight_kg} kg` : "—"}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                {/* Notable Skills */}
+                <div className="border-t border-slate-100 pt-2.5">
+                  <div className="flex items-center gap-1.5 text-xs font-bold text-slate-700 mb-1.5">
+                    <Award size={13} className="text-blue-700" />
+                    <span>
+                      {(dict?.create_shift_modal?.guard_tooltip_skills || "Kỹ năng nổi bật ({0}):").replace("{0}", String(skills.length))}
+                    </span>
+                  </div>
+                  {skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto">
+                      {skills.map((skill, idx) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[11px] font-semibold text-blue-900"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[11px] text-slate-400 italic">
+                      {dict?.create_shift_modal?.guard_tooltip_no_skills || "Chưa cập nhật kỹ năng."}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>
