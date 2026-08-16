@@ -1720,13 +1720,19 @@ export const handleGetReplacementGuards = async (
         user_id,
         company_id,
         approval_status,
+        height_cm,
+        weight_kg,
+        notable_skills,
         profiles!guards_user_id_fkey (
           user_id,
           full_name,
           phone_number,
           avatar_url,
           email,
-          status
+          status,
+          identities (
+            identity_id
+          )
         )
       `)
       .eq("company_id", companyId);
@@ -1748,6 +1754,10 @@ export const handleGetReplacementGuards = async (
           email: profile?.email ?? "",
           status: profile?.status ?? "active",
           approval_status: g.approval_status ?? "approved",
+          height_cm: g.height_cm ?? null,
+          weight_kg: g.weight_kg ?? null,
+          notable_skills: g.notable_skills ?? [],
+          profiles: profile,
         };
       })
       .filter((g) => g.status !== "unactive" && g.status !== "rejected");
