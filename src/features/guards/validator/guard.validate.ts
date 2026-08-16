@@ -217,6 +217,7 @@ export const validateCreateGuardAccount = (
 
 export const validateCompleteGuardProfileInput = (
   input: {
+    phone_number?: string;
     date_of_birth: string;
     gender: string;
     address: string;
@@ -233,6 +234,14 @@ export const validateCompleteGuardProfileInput = (
     skill_certificate_paths?: string[] | null;
   }
 ): string | null => {
+  if (input.phone_number !== undefined) {
+    if (!input.phone_number.trim()) {
+      return "Vui lòng nhập số điện thoại.";
+    }
+    if (!PHONE_REGEX.test(input.phone_number.trim())) {
+      return "Số điện thoại không hợp lệ.";
+    }
+  }
   if (!input.date_of_birth) {
     return "Vui lòng chọn ngày sinh.";
   }

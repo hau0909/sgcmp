@@ -1243,6 +1243,7 @@ export const handleCompleteGuardProfile = async (
     }
 
     const input = {
+      phone_number: typeof body.phone_number === "string" ? body.phone_number.trim() : undefined,
       date_of_birth: String(body.date_of_birth ?? "").trim(),
       gender: String(body.gender ?? "").trim(),
       address: String(body.address ?? "").trim(),
@@ -1270,6 +1271,19 @@ export const handleCompleteGuardProfile = async (
         success: false,
         message: validateError,
       };
+    }
+
+    if (input.phone_number) {
+      const phoneExists = await checkPhoneNumberExistsForOtherUser(
+        input.phone_number,
+        profile.user_id,
+      );
+      if (phoneExists) {
+        return {
+          success: false,
+          message: "Số điện thoại này đã được sử dụng bởi tài khoản khác.",
+        };
+      }
     }
 
     // Check if identity exists for other user

@@ -369,6 +369,12 @@ export default function GuardCompleteProfilePage() {
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
 
+    if (!phoneNumber.trim()) {
+      errors.phoneNumber = t?.validate_phone_required || "Vui lòng nhập số điện thoại.";
+    } else if (!/^(0|\+84)[0-9]{9,10}$/.test(phoneNumber.trim())) {
+      errors.phoneNumber = t?.validate_phone_invalid || "Số điện thoại không hợp lệ.";
+    }
+
     if (!dateOfBirth) {
       errors.dateOfBirth = t?.validate_dob_required || "Vui lòng chọn ngày sinh.";
     } else {
@@ -519,6 +525,7 @@ export default function GuardCompleteProfilePage() {
 
       // Submit complete profile
       const res = await requestCompleteGuardProfile({
+        phone_number: phoneNumber.trim(),
         date_of_birth: dateOfBirth,
         gender,
         address: address.trim(),
@@ -556,7 +563,11 @@ export default function GuardCompleteProfilePage() {
       const iden = profileData.identity;
       const g = profileData.guard;
 
-      setDateOfBirth(p?.date_of_birth ? p.date_of_birth.split("T")[0] : "");
+        setFullName(p?.full_name || "");
+        setEmail(p?.email || "");
+        setPhoneNumber(p?.phone_number || "");
+
+        setDateOfBirth(p?.date_of_birth ? p.date_of_birth.split("T")[0] : "");
       const gen = (p?.gender || "").toLowerCase();
       setGender(gen === "female" || gen === "nữ" || gen === "nu" ? "female" : "male");
       const origAddr = p?.address || "";
@@ -780,8 +791,31 @@ export default function GuardCompleteProfilePage() {
               </div>
 
               <div className="rounded-lg bg-slate-50 p-3 border border-slate-200">
-                <p className="text-xs font-medium text-slate-500">{t?.field_phone || "Số điện thoại"}</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">{phoneNumber || (t?.not_updated || "Chưa cập nhật")}</p>
+                <label className="block text-xs font-medium text-slate-500">
+                  {t?.field_phone || "Số điện thoại"} {isEditing && <span className="text-red-500">*</span>}
+                </label>
+                {isEditing ? (
+                  <div className="mt-1">
+                    <input
+                      type="tel"
+                      value={phoneNumber}
+                      disabled={isSubmitting}
+                      onChange={(e) => {
+                        setPhoneNumber(e.target.value);
+                        if (fieldErrors.phoneNumber) setFieldErrors((prev) => ({ ...prev, phoneNumber: "" }));
+                      }}
+                      placeholder="VD: 0912345678"
+                      className={`h-9 w-full rounded-md border bg-white px-2.5 text-sm font-bold text-slate-900 outline-none transition focus:ring-2 focus:ring-blue-100 ${
+                        fieldErrors.phoneNumber ? "border-red-500 focus:border-red-500" : "border-slate-300 focus:border-blue-700"
+                      } disabled:bg-slate-100 disabled:cursor-not-allowed`}
+                    />
+                    {fieldErrors.phoneNumber && (
+                      <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.phoneNumber}</p>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-sm font-bold text-slate-900 mt-0.5">{phoneNumber || (t?.not_updated || "Chưa cập nhật")}</p>
+                )}
               </div>
             </div>
           </section>

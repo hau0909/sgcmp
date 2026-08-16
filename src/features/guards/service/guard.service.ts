@@ -64,6 +64,7 @@ export const rejectGuardService = async (params: {
 
 export const completeGuardProfileService = async (params: {
   user_id: string;
+  phone_number?: string | null;
   date_of_birth: string;
   gender: string;
   address: string;

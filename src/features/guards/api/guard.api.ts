@@ -136,6 +136,7 @@ export const requestApproveRejectGuard = async (
 
 export const requestCompleteGuardProfile = async (
   data: {
+    phone_number?: string;
     date_of_birth: string;
     gender: string;
     address: string;

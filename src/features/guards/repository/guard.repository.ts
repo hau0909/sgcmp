@@ -925,6 +925,7 @@ export const rejectGuardRepository = async ({
 
 export const completeGuardProfileRepository = async ({
   user_id,
+  phone_number,
   date_of_birth,
   gender,
   address,
@@ -941,6 +942,7 @@ export const completeGuardProfileRepository = async ({
   skill_certificate_paths,
 }: {
   user_id: string;
+  phone_number?: string | null;
   date_of_birth: string;
   gender: string;
   address: string;
@@ -965,6 +967,9 @@ export const completeGuardProfileRepository = async ({
     address,
     updated_at: new Date().toISOString(),
   };
+  if (phone_number !== undefined && phone_number !== null) {
+    profileUpdates.phone_number = phone_number;
+  }
   if (avatar_url) {
     profileUpdates.avatar_url = avatar_url;
   }
