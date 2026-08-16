@@ -148,6 +148,15 @@ export type GuardAvailabilityInfo = {
   overtimeMinutes?: number;
   hasOvertimeWarning?: boolean;
   reason: string;
+  dailyStatsByDate?: Record<string, {
+    assignedMinutes: number;
+    proposedMinutes: number;
+    totalMinutes: number;
+    exceedsDailyLimit: boolean;
+    isOvertime: boolean;
+    overtimeMinutes: number;
+    reason: string;
+  }>;
 };
 
 export type GuardAvailabilityResponse = {

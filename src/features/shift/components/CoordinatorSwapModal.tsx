@@ -10,6 +10,7 @@ import {
   Activity,
   Clock,
   MapPin,
+  Building2,
   CheckCircle2,
   AlertTriangle,
   Search,
@@ -222,6 +223,14 @@ export function CoordinatorSwapModal({
     });
   }, [guards, searchGuard, request?.requester_guard_id]);
 
+  const activeDateStr = useMemo(() => {
+    const detail = activeShiftId ? request?.shift_details?.[activeShiftId] : null;
+    if (!detail?.start_time) return null;
+    const d = new Date(detail.start_time);
+    d.setUTCHours(d.getUTCHours() + 7);
+    return d.toISOString().split("T")[0];
+  }, [activeShiftId, request?.shift_details]);
+
   // Handle guard selection
   const handleSelectGuard = (guardId: string) => {
     if (activeShiftId) {
@@ -414,6 +423,13 @@ export function CoordinatorSwapModal({
                         )}
                       </div>
 
+                      {shiftInfo?.company_name && (
+                        <div className="flex items-center gap-1.5 text-xs text-blue-800 font-semibold mb-1.5">
+                          <Building2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                          <span>{shiftInfo.company_name}</span>
+                        </div>
+                      )}
+
                       {shiftInfo?.location && (
                         <div className="flex items-center gap-1.5 text-xs text-slate-500 mb-3">
                           <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0" />
@@ -505,12 +521,22 @@ export function CoordinatorSwapModal({
                   const hasConflict = availInfo ? availInfo.hasConflict : false;
                   const exceedsDailyLimit = availInfo ? availInfo.exceedsDailyLimit : false;
                   const exceedsWeeklyLimit = availInfo ? availInfo.exceedsWeeklyLimit : false;
-                  const isOvertime = availInfo
-                    ? availInfo.isOvertime || (availInfo.totalMinutesAfterAssign > 480 && !exceedsDailyLimit)
-                    : false;
 
-                  // Guard is disabled if checking conflicts OR hard schedule conflict OR exceeds 12h daily limit OR exceeds weekly limit
-                  const isDisabled = isCheckingConflicts || hasConflict || exceedsDailyLimit || exceedsWeeklyLimit;
+                  // Look up stats specifically for active shift date
+                  const activeDateStats = (activeDateStr && availInfo?.dailyStatsByDate)
+                    ? availInfo.dailyStatsByDate[activeDateStr]
+                    : null;
+
+                  const isOvertimeOnActiveDate = activeDateStats
+                    ? activeDateStats.isOvertime
+                    : (availInfo ? (availInfo.isOvertime && !exceedsWeeklyLimit) : false);
+
+                  const overtimeReason = activeDateStats?.isOvertime
+                    ? activeDateStats.reason
+                    : availInfo?.reason;
+
+                  // Guard is disabled if checking conflicts OR hard schedule conflict OR exceeds 12h daily limit
+                  const isDisabled = isCheckingConflicts || hasConflict || exceedsDailyLimit;
 
                   return (
                     <div
@@ -530,9 +556,9 @@ export function CoordinatorSwapModal({
                           ? "border-slate-200 bg-slate-100/70 opacity-60 pointer-events-none cursor-wait"
                           : isChosen
                             ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20"
-                            : hasConflict || exceedsDailyLimit || exceedsWeeklyLimit
+                            : hasConflict || exceedsDailyLimit
                               ? "border-rose-200 bg-rose-50/30 opacity-80 cursor-not-allowed"
-                              : isOvertime
+                              : isOvertimeOnActiveDate || exceedsWeeklyLimit
                                 ? "border-amber-300 bg-amber-50/40 hover:border-amber-400 cursor-pointer"
                                 : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50/80 cursor-pointer"
                       }`}
@@ -547,66 +573,61 @@ export function CoordinatorSwapModal({
                               className="h-full w-full object-cover"
                             />
                           ) : (
-                            <div className="flex h-full w-full items-center justify-center text-slate-400">
-                              <UserRound className="h-6 w-6" />
+                            <div className="h-full w-full flex items-center justify-center text-slate-400">
+                              <UserRound size={20} />
                             </div>
                           )}
                         </div>
 
-                        {/* Details */}
-                        <div className="flex-1 min-w-0">
-                          <h5 className="font-bold text-xs text-slate-900 truncate">
+                        {/* Info & Status */}
+                        <div className="min-w-0 flex-1 text-left">
+                          <h4 className="font-bold text-sm text-slate-900 truncate">
                             {guardProfile?.full_name || (dict?.coordinator_swap_modal?.default_guard_name || "Bảo vệ")}
-                          </h5>
-                          <p className="text-[11px] text-slate-500 truncate">
+                          </h4>
+                          <p className="text-xs text-slate-500 truncate">
                             {guardProfile?.phone_number || (dict?.coordinator_swap_modal?.no_phone || "Chưa cập nhật SĐT")}
                           </p>
 
                           {/* Notable Skills badges */}
                           {Array.isArray(g.notable_skills) && g.notable_skills.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1.5">
+                            <div className="flex flex-wrap gap-1 mt-1 font-sans">
                               {g.notable_skills.slice(0, 3).map((skill, idx) => (
                                 <span
                                   key={idx}
-                                  className="inline-flex items-center rounded bg-blue-50 border border-blue-200 px-1.5 py-0.2 text-[10px] font-semibold text-blue-900"
+                                  className="inline-flex items-center rounded bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[10px] font-semibold text-blue-900"
                                 >
                                   {skill}
                                 </span>
                               ))}
-                              {g.notable_skills.length > 3 && (
-                                <span className="text-[10px] text-slate-400 font-medium self-center">
-                                  +{g.notable_skills.length - 3}
-                                </span>
-                              )}
                             </div>
                           )}
 
-                          {/* Availability Badges */}
-                          <div className="flex flex-wrap gap-1 mt-1.5">
+                          {/* Availability status badge */}
+                          <div className="mt-2">
                             {isCheckingConflicts ? (
-                              <span className="inline-flex items-center gap-1.5 rounded-md bg-blue-50 border border-blue-200 px-2 py-0.5 text-[10px] font-semibold text-blue-700">
-                                <Loader2 className="h-3 w-3 animate-spin text-blue-600" />
+                              <span className="inline-flex items-center gap-1 rounded-md bg-slate-100 border border-slate-200 px-1.5 py-0.5 text-[10px] font-bold text-slate-500">
+                                <Loader2 className="h-3 w-3 animate-spin text-slate-400" />
                                 <span>{dict?.coordinator_swap_modal?.checking_badge || "Đang kiểm tra..."}</span>
                               </span>
                             ) : hasConflict ? (
                               <span className="inline-flex items-center gap-1 rounded-md bg-rose-100 border border-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
                                 <AlertTriangle className="h-3 w-3 text-rose-600" />
-                                <span>{dict?.coordinator_swap_modal?.conflict_badge || "Trùng lịch"}</span>
+                                <span>{availInfo?.reason || (dict?.coordinator_swap_modal?.conflict_badge_default || "Trùng lịch ca")}</span>
                               </span>
                             ) : exceedsDailyLimit ? (
                               <span className="inline-flex items-center gap-1 rounded-md bg-rose-100 border border-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
                                 <AlertTriangle className="h-3 w-3 text-rose-600" />
-                                <span>{dict?.coordinator_swap_modal?.exceed_12h_badge || "Vượt 12h/ngày"}</span>
+                                <span>{availInfo?.reason || (dict?.coordinator_swap_modal?.exceed_daily_badge || "Vượt 12h/ngày")}</span>
                               </span>
                             ) : exceedsWeeklyLimit ? (
-                              <span className="inline-flex items-center gap-1 rounded-md bg-rose-100 border border-rose-200 px-1.5 py-0.5 text-[10px] font-bold text-rose-700">
-                                <AlertTriangle className="h-3 w-3 text-rose-600" />
-                                <span>{dict?.coordinator_swap_modal?.exceed_48h_badge || "Vượt 48h/tuần"}</span>
-                              </span>
-                            ) : isOvertime ? (
                               <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 border border-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
                                 <AlertTriangle className="h-3 w-3 text-amber-600" />
-                                <span>{availInfo?.reason || (dict?.coordinator_swap_modal?.overtime_badge_default || "Làm thêm (OT)")}</span>
+                                <span>{dict?.coordinator_swap_modal?.exceed_48h_badge || "Tăng ca tuần (>48h)"}</span>
+                              </span>
+                            ) : isOvertimeOnActiveDate ? (
+                              <span className="inline-flex items-center gap-1 rounded-md bg-amber-100 border border-amber-200 px-1.5 py-0.5 text-[10px] font-bold text-amber-800">
+                                <AlertTriangle className="h-3 w-3 text-amber-600" />
+                                <span>{overtimeReason || (dict?.coordinator_swap_modal?.overtime_badge_default || "Làm thêm (OT)")}</span>
                               </span>
                             ) : (
                               <span className="inline-flex items-center gap-1 rounded-md bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700">
