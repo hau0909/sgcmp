@@ -766,7 +766,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
   // Variant: Large (Hero search bar)
   return (
     <div
-      className={`flex items-center h-14 bg-white/85 backdrop-blur-xl border border-white/90 rounded-full text-on-surface p-1.5 transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.08)] ${
+      className={`flex items-center h-14 bg-white border border-slate-200/80 rounded-full text-on-surface p-1.5 transition-all duration-300 shadow-[0_8px_30px_rgba(0,0,0,0.12)] ${
         isAnyDropdownOpen
           ? "border-primary ring-4 ring-primary/10 shadow-2xl"
           : "hover:border-primary/50 hover:shadow-xl"
@@ -813,7 +813,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
               setWardInput("");
               handleSearchSubmit("");
             }}
-            className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0 mr-1"
+            className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0 mr-1 cursor-pointer"
           >
             <X className="w-4 h-4 text-outline-variant" />
           </button>
@@ -827,7 +827,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
           }}
           title={locale === "vi" ? "Gần bạn (GPS)" : "Nearby (GPS)"}
           disabled={isLocating}
-          className="p-1.5 hover:bg-primary/10 rounded-full transition-colors flex items-center gap-1 shrink-0"
+          className="p-1.5 hover:bg-primary/10 rounded-full transition-colors flex items-center gap-1 shrink-0 cursor-pointer"
         >
           <Navigation className={`w-4 h-4 text-primary shrink-0 transition-opacity ${isLocating ? "opacity-50" : ""}`} />
           {isLocating && (
@@ -852,7 +852,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                       if (matched) handleCitySelect(matched);
                     }
                   }}
-                  className={`w-full text-left px-4.5 py-2.5 hover:bg-surface-container-low transition-colors flex items-center gap-3 border-b border-outline-variant/10 last:border-b-0 ${
+                  className={`w-full text-left px-4.5 py-2.5 hover:bg-surface-container-low transition-colors flex items-center gap-3 border-b border-outline-variant/10 last:border-b-0 cursor-pointer ${
                     dest.isNearby ? "bg-primary/5 hover:bg-primary/10" : ""
                   }`}
                 >
@@ -892,7 +892,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
               setSelectedWard(null);
               handleSearchSubmit(selectedCity ? selectedCity.city_name : "");
             }}
-            className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0 mr-1"
+            className="p-1 hover:bg-slate-100 rounded-full transition-colors shrink-0 mr-1 cursor-pointer"
           >
             <X className="w-4 h-4 text-outline-variant" />
           </button>
@@ -927,7 +927,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
                       <button
                         key={ward.ward_id}
                         onClick={() => handleWardSelect(ward)}
-                        className={`w-full text-left px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium border-b border-outline-variant/10 last:border-b-0 ${
+                        className={`w-full text-left px-4 py-2.5 hover:bg-surface-container-low transition-colors text-sm font-medium border-b border-outline-variant/10 last:border-b-0 cursor-pointer ${
                           selectedWard?.ward_id === ward.ward_id ? "text-primary font-bold bg-primary/5" : "text-on-surface"
                         }`}
                       >
@@ -951,7 +951,7 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
             setCityDropdownOpen(false);
             setWardDropdownOpen(false);
           }}
-          className="w-full h-full flex items-center justify-between px-3 text-sm font-medium text-left bg-transparent transition-colors rounded-r-full"
+          className="w-full h-full flex items-center justify-between px-3 text-sm font-medium text-left bg-transparent hover:bg-slate-50/50 transition-colors rounded-lg cursor-pointer"
         >
           <span className="truncate flex items-center gap-2">
             <SlidersHorizontal className="w-4 h-4 text-primary shrink-0" />
@@ -1036,10 +1036,10 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
             )}
 
             <div className="flex justify-end gap-2 border-t border-outline-variant/30 pt-3">
-              <button onClick={handleResetFilters} className="px-3.5 py-1.5 text-xs font-bold text-outline-variant hover:text-primary transition-colors">
+              <button onClick={handleResetFilters} className="px-3.5 py-1.5 text-xs font-bold text-outline-variant hover:text-primary transition-colors cursor-pointer">
                 {dict.customer.search.bar_reset}
               </button>
-              <button onClick={handleApplyFilters} className="px-4.5 py-1.5 text-xs font-bold bg-primary hover:bg-primary/95 text-white rounded-xl transition-colors shadow-sm">
+              <button onClick={handleApplyFilters} className="px-4.5 py-1.5 text-xs font-bold bg-primary hover:bg-primary/95 text-white rounded-xl transition-colors shadow-sm cursor-pointer">
                 {dict.customer.search.bar_apply}
               </button>
             </div>
@@ -1049,8 +1049,10 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
 
       {/* Search submit button inside pill */}
       <button
+        type="button"
         onClick={() => handleSearchSubmit()}
-        className="bg-primary hover:bg-primary/95 hover:scale-105 active:scale-95 text-white w-10 h-10 rounded-full transition-all flex items-center justify-center shrink-0 shadow-md ml-1"
+        className="bg-primary hover:bg-primary/95 hover:scale-105 active:scale-95 text-white h-11 w-11 rounded-full transition-all flex items-center justify-center shrink-0 shadow-md ml-1 cursor-pointer"
+        title={locale === "vi" ? "Tìm kiếm" : "Search"}
       >
         <Search className="w-4.5 h-4.5" />
       </button>

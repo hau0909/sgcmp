@@ -635,19 +635,26 @@ export const getRecentBookings = async (companyId: string, limitVal: number) => 
   return data || [];
 };
 
-export const getRecentCoordinators = async (limitVal: number) => {
+export const getRecentCoordinators = async (companyId: string, limitVal: number) => {
   const supabase = await createClient();
   const { data, error } = await supabase
-    .from("profiles")
-    .select("user_id, full_name, created_at")
-    .eq("role", "coordinator")
-    .order("created_at", { ascending: false })
+    .from("coordinators")
+    .select(`
+      company_id,
+      profiles!inner (
+        user_id,
+        full_name,
+        created_at
+      )
+    `)
+    .eq("company_id", companyId)
+    .order("created_at", { referencedTable: "profiles", ascending: false })
     .limit(limitVal);
 
   if (error) {
     throw new Error(`Không thể lấy điều phối viên cho hoạt động gần đây: ${error.message}`);
   }
-  return data || [];
+  return (data || []).map((item: any) => item.profiles).filter(Boolean);
 };
 
 export const getCompletedPayments = async (): Promise<{ amount: number; created_at: string }[]> => {
