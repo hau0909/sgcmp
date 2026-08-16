@@ -10,6 +10,7 @@ import {
   User,
   Clock,
   MapPin,
+  Building2,
   Loader2,
   FileText,
   AlertCircle,
@@ -100,10 +101,10 @@ export default function CoordinatorShiftRequestsPage() {
       <div className="mb-6 flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-950">
-            {dict?.coor_shift_requests?.page_title || "Quản lý yêu cầu đổi ca"}
+            {dict?.coor_shift_requests?.page_title || "Quản lý yêu cầu thay ca"}
           </h1>
           <p className="mt-1 text-sm text-slate-600">
-            {dict?.coor_shift_requests?.page_subtitle || "Xét duyệt các yêu cầu xin đổi ca từ bảo vệ và chỉ định bảo vệ thay thế."}
+            {dict?.coor_shift_requests?.page_subtitle || "Xét duyệt các yêu cầu xin thay ca từ bảo vệ và chỉ định bảo vệ thay thế."}
           </p>
         </div>
 
@@ -168,12 +169,12 @@ export default function CoordinatorShiftRequestsPage() {
       {loading ? (
         <div className="flex flex-col items-center justify-center py-16 text-slate-400 bg-white rounded-2xl border border-slate-200 shadow-xs">
           <Loader2 className="h-10 w-10 animate-spin text-blue-600 mb-3" />
-          <span className="text-xs font-semibold">{dict?.coor_shift_requests?.loading_msg || "Đang tải danh sách yêu cầu đổi ca..."}</span>
+          <span className="text-xs font-semibold">{dict?.coor_shift_requests?.loading_msg || "Đang tải danh sách yêu cầu thay ca..."}</span>
         </div>
       ) : filteredRequests.length === 0 ? (
         <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center shadow-xs">
           <FileText className="mx-auto h-12 w-12 text-slate-300 mb-3" />
-          <h3 className="text-base font-bold text-slate-700">{dict?.coor_shift_requests?.empty_title || "Không có yêu cầu đổi ca nào"}</h3>
+          <h3 className="text-base font-bold text-slate-700">{dict?.coor_shift_requests?.empty_title || "Không có yêu cầu thay ca nào"}</h3>
           <p className="text-xs text-slate-400 mt-1">
             {dict?.coor_shift_requests?.empty_desc || "Chưa có bảo vệ nào tạo yêu cầu thuộc bộ lọc hiện tại."}
           </p>
@@ -251,7 +252,7 @@ export default function CoordinatorShiftRequestsPage() {
 
                 {/* Reason */}
                 <div className="text-xs bg-slate-50/70 p-3 rounded-xl border border-slate-100">
-                  <span className="font-bold text-slate-700">{dict?.coor_shift_requests?.reason_prefix || "Lý do xin đổi ca:"} </span>
+                  <span className="font-bold text-slate-700">{dict?.coor_shift_requests?.reason_prefix || "Lý do xin thay ca:"} </span>
                   <span className="text-slate-800 italic">"{req.reason}"</span>
                 </div>
 
@@ -266,7 +267,7 @@ export default function CoordinatorShiftRequestsPage() {
                 {/* Requested Shifts */}
                 <div className="space-y-2">
                   <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-                    {dict?.coor_shift_requests?.requested_shifts_title || "Các ca làm xin đổi"} ({req.items.length}):
+                    {dict?.coor_shift_requests?.requested_shifts_title || "Các ca làm xin thay ca"} ({req.items.length}):
                   </span>
                   <div className="grid gap-2 sm:grid-cols-2">
                     {req.items.map((item, idx) => {
@@ -292,6 +293,13 @@ export default function CoordinatorShiftRequestsPage() {
                               </span>
                             )}
                           </div>
+
+                          {shiftInfo?.company_name && (
+                            <div className="flex items-center gap-1 text-blue-800 font-semibold text-[11px] truncate">
+                              <Building2 className="h-3 w-3 text-blue-600 shrink-0" />
+                              <span className="truncate">{shiftInfo.company_name}</span>
+                            </div>
+                          )}
 
                           {times && (
                             <div className="flex items-center gap-1 text-slate-500 text-[11px]">

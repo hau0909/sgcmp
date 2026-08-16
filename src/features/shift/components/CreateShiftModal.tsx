@@ -642,6 +642,33 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     [slots],
   );
 
+  const assignedGuardIdsSet = useMemo(() => {
+    const ids = new Set<string>();
+    for (const slot of slots) {
+      for (const seg of slot.segments || []) {
+        for (const gid of seg.assignedGuardIds || []) {
+          ids.add(gid);
+        }
+      }
+    }
+    return ids;
+  }, [slots]);
+
+  const weeklyOvertimeGuardsCount = useMemo(() => {
+    let count = 0;
+    assignedGuardIdsSet.forEach((gid) => {
+      const avail = guardAvailabilityMap[gid];
+      if (
+        avail &&
+        (avail.exceedsWeeklyLimit ||
+          (avail.totalMinutesWeekAfterAssign && avail.totalMinutesWeekAfterAssign > 48 * 60))
+      ) {
+        count++;
+      }
+    });
+    return count;
+  }, [assignedGuardIdsSet, guardAvailabilityMap]);
+
   const targetDays = useMemo<number[]>(() => {
     if (!selectedContract) return [];
     return (selectedContract.day_per_week ?? [])
@@ -900,10 +927,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       status = "conflict";
       reason = `${dict?.create_shift_modal?.status_exceeds_max_daily || "Vượt quá 12 giờ làm việc tối đa trong ngày"} (${(totalAfterActiveSeg / 60).toFixed(1)}h)`;
       isDisabled = false;
-    } else if (exceedsWeekly) {
-      status = "conflict";
-      reason = translateAvailabilityReason(availData?.reason) || (dict?.create_shift_modal?.status_exceeds_weekly || "Vượt quá 48 giờ làm việc trong tuần");
-      isDisabled = false;
     } else if (isSelected) {
       status = "selected";
       reason = dict?.create_shift_modal?.status_selected || "Đã chọn";
@@ -921,10 +944,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     }
 
     if (isSelected) {
-      if (exceedsWeekly) {
-        status = "conflict";
-        reason = `⚠️ ${dict?.create_shift_modal?.status_selected || "Đã chọn"} (${translateAvailabilityReason(availData?.reason) || "Vượt 48h/tuần"})`;
-      } else if (exceedsHardDaily) {
+      if (exceedsHardDaily) {
         status = "conflict";
         reason = `⚠️ ${dict?.create_shift_modal?.status_selected || "Đã chọn"} (Vượt 12h/ngày)`;
       } else {
@@ -1931,7 +1951,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               // Filter out conflicting guards (either direct conflict, daily or weekly check)
               const conflictFree = (seg.assignedGuardIds || []).filter((id) => {
                 const avail = dateMap[id];
-                return !avail || (!avail.hasConflict && !avail.exceedsDailyLimit && !avail.exceedsWeeklyLimit);
+                return !avail || (!avail.hasConflict && !avail.exceedsDailyLimit);
               });
 
               if (conflictFree.length < requiredGuards) {
@@ -1939,7 +1959,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 const replacements = allActiveIds
                   .filter((id) => {
                     const avail = dateMap[id];
-                    return (!avail || (!avail.hasConflict && !avail.exceedsDailyLimit && !avail.exceedsWeeklyLimit)) && !conflictFree.includes(id);
+                    return (!avail || (!avail.hasConflict && !avail.exceedsDailyLimit)) && !conflictFree.includes(id);
                   })
                   .slice(0, requiredGuards - conflictFree.length);
 
@@ -2900,129 +2920,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                 </span>
               </div>
 
-              {/* Free-time Filter Section */}
-              <div className="mb-4 rounded-md border border-slate-200 bg-slate-50/50 p-3">
-                <label className="mb-2 block text-xs font-semibold text-slate-700">
-                  {dict.create_shift_modal?.filter_free_time || "Lọc bảo vệ rảnh (Không trùng ca):"}
-                </label>
-                <div className="grid grid-cols-3 sm:grid-cols-6 gap-1 rounded bg-slate-200/50 p-0.5">
-                  {(["shift", "today", "day", "week", "month", "custom"] as const).map((mode) => {
-                    const labels = {
-                      shift: dict.create_shift_modal?.filter_shift || "Theo ca trực",
-                      today: dict.create_shift_modal?.filter_today || "Hôm nay",
-                      day: dict.create_shift_modal?.filter_day || "Ngày",
-                      week: dict.create_shift_modal?.filter_week || "Tuần",
-                      month: dict.create_shift_modal?.filter_month || "Tháng",
-                      custom: dict.create_shift_modal?.filter_custom || "Tự chọn",
-                    };
-                    const isSelected = freeTimeMode === mode;
-                    return (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => {
-                          setFreeTimeMode(mode);
-                          setGuardPage(1);
-                        }}
-                        className={`py-1 text-[10px] sm:text-[11px] font-medium rounded transition ${isSelected
-                          ? "bg-blue-600 text-white shadow-sm font-semibold"
-                          : "text-slate-600 hover:bg-slate-200"
-                          }`}
-                      >
-                        {labels[mode]}
-                      </button>
-                    );
-                  })}
-                </div>
 
-                {/* Specific Day Field */}
-                {freeTimeMode === "day" && (
-                  <div className="mt-3 border-t border-slate-200/60 pt-3">
-                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.select_specific_day || "Chọn ngày cụ thể"}</label>
-                    <input
-                      type="date"
-                      value={filterDate}
-                      onChange={(e) => {
-                        setFilterDate(e.target.value);
-                        setGuardPage(1);
-                      }}
-                      className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
-                    />
-                  </div>
-                )}
-
-                {/* Specific Week Field */}
-                {freeTimeMode === "week" && (
-                  <div className="mt-3 border-t border-slate-200/60 pt-3">
-                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.select_week_start || "Chọn ngày bắt đầu tuần"}</label>
-                    <input
-                      type="date"
-                      value={filterWeekDate}
-                      onChange={(e) => {
-                        setFilterWeekDate(e.target.value);
-                        setGuardPage(1);
-                      }}
-                      className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
-                    />
-                  </div>
-                )}
-
-                {/* Specific Month Field */}
-                {freeTimeMode === "month" && (
-                  <div className="mt-3 border-t border-slate-200/60 pt-3">
-                    <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.select_specific_month || "Chọn tháng cụ thể"}</label>
-                    <input
-                      type="month"
-                      value={filterMonth}
-                      onChange={(e) => {
-                        setFilterMonth(e.target.value);
-                        setGuardPage(1);
-                      }}
-                      className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
-                    />
-                  </div>
-                )}
-
-                {/* Custom Date/Time Range Fields */}
-                {freeTimeMode === "custom" && (
-                  <div className="mt-3 grid grid-cols-2 gap-2 border-t border-slate-200/60 pt-3">
-                    <div>
-                      <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.label_start || "Bắt đầu"}</label>
-                      <div className="flex gap-1">
-                        <input
-                          type="date"
-                          value={customStartDate}
-                          onChange={(e) => setCustomStartDate(e.target.value)}
-                          className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
-                        />
-                        <input
-                          type="time"
-                          value={customStartTime}
-                          onChange={(e) => setCustomStartTime(e.target.value)}
-                          className="rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="mb-1 block text-[10px] font-semibold text-slate-500 uppercase">{dict.create_shift_modal?.label_end || "Kết thúc"}</label>
-                      <div className="flex gap-1">
-                        <input
-                          type="date"
-                          value={customEndDate}
-                          onChange={(e) => setCustomEndDate(e.target.value)}
-                          className="w-full rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
-                        />
-                        <input
-                          type="time"
-                          value={customEndTime}
-                          onChange={(e) => setCustomEndTime(e.target.value)}
-                          className="rounded border border-slate-300 bg-white px-1.5 py-1 text-[11px] outline-none focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
 
               {/* Filter chips */}
               <div className="mb-3 flex flex-wrap gap-2">
@@ -3537,17 +3435,31 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
             <p className="text-right text-sm font-medium text-red-600">{submitError}</p>
           )}
 
-          <div className="flex items-center justify-between">
-            {slots.length > 0 && (
-              <p className="text-xs text-slate-500">
-                {configuredSlots.length}/{slots.length} {dict.create_shift_modal?.valid_slots_summary || "ca hợp lệ"}
-                {pendingSlots.length > 0 && (
-                  <span className="ml-2 text-amber-600">
-                    · {pendingSlots.length} {dict.create_shift_modal?.needs_adjustment || "cần điều chỉnh"}
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              {slots.length > 0 && (
+                <p className="text-xs text-slate-500">
+                  {configuredSlots.length}/{slots.length} {dict.create_shift_modal?.valid_slots_summary || "ca hợp lệ"}
+                  {pendingSlots.length > 0 && (
+                    <span className="ml-2 text-amber-600">
+                      · {pendingSlots.length} {dict.create_shift_modal?.needs_adjustment || "cần điều chỉnh"}
+                    </span>
+                  )}
+                </p>
+              )}
+
+              {weeklyOvertimeGuardsCount > 0 && (
+                <div className="inline-flex items-center gap-1.5 rounded-full border border-amber-300 bg-amber-50 px-3 py-1 text-xs font-semibold text-amber-800 shadow-2xs">
+                  <AlertTriangle size={14} className="shrink-0 text-amber-600" />
+                  <span>
+                    {(
+                      dict?.create_shift_modal?.weekly_overtime_guards_warn ||
+                      "Có {count} bảo vệ làm tăng ca tuần (>48h)"
+                    ).replace("{count}", String(weeklyOvertimeGuardsCount))}
                   </span>
-                )}
-              </p>
-            )}
+                </div>
+              )}
+            </div>
             <div className="ml-auto flex gap-3">
               <button
                 type="button"

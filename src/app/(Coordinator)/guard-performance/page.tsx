@@ -1087,12 +1087,12 @@ export default function GuardPerformancePage() {
 
                 {/* Right Section: Recharts Attendance Breakdown & Recognition (4 Cols) */}
                 <div className="lg:col-span-4 space-y-6">
-                    {/* Card 1: Recharts Attendance Chart (Đúng giờ, Trễ, Vắng mặt, Điểm danh trễ) */}
+                    {/* Card 1: Recharts Radar Chart (Đúng giờ, Tăng ca, Vắng mặt, Điểm danh trễ, Thay ca) */}
                     <div className="p-5 rounded-2xl bg-surface-container-lowest border border-outline-variant/60 shadow-xs space-y-5">
                         <div className="flex items-center justify-between">
                             <div>
                                 <h2 className="text-base font-bold text-on-surface">
-                                    {dict.coor_guard_performance?.attendance_chart_title || "Chỉ số chuyên cần"}
+                                    {dict.coor_guard_performance?.attendance_chart_title || "Biểu đồ Tổng quan Trạng thái Làm việc"}
                                 </h2>
                                 <p className="text-[11px] text-on-surface-variant">
                                     {dict.coor_guard_performance?.attendance_chart_desc || "Đúng giờ, Tăng ca, Vắng mặt, Điểm danh trễ & Thay ca"}
@@ -1112,7 +1112,7 @@ export default function GuardPerformancePage() {
                                         />
                                         <PolarRadiusAxis angle={30} domain={[0, 100]} tick={false} axisLine={false} />
                                         <Radar
-                                            name={dict.coor_guard_performance?.chart_series_name || "Chỉ số năng lực chuyên cần"}
+                                            name={dict.coor_guard_performance?.chart_series_name || "Tỷ lệ trạng thái làm việc"}
                                             dataKey="score"
                                             stroke="#1d4ed8"
                                             fill="#2563eb"

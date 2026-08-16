@@ -7,6 +7,7 @@ import {
   CalendarDays,
   Clock,
   MapPin,
+  Building2,
   CheckCircle2,
   AlertCircle,
   XCircle,
@@ -298,6 +299,12 @@ export function GuardSwapRequestModal({ isOpen, onClose }: GuardSwapRequestModal
                             </div>
 
                             <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-600">
+                              {shift.company_name && (
+                                <span className="flex items-center gap-1 font-semibold text-blue-800 truncate max-w-[240px]">
+                                  <Building2 className="h-3.5 w-3.5 text-blue-600 shrink-0" />
+                                  <span className="truncate">{shift.company_name}</span>
+                                </span>
+                              )}
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3.5 w-3.5 text-slate-400" />
                                 {startTime} - {endTime}
@@ -468,6 +475,12 @@ export function GuardSwapRequestModal({ isOpen, onClose }: GuardSwapRequestModal
                                   <p className="font-bold text-slate-800">
                                     {shiftInfo?.shift_name || `Ca trực #${item.shift_id.slice(0, 8)}`}
                                   </p>
+                                  {shiftInfo?.company_name && (
+                                    <p className="flex items-center gap-1 font-semibold text-blue-800 text-[11px]">
+                                      <Building2 className="h-3 w-3 text-blue-600 shrink-0" />
+                                      <span className="truncate">{shiftInfo.company_name}</span>
+                                    </p>
+                                  )}
                                   {times && (
                                     <p className="text-slate-500">
                                       {times.dateFormatted} · {times.startTime} - {times.endTime}

@@ -79,25 +79,25 @@ export default function AddGuardQuickModal({
     const phoneRegex = /^(0|\+84)[0-9]{9,10}$/;
 
     if (!trimmedName) {
-      errors.fullName = dict.add_guard?.validate_name_required ?? "Vui lòng nhập họ và tên.";
+      errors.fullName = dict?.add_guard_modal?.val_name_required ?? dict?.add_guard?.validate_name_required ?? "Vui lòng nhập họ và tên.";
     } else if (fullName.startsWith(" ") || fullName.endsWith(" ")) {
-      errors.fullName = dict.add_guard?.validate_name_no_leading_trailing_space ?? "Họ và tên không được chứa khoảng trắng ở đầu hoặc cuối.";
+      errors.fullName = dict?.add_guard?.validate_name_no_leading_trailing_space ?? "Họ và tên không được chứa khoảng trắng ở đầu hoặc cuối.";
     } else if (/\s{2,}/.test(fullName)) {
-      errors.fullName = dict.add_guard?.validate_name_no_multiple_spaces ?? "Họ và tên không được chứa nhiều khoảng trắng liên tiếp.";
+      errors.fullName = dict?.add_guard?.validate_name_no_multiple_spaces ?? "Họ và tên không được chứa nhiều khoảng trắng liên tiếp.";
     } else if (!nameRegex.test(trimmedName)) {
-      errors.fullName = dict.add_guard?.validate_name_letters_only ?? "Họ và tên chỉ được chứa chữ cái và khoảng trắng.";
+      errors.fullName = dict?.add_guard?.validate_name_letters_only ?? "Họ và tên chỉ được chứa chữ cái và khoảng trắng.";
     }
 
     if (!trimmedEmail) {
-      errors.email = dict.add_guard?.validate_email_required ?? "Vui lòng nhập email.";
+      errors.email = dict?.add_guard_modal?.val_email_required ?? dict?.add_guard?.validate_email_required ?? "Vui lòng nhập email.";
     } else if (!emailRegex.test(trimmedEmail)) {
-      errors.email = dict.add_guard?.validate_email_invalid ?? "Email không hợp lệ.";
+      errors.email = dict?.add_guard_modal?.val_email_invalid ?? dict?.add_guard?.validate_email_invalid ?? "Email không hợp lệ.";
     }
 
     if (!trimmedPhone) {
-      errors.phoneNumber = dict.add_guard?.validate_phone_required ?? "Vui lòng nhập số điện thoại.";
+      errors.phoneNumber = dict?.add_guard_modal?.val_phone_required ?? dict?.add_guard?.validate_phone_required ?? "Vui lòng nhập số điện thoại.";
     } else if (!phoneRegex.test(trimmedPhone)) {
-      errors.phoneNumber = dict.add_guard?.validate_phone_invalid ?? "Số điện thoại không hợp lệ (9-10 chữ số).";
+      errors.phoneNumber = dict?.add_guard_modal?.val_phone_invalid ?? dict?.add_guard?.validate_phone_invalid ?? "Số điện thoại không hợp lệ (9-10 chữ số).";
     }
 
     setFieldErrors(errors);
@@ -122,11 +122,11 @@ export default function AddGuardQuickModal({
       });
 
       if (!res.success) {
-        throw new Error(res.message || "Không thể tạo tài khoản bảo vệ.");
+        throw new Error(res.message || dict?.add_guard_modal?.error_create || "Không thể tạo tài khoản bảo vệ.");
       }
 
       setSuccessMessage(
-        "Tạo tài khoản thành công! Email xác thực tài khoản đã được gửi đến bảo vệ."
+        dict?.add_guard_modal?.success_msg || "Tạo tài khoản thành công! Email xác thực tài khoản đã được gửi đến bảo vệ."
       );
 
       setTimeout(() => {
@@ -135,7 +135,7 @@ export default function AddGuardQuickModal({
       }, 1500);
     } catch (err: any) {
       console.error("Create guard error:", err);
-      setErrorMessage(err.message || "Không thể tạo tài khoản bảo vệ.");
+      setErrorMessage(err.message || dict?.add_guard_modal?.error_create || "Không thể tạo tài khoản bảo vệ.");
     } finally {
       setIsSubmitting(false);
     }
@@ -152,10 +152,10 @@ export default function AddGuardQuickModal({
             </div>
             <div>
               <h2 className="text-lg font-bold text-slate-900">
-                Thêm nhân viên bảo vệ
+                {dict?.add_guard_modal?.modal_title || "Thêm nhân viên bảo vệ"}
               </h2>
               <p className="text-xs text-slate-500">
-                Tạo tài khoản và gửi email xác thực đến nhân viên
+                {dict?.add_guard_modal?.modal_subtitle || "Tạo tài khoản và gửi email xác thực đến nhân viên"}
               </p>
             </div>
           </div>
@@ -196,7 +196,7 @@ export default function AddGuardQuickModal({
           {/* Full Name */}
           <div>
             <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
-              Họ và tên <span className="text-red-500">*</span>
+              {dict?.add_guard_modal?.field_fullname || "Họ và tên"} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -210,7 +210,7 @@ export default function AddGuardQuickModal({
                   }
                 }}
                 disabled={isSubmitting || quotaExceeded}
-                placeholder="VD: Nguyễn Văn A"
+                placeholder={dict?.add_guard_modal?.fullname_placeholder || "VD: Nguyễn Văn A"}
                 className={`h-10 w-full rounded-lg border bg-slate-50/50 pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-100 ${
                   fieldErrors.fullName
                     ? "border-red-500 focus:border-red-500"
@@ -228,7 +228,7 @@ export default function AddGuardQuickModal({
           {/* Email */}
           <div>
             <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
-              Email <span className="text-red-500">*</span>
+              {dict?.add_guard_modal?.field_email || "Email"} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -242,7 +242,7 @@ export default function AddGuardQuickModal({
                   }
                 }}
                 disabled={isSubmitting || quotaExceeded}
-                placeholder="VD: guard@example.com"
+                placeholder={dict?.add_guard_modal?.email_placeholder || "VD: guard@example.com"}
                 className={`h-10 w-full rounded-lg border bg-slate-50/50 pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-100 ${
                   fieldErrors.email
                     ? "border-red-500 focus:border-red-500"
@@ -256,14 +256,14 @@ export default function AddGuardQuickModal({
               </p>
             )}
             <p className="mt-1 text-[11px] text-slate-500">
-              Email sẽ nhận đường dẫn xác thực và hướng dẫn đăng nhập.
+              {dict?.add_guard_modal?.email_hint || "Email sẽ nhận đường dẫn xác thực và hướng dẫn đăng nhập."}
             </p>
           </div>
 
           {/* Phone Number */}
           <div>
             <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-1.5">
-              Số điện thoại <span className="text-red-500">*</span>
+              {dict?.add_guard_modal?.field_phone || "Số điện thoại"} <span className="text-red-500">*</span>
             </label>
             <div className="relative">
               <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -277,7 +277,7 @@ export default function AddGuardQuickModal({
                   }
                 }}
                 disabled={isSubmitting || quotaExceeded}
-                placeholder="VD: 0912345678"
+                placeholder={dict?.add_guard_modal?.phone_placeholder || "VD: 0912345678"}
                 maxLength={11}
                 className={`h-10 w-full rounded-lg border bg-slate-50/50 pl-9 pr-3 text-sm text-slate-900 outline-none transition placeholder:text-slate-400 focus:bg-white focus:ring-2 focus:ring-blue-100 ${
                   fieldErrors.phoneNumber
@@ -295,9 +295,9 @@ export default function AddGuardQuickModal({
 
           {/* Note */}
           <div className="rounded-lg bg-blue-50/70 p-3 text-xs text-blue-800 border border-blue-100">
-            <p className="font-semibold mb-0.5">ℹ️ Quy trình sau khi tạo:</p>
+            <p className="font-semibold mb-0.5">{dict?.add_guard_modal?.workflow_title || "ℹ️ Quy trình sau khi tạo:"}</p>
             <p className="text-blue-700">
-              Bảo vệ sẽ xác thực email $\rightarrow$ đăng nhập hoàn tất thông tin CCCD, địa chỉ, ảnh thẻ $\rightarrow$ gửi hồ sơ duyệt cho bạn.
+              {dict?.add_guard_modal?.workflow_desc || "Bảo vệ sẽ xác thực email → đăng nhập hoàn tất thông tin CCCD, địa chỉ, ảnh thẻ → gửi hồ sơ duyệt cho bạn."}
             </p>
           </div>
 
@@ -309,7 +309,7 @@ export default function AddGuardQuickModal({
               disabled={isSubmitting}
               className="px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-100 rounded-lg transition cursor-pointer disabled:opacity-50"
             >
-              Hủy bỏ
+              {dict?.add_guard_modal?.btn_cancel || "Hủy bỏ"}
             </button>
 
             <button
@@ -320,10 +320,10 @@ export default function AddGuardQuickModal({
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Đang xử lý...</span>
+                  <span>{dict?.add_guard_modal?.btn_submitting || "Đang xử lý..."}</span>
                 </>
               ) : (
-                <span>Tạo và gửi thư xác thực</span>
+                <span>{dict?.add_guard_modal?.btn_submit || "Tạo và gửi thư xác thực"}</span>
               )}
             </button>
           </div>

@@ -397,24 +397,6 @@ export const handleCreateWorkShift = async (request: Request) => {
       }
     }
 
-    for (const [gid, totalMinutes] of Object.entries(guardWeeklyMinutes)) {
-      if (totalMinutes > 48 * 60) {
-        const guardName = profileMap[gid]?.full_name || "Bảo vệ";
-        const startOfWeekKey = getStartOfWeekKey(dateStr);
-        const endOfWeekKey = addDaysToDateKey(startOfWeekKey, 6);
-        const [sYr, sMo, sDy] = startOfWeekKey.split("-");
-        const [eYr, eMo, eDy] = endOfWeekKey.split("-");
-        const formattedStart = `${sDy}/${sMo}/${sYr}`;
-        const formattedEnd = `${eDy}/${eMo}/${eYr}`;
-        return Response.json(
-          {
-            success: false,
-            message: `Bảo vệ ${guardName} sẽ làm tổng cộng ${(totalMinutes / 60).toFixed(1)} giờ trong tuần từ ${formattedStart} đến ${formattedEnd}, vượt quá giới hạn 48 giờ.`,
-          },
-          { status: 400 },
-        );
-      }
-    }
 
     const contractRule = await getContractShiftRuleService(input.contract_id);
 
@@ -1330,6 +1312,15 @@ export const handleGetGuardAvailability = async (request: Request) => {
       overtimeMinutes?: number;
       hasOvertimeWarning?: boolean;
       reason: string;
+      dailyStatsByDate?: Record<string, {
+        assignedMinutes: number;
+        proposedMinutes: number;
+        totalMinutes: number;
+        exceedsDailyLimit: boolean;
+        isOvertime: boolean;
+        overtimeMinutes: number;
+        reason: string;
+      }>;
     }> = {};
 
     for (const guardId of body.guardIds) {
@@ -1353,6 +1344,20 @@ export const handleGetGuardAvailability = async (request: Request) => {
       // Pre-calculate cumulative proposed duration per date & per week for this guard
       const totalProposedMinutesByDate: Record<string, number> = {};
       const totalProposedMinutesByWeek: Record<string, number> = {};
+      const dailyStatsByDate: Record<string, {
+        assignedMinutes: number;
+        proposedMinutes: number;
+        totalMinutes: number;
+        exceedsDailyLimit: boolean;
+        isOvertime: boolean;
+        overtimeMinutes: number;
+        reason: string;
+      }> = {};
+
+      const formatDateStrVN = (ds: string) => {
+        const [yr, mo, dy] = ds.split("-");
+        return `${dy}/${mo}/${yr}`;
+      };
 
       for (const ps of proposedShifts) {
         const startProposed = new Date(ps.startTime).getTime();
@@ -1477,6 +1482,25 @@ export const handleGetGuardAvailability = async (request: Request) => {
           firstExceedsWeeklyDate = propDateStr;
         }
 
+        const isOvertimeOnDate = totalToday > 8 * 60 && totalToday <= 12 * 60;
+        const exceedsDailyOnDate = totalToday > 12 * 60;
+        let reasonOnDate = "Có thể phân công";
+        if (exceedsDailyOnDate) {
+          reasonOnDate = `Vượt quá 12 giờ ngày ${formatDateStrVN(propDateStr)}`;
+        } else if (isOvertimeOnDate) {
+          reasonOnDate = `Tăng ca ngày ${formatDateStrVN(propDateStr)} (${(totalToday / 60).toFixed(1)}h)`;
+        }
+
+        dailyStatsByDate[propDateStr] = {
+          assignedMinutes: assignedToday,
+          proposedMinutes: cumulativeProposedToday,
+          totalMinutes: totalToday,
+          exceedsDailyLimit: exceedsDailyOnDate,
+          isOvertime: isOvertimeOnDate,
+          overtimeMinutes: Math.max(0, totalToday - 480),
+          reason: reasonOnDate,
+        };
+
         // Keep last checked stats to return in map
         lastProposedMinutes = cumulativeProposedToday;
         lastAssignedMinutesToday = assignedToday;
@@ -1492,10 +1516,11 @@ export const handleGetGuardAvailability = async (request: Request) => {
       let isOvertime = false;
       let hasOvertimeWarning = false;
 
-      const formatDateStrVN = (ds: string) => {
-        const [yr, mo, dy] = ds.split("-");
-        return `${dy}/${mo}/${yr}`;
-      };
+      if (firstExceedsWeeklyDate) {
+        exceedsWeeklyLimit = true;
+        isOvertime = true;
+        hasOvertimeWarning = true;
+      }
 
       if (firstConflictDate) {
         hasConflict = true;
@@ -1503,11 +1528,6 @@ export const handleGetGuardAvailability = async (request: Request) => {
       } else if (firstExceedsDailyDate) {
         exceedsDailyLimit = true;
         reason = `Vượt quá 12 giờ ngày ${formatDateStrVN(firstExceedsDailyDate)}`;
-      } else if (firstExceedsWeeklyDate) {
-        exceedsWeeklyLimit = true;
-        const weekMon = getStartOfWeekKey(firstExceedsWeeklyDate);
-        const weekSun = addDaysToDateKey(weekMon, 6);
-        reason = `Vượt quá 48 giờ tuần ${formatDateStrVN(weekMon)} - ${formatDateStrVN(weekSun)}`;
       } else if (firstOvertimeDate) {
         isOvertime = true;
         hasOvertimeWarning = true;
@@ -1541,6 +1561,7 @@ export const handleGetGuardAvailability = async (request: Request) => {
         overtimeMinutes: maxOvertimeMinutes,
         hasOvertimeWarning,
         reason,
+        dailyStatsByDate,
       };
     }
 
