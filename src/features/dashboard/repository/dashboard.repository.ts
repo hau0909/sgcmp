@@ -430,6 +430,7 @@ export const getTodayGuardsStatusList = async (
         bookings!inner (
           company_id,
           address,
+          company_name,
           services!inner (
             name
           )
@@ -1138,6 +1139,7 @@ export const getPastShiftsRepository = async (
         bookings!inner (
           company_id,
           address,
+          company_name,
           services (
             name
           )

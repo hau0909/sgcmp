@@ -21,6 +21,7 @@ import {
     IdCard,
     Mail,
     Activity,
+    Building2,
 } from "lucide-react";
 import {
     Radar,
@@ -293,6 +294,7 @@ export default function CoordinatorDashboardPage() {
         return (
             shift.name.toLowerCase().includes(query) ||
             shift.location.toLowerCase().includes(query) ||
+            (shift.companyName && shift.companyName.toLowerCase().includes(query)) ||
             (shift.contractName && shift.contractName.toLowerCase().includes(query)) ||
             (shift.phone && shift.phone.toLowerCase().includes(query)) ||
             shift.id.toLowerCase().includes(query) ||
@@ -321,6 +323,7 @@ export default function CoordinatorDashboardPage() {
         return (
             shift.name.toLowerCase().includes(query) ||
             shift.location.toLowerCase().includes(query) ||
+            (shift.companyName && shift.companyName.toLowerCase().includes(query)) ||
             (shift.phone && shift.phone.toLowerCase().includes(query)) ||
             shift.id.toLowerCase().includes(query) ||
             shift.statusText.toLowerCase().includes(query)
@@ -525,10 +528,18 @@ export default function CoordinatorDashboardPage() {
                                             </div>
 
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between">
-                                                    <h3 className="text-sm font-bold text-slate-900 truncate">
-                                                        {shift.name}
-                                                    </h3>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <h3 className="text-sm font-bold text-slate-900 truncate">
+                                                            {shift.name}
+                                                        </h3>
+                                                        {shift.phone && (
+                                                            <span className="flex items-center gap-1 text-xs text-slate-500 font-medium shrink-0">
+                                                                <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                                <span>{shift.phone}</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
 
                                                     <span className="flex items-center gap-1.5 text-xs shrink-0">
                                                         {renderStatusIcon(shift.statusText, shift.timeText)}
@@ -543,16 +554,13 @@ export default function CoordinatorDashboardPage() {
                                                         <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                                         <span>{shift.location}</span>
                                                     </span>
-                                                    {shift.phone && (
-                                                        <>
-                                                            <span className="text-slate-300">•</span>
-                                                            <span className="flex items-center gap-1 text-slate-500 font-medium">
-                                                                <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                                                                <span>{shift.phone}</span>
-                                                            </span>
-                                                        </>
-                                                    )}
                                                 </p>
+                                                {shift.companyName && (
+                                                    <p className="text-xs text-slate-600 mt-1 flex items-center gap-1 font-semibold">
+                                                        <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                        <span>{shift.companyName}</span>
+                                                    </p>
+                                                )}
                                                 <div className="flex items-center justify-between mt-3">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                         <span
@@ -566,9 +574,6 @@ export default function CoordinatorDashboardPage() {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <span className="text-[11px] text-slate-400 font-mono">
-                                                        ID: {shift.id}
-                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -649,10 +654,18 @@ export default function CoordinatorDashboardPage() {
                                                 <User className={`w-5 h-5 text-slate-500 ${shift.avatar ? "hidden" : ""}`} />
                                             </div>
                                             <div className="flex-1 min-w-0">
-                                                <div className="flex items-center justify-between">
-                                                    <h3 className="text-sm font-bold text-slate-900 truncate">
-                                                        {shift.name}
-                                                    </h3>
+                                                <div className="flex items-center justify-between gap-2">
+                                                    <div className="flex items-center gap-2 min-w-0">
+                                                        <h3 className="text-sm font-bold text-slate-900 truncate">
+                                                            {shift.name}
+                                                        </h3>
+                                                        {shift.phone && (
+                                                            <span className="flex items-center gap-1 text-xs text-slate-500 font-medium shrink-0">
+                                                                <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                                <span>{shift.phone}</span>
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <span className="flex items-center gap-1 text-xs font-semibold text-slate-500">
                                                         {renderStatusIcon(shift.status)}
                                                         <span>{shift.time}</span>
@@ -660,22 +673,13 @@ export default function CoordinatorDashboardPage() {
                                                 </div>
                                                 <p className="text-xs text-slate-500 mt-0.5 font-medium flex items-center gap-1.5 flex-wrap">
                                                     <span>{shift.location}</span>
-                                                    {shift.contractName && (
-                                                        <>
-                                                            <span className="text-slate-300">•</span>
-                                                            <span className="text-slate-600 font-semibold">{shift.contractName}</span>
-                                                        </>
-                                                    )}
-                                                    {shift.phone && (
-                                                        <>
-                                                            <span className="text-slate-300">•</span>
-                                                            <span className="flex items-center gap-1 text-slate-500 font-medium">
-                                                                <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                                                                <span>{shift.phone}</span>
-                                                            </span>
-                                                        </>
-                                                    )}
                                                 </p>
+                                                {shift.companyName && (
+                                                    <p className="text-xs text-slate-600 mt-0.5 flex items-center gap-1 font-semibold">
+                                                        <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                        <span>{shift.companyName}</span>
+                                                    </p>
+                                                )}
                                                 <div className="flex items-center justify-between mt-2">
                                                     <div className="flex items-center gap-1.5 flex-wrap">
                                                         <span className={`px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wide border ${getStatusBadgeStyle(shift.status)}`}>
@@ -687,9 +691,6 @@ export default function CoordinatorDashboardPage() {
                                                             </span>
                                                         )}
                                                     </div>
-                                                    <span className="text-[11px] text-slate-400 font-mono">
-                                                        ID: {shift.id}
-                                                    </span>
                                                 </div>
                                             </div>
                                         </div>
@@ -973,26 +974,29 @@ export default function CoordinatorDashboardPage() {
                                             <User className={`w-5 h-5 text-slate-500 ${shift.avatar ? "hidden" : ""}`} />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-900 leading-snug">
-                                                {shift.name}
-                                            </h4>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-sm font-bold text-slate-900 leading-snug">
+                                                    {shift.name}
+                                                </h4>
+                                                {shift.phone && (
+                                                    <span className="flex items-center gap-1 text-xs text-slate-500 font-medium shrink-0">
+                                                        <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                        <span>{shift.phone}</span>
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
                                                 <span className="flex items-center gap-1 text-slate-600 font-semibold">
                                                     <MapPin className="w-3.5 h-3.5 text-slate-400 shrink-0" />
                                                     <span>{shift.location}</span>
                                                 </span>
-                                                {shift.phone && (
-                                                    <>
-                                                        <span className="text-slate-300">•</span>
-                                                        <span className="flex items-center gap-1 text-slate-500 font-medium">
-                                                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                                                            <span>{shift.phone}</span>
-                                                        </span>
-                                                    </>
-                                                )}
-                                                <span className="text-slate-300">•</span>
-                                                <span className="font-mono text-slate-400">{shift.id}</span>
                                             </p>
+                                            {shift.companyName && (
+                                                <p className="text-xs text-slate-600 mt-0.5 flex items-center gap-1 font-semibold">
+                                                    <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                    <span>{shift.companyName}</span>
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 
@@ -1102,29 +1106,26 @@ export default function CoordinatorDashboardPage() {
                                             <User className={`w-5 h-5 text-slate-500 ${shift.avatar ? "hidden" : ""}`} />
                                         </div>
                                         <div>
-                                            <h4 className="text-sm font-bold text-slate-900 leading-snug">
-                                                {shift.name}
-                                            </h4>
+                                            <div className="flex items-center gap-2">
+                                                <h4 className="text-sm font-bold text-slate-900 leading-snug">
+                                                    {shift.name}
+                                                </h4>
+                                                {shift.phone && (
+                                                    <span className="flex items-center gap-1 text-xs text-slate-500 font-medium shrink-0">
+                                                        <Phone className="w-3 h-3 text-slate-400 shrink-0" />
+                                                        <span>{shift.phone}</span>
+                                                    </span>
+                                                )}
+                                            </div>
                                             <p className="text-xs text-slate-500 font-medium mt-0.5 flex items-center gap-1.5 flex-wrap">
                                                 <span>{shift.location}</span>
-                                                {shift.contractName && (
-                                                    <>
-                                                        <span className="text-slate-300">•</span>
-                                                        <span className="text-slate-600 font-semibold">{shift.contractName}</span>
-                                                    </>
-                                                )}
-                                                {shift.phone && (
-                                                    <>
-                                                        <span className="text-slate-300">•</span>
-                                                        <span className="flex items-center gap-1 text-slate-500 font-medium">
-                                                            <Phone className="w-3 h-3 text-slate-400 shrink-0" />
-                                                            <span>{shift.phone}</span>
-                                                        </span>
-                                                    </>
-                                                )}
-                                                <span className="text-slate-300">•</span>
-                                                <span className="font-mono text-slate-400">{shift.id}</span>
                                             </p>
+                                            {shift.companyName && (
+                                                <p className="text-xs text-slate-600 mt-0.5 flex items-center gap-1 font-semibold">
+                                                    <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                                                    <span>{shift.companyName}</span>
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
 

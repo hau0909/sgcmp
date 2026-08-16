@@ -338,6 +338,7 @@ export type CurrentUpcomingShiftItem = {
   startTime?: string;
   isOvertime?: boolean;
   overtimeMinutes?: number;
+  companyName?: string;
 };
 
 /**
@@ -392,6 +393,7 @@ export type PastShiftItem = {
   startTime?: string;
   isOvertime?: boolean;
   overtimeMinutes?: number;
+  companyName?: string;
 };
 
 export type AvailableGuardItem = {

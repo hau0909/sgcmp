@@ -1468,6 +1468,7 @@ export interface CurrentUpcomingShiftItem {
   startTime?: string;
   isOvertime?: boolean;
   overtimeMinutes?: number;
+  companyName?: string;
 }
 
 export const getCurrentUpcomingShiftsTodayService = async (
@@ -1530,6 +1531,8 @@ export const getCurrentUpcomingShiftsTodayService = async (
       continue;
     }
 
+    const bookingCompanyName = (s.contracts as any)?.bookings?.company_name || "";
+
     for (const sa of s.shift_assignments || []) {
       const st = sa.status;
 
@@ -1576,6 +1579,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
         startTime: s.start_time,
         isOvertime: sa.is_overtime || (Number(sa.overtime_minutes) > 0),
         overtimeMinutes: sa.overtime_minutes,
+        companyName: bookingCompanyName || undefined,
       });
 
       if (hasRep) {
@@ -1591,6 +1595,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
             location: locationName,
             statusText: "THAY CA",
             startTime: s.start_time,
+            companyName: bookingCompanyName || undefined,
           });
         });
       }
@@ -1634,6 +1639,7 @@ export interface PastShiftItem {
   startTime?: string;
   isOvertime?: boolean;
   overtimeMinutes?: number;
+  companyName?: string;
 }
 
 export interface AvailableGuardItem {
@@ -1705,6 +1711,8 @@ export const getPastShiftsService = async (
       : serviceName || shiftName || "Mục tiêu trực";
     const contractName = s.contracts?.contract_name || s.contracts?.contract_code || (s.contracts?.contract_id ? `Hợp đồng #${s.contracts.contract_id.slice(0, 6)}` : "Hợp đồng bảo vệ");
 
+    const bookingCompanyName = s.contracts?.bookings?.company_name || "";
+
     for (const sa of s.shift_assignments || []) {
       const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
       const p = getProfile(sa.guard_id);
@@ -1726,6 +1734,7 @@ export const getPastShiftsService = async (
         startTime: s.start_time,
         isOvertime: sa.is_overtime || (Number(sa.overtime_minutes) > 0),
         overtimeMinutes: sa.overtime_minutes,
+        companyName: bookingCompanyName || undefined,
       });
 
       if (hasRep) {
@@ -1743,6 +1752,7 @@ export const getPastShiftsService = async (
             startTime: s.start_time,
             isOvertime: sa.is_overtime || (Number(sa.overtime_minutes) > 0),
             overtimeMinutes: sa.overtime_minutes,
+            companyName: bookingCompanyName || undefined,
           });
         });
       }
