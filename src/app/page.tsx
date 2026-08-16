@@ -160,7 +160,7 @@ export default function Home() {
                 )}
 
                 {/* Compact Floating Glassmorphic Search Bar (Adjusted width to touch right up against the character) */}
-                <div className="w-full max-w-[590px] relative z-[999]">
+                <div className="w-full max-w-[640px] relative z-[999]">
                   <CompanySearchBar variant="large" />
                 </div>
               </div>
