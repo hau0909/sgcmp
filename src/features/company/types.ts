@@ -74,6 +74,12 @@ export interface CompanyServiceData {
   price: number;
 }
 
+export interface GuardSkillSummary {
+  skillName: string;
+  count: number;
+  percentage: number;
+}
+
 export interface CompanyDetailData {
   id: string;
   name: string;
@@ -106,6 +112,8 @@ export interface CompanyDetailData {
   latestPublishRequest?: any;
   monthlyDiscountPercent?: number | null;
   packageDiscountPercent?: number | null;
+  guardSkillsSummary?: GuardSkillSummary[];
+  totalApprovedGuards?: number;
 }
 
 

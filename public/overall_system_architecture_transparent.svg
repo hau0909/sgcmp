@@ -1,0 +1,180 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1400 480" width="2240" height="768">
+  <defs>
+    <!-- Box Gradients -->
+    <linearGradient id="cardGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#ffffff" />
+      <stop offset="100%" stop-color="#f8fafc" />
+    </linearGradient>
+
+    <!-- Shadow -->
+    <filter id="boxShadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="4" stdDeviation="5" flood-color="#000000" flood-opacity="0.07"/>
+    </filter>
+
+    <!-- Arrow Markers -->
+    <marker id="arrowRight" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+      <path d="M 1 1 L 6 4 L 1 7" fill="none" stroke="#2563eb" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+    <marker id="arrowLeft" markerWidth="8" markerHeight="8" refX="2" refY="4" orient="auto">
+      <path d="M 6 1 L 1 4 L 6 7" fill="none" stroke="#475569" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;600;700;800&amp;display=swap');
+    text {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    }
+    .tier-title {
+      font-size: 14px;
+      font-weight: 800;
+      fill: #1e293b;
+      text-anchor: middle;
+    }
+    .tier-subtitle {
+      font-size: 11.5px;
+      font-weight: 600;
+      fill: #475569;
+      text-anchor: middle;
+    }
+    .box-title {
+      font-size: 13.5px;
+      font-weight: 700;
+      fill: #0f172a;
+      text-anchor: middle;
+    }
+    .flow-label-top {
+      font-size: 11px;
+      font-weight: 700;
+      fill: #1d4ed8;
+      text-anchor: middle;
+    }
+    .flow-label-bottom {
+      font-size: 11px;
+      font-weight: 700;
+      fill: #475569;
+      text-anchor: middle;
+    }
+  </style>
+
+  <!-- Outer Dash Container (System Architecture) -->
+  <rect x="15" y="15" width="1370" height="450" rx="24" ry="24" fill="#ffffff" fill-opacity="0.95" stroke="#cbd5e1" stroke-width="2" stroke-dasharray="6,6" filter="url(#boxShadow)"/>
+
+  <!-- TIER 1: Presentation Layer (x=40..210) -->
+  <g transform="translate(40, 45)">
+    <rect x="0" y="0" width="170" height="390" rx="16" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1.5"/>
+    <!-- Header Badge -->
+    <rect x="10" y="15" width="150" height="44" rx="8" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>
+    <text x="85" y="33" class="tier-title" fill="#0369a1">Presentation Layer</text>
+    <text x="85" y="49" class="tier-subtitle" fill="#0284c7">(React / Next.js 16)</text>
+
+    <!-- Inner Box -->
+    <rect x="12" y="120" width="146" height="180" rx="12" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,4"/>
+    <text x="85" y="195" class="box-title">Web Application</text>
+    <text x="85" y="215" class="box-title" fill="#2563eb">(React &amp; Zustand)</text>
+  </g>
+
+  <!-- Flow 1 -> 2 (Presentation <-> API) (Gap 130px: x=210..340) -->
+  <g transform="translate(210, 215)">
+    <!-- Request Top Arrow -->
+    <path d="M 12 0 L 118 0" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowRight)"/>
+    <text x="65" y="-10" class="flow-label-top">HTTP / HTTPS Request</text>
+
+    <!-- Response Bottom Arrow -->
+    <path d="M 118 38 L 12 38" fill="none" stroke="#475569" stroke-width="2.5" marker-end="url(#arrowLeft)"/>
+    <text x="65" y="55" class="flow-label-bottom">HTTP / HTTPS Response</text>
+  </g>
+
+  <!-- TIER 2: API Layer (x=340..510) -->
+  <g transform="translate(340, 45)">
+    <rect x="0" y="0" width="170" height="390" rx="16" fill="#f0fdf4" stroke="#dcfce7" stroke-width="1.5"/>
+    <!-- Header Badge -->
+    <rect x="10" y="15" width="150" height="44" rx="8" fill="#dcfce7" stroke="#bbf7d0" stroke-width="1"/>
+    <text x="85" y="33" class="tier-title" fill="#15803d">API Layer</text>
+    <text x="85" y="49" class="tier-subtitle" fill="#166534">(SGCMP API)</text>
+
+    <!-- Inner Box 1: Controllers -->
+    <rect x="12" y="95" width="146" height="100" rx="10" fill="#ffffff" stroke="#86efac" stroke-width="1.5"/>
+    <text x="85" y="138" class="box-title">RESTful API</text>
+    <text x="85" y="158" class="box-title">Controllers</text>
+
+    <!-- Inner Box 2: Middleware & Auth -->
+    <rect x="12" y="215" width="146" height="100" rx="10" fill="#ffffff" stroke="#86efac" stroke-width="1.5" stroke-dasharray="4,4"/>
+    <text x="85" y="258" class="box-title">Middleware &amp;</text>
+    <text x="85" y="278" class="box-title">Authentication</text>
+  </g>
+
+  <!-- Flow 2 -> 3 (API <-> Business Logic) (Gap 110px: x=510..620) -->
+  <g transform="translate(510, 215)">
+    <!-- Top Arrow -->
+    <path d="M 12 0 L 98 0" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowRight)"/>
+    <text x="55" y="-10" class="flow-label-top">Method Call</text>
+
+    <!-- Bottom Arrow -->
+    <path d="M 98 38 L 12 38" fill="none" stroke="#475569" stroke-width="2.5" marker-end="url(#arrowLeft)"/>
+    <text x="55" y="55" class="flow-label-bottom">Return Data</text>
+  </g>
+
+  <!-- TIER 3: Business Logic Layer (x=620..790) -->
+  <g transform="translate(620, 45)">
+    <rect x="0" y="0" width="170" height="390" rx="16" fill="#fffbe6" stroke="#fef08a" stroke-width="1.5"/>
+    <!-- Header Badge -->
+    <rect x="10" y="15" width="150" height="44" rx="8" fill="#fef08a" stroke="#fde047" stroke-width="1"/>
+    <text x="85" y="32" class="tier-title" fill="#a16207">Business Logic Layer</text>
+    <text x="85" y="48" class="tier-subtitle" fill="#854d0e">(SGCMP Service)</text>
+
+    <!-- Inner Box: Service Classes -->
+    <rect x="12" y="120" width="146" height="180" rx="12" fill="#ffffff" stroke="#eab308" stroke-width="1.5"/>
+    <text x="85" y="195" class="box-title">Service Classes</text>
+    <text x="85" y="215" class="box-title" fill="#ca8a04">(Business Logic)</text>
+  </g>
+
+  <!-- Flow 3 -> 4 (Business Logic <-> Repository) (Gap 110px: x=790..900) -->
+  <g transform="translate(790, 215)">
+    <!-- Top Arrow -->
+    <path d="M 12 0 L 98 0" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowRight)"/>
+    <text x="55" y="-10" class="flow-label-top">Service Call</text>
+
+    <!-- Bottom Arrow -->
+    <path d="M 98 38 L 12 38" fill="none" stroke="#475569" stroke-width="2.5" marker-end="url(#arrowLeft)"/>
+    <text x="55" y="55" class="flow-label-bottom">Return Data</text>
+  </g>
+
+  <!-- TIER 4: Data Access Layer (x=900..1070) -->
+  <g transform="translate(900, 45)">
+    <rect x="0" y="0" width="170" height="390" rx="16" fill="#eff6ff" stroke="#dbeafe" stroke-width="1.5"/>
+    <!-- Header Badge -->
+    <rect x="10" y="15" width="150" height="44" rx="8" fill="#dbeafe" stroke="#bfdbfe" stroke-width="1"/>
+    <text x="85" y="32" class="tier-title" fill="#1d4ed8">Data Access Layer</text>
+    <text x="85" y="48" class="tier-subtitle" fill="#1e40af">(SGCMP Repository)</text>
+
+    <!-- Inner Box: Repositories -->
+    <rect x="12" y="120" width="146" height="180" rx="12" fill="#ffffff" stroke="#3b82f6" stroke-width="1.5"/>
+    <text x="85" y="205" class="box-title" fill="#2563eb">Repositories</text>
+  </g>
+
+  <!-- Flow 4 -> 5 (Repository <-> Data Layer) (Gap 100px: x=1070..1170) -->
+  <g transform="translate(1070, 215)">
+    <!-- Top Arrow -->
+    <path d="M 10 0 L 90 0" fill="none" stroke="#2563eb" stroke-width="2.5" marker-end="url(#arrowRight)"/>
+    <text x="50" y="-10" class="flow-label-top">DB Query</text>
+
+    <!-- Bottom Arrow -->
+    <path d="M 90 38 L 10 38" fill="none" stroke="#475569" stroke-width="2.5" marker-end="url(#arrowLeft)"/>
+    <text x="50" y="55" class="flow-label-bottom">Result Set</text>
+  </g>
+
+  <!-- TIER 5: Data Layer (x=1170..1340) -->
+  <g transform="translate(1170, 45)">
+    <rect x="0" y="0" width="170" height="390" rx="16" fill="#ecfdf5" stroke="#a7f3d0" stroke-width="1.5"/>
+    <!-- Header Badge -->
+    <rect x="10" y="15" width="150" height="44" rx="8" fill="#a7f3d0" stroke="#6ee7b7" stroke-width="1"/>
+    <text x="85" y="32" class="tier-title" fill="#047857">Data Layer</text>
+    <text x="85" y="48" class="tier-subtitle" fill="#065f46">(SGCMP Data)</text>
+
+    <!-- Inner Box: Supabase / PostgreSQL -->
+    <rect x="12" y="120" width="146" height="180" rx="12" fill="#ffffff" stroke="#10b981" stroke-width="1.5"/>
+    <text x="85" y="195" class="box-title" font-size="14px">Supabase</text>
+    <text x="85" y="215" class="box-title" fill="#059669" font-size="12px">(PostgreSQL)</text>
+  </g>
+</svg>

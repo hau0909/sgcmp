@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from "react";
 import CompanyDetailHeader from "./CompanyDetailHeader";
 import CompanyDetailAbout from "./CompanyDetailAbout";
+import CompanyDetailGuardSkills from "./CompanyDetailGuardSkills";
 import CompanyDetailServices from "./CompanyDetailServices";
 import CompanyDetailLegalInfo from "./CompanyDetailLegalInfo";
 import CompanyDetailGallery from "./CompanyDetailGallery";
@@ -237,7 +238,13 @@ export default function CompanyDetail({ id }: CompanyDetailProps) {
       {/* 3. About Company / Brand Story */}
       <CompanyDetailAbout description={company.description} />
 
-      {/* 4. Company Activity Photos Gallery */}
+      {/* 4. Guard Force Notable Skills */}
+      <CompanyDetailGuardSkills
+        guardSkillsSummary={company.guardSkillsSummary}
+        totalApprovedGuards={company.totalApprovedGuards}
+      />
+
+      {/* 5. Company Activity Photos Gallery */}
       <CompanyDetailGallery
         images={company.activityImgs}
         companyName={company.name}

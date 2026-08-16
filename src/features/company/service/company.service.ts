@@ -27,6 +27,7 @@ import {
   Service,
   CompanyDetailData,
   CompanyServiceData,
+  GuardSkillSummary,
   UpdateCompanyProfileInput,
   UploadCompanyImageServiceParams,
   CompanyPublishRequestItem,
@@ -378,6 +379,47 @@ export const getCompanyByIdServiceInCustomer = async (
     console.error("Lỗi khi tải chỉ số thống kê công ty:", err);
   }
 
+  // Fetch guard skills summary for approved guards belonging to this company
+  let guardSkillsSummary: GuardSkillSummary[] = [];
+  let totalApprovedGuards = 0;
+  try {
+    const supabaseServer = await createClient();
+    const { data: approvedGuards, count: guardCount } = await supabaseServer
+      .from("guards")
+      .select("notable_skills", { count: "exact" })
+      .eq("company_id", id)
+      .eq("approval_status", "approved");
+
+    if (guardCount !== null && guardCount !== undefined) {
+      totalApprovedGuards = guardCount;
+    }
+
+    if (approvedGuards && approvedGuards.length > 0) {
+      const skillCounts: Record<string, number> = {};
+      approvedGuards.forEach((g: any) => {
+        if (Array.isArray(g.notable_skills)) {
+          g.notable_skills.forEach((skill: string) => {
+            const cleanSkill = skill.trim();
+            if (cleanSkill) {
+              skillCounts[cleanSkill] = (skillCounts[cleanSkill] || 0) + 1;
+            }
+          });
+        }
+      });
+
+      const totalGuards = approvedGuards.length;
+      guardSkillsSummary = Object.entries(skillCounts)
+        .map(([skillName, count]) => ({
+          skillName,
+          count,
+          percentage: totalGuards > 0 ? Math.round((count / totalGuards) * 100) : 0,
+        }))
+        .sort((a, b) => b.count - a.count);
+    }
+  } catch (err) {
+    console.error("Lỗi khi tải kỹ năng nổi bật của lực lượng bảo vệ:", err);
+  }
+
   // Fetch latest publish request (to get reject_reason if rejected)
   let latestPublishRequest: any = null;
   try {
@@ -433,6 +475,8 @@ export const getCompanyByIdServiceInCustomer = async (
     packageDiscountPercent: dbCompany.package_discount_percent ?? 15,
     rejectReason: latestPublishRequest?.reject_reason || null,
     latestPublishRequest,
+    guardSkillsSummary,
+    totalApprovedGuards,
   };
 };
 export const getCompanyByIdService = async (
