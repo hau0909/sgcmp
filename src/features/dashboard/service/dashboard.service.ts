@@ -797,8 +797,9 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
   }
 
   // 5. Activated coordinators
-  const activatedCoordinators = await getRecentCoordinators(1000);
+  const activatedCoordinators = await getRecentCoordinators(companyId, 1000);
   for (const coord of activatedCoordinators) {
+    if (!coord) continue;
     activities.push({
       id: `act-sys-coord-${coord.user_id}`,
       type: "system",
