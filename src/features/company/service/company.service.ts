@@ -476,6 +476,7 @@ export const getCompanyByIdServiceInCustomer = async (
     rejectReason: latestPublishRequest?.reject_reason || null,
     latestPublishRequest,
     guardSkillsSummary,
+    notable_skills: guardSkillsSummary.map((s) => s.skillName),
     totalApprovedGuards,
   };
 };

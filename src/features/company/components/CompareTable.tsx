@@ -13,6 +13,7 @@ import {
   FileText,
   DollarSign,
   Shield,
+  Award,
 } from "lucide-react";
 import { requestGetCompanyById } from "../api/company.api";
 import { CompanyDetailData } from "../types";
@@ -367,6 +368,56 @@ export default function CompareTable() {
                       )}
                     </td>
                   ))}
+                </tr>
+
+                {/* ── 6. Kỹ năng nổi bật (Notable Skills) ────────────────── */}
+                <tr className="hover:bg-surface-container-low/30 transition-colors">
+                  <td className="p-4 font-bold text-on-surface bg-surface-container-low/40 flex items-center gap-2">
+                    <Award className="w-4 h-4 text-purple-600" />
+                    <span>{t.col_notable_skills || "Kỹ năng nổi bật"}</span>
+                  </td>
+                  {validCompanies.map((comp) => {
+                    const skills =
+                      comp.notable_skills && comp.notable_skills.length > 0
+                        ? comp.notable_skills
+                        : comp.guardSkillsSummary?.map((s) => s.skillName) || [];
+
+                    return (
+                      <td
+                        key={comp.id}
+                        className="p-4 text-center border-l border-outline-variant/30 text-on-surface font-medium"
+                      >
+                        {skills.length > 0 ? (
+                          <div className="flex flex-col items-center gap-1.5">
+                            {Array.from({ length: Math.ceil(skills.length / 3) }).map(
+                              (_, rIdx) => {
+                                const rowSkills = skills.slice(rIdx * 3, rIdx * 3 + 3);
+                                return (
+                                  <div
+                                    key={rIdx}
+                                    className="flex flex-wrap justify-center gap-1"
+                                  >
+                                    {rowSkills.map((skill, idx) => (
+                                      <span
+                                        key={idx}
+                                        className="bg-purple-500/10 text-purple-700 border border-purple-200/60 text-[10px] font-bold px-2 py-0.5 rounded-full"
+                                      >
+                                        {skill}
+                                      </span>
+                                    ))}
+                                  </div>
+                                );
+                              }
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-on-surface-variant font-normal">
+                            {t.no_skills || "Chưa cập nhật"}
+                          </span>
+                        )}
+                      </td>
+                    );
+                  })}
                 </tr>
 
                 {/* ── 6. Giá dịch vụ (Service Price) ──────────────────────── */}

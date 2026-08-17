@@ -113,6 +113,7 @@ export interface CompanyDetailData {
   monthlyDiscountPercent?: number | null;
   packageDiscountPercent?: number | null;
   guardSkillsSummary?: GuardSkillSummary[];
+  notable_skills?: string[];
   totalApprovedGuards?: number;
 }
 
