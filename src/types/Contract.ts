@@ -1,8 +1,13 @@
 import { ContractStatus } from "./Enum";
+import { ContractParties } from "./ContractParties";
+
+export type { ContractParties };
 
 export interface Contract {
   contract_id: string;
   booking_id: string;
+  customer_id: string | null;
+  company_id: string | null;
   contract_file_url: string | null;
   customer_agreed: boolean;
   company_agreed: boolean;
@@ -12,6 +17,9 @@ export interface Contract {
   created_at: string;
   updated_at: string;
   guard_assigned: string[];
+
+  // Snapshot parties information
+  contract_parties?: ContractParties | null;
 
   // Custom joined fields for frontend/API lists and detail representations
   contract_code?: string;
