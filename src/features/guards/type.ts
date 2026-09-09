@@ -299,6 +299,18 @@ export type GetGuardDetailResponse = {
   data: GuardDetail | null;
 };
 
+export type GuardMyProfileData = {
+  profile: any;
+  guard: GuardDetailDatabase | null;
+  identity: IdentityDetail | null;
+};
+
+export type GetGuardMyProfileResponse = {
+  success: boolean;
+  message: string;
+  data: GuardMyProfileData | null;
+};
+
 export type RouteContext = {
   params: Promise<{
     guardId: string;

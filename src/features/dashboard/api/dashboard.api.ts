@@ -44,6 +44,28 @@ export const requestGetActiveContracts = (
   ) as Promise<MetricWithTrend>;
 };
 
+export type ActiveContractTrendItem = {
+  label: string;
+  dateStr: string;
+  activeContracts: number;
+  newContracts: number;
+};
+
+/**
+ * Xu hướng hợp đồng đang hoạt động theo tuần (7 ngày) hoặc tháng (30 ngày).
+ * GET /api/dashboard/company/active-contracts-trend?companyId=...&view=weekly|monthly
+ */
+export const requestGetActiveContractsTrend = (
+  companyId: string,
+  view: "weekly" | "monthly" = "weekly",
+): Promise<ActiveContractTrendItem[]> => {
+  const params = new URLSearchParams({ companyId, view });
+  return fetcher(
+    `/api/dashboard/company/active-contracts-trend?${params.toString()}`,
+    { method: "GET" },
+  ) as Promise<ActiveContractTrendItem[]>;
+};
+
 /**
  * Tổng số báo cáo sự cố chờ xử lý + % so với tháng trước.
  * GET /api/dashboard/pending-reports?companyId=...

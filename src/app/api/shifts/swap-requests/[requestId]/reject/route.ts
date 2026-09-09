@@ -1,4 +1,4 @@
-import { handleRejectShiftSwapRequest } from "@/features/shift/controller/shift-swap.controller";
+import { handleRejectShiftSwapRequest } from "@/features/shift/controller/shift.controller";
 
 export async function POST(
   request: Request,

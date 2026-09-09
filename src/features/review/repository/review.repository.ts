@@ -7,6 +7,8 @@ import {
   GetAllReviewByCompanyIdResult,
   ReviewCustomer,
   ReviewRow,
+  ReviewRatingRow,
+  CompanyRatingAverageRow,
   GetAverageRatingByCompanyIdResult,
   GetRatingDistributionByCompanyIdResult,
 } from "../types";
@@ -38,9 +40,10 @@ export async function insertReview(
       .eq("company_id", payload.company_id);
 
     if (!ratingsError && ratingsData && ratingsData.length > 0) {
+      const typedRatings = ratingsData as unknown as ReviewRatingRow[];
       const avgRating =
-        ratingsData.reduce((acc, curr) => acc + curr.rating, 0) /
-        ratingsData.length;
+        typedRatings.reduce((acc, curr) => acc + curr.rating, 0) /
+        typedRatings.length;
 
       await supabase
         .from("companies")
@@ -143,9 +146,9 @@ export const getAllReviewByCompanyId = async ({
     }
 
     customerMap = new Map(
-      (customerData ?? []).map((customer) => [
+      ((customerData ?? []) as unknown as ReviewCustomer[]).map((customer) => [
         customer.user_id,
-        customer as ReviewCustomer,
+        customer,
       ]),
     );
   }
@@ -190,8 +193,10 @@ export const getAverageRatingByCompanyId = async (
     return null;
   }
 
+  const typedData = data as unknown as CompanyRatingAverageRow;
+
   return {
-    average_rating: Number(data.rating_average ?? 0),
+    average_rating: Number(typedData.rating_average ?? 0),
   };
 };
 
@@ -209,7 +214,7 @@ export const getRatingDistributionByCompanyId = async (
     throw new Error(error.message);
   }
 
-  const ratings = data ?? [];
+  const ratings = (data ?? []) as unknown as ReviewRatingRow[];
   const total_reviews = ratings.length;
 
   const getStarCount = (star: 1 | 2 | 3 | 4 | 5) => {
