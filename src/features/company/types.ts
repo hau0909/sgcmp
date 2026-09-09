@@ -1,5 +1,6 @@
 import { ImageType, CompanyStatus } from "@/types/Enum";
 import { PublishRequest } from "@/types/PublishRequest";
+import { CompanyImg } from "@/types/CompanyImg";
 
 
 export interface MarketplaceCompany {
@@ -186,5 +187,47 @@ export interface PublishRequestDetailData {
       price: number;
     }[];
   };
+}
+
+export interface UploadCompanyImageResult extends CompanyImg {
+  file_path: string;
+}
+
+export interface PublishRequestRow {
+  request_id: string;
+  company_id: string;
+  status: string;
+  notes: string | null;
+  reject_reason: string | null;
+  requested_at: string;
+  requested_by: string;
+  approved_by: string | null;
+  processed_at: string | null;
+}
+
+export interface AdminCompanyOwner {
+  user_id: string;
+  full_name: string;
+  email: string;
+  phone_number?: string | null;
+  avatar_url?: string | null;
+}
+
+export interface AdminCompanyListItem {
+  company_id: string;
+  company_name: string;
+  business_license_no: string;
+  license_file_url?: string | null;
+  address: string;
+  description?: string | null;
+  rating_average: number | null;
+  status: string;
+  created_at: string;
+  owner_id: string;
+  owner: AdminCompanyOwner | null;
+  logo_url: string | null;
+  banner_url: string | null;
+  services_count: number;
+  guards_count: number;
 }
 

@@ -114,8 +114,8 @@ export function ContractTable({
                   <td className="px-3 py-2 whitespace-nowrap font-mono font-bold text-primary">
                     {contract.contract_code}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap font-semibold text-on-surface max-w-[180px] truncate" title={contract.customer_name}>
-                    {contract.customer_name}
+                  <td className="px-3 py-2 whitespace-nowrap font-semibold text-on-surface max-w-[180px] truncate" title={contract.contract_parties?.customer_name || "—"}>
+                    {contract.contract_parties?.customer_name || "—"}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap text-on-surface-variant max-w-[160px] truncate" title={contract.service_name}>
                     {contract.service_name}

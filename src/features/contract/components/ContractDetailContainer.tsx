@@ -28,6 +28,7 @@ import {
   requestDeleteContractFile,
 } from "../api/contract.api";
 import { formatPrice } from "@/utils/formatPrice";
+import { useAuthStore } from "@/store/auth.store";
 
 interface ContractDetailContainerProps {
   contractId: string;
@@ -45,6 +46,8 @@ export function ContractDetailContainer({
   const [isSignModalOpen, setIsSignModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  const companyId = useAuthStore((state) => state.company_id);
+
   const fetchDetail = React.useCallback(
     async (showLoading = true) => {
       try {
@@ -53,7 +56,7 @@ export function ContractDetailContainer({
           setIsLoading(true);
         }
         setError(null);
-        const res = await requestGetContractDetail(contractId);
+        const res = await requestGetContractDetail(contractId, companyId || undefined);
         if (res && res.contract) {
           setContract(res.contract);
         } else {
@@ -74,7 +77,7 @@ export function ContractDetailContainer({
         setIsLoading(false);
       }
     },
-    [contractId, dict],
+    [contractId, companyId, dict],
   );
 
   useEffect(() => {
@@ -121,12 +124,13 @@ export function ContractDetailContainer({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const getDetailedData = (currentContract: any) => {
     const booking = currentContract.booking;
-    const customerProfile = booking?.profiles;
+    const parties = currentContract.contract_parties;
 
     const notUpdatedText = dict.contract_detail?.not_updated || "Chưa cập nhật";
-    const phone = customerProfile?.phone_number || notUpdatedText;
-    const email = customerProfile?.email || notUpdatedText;
-    const address = customerProfile?.address || notUpdatedText;
+    const phone = parties?.customer_phone || notUpdatedText;
+    const email = parties?.customer_email || notUpdatedText;
+    const address =
+      parties?.customer_address || booking?.address || notUpdatedText;
     const quantity = booking?.guards_per_slot || 1;
 
     // Format duration
@@ -152,28 +156,28 @@ export function ContractDetailContainer({
       booking?.quotation_type || currentContract.quotation_type || "monthly";
     const totalHours = booking?.total_hours || null;
 
-    let unitPriceDetail: string | null = null;
-    if (rawPrice) {
-      if (quotationType === "hourly") {
-        const hourlyRate =
-          booking?.negotiated_price ||
-          booking?.unit_price ||
-          booking?.hourly_rate ||
-          (quantity ? Math.round(rawPrice / (quantity * 54)) : 20000);
-        unitPriceDetail = `${formatPrice(hourlyRate)} VNĐ / giờ / nhân sự`;
-      } else if (quotationType === "monthly") {
-        unitPriceDetail = `${booking?.formatted_price || formatPrice(rawPrice) + " VNĐ"} / tháng`;
-      } else {
-        unitPriceDetail = `${booking?.formatted_price || formatPrice(rawPrice) + " VNĐ"} / trọn gói`;
+    const rawFormattedPrice =
+      currentContract.formatted_price || booking?.formatted_price;
+    let totalValue = "";
+    if (rawFormattedPrice) {
+      totalValue = rawFormattedPrice.replace(/\s*đ(\/|$)/, " VNĐ$1");
+      if (quotationType === "hourly" && !totalValue.includes("nhân sự")) {
+        totalValue = totalValue.replace(
+          /VNĐ\/giờ|VNĐ \/ giờ/,
+          "VNĐ / giờ / nhân sự",
+        );
       }
+    } else if (rawPrice) {
+      if (quotationType === "hourly") {
+        totalValue = `${formatPrice(rawPrice)} VNĐ / giờ / nhân sự`;
+      } else if (quotationType === "monthly") {
+        totalValue = `${formatPrice(rawPrice)} VNĐ/tháng`;
+      } else {
+        totalValue = `${formatPrice(rawPrice)} VNĐ`;
+      }
+    } else {
+      totalValue = dict.contract_detail?.not_quoted || "Chưa báo giá";
     }
-
-    const totalValue =
-      currentContract.formatted_price ||
-      booking?.formatted_price ||
-      (rawPrice
-        ? `${formatPrice(rawPrice)} VNĐ`
-        : dict.contract_detail?.not_quoted || "Chưa báo giá");
     const paymentMethod =
       dict.contract_detail?.bank_transfer || "Chuyển khoản ngân hàng";
     const timeSlots = booking?.time_slots || [];
@@ -188,68 +192,79 @@ export function ContractDetailContainer({
     const description = booking?.description || null;
     const contractFileUrl = currentContract.contract_file_url;
 
-    // Generate dynamic history log based on signatures
+    // Chuẩn hóa timeline lịch sử hợp đồng theo 4 mốc rõ ràng:
+    // 4. Hợp đồng có hiệu lực / Hoàn thành
+    // 3. Khách hàng ký duyệt
+    // 2. Công ty ký duyệt
+    // 1. Khởi tạo hợp đồng
     const historyList = [];
 
-    if (currentContract.status === "active") {
+    // Mốc 4: Có hiệu lực hoặc Hoàn thành
+    if (currentContract.status === "completed") {
+      historyList.push({
+        time: currentContract.updated_at
+          ? new Date(currentContract.updated_at).toLocaleString(dateLocale)
+          : dict.contract_detail?.just_now || "Vừa xong",
+        title: dict.contract_detail?.history_completed_title || "Hợp đồng đã hoàn thành",
+        description:
+          dict.contract_detail?.history_completed_desc ||
+          "Khách hàng đã xác nhận hoàn thành dịch vụ và hợp đồng được kết thúc thành công.",
+        isLatest: true,
+      });
+    } else if (currentContract.status === "active") {
       historyList.push({
         time: currentContract.updated_at
           ? new Date(currentContract.updated_at).toLocaleString(dateLocale)
           : dict.contract_detail?.just_now || "Vừa xong",
         title:
-          dict.contract_detail?.history_active_title || "Hợp đồng kích hoạt",
+          dict.contract_detail?.history_active_title || "Hợp đồng có hiệu lực",
         description:
           dict.contract_detail?.history_active_desc ||
-          "Hợp đồng chuyển sang trạng thái Đang hoạt động sau khi hoàn tất ký kết.",
+          "Cả hai bên đã hoàn tất ký kết, hợp đồng chính thức có hiệu lực.",
         isLatest: true,
       });
     }
 
-    if (currentContract.company_agreed) {
+    // Mốc 3: Khách hàng ký
+    if (currentContract.customer_agreed || parties?.customer_signed_at) {
       historyList.push({
-        time: currentContract.updated_at
-          ? new Date(currentContract.updated_at).toLocaleString(dateLocale)
-          : dict.contract_detail?.just_now || "Vừa xong",
-        title:
-          dict.contract_detail?.history_company_signed_title ||
-          "Công ty đã ký duyệt",
-        description:
-          dict.contract_detail?.history_company_signed_desc ||
-          "Người thực hiện: Quản lý doanh nghiệp (Company Admin)",
-        isLatest: currentContract.status !== "active",
-      });
-    }
-
-    if (currentContract.customer_agreed) {
-      historyList.push({
-        time: dict.contract_detail?.history_earlier || "Trước đó",
+        time: parties?.customer_signed_at
+          ? new Date(parties.customer_signed_at).toLocaleString(dateLocale)
+          : dict.contract_detail?.history_earlier || "Đã ký duyệt",
         title:
           dict.contract_detail?.history_customer_signed_title ||
           "Khách hàng đã ký duyệt",
-        description: `${dict.contract_detail?.history_performer || "Người thực hiện:"} ${dict.contract_detail?.customer_agreed || "Khách hàng"} (${currentContract.customer_name})`,
+        description: `${dict.contract_detail?.history_performer_customer || "Người thực hiện: Khách hàng"} (${parties?.customer_name || dict.contract_detail?.history_customer_default || "Khách hàng"})`,
       });
     }
 
-    historyList.push(
-      {
-        time: new Date(currentContract.created_at).toLocaleString(dateLocale),
+    // Mốc 2: Công ty ký
+    if (currentContract.company_agreed || parties?.company_signed_at) {
+      historyList.push({
+        time: parties?.company_signed_at
+          ? new Date(parties.company_signed_at).toLocaleString(dateLocale)
+          : currentContract.updated_at
+            ? new Date(currentContract.updated_at).toLocaleString(dateLocale)
+            : dict.contract_detail?.just_now || "Vừa xong",
         title:
-          dict.contract_detail?.history_pending_signatures_title ||
-          "Chờ chữ ký",
-        description:
-          dict.contract_detail?.history_pending_signatures_desc ||
-          "Báo giá được chấp nhận, hệ thống chuyển sang trạng thái chờ ký kết",
-      },
-      {
-        time: new Date(currentContract.created_at).toLocaleString(dateLocale),
-        title:
-          dict.contract_detail?.history_created_title ||
-          "Dự thảo hợp đồng được tạo",
-        description:
-          dict.contract_detail?.history_created_desc ||
-          "Tài liệu hợp đồng nháp được tạo tự động bởi hệ thống",
-      },
-    );
+          dict.contract_detail?.history_company_signed_title ||
+          "Công ty đã ký duyệt",
+        description: `${dict.contract_detail?.history_performer_company || "Người thực hiện: Đại diện doanh nghiệp"} (${parties?.representative_name || parties?.company_name || dict.contract_detail?.history_performer_admin || "Quản lý doanh nghiệp"})`,
+      });
+    }
+
+    // Mốc 1: Khởi tạo hợp đồng
+    historyList.push({
+      time: currentContract.created_at
+        ? new Date(currentContract.created_at).toLocaleString(dateLocale)
+        : parties?.created_at
+          ? new Date(parties.created_at).toLocaleString(dateLocale)
+          : "",
+      title: dict.contract_detail?.history_created_title || "Khởi tạo hợp đồng",
+      description:
+        dict.contract_detail?.history_created_desc ||
+        "Dự thảo hợp đồng được tạo tự động bởi hệ thống sau khi báo giá được chấp nhận.",
+    });
 
     return {
       phone,
@@ -259,7 +274,6 @@ export function ContractDetailContainer({
       duration,
       location,
       totalValue,
-      unitPriceDetail,
       quotationType,
       totalHours,
       paymentMethod,
@@ -269,13 +283,11 @@ export function ContractDetailContainer({
       contractFileUrl,
       historyList,
       clientCompanyName:
-        booking?.company_name || currentContract.customer?.company_name || null,
+        parties?.customer_company_name || booking?.company_name || null,
       companyScope:
-        booking?.company_scope ||
-        currentContract.customer?.company_scope ||
-        null,
+        parties?.customer_company_scope || booking?.company_scope || null,
       companyPosition:
-        booking?.company_position || currentContract.customer?.position || null,
+        parties?.customer_position || booking?.company_position || null,
     };
   };
 
@@ -364,39 +376,9 @@ export function ContractDetailContainer({
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
         {/* Left Column (Main Details & Documents) */}
         <div className="xl:col-span-2 flex flex-col gap-6">
-          {/* Company Name Change Notice for Provider Company */}
-          {(contract?.is_company_name_changed || contract?.company?.is_name_changed) && (
-            <div className="flex flex-col bg-amber-50/70 border border-amber-200/80 rounded-xl p-4 space-y-2 font-body">
-              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800 uppercase tracking-wider">
-                <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0" />
-                <span>Thay đổi tên doanh nghiệp bảo vệ</span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1 border-t border-amber-200/50">
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-bold text-amber-700/90 uppercase tracking-wider">
-                    Tên công ty hiện tại
-                  </span>
-                  <span className="text-sm font-bold text-amber-950 flex items-center gap-1.5 mt-0.5">
-                    <Building2 className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                    {contract?.company?.name || contract?.company_name}
-                  </span>
-                </div>
-                <div className="flex flex-col">
-                  <span className="text-[11px] font-bold text-amber-700/90 uppercase tracking-wider">
-                    Tên công ty lúc ký hợp đồng
-                  </span>
-                  <span className="text-sm font-bold text-amber-950 flex items-center gap-1.5 mt-0.5">
-                    <Building2 className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                    {contract?.company?.signed_name || contract?.signed_company_name}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Partner Info */}
+          {/* Partner Info (Bên A & Bên B) */}
           <ContractPartnerInfo
-            customerName={contract.customer_name || ""}
+            customerName={contract.contract_parties?.customer_name || ""}
             phone={detailedData.phone}
             email={detailedData.email}
             address={detailedData.address}
@@ -404,6 +386,7 @@ export function ContractDetailContainer({
             companyName={detailedData.clientCompanyName}
             companyScope={detailedData.companyScope}
             companyPosition={detailedData.companyPosition}
+            contractParties={contract.contract_parties}
           />
 
           {/* Service & Payment & Guards Info Grid */}
@@ -421,7 +404,6 @@ export function ContractDetailContainer({
 
               <ContractPaymentInfo
                 totalValue={detailedData.totalValue}
-                unitPriceDetail={detailedData.unitPriceDetail}
                 quotationType={detailedData.quotationType}
                 totalHours={detailedData.totalHours}
               />

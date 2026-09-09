@@ -23,7 +23,10 @@ import {
   UploadCompanyImageControllerParams,
   CompanyPublishRequestItem,
   PublishRequestDetailData,
+  UploadCompanyImageResult,
+  AdminCompanyListItem,
 } from "../types";
+import { Company } from "@/types/Company";
 import {
   validateUpdateCompanyProfileInput,
   validateUploadCompanyImageInput,
@@ -69,7 +72,10 @@ export const handleGetCompanyById = async (
 
 export const handleUpdateCompanyProfile = async ({
   input,
-}: UpdateCompanyProfileControllerParams) => {
+}: UpdateCompanyProfileControllerParams): Promise<
+  | { company: Company; registration: null }
+  | { success: false; message: string; data: null }
+> => {
   validateUpdateCompanyProfileInput(input);
 
   const profile = await getCurrentUserProfileService();
@@ -115,7 +121,10 @@ export const handleUpdateCompanyProfile = async ({
 export const handleUploadCompanyImage = async ({
   file,
   image_type,
-}: UploadCompanyImageControllerParams) => {
+}: UploadCompanyImageControllerParams): Promise<
+  | UploadCompanyImageResult
+  | { success: false; message: string; data: null }
+> => {
   validateUploadCompanyImageInput({
     file,
     image_type,
@@ -207,7 +216,7 @@ export const handleUpdateCompanyPublishRequestStatus = async (
   await updateCompanyPublishRequestStatusService(requestId, status, adminId, note);
 };
 
-export const handleGetAdminCompanies = async (): Promise<any[]> => {
+export const handleGetAdminCompanies = async (): Promise<AdminCompanyListItem[]> => {
   return await getAdminCompaniesListService();
 };
 
