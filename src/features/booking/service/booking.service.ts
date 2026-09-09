@@ -1,4 +1,4 @@
-import { Booking, BookingWithCustomerProfile, BookingStatus } from "../types";
+import { Booking, BookingWithCustomerProfile, BookingStatus, QuotationType } from "../types";
 import { getBookings, getBookingDetail, getBookingById, createBooking, updateBookingStatusAndPrice, updateBookingDetails, getCustomerBookings, getActiveBookingsByAddressAndService } from "../repository/booking.repository";
 import { formatAddressService } from "@/features/address/service/address.service";
 import { validateBookingUpdateStatusData } from "../validator/booking.validator";
@@ -52,13 +52,15 @@ export const getBookingsService = async (
   };
 };
 
-export const getBookingDetailService = async (id: string): Promise<any | null> => {
+export const getBookingDetailService = async (id: string): Promise<Booking | null> => {
   const item = await getBookingDetail(id);
   if (!item) return null;
 
-  const profile = item.profiles;
-  const service = item.services;
-  const company = item.companies;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rawItem = item as any;
+  const profile = rawItem.profiles;
+  const service = rawItem.services;
+  const company = rawItem.companies;
 
   const companyRawAddress = Array.isArray(company) ? company[0]?.address : company?.address;
   const companyAddressFormatted = await formatAddressService(companyRawAddress);
@@ -150,12 +152,12 @@ export const getBookingDetailService = async (id: string): Promise<any | null> =
     package_discount_percent: Array.isArray(company)
       ? (company[0]?.package_discount_percent ?? 15)
       : (company?.package_discount_percent ?? 15),
-    contract_id: Array.isArray(item.contracts)
-      ? (item.contracts[0]?.contract_id || null)
-      : (item.contracts?.contract_id || null),
-    contract_status: Array.isArray(item.contracts)
-      ? (item.contracts[0]?.status || null)
-      : (item.contracts?.status || null),
+    contract_id: Array.isArray(rawItem.contracts)
+      ? (rawItem.contracts[0]?.contract_id || null)
+      : (rawItem.contracts?.contract_id || null),
+    contract_status: Array.isArray(rawItem.contracts)
+      ? (rawItem.contracts[0]?.status || null)
+      : (rawItem.contracts?.status || null),
   };
 };
 
@@ -240,7 +242,7 @@ export const updateBookingStatusAndPriceService = async (
   updates: {
     status: BookingStatus;
     quoted_price?: number;
-    quotation_type?: any;
+    quotation_type?: QuotationType;
     hourly_rate?: number;
     monthly_rate?: number;
   }

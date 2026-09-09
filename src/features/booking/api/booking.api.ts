@@ -25,7 +25,7 @@ export async function requestGetBookings(
   });
 }
 
-export async function requestGetBookingDetail(id: string) {
+export async function requestGetBookingDetail(id: string): Promise<{ booking: Booking }> {
   return await fetcher(`/api/bookings/${id}`, {
     method: "GET",
   });

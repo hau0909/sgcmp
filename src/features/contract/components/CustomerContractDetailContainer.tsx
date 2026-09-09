@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { CustomerContractDetailHeader } from "./CustomerContractDetailHeader";
 import { CustomerCompanyInfo } from "./CustomerCompanyInfo";
-import { CustomerServiceInfo } from "./CustomerServiceInfo";
+import { ContractServiceInfo } from "./ContractServiceInfo";
 import { CustomerPaymentInfo } from "./CustomerPaymentInfo";
 import { CustomerContractDocument } from "./CustomerContractDocument";
 import { CustomerHistoryLog } from "./CustomerHistoryLog";
@@ -25,6 +25,7 @@ import {
 } from "../api/contract.api";
 import { useAuthStore } from "@/store/auth.store";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { formatPrice } from "@/utils/formatPrice";
 
 // ─── Component ────────────────────────────────────────────────────────────────
 interface CustomerContractDetailContainerProps {
@@ -35,7 +36,8 @@ export function CustomerContractDetailContainer({
   contractId,
 }: CustomerContractDetailContainerProps) {
   const customerId = useAuthStore((state) => state.user_id) || "";
-  const { dict } = useTranslation();
+  const { dict, locale } = useTranslation();
+  const dateLocale = locale === "en" ? "en-US" : "vi-VN";
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [contract, setContract] = useState<any | null>(null);
@@ -73,13 +75,13 @@ export function CustomerContractDetailContainer({
   }, [contractId, customerId]);
 
   useEffect(() => {
-    if (contractId) {
+    if (contractId && customerId) {
       const timer = setTimeout(() => {
         fetchDetail();
       }, 0);
       return () => clearTimeout(timer);
     }
-  }, [contractId, fetchDetail]);
+  }, [contractId, customerId, fetchDetail]);
 
   const handleSignCustomer = async () => {
     try {
@@ -152,56 +154,155 @@ export function CustomerContractDetailContainer({
     );
   }
 
-  // --- Map history dynamically based on state ---
-  const history = [];
-  
-  // Note: time formatting assumes we have proper ISO strings or similar
-  const formatTime = (dateStr: string) => {
-    if (!dateStr) return "N/A";
-    const d = new Date(dateStr);
-    return `${d.toLocaleDateString("vi-VN")} ${d.toLocaleTimeString("vi-VN", { hour: '2-digit', minute: '2-digit' })}`;
+  // Generate detailed parameters based on contract details from DB / booking
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const getDetailedData = (currentContract: any) => {
+    if (!currentContract) return null;
+    const booking = currentContract.booking;
+    const parties = currentContract.contract_parties;
+
+    const notUpdatedText = dict.contract_detail?.not_updated || "Chưa cập nhật";
+    const phone = parties?.customer_phone || notUpdatedText;
+    const email = parties?.customer_email || notUpdatedText;
+    const address =
+      parties?.customer_address || booking?.address || notUpdatedText;
+    const quantity = booking?.guards_per_slot || 1;
+
+    // Format duration
+    const formattedStartDate = currentContract.start_date
+      ? new Date(currentContract.start_date).toLocaleDateString(dateLocale)
+      : booking?.start_date
+        ? new Date(booking.start_date).toLocaleDateString(dateLocale)
+        : "";
+    const formattedEndDate = currentContract.end_date
+      ? new Date(currentContract.end_date).toLocaleDateString(dateLocale)
+      : booking?.end_date
+        ? new Date(booking.end_date).toLocaleDateString(dateLocale)
+        : "";
+    const duration =
+      formattedStartDate && formattedEndDate
+        ? `${formattedStartDate} - ${formattedEndDate}`
+        : formattedStartDate || formattedEndDate || notUpdatedText;
+
+    const location = booking?.address || notUpdatedText;
+    const rawPrice =
+      booking?.quoted_price ||
+      booking?.total_price ||
+      currentContract.total_price ||
+      0;
+    const quotationType =
+      booking?.quotation_type || currentContract.quotation_type || "monthly";
+    const totalHours = booking?.total_hours || null;
+
+    const rawFormattedPrice =
+      currentContract.formatted_price || booking?.formatted_price;
+    let totalValue = "";
+    if (rawFormattedPrice) {
+      totalValue = rawFormattedPrice.replace(/\s*đ(\/|$)/, " VNĐ$1");
+      if (quotationType === "hourly" && !totalValue.includes("nhân sự")) {
+        totalValue = totalValue.replace(
+          /VNĐ\/giờ|VNĐ \/ giờ/,
+          "VNĐ / giờ / nhân sự",
+        );
+      }
+    } else if (rawPrice) {
+      if (quotationType === "hourly") {
+        totalValue = `${formatPrice(rawPrice)} VNĐ / giờ / nhân sự`;
+      } else if (quotationType === "monthly") {
+        totalValue = `${formatPrice(rawPrice)} VNĐ/tháng`;
+      } else {
+        totalValue = `${formatPrice(rawPrice)} VNĐ`;
+      }
+    } else {
+      totalValue = dict.contract_detail?.not_quoted || "Chưa báo giá";
+    }
+
+    const timeSlots = booking?.time_slots || [];
+    const workingDays =
+      booking?.day_per_week ||
+      booking?.days_per_week ||
+      booking?.working_days ||
+      booking?.days_of_week ||
+      booking?.days ||
+      currentContract?.day_per_week ||
+      [];
+    const description = booking?.description || null;
+
+    return {
+      serviceName: currentContract.service_name || (booking as any)?.services?.name || "Dịch vụ bảo vệ",
+      quantity,
+      duration,
+      location,
+      timeSlots,
+      workingDays,
+      description,
+      totalValue,
+      quotationType,
+      totalHours,
+      phone,
+      email,
+      address,
+    };
   };
 
-  if (contract.status === "active") {
+  const detailedData = getDetailedData(contract);
+
+  // --- Map history dynamically based on 4 standardized milestones ---
+  const history = [];
+  const parties = contract.contract_parties;
+
+  const formatTime = (dateStr?: string | null) => {
+    if (!dateStr) return "N/A";
+    const d = new Date(dateStr);
+    return `${d.toLocaleDateString("vi-VN")} ${d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+  };
+
+  // 4. Hợp đồng có hiệu lực / Hoàn thành
+  if (contract.status === "completed") {
     history.push({
       time: formatTime(contract.updated_at),
-      title: dict.contract.detail.history_active_title,
-      description: dict.contract.detail.history_active_desc,
+      title: dict.contract?.detail?.history_completed_title || "Hợp đồng đã hoàn thành",
+      description: dict.contract?.detail?.history_completed_desc || "Khách hàng đã xác nhận hoàn thành dịch vụ và hợp đồng được kết thúc thành công.",
+      isLatest: true,
+    });
+  } else if (contract.status === "active") {
+    history.push({
+      time: formatTime(contract.updated_at),
+      title: dict.contract?.detail?.history_active_title || "Hợp đồng có hiệu lực",
+      description: dict.contract?.detail?.history_active_desc || "Cả hai bên đã hoàn tất ký kết, hợp đồng chính thức có hiệu lực.",
       isLatest: true,
     });
   }
 
-  if (contract.customer_agreed) {
+  // 3. Khách hàng ký duyệt
+  if (contract.customer_agreed || parties?.customer_signed_at) {
     history.push({
-      time: formatTime(contract.updated_at), // rough estimation
-      title: dict.contract.detail.history_customer_agreed_title,
-      description: dict.contract.detail.history_customer_agreed_desc,
+      time: parties?.customer_signed_at
+        ? formatTime(parties.customer_signed_at)
+        : formatTime(contract.updated_at),
+      title: dict.contract?.detail?.history_customer_agreed_title || "Khách hàng đã ký duyệt",
+      description: `${dict.contract?.detail?.history_performer_customer || "Người thực hiện: Khách hàng"} (${parties?.customer_name || dict.contract?.detail?.history_customer_default || "Khách hàng"})`,
       isLatest: history.length === 0,
     });
   }
 
-  if (contract.company_agreed) {
+  // 2. Công ty ký duyệt
+  if (contract.company_agreed || parties?.company_signed_at) {
     history.push({
-      time: formatTime(contract.updated_at), // rough estimation
-      title: dict.contract.detail.history_company_agreed_title,
-      description: dict.contract.detail.history_company_agreed_desc,
+      time: parties?.company_signed_at
+        ? formatTime(parties.company_signed_at)
+        : formatTime(contract.updated_at),
+      title: dict.contract?.detail?.history_company_agreed_title || "Công ty đã ký duyệt",
+      description: `${dict.contract?.detail?.history_performer_company || "Người thực hiện: Đại diện doanh nghiệp"} (${parties?.representative_name || parties?.company_name || dict.contract?.detail?.history_performer_admin || "Quản lý doanh nghiệp"})`,
       isLatest: history.length === 0,
     });
   }
 
-  if (contract.contract_file_url) {
-    history.push({
-      time: formatTime(contract.updated_at),
-      title: dict.contract.detail.history_file_uploaded_title,
-      description: dict.contract.detail.history_file_uploaded_desc,
-      isLatest: history.length === 0,
-    });
-  }
-
+  // 1. Khởi tạo hợp đồng
   history.push({
-    time: formatTime(contract.created_at),
-    title: dict.contract.detail.history_draft_created_title,
-    description: dict.contract.detail.history_draft_created_desc,
+    time: formatTime(contract.created_at || parties?.created_at),
+    title: dict.contract?.detail?.history_draft_created_title || "Khởi tạo hợp đồng",
+    description: dict.contract?.detail?.history_draft_created_desc || "Dự thảo hợp đồng được tạo tự động bởi hệ thống sau khi báo giá được chấp nhận.",
     isLatest: history.length === 0,
   });
 
@@ -269,28 +370,29 @@ export function CustomerContractDetailContainer({
         <div className="xl:col-span-2 flex flex-col gap-6">
           {/* Company info */}
           <CustomerCompanyInfo
-            companyName={contract.company?.name || dict.contract.detail.not_updated}
-            signedCompanyName={contract.company?.signed_name || contract.signed_company_name}
-            isNameChanged={contract.company?.is_name_changed || contract.is_company_name_changed}
-            phone={contract.company?.phone}
-            email={contract.company?.email}
-            address={contract.company?.address}
+            contractParties={contract.contract_parties}
+            companyName={contract.company_name || contract.booking?.company_name}
+            phone={contract.booking?.company_phone}
+            email={contract.booking?.company_email}
+            address={contract.booking?.company_address}
           />
 
           {/* Service + Payment + Guards */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div className="space-y-6">
-              <CustomerServiceInfo
-                serviceName={contract.service_name}
-                quantity={contract.guards_per_slot}
-                duration={contract.duration}
-                location={contract.location}
-                timeSlots={contract.time_slots}
-                description={contract.description}
+              <ContractServiceInfo
+                serviceName={contract.service_name || detailedData?.serviceName || "Dịch vụ bảo vệ"}
+                quantity={detailedData?.quantity || 1}
+                duration={detailedData?.duration || ""}
+                location={detailedData?.location || ""}
+                timeSlots={detailedData?.timeSlots || []}
+                workingDays={detailedData?.workingDays || []}
+                description={detailedData?.description}
               />
               <CustomerPaymentInfo
-                totalValue={contract.formatted_price}
-                quotationType={contract.quotation_type}
+                totalValue={detailedData?.totalValue || contract.formatted_price || ""}
+                quotationType={detailedData?.quotationType || contract.quotation_type}
+                totalHours={detailedData?.totalHours}
               />
             </div>
 

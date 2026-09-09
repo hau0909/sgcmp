@@ -977,7 +977,7 @@ export const handleGetCustomerGuardsByContract = async ({
       };
     }
 
-    const company_id = contract.bookings?.companies?.company_id;
+    const company_id = contract.company_id || contract.bookings?.company_id;
     if (!company_id) {
       return {
         success: false,

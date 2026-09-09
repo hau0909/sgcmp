@@ -12,13 +12,13 @@ import {
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export const DAYS_OF_WEEK_SHORT = [
-  { value: "Monday", label: "T2" },
-  { value: "Tuesday", label: "T3" },
-  { value: "Wednesday", label: "T4" },
-  { value: "Thursday", label: "T5" },
-  { value: "Friday", label: "T6" },
-  { value: "Saturday", label: "T7" },
-  { value: "Sunday", label: "CN" },
+  { value: "Monday", label: "T2", key: "days_mon" },
+  { value: "Tuesday", label: "T3", key: "days_tue" },
+  { value: "Wednesday", label: "T4", key: "days_wed" },
+  { value: "Thursday", label: "T5", key: "days_thu" },
+  { value: "Friday", label: "T6", key: "days_fri" },
+  { value: "Saturday", label: "T7", key: "days_sat" },
+  { value: "Sunday", label: "CN", key: "days_sun" },
 ];
 
 export function isDayActive(activeDays: string[], dayValue: string, dayLabel: string): boolean {
@@ -114,11 +114,15 @@ export function ContractServiceInfo({
         {/* Days of Week Badge Container (Matching Screenshot 1 & 3) */}
         <div className="flex flex-col pt-1">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1.5">
-            LỊCH LÀM VIỆC TRONG TUẦN
+            {dict.contract_detail?.working_schedule_title || dict.contract?.detail?.working_schedule_title || "LỊCH LÀM VIỆC TRONG TUẦN"}
           </span>
           <div className="flex gap-1.5 bg-surface-container-low/40 p-1.5 border border-outline-variant/60 rounded-xl max-w-sm">
             {DAYS_OF_WEEK_SHORT.map((dayObj) => {
               const active = isDayActive(workingDays, dayObj.value, dayObj.label);
+              const displayLabel =
+                (dict.contract_detail as any)?.[dayObj.key] ||
+                (dict.contract?.detail as any)?.[dayObj.key] ||
+                dayObj.label;
               return (
                 <div
                   key={dayObj.value}
@@ -128,7 +132,7 @@ export function ContractServiceInfo({
                       : "bg-surface-container-low text-on-surface-variant/30 font-medium"
                   }`}
                 >
-                  {dayObj.label}
+                  {displayLabel}
                 </div>
               );
             })}

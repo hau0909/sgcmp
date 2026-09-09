@@ -82,8 +82,7 @@ function formatDateDisplay(rawDate?: string): string {
 export function exportContractDocx(contract: any, customFormData?: ContractExportFormData) {
   if (!contract) return;
 
-  const company = contract.company || {};
-  const customer = contract.customer || {};
+  const parties = contract.contract_parties || {};
   const booking = contract.booking || {};
 
   // Formatted signing date split
@@ -104,7 +103,7 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
     }
   }
 
-  const signingLocation = customFormData?.signing_location || (company.address ? `Trụ sở ${company.name}` : "Trụ sở Bên B");
+  const signingLocation = customFormData?.signing_location || (parties.company_address ? `Trụ sở ${parties.company_name}` : "Trụ sở Bên B");
   const contractCode = customFormData?.contract_code || contract.contract_code || `88/2026/HĐDV-VTL`;
 
   // Dates
@@ -113,24 +112,24 @@ export function exportContractDocx(contract: any, customFormData?: ContractExpor
 
   // Resolved Customer Info (Party A)
   const partyA = {
-    company_name: customFormData?.customer_company_name || customer.company_name || customer.representative || "CỬA HÀNG THỜI TRANG NHẬT LONG",
-    address: customFormData?.customer_address || customer.address || booking.address || "Số 122 Đường 30 Tháng 4, Phường An Phú, Quận Ninh Kiều, TP. Cần Thơ",
-    tax_code: customFormData?.customer_tax_code ? customFormData.customer_tax_code : (customer.tax_code && customer.tax_code !== "........................" ? customer.tax_code : "Cá nhân (Không có MST)"),
-    phone: customFormData?.customer_phone || customer.phone || "0292 3888 777",
-    email: customFormData?.customer_email || customer.email || "nhatlongfashion.ct@gmail.com",
-    representative: customFormData?.customer_representative || customer.representative || "Ông TRẦN VĂN THỊNH",
-    position: customFormData?.customer_position || (customer.position !== "........................" ? customer.position : "Chủ Cửa hàng / Giám đốc"),
+    company_name: customFormData?.customer_company_name || parties.customer_company_name || parties.customer_name || "CỬA HÀNG THỜI TRANG NHẬT LONG",
+    address: customFormData?.customer_address || parties.customer_address || booking.address || "Số 122 Đường 30 Tháng 4, Phường An Phú, Quận Ninh Kiều, TP. Cần Thơ",
+    tax_code: customFormData?.customer_tax_code || "Cá nhân (Không có MST)",
+    phone: customFormData?.customer_phone || parties.customer_phone || "0292 3888 777",
+    email: customFormData?.customer_email || parties.customer_email || "nhatlongfashion.ct@gmail.com",
+    representative: customFormData?.customer_representative || parties.customer_name || "Ông TRẦN VĂN THỊNH",
+    position: customFormData?.customer_position || parties.customer_position || "Chủ Cửa hàng / Giám đốc",
   };
 
   // Resolved Company Info (Party B)
   const partyB = {
-    name: customFormData?.company_name || company.name || "CÔNG TY CỔ PHẦN DỊCH VỤ BẢO VỆ VIỆT THIÊN LONG",
-    address: customFormData?.company_address || company.address || "12B, tổ 3, KV1, Phường Cái Răng, TP. Cần Thơ",
-    tax_code: customFormData?.company_tax_code || company.tax_code || "1801654321",
-    phone: customFormData?.company_phone || company.phone || "0902 360 799",
-    email: customFormData?.company_email || company.email || "contact@vietthienlongsecurity.com",
-    representative: customFormData?.company_representative || company.representative || "Ông PHAN KIM LÂM",
-    position: customFormData?.company_position || company.position || "Giám đốc Điều hành",
+    name: customFormData?.company_name || parties.company_name || "CÔNG TY CỔ PHẦN DỊCH VỤ BẢO VỆ VIỆT THIÊN LONG",
+    address: customFormData?.company_address || parties.company_address || "12B, tổ 3, KV1, Phường Cái Răng, TP. Cần Thơ",
+    tax_code: customFormData?.company_tax_code || parties.business_license_no || "1801654321",
+    phone: customFormData?.company_phone || parties.company_phone || "0902 360 799",
+    email: customFormData?.company_email || parties.company_email || "contact@vietthienlongsecurity.com",
+    representative: customFormData?.company_representative || parties.representative_name || "Ông PHAN KIM LÂM",
+    position: customFormData?.company_position || "Đại diện pháp luật",
   };
 
   // Target Location & Service Name
