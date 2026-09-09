@@ -864,12 +864,27 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     return rawReason;
   }, [dict]);
 
-  const getGuardStatusAndInfo = useCallback((guardId: string, profileStatus: string | null) => {
-    const st = profileStatus?.trim().toLowerCase();
-    if (st && st !== "active") {
+  const getGuardStatusAndInfo = useCallback((guardId: string, profileStatus: string | null, approvalStatus?: string | null) => {
+    const pSt = profileStatus?.trim().toLowerCase();
+    const aSt = approvalStatus?.trim().toLowerCase();
+
+    const isProfileInactive = Boolean(pSt && pSt !== "active");
+    const isApprovalNotApproved = Boolean(aSt && aSt !== "approved");
+
+    if (isProfileInactive || isApprovalNotApproved) {
+      let reason = dict?.create_shift_modal?.status_inactive || "Không hoạt động";
+      if (isApprovalNotApproved) {
+        if (aSt === "pending_approval" || aSt === "pending_profile") {
+          reason = "Hồ sơ chưa được duyệt";
+        } else if (aSt === "rejected") {
+          reason = "Hồ sơ bị từ chối";
+        } else {
+          reason = "Chưa phê duyệt";
+        }
+      }
       return {
         status: "unavailable" as GuardShiftStatus,
-        reason: dict?.create_shift_modal?.status_inactive || "Không hoạt động",
+        reason,
         dbHours: 0,
         afterHours: 0,
         isDisabled: true,
@@ -1067,8 +1082,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
             page: 1,
             limit: 10,
             search: debouncedSearch,
-            status: "active",
-            approvalStatus: "approved",
           }),
         ]);
 
@@ -1170,8 +1183,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
         page: nextPage,
         limit: 10,
         search: debouncedSearch,
-        status: "active",
-        approvalStatus: "approved",
       });
 
       if (res && res.success) {
@@ -1748,7 +1759,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
     if (!activeSegmentId) return;
 
-    const info = getGuardStatusAndInfo(profile.user_id, profile.status);
+    const info = getGuardStatusAndInfo(profile.user_id, profile.status, guard.approval_status);
     if (info.isDisabled && info.status !== "selected") return;
 
     setSlots((prev) => {
@@ -1787,7 +1798,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       .map((g) => {
         const p = getGuardProfile(g.profiles);
         if (!p?.user_id) return null;
-        const info = getGuardStatusAndInfo(p.user_id, p.status);
+        const info = getGuardStatusAndInfo(p.user_id, p.status, g.approval_status);
         return { guard: g, info, user_id: p.user_id };
       })
       .filter((item): item is { guard: GuardListItem; info: any; user_id: string } => {
@@ -1851,7 +1862,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
       const guardItem = guards.find(g => getGuardProfile(g.profiles)?.user_id === gid);
       const p = guardItem ? getGuardProfile(guardItem.profiles) : null;
 
-      const info = getGuardStatusAndInfo(gid, p?.status ?? null);
+      const info = getGuardStatusAndInfo(gid, p?.status ?? null, guardItem?.approval_status);
       if (info.isDisabled) {
         const name = p?.full_name || gid;
         invalidInfo.push(`${name} (${info.reason})`);
@@ -2099,10 +2110,11 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     return contractGuards.filter((guard) => {
       const profile = getGuardProfile(guard.profiles);
       if (!profile?.user_id) return false;
-      const info = getGuardStatusAndInfo(profile.user_id, profile.status);
-      if (filterMode === "available") return info.status === "available";
+      const info = getGuardStatusAndInfo(profile.user_id, profile.status, guard.approval_status);
+      if (filterMode === "available") return info.status === "available" || info.status === "warning" || info.status === "selected";
       if (filterMode === "conflict") return info.status === "conflict" || info.reason.includes("Vượt quá");
       if (filterMode === "unavailable") return info.status === "unavailable";
+      if (filterMode === "all") return info.status !== "unavailable";
       return true;
     });
   }, [contractGuards, filterMode, getGuardStatusAndInfo]);
@@ -2111,24 +2123,29 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
     return otherGuards.filter((guard) => {
       const profile = getGuardProfile(guard.profiles);
       if (!profile?.user_id) return false;
-      const info = getGuardStatusAndInfo(profile.user_id, profile.status);
-      if (filterMode === "available") return info.status === "available";
+      const info = getGuardStatusAndInfo(profile.user_id, profile.status, guard.approval_status);
+      if (filterMode === "available") return info.status === "available" || info.status === "warning" || info.status === "selected";
       if (filterMode === "conflict") return info.status === "conflict" || info.reason.includes("Vượt quá");
       if (filterMode === "unavailable") return info.status === "unavailable";
+      if (filterMode === "all") return info.status !== "unavailable";
       return true;
     });
   }, [otherGuards, filterMode, getGuardStatusAndInfo]);
+
+  const contractGuardIdsSet = useMemo(() => {
+    return new Set(contractGuards.map((g) => g.guard_id));
+  }, [contractGuards]);
 
   const filteredGuards = useMemo(() => {
     return [...filteredContractGuards, ...filteredOtherGuards];
   }, [filteredContractGuards, filteredOtherGuards]);
 
   const statusCounts = useMemo(() => {
-    const counts = { available: 0, conflict: 0, unavailable: 0, selected: 0 };
+    const counts = { available: 0, conflict: 0, unavailable: 0, selected: 0, warning: 0 };
     guards.forEach((guard) => {
       const profile = getGuardProfile(guard.profiles);
       if (!profile?.user_id) return;
-      const info = getGuardStatusAndInfo(profile.user_id, profile.status);
+      const info = getGuardStatusAndInfo(profile.user_id, profile.status, guard.approval_status);
       const status = info.status;
       if (status in counts) counts[status as keyof typeof counts]++;
     });
@@ -2151,8 +2168,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
             </div>
             <div>
               <h2 className="text-xl font-bold text-slate-900">{dict.create_shift_modal?.title || "Tạo ca trực & Phân công bảo vệ"}</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                {dict.create_shift_modal?.step_1 || "Hệ thống tự động cấu hình ca từ lịch booking và tạo theo chu kỳ"}
+              <p className="mt-1 text-xs font-semibold text-slate-500 tracking-wide">
+                {dict.create_shift_modal?.step_1 || "BƯỚC 1: CHỌN HỢP ĐỒNG & CẤU HÌNH CA TRỰC"} - {dict.create_shift_modal?.step_2 || "BƯỚC 2: PHÂN CÔNG BẢO VỆ CHO CÁC CA TRỰC"}
               </p>
             </div>
           </div>
@@ -2241,8 +2258,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                               setIsContractDropdownOpen(false);
                             }}
                             className={`w-full flex items-center justify-between gap-3 p-3 rounded-xl text-left transition-all cursor-pointer ${isSelected
-                                ? "bg-blue-50 text-blue-700 font-semibold border border-blue-100 shadow-2xs"
-                                : "text-slate-700 hover:bg-slate-50 border border-transparent"
+                              ? "bg-blue-50 text-blue-700 font-semibold border border-blue-100 shadow-2xs"
+                              : "text-slate-700 hover:bg-slate-50 border border-transparent"
                               }`}
                           >
                             <div className="flex-1 min-w-0">
@@ -2611,8 +2628,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                     key={seg.id}
                                     onClick={() => setActiveSegmentId(seg.id)}
                                     className={`p-2.5 rounded-lg border-2 transition-all cursor-pointer ${isSegActive
-                                        ? "border-blue-600 bg-blue-50/80 ring-2 ring-blue-200 shadow-2xs"
-                                        : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100/60"
+                                      ? "border-blue-600 bg-blue-50/80 ring-2 ring-blue-200 shadow-2xs"
+                                      : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-slate-100/60"
                                       }`}
                                   >
                                     {/* Row 1: Sub-shift name, 24h Badge, Shift Name, Duration, Guard Count, Delete */}
@@ -2649,10 +2666,10 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
 
                                         <span
                                           className={`text-[11px] font-semibold px-2 py-0.5 rounded-full shrink-0 ${isFull
-                                              ? "bg-emerald-100 text-emerald-700"
-                                              : assignedCount > 0
-                                                ? "bg-blue-100 text-blue-700"
-                                                : "bg-amber-100 text-amber-700"
+                                            ? "bg-emerald-100 text-emerald-700"
+                                            : assignedCount > 0
+                                              ? "bg-blue-100 text-blue-700"
+                                              : "bg-amber-100 text-amber-700"
                                             }`}
                                         >
                                           {assignedCount}/{requiredGuards} BV
@@ -2926,7 +2943,11 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               <div className="mb-3 flex flex-wrap gap-2">
                 {(["all", "available", "conflict", "unavailable"] as const).map((mode) => {
                   const count =
-                    mode === "all" ? guards.length : statusCounts[mode];
+                    mode === "all"
+                      ? Math.max(0, guards.length - statusCounts.unavailable)
+                      : mode === "available"
+                        ? statusCounts.available + statusCounts.warning + statusCounts.selected
+                        : statusCounts[mode];
                   const isActive = filterMode === mode;
 
                   const colorMap: Record<string, string> = {
@@ -2996,8 +3017,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
               )}
             </div>
 
-            {/* Guard list with 2 Collapsible Sections */}
-            <div onScroll={handleGuardListScroll} className="min-h-[250px] md:min-h-[350px] flex-1 space-y-4 overflow-y-auto pr-1">
+            {/* Guard list section */}
+            <div onScroll={handleGuardListScroll} className="min-h-[250px] md:min-h-[350px] flex-1 space-y-3 overflow-y-auto pr-1">
               {isLoadingGuards ? (
                 <GuardListSkeleton />
               ) : guardErrorMessage ? (
@@ -3017,7 +3038,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                     <button
                       type="button"
                       onClick={() => setIsContractSectionOpen((prev) => !prev)}
-                      className="w-full px-4 py-3 bg-blue-50/80 hover:bg-blue-100/70 flex items-center justify-between transition-colors select-none text-left"
+                      className="w-full px-4 py-3 bg-blue-50/80 hover:bg-blue-100/70 flex items-center justify-between transition-colors select-none text-left cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <ShieldCheck size={16} className="text-blue-700" />
@@ -3025,7 +3046,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                           {dict.create_shift_modal?.contract_guards_section || "Bảo vệ trong hợp đồng"}
                         </span>
                         <span className="ml-1 rounded-full bg-blue-600 text-white px-2 py-0.5 text-[11px] font-bold">
-                          {contractTotal}
+                          {filteredContractGuards.length}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-blue-700 font-semibold">
@@ -3050,7 +3071,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                           filteredContractGuards.map((guard) => {
                             const profile = getGuardProfile(guard.profiles);
                             const uid = profile?.user_id ?? "";
-                            const info = getGuardStatusAndInfo(uid, profile?.status ?? null);
+                            const info = getGuardStatusAndInfo(uid, profile?.status ?? null, guard.approval_status);
                             const isSelected = info.status === "selected";
 
                             return (
@@ -3068,7 +3089,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                   });
                                 }}
                                 onMouseLeave={() => setHoveredGuardInfo(null)}
-                                className={`w-full rounded-md border p-3.5 text-left transition ${isSelected
+                                className={`w-full rounded-md border p-3.5 text-left transition ${
+                                  isSelected
                                     ? "border-blue-600 bg-blue-50"
                                     : info.status === "assigned"
                                       ? "border-indigo-300 bg-indigo-50/40"
@@ -3095,14 +3117,15 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                       )}
                                     </div>
                                     <span
-                                      className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${isSelected
+                                      className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${
+                                        isSelected
                                           ? "bg-blue-600"
                                           : info.status === "conflict"
                                             ? "bg-red-500"
                                             : info.status === "warning"
                                               ? "bg-amber-500"
                                               : "bg-slate-400"
-                                        }`}
+                                      }`}
                                     />
                                   </div>
 
@@ -3118,14 +3141,15 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                         </span>
                                       ) : (
                                         <span
-                                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${isSelected
+                                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                            isSelected
                                               ? "bg-blue-100 text-blue-700"
                                               : info.status === "conflict"
                                                 ? "bg-red-100 text-red-600"
                                                 : info.status === "warning"
                                                   ? "bg-amber-100 text-amber-800"
                                                   : "bg-slate-100 text-slate-500"
-                                            }`}
+                                          }`}
                                         >
                                           {isSelected && <CheckCircle2 size={10} />}
                                           {(info.status === "conflict" || info.status === "warning") && (
@@ -3139,7 +3163,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                       {profile?.phone_number ?? "—"} · {profile?.email ?? "—"}
                                     </p>
 
-                                    {/* Notable Skills Chip */}
                                     {Array.isArray(guard.notable_skills) && guard.notable_skills.length > 0 && (
                                       <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                                         <span className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200/80 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
@@ -3161,10 +3184,11 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                   </div>
 
                                   <div
-                                    className={`flex h-5 w-5 items-center justify-center rounded-full border transition ${isSelected
+                                    className={`flex h-5 w-5 items-center justify-center rounded-full border transition ${
+                                      isSelected
                                         ? "border-blue-700 bg-blue-700 text-white"
                                         : "border-slate-300 bg-white"
-                                      }`}
+                                    }`}
                                   >
                                     {isSelected && <Check size={12} strokeWidth={3} />}
                                   </div>
@@ -3174,7 +3198,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                           })
                         )}
 
-                        {/* Load More Button / Indicator for Contract Guards */}
                         {hasMoreContract && (
                           <div className="pt-2 text-center">
                             <button
@@ -3203,7 +3226,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                     <button
                       type="button"
                       onClick={() => setIsOtherSectionOpen((prev) => !prev)}
-                      className="w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-200/70 flex items-center justify-between transition-colors select-none text-left"
+                      className="w-full px-4 py-3 bg-slate-100/80 hover:bg-slate-200/70 flex items-center justify-between transition-colors select-none text-left cursor-pointer"
                     >
                       <div className="flex items-center gap-2">
                         <UserRound size={16} className="text-slate-600" />
@@ -3211,7 +3234,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                           {dict.create_shift_modal?.other_guards_section || "Bảo vệ ngoài hợp đồng"}
                         </span>
                         <span className="ml-1 rounded-full bg-slate-600 text-white px-2 py-0.5 text-[11px] font-bold">
-                          {otherTotal}
+                          {filteredOtherGuards.length}
                         </span>
                       </div>
                       <div className="flex items-center gap-1.5 text-xs text-slate-600 font-semibold">
@@ -3234,7 +3257,7 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                           filteredOtherGuards.map((guard) => {
                             const profile = getGuardProfile(guard.profiles);
                             const uid = profile?.user_id ?? "";
-                            const info = getGuardStatusAndInfo(uid, profile?.status ?? null);
+                            const info = getGuardStatusAndInfo(uid, profile?.status ?? null, guard.approval_status);
                             const isSelected = info.status === "selected";
 
                             return (
@@ -3252,7 +3275,8 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                   });
                                 }}
                                 onMouseLeave={() => setHoveredGuardInfo(null)}
-                                className={`w-full rounded-md border p-3.5 text-left transition ${isSelected
+                                className={`w-full rounded-md border p-3.5 text-left transition ${
+                                  isSelected
                                     ? "border-blue-600 bg-blue-50"
                                     : info.status === "assigned"
                                       ? "border-indigo-300 bg-indigo-50/40"
@@ -3279,14 +3303,15 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                       )}
                                     </div>
                                     <span
-                                      className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${isSelected
+                                      className={`absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-white ${
+                                        isSelected
                                           ? "bg-blue-600"
                                           : info.status === "conflict"
                                             ? "bg-red-500"
                                             : info.status === "warning"
                                               ? "bg-amber-500"
                                               : "bg-slate-400"
-                                        }`}
+                                      }`}
                                     />
                                   </div>
 
@@ -3302,14 +3327,15 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                         </span>
                                       ) : (
                                         <span
-                                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${isSelected
+                                          className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium ${
+                                            isSelected
                                               ? "bg-blue-100 text-blue-700"
                                               : info.status === "conflict"
                                                 ? "bg-red-100 text-red-600"
                                                 : info.status === "warning"
                                                   ? "bg-amber-100 text-amber-800"
                                                   : "bg-slate-100 text-slate-500"
-                                            }`}
+                                          }`}
                                         >
                                           {isSelected && <CheckCircle2 size={10} />}
                                           {(info.status === "conflict" || info.status === "warning") && (
@@ -3323,7 +3349,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                       {profile?.phone_number ?? "—"} · {profile?.email ?? "—"}
                                     </p>
 
-                                    {/* Notable Skills Chip */}
                                     {Array.isArray(guard.notable_skills) && guard.notable_skills.length > 0 && (
                                       <div className="mt-1 flex items-center gap-1.5 flex-wrap">
                                         <span className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200/80 px-2 py-0.5 text-[11px] font-semibold text-blue-800">
@@ -3345,10 +3370,11 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                                   </div>
 
                                   <div
-                                    className={`flex h-5 w-5 items-center justify-center rounded-full border transition ${isSelected
+                                    className={`flex h-5 w-5 items-center justify-center rounded-full border transition ${
+                                      isSelected
                                         ? "border-blue-700 bg-blue-700 text-white"
                                         : "border-slate-300 bg-white"
-                                      }`}
+                                    }`}
                                   >
                                     {isSelected && <Check size={12} strokeWidth={3} />}
                                   </div>
@@ -3358,7 +3384,6 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                           })
                         )}
 
-                        {/* Load More Button / Indicator for Other Guards */}
                         {hasMoreOther && (
                           <div className="pt-2 text-center">
                             <button
