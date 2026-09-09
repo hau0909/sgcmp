@@ -52,8 +52,8 @@ export const getContractsService = async (
     return {
       contract_id: item.contract_id,
       booking_id: item.booking_id || booking?.booking_id || "",
-      customer_id: item.customer_id || null,
-      company_id: item.company_id || null,
+      customer_id: item.customer_id || booking?.customer_id || null,
+      company_id: item.company_id || booking?.company_id || null,
       contract_file_url: item.contract_file_url,
       customer_agreed: item.customer_agreed || false,
       company_agreed: item.company_agreed || false,
@@ -311,8 +311,8 @@ export const getCustomerContractsService = async (
     return {
       contract_id: item.contract_id,
       booking_id: item.booking_id || booking?.booking_id || "",
-      customer_id: item.customer_id,
-      company_id: item.company_id,
+      customer_id: item.customer_id || booking?.customer_id || null,
+      company_id: item.company_id || booking?.company_id || null,
       contract_file_url: item.contract_file_url,
       customer_agreed: item.customer_agreed || false,
       company_agreed: item.company_agreed || false,

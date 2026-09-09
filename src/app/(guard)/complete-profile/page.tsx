@@ -369,6 +369,12 @@ export default function GuardCompleteProfilePage() {
   const validate = (): boolean => {
     const errors: Record<string, string> = {};
 
+    if (!phoneNumber.trim()) {
+      errors.phoneNumber = t?.validate_phone_required || "Vui lòng nhập số điện thoại.";
+    } else if (!/^(0|\+84)[3|5|7|8|9][0-9]{8}$/.test(phoneNumber.trim()) && !/^\d{9,11}$/.test(phoneNumber.trim())) {
+      errors.phoneNumber = t?.validate_phone_format || "Số điện thoại không hợp lệ (ví dụ: 0912345678).";
+    }
+
     if (!dateOfBirth) {
       errors.dateOfBirth = t?.validate_dob_required || "Vui lòng chọn ngày sinh.";
     } else {
@@ -519,6 +525,7 @@ export default function GuardCompleteProfilePage() {
 
       // Submit complete profile
       const res = await requestCompleteGuardProfile({
+        phone_number: phoneNumber.trim(),
         date_of_birth: dateOfBirth,
         gender,
         address: address.trim(),
@@ -779,9 +786,30 @@ export default function GuardCompleteProfilePage() {
                 <p className="text-sm font-bold text-slate-900 mt-0.5 break-all">{email || (t?.not_updated || "Chưa cập nhật")}</p>
               </div>
 
-              <div className="rounded-lg bg-slate-50 p-3 border border-slate-200">
-                <p className="text-xs font-medium text-slate-500">{t?.field_phone || "Số điện thoại"}</p>
-                <p className="text-sm font-bold text-slate-900 mt-0.5">{phoneNumber || (t?.not_updated || "Chưa cập nhật")}</p>
+              <div>
+                <label className="block text-xs font-medium text-slate-500 mb-1">
+                  {t?.field_phone || "Số điện thoại"} <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="tel"
+                  value={phoneNumber}
+                  onChange={(e) => {
+                    setPhoneNumber(e.target.value);
+                    if (fieldErrors.phoneNumber) {
+                      setFieldErrors((prev) => ({ ...prev, phoneNumber: "" }));
+                    }
+                  }}
+                  disabled={!isEditing || isSubmitting}
+                  placeholder="0912345678"
+                  className={`w-full rounded-lg border p-2 text-sm font-bold transition outline-none ${
+                    fieldErrors.phoneNumber
+                      ? "border-red-500 bg-red-50/30 text-red-900 focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                      : "border-slate-200 bg-slate-50 text-slate-900 focus:border-blue-600 focus:ring-1 focus:ring-blue-600 disabled:bg-slate-50 disabled:text-slate-900"
+                  }`}
+                />
+                {fieldErrors.phoneNumber && (
+                  <p className="mt-1 text-xs font-medium text-red-600">{fieldErrors.phoneNumber}</p>
+                )}
               </div>
             </div>
           </section>

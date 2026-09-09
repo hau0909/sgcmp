@@ -16,7 +16,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import { requestGetCompanySwapRequests } from "@/features/shift/api/shift-swap.api";
-import { ShiftSwapRequestWithDetails } from "@/features/shift/repository/shift-swap.repository";
+import { ShiftSwapRequestWithDetails } from "@/features/shift/repository/shift.repository";
 import { CoordinatorSwapModal } from "@/features/shift/components/CoordinatorSwapModal";
 import { RejectSwapModal } from "@/features/shift/components/RejectSwapModal";
 import { formatDate } from "@/utils/dateTime";

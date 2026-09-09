@@ -1,9 +1,14 @@
 import type {
   ContractOption,
+  ContractShiftRule,
   CreateShiftInput,
   GetShiftDateRangeParams,
   GetGuardShiftsResult,
   GetGuardShiftsServiceParams,
+  GuardShiftSimpleItem,
+  OverlappingGuardShift,
+  Shift,
+  ShiftWithAssignments,
   UpdateShiftAssignmentStatusParams,
 } from "../type";
 
@@ -51,7 +56,7 @@ export const createWorkShiftService = async ({
 }: {
   input: CreateShiftInput;
   assignedBy: string;
-}) => {
+}): Promise<{ shift: Shift; assignments: Shift_Assignment[] }> => {
   const shift = await createShift(input);
 
   try {
@@ -77,7 +82,9 @@ export const getContractGuardsPerSlotService = async (
   return getContractGuardsPerSlot(contractId);
 };
 
-export const getContractShiftRuleService = async (contractId: string) => {
+export const getContractShiftRuleService = async (
+  contractId: string,
+): Promise<ContractShiftRule | null> => {
   return getContractShiftRule(contractId);
 };
 
@@ -89,7 +96,7 @@ export const getOverlappingGuardShiftsService = async ({
   guardId: string[];
   startTime: string;
   endTime: string;
-}) => {
+}): Promise<OverlappingGuardShift[]> => {
   return getOverlappingGuardShifts({
     guardId,
     startTime,
@@ -103,7 +110,7 @@ export const getGuardsShiftsOnDateService = async ({
 }: {
   guardIds: string[];
   date: string;
-}) => {
+}): Promise<GuardShiftSimpleItem[]> => {
   return getGuardsShiftsOnDate({
     guardIds,
     date,
@@ -116,7 +123,7 @@ export const getGuardsShiftsInWeekService = async ({
 }: {
   guardIds: string[];
   date: string;
-}) => {
+}): Promise<GuardShiftSimpleItem[]> => {
   return getGuardsShiftsInWeek({
     guardIds,
     date,
@@ -131,7 +138,7 @@ export const getGuardsShiftsInRangeService = async ({
   guardIds: string[];
   startTime: string;
   endTime: string;
-}) => {
+}): Promise<GuardShiftSimpleItem[]> => {
   return getGuardsShiftsInRange({
     guardIds,
     startTime,
@@ -141,7 +148,7 @@ export const getGuardsShiftsInRangeService = async ({
 
 export const getAllShiftsByDateRangeService = async (
   params: GetShiftDateRangeParams,
-) => {
+): Promise<ShiftWithAssignments[]> => {
   return getAllShiftsByDateRange(params);
 };
 
@@ -195,13 +202,13 @@ export const getShiftAssignmentsByShiftIdService = async (
 
 export const updateShiftAssignmentStatusByShiftAndGuardService = async (
   params: UpdateShiftAssignmentStatusParams,
-) => {
+): Promise<Shift_Assignment | null> => {
   return await updateShiftAssignmentStatusByShiftAndGuard(params);
 };
 
 export const updateAssignedShiftAssignmentsToAbsentByShiftIdService = async (
   shiftId: string,
-) => {
+): Promise<Shift_Assignment[]> => {
   return await updateAssignedShiftAssignmentsToAbsentByShiftId(shiftId);
 };
 
@@ -236,7 +243,7 @@ export const getScheduledShiftDatesService = async (
 export const uploadShiftCheckinImageService = async (
   assignmentId: string,
   file: File,
-) => {
+): Promise<{ path: string; publicUrl: string }> => {
   return await uploadShiftCheckinImage(assignmentId, file);
 };
 
@@ -246,3 +253,4 @@ export const updateReplacementGuardsService = async (
 ): Promise<Shift_Assignment> => {
   return await updateReplacementGuards(assignmentId, replacementGuardIds);
 };
+

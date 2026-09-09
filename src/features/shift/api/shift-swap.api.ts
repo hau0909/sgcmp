@@ -1,5 +1,5 @@
 import { fetcher } from "@/lib/fetcher";
-import { EligibleShiftForSwap, ShiftSwapRequestWithDetails } from "../repository/shift-swap.repository";
+import { EligibleShiftForSwap, ShiftSwapRequestWithDetails } from "../repository/shift.repository";
 import { ShiftSwapRequestItem } from "@/types/ShiftSwapRequest";
 
 export interface ApiResponse<T> {

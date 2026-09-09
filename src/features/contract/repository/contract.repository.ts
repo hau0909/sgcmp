@@ -365,32 +365,32 @@ export const getContractIdsByCompany = async (
 ): Promise<string[]> => {
   const supabase = await createClient();
 
-  let query = supabase
-    .from("contracts")
-    .select(
-      `
-        contract_id,
-        bookings!inner (
-          company_id,
-          address
-        )
-      `,
-    )
-    .eq("bookings.company_id", companyId);
-
   if (location && location !== "all") {
-    query = query.eq("bookings.address", location);
+    const { data, error } = await supabase
+      .from("contracts")
+      .select("contract_id, bookings!inner(address)")
+      .eq("company_id", companyId)
+      .eq("bookings.address", location);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const contracts = (data ?? []) as unknown as CompanyContractQuery[];
+    return contracts.map((contract) => contract.contract_id);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from("contracts")
+    .select("contract_id")
+    .eq("company_id", companyId);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as CompanyContractQuery[]).map(
-    (contract) => contract.contract_id,
-  );
+  const contracts = (data ?? []) as unknown as CompanyContractQuery[];
+  return contracts.map((contract) => contract.contract_id);
 };
 
 export const getContractById = async (

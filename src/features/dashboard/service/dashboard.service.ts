@@ -37,6 +37,7 @@ import {
   getPastShiftsRepository,
   getAvailableGuardsRepository,
   getGuardPerformanceRadarRepository,
+  getCompanyActiveContractsData,
 } from "../repository/dashboard.repository";
 import { getRelativeTimeString } from "../utils/dashboard.utils";
 import { getCurrentActivePlan } from "@/features/subscription/repository/subscription.repository";
@@ -105,20 +106,18 @@ function prevMonthRange(now: Date): { start: string; end: string } {
 // Services
 // ─────────────────────────────────────────────────────────────
 
-/** Tổng số bảo vệ đang trực hiện tại + % so với cùng giờ hôm qua */
+/** Tổng số bảo vệ đang trực hiện tại (không so sánh với hôm qua) */
 export const getActiveGuardsOnShiftService = async (
   companyId: string,
 ): Promise<MetricWithTrend> => {
   const now = new Date();
-  // yesterday = cùng thời điểm nhưng lùi 24 tiếng
-  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+  const current = await countActiveGuardsOnShift(companyId, now.toISOString());
 
-  const [current, prev] = await Promise.all([
-    countActiveGuardsOnShift(companyId, now.toISOString()),
-    countActiveGuardsOnShiftYesterday(companyId, yesterday.toISOString()),
-  ]);
-
-  return calcTrend(current, prev);
+  return {
+    count: current,
+    percentChange: null,
+    trend: "neutral",
+  };
 };
 
 /** Tổng số hợp đồng đang hoạt động + % so với tháng trước */
@@ -188,9 +187,18 @@ export const getRatingService = async (
   return { averageRating: current, percentChange, trend };
 };
 
+export type SubscriptionStatusData = {
+  plan: any;
+  subscription: any;
+  usage: {
+    coordinators: number;
+    guards: number;
+  };
+};
+
 export const getDashboardSubscriptionService = async (
   companyId: string,
-) => {
+): Promise<SubscriptionStatusData> => {
   const [currentPlan, coordinatorsCount, guardsCount] = await Promise.all([
     getCurrentActivePlan(companyId),
     getCoordinatorCountByCompanyId(companyId),
@@ -207,7 +215,100 @@ export const getDashboardSubscriptionService = async (
   };
 };
 
-export const getWeeklyShiftsService = async (companyId: string) => {
+export type ActiveContractTrendItem = {
+  label: string;
+  dateStr: string;
+  activeContracts: number;
+  newContracts: number;
+};
+
+export const getActiveContractsTrendService = async (
+  companyId: string,
+  view: "weekly" | "monthly" = "weekly",
+): Promise<ActiveContractTrendItem[]> => {
+  const contracts = await getCompanyActiveContractsData(companyId);
+  const today = new Date();
+
+  const numDays = view === "weekly" ? 7 : 30;
+  const result: ActiveContractTrendItem[] = [];
+
+  for (let i = numDays - 1; i >= 0; i--) {
+    const d = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i);
+    const startOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, 0, 0, 0);
+    const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23, 59, 59, 999);
+
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const dateStr = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    const shortDateLabel = `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+
+    let label = shortDateLabel;
+    if (view === "weekly") {
+      const dayOfWeek = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Asia/Ho_Chi_Minh",
+        weekday: "short",
+      }).format(d);
+      const map: Record<string, string> = {
+        Mon: "T2",
+        Tue: "T3",
+        Wed: "T4",
+        Thu: "T5",
+        Fri: "T6",
+        Sat: "T7",
+        Sun: "CN",
+      };
+      label = `${map[dayOfWeek] || dayOfWeek} (${shortDateLabel})`;
+    }
+
+    let activeContracts = 0;
+    let newContracts = 0;
+
+    for (const c of contracts) {
+      const startDate = c.start_date ? new Date(c.start_date) : null;
+      const endDate = c.end_date ? new Date(c.end_date) : null;
+      const createdAt = c.created_at ? new Date(c.created_at) : null;
+
+      const isStatusActive = c.status === "active";
+      const hasStarted = !startDate || startDate <= endOfDay;
+      const hasNotEnded = !endDate || endDate >= startOfDay;
+
+      if (isStatusActive && hasStarted && hasNotEnded) {
+        activeContracts++;
+      }
+
+      const createdDateStr = createdAt
+        ? `${createdAt.getFullYear()}-${pad(createdAt.getMonth() + 1)}-${pad(createdAt.getDate())}`
+        : null;
+      const startDateStr = startDate
+        ? `${startDate.getFullYear()}-${pad(startDate.getMonth() + 1)}-${pad(startDate.getDate())}`
+        : null;
+
+      if (createdDateStr === dateStr || startDateStr === dateStr) {
+        newContracts++;
+      }
+    }
+
+    result.push({
+      label,
+      dateStr,
+      activeContracts,
+      newContracts,
+    });
+  }
+
+  return result;
+};
+
+export type WeeklyShiftDayStat = {
+  day: string;
+  totalAssignments: number;
+  onTimeCheckins: number;
+  lateCheckins: number;
+  absentGuards: number;
+};
+
+export const getWeeklyShiftsService = async (
+  companyId: string,
+): Promise<WeeklyShiftDayStat[]> => {
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
 
@@ -299,7 +400,14 @@ export const getWeeklyShiftsService = async (companyId: string) => {
   }));
 };
 
-export const getShiftStatusTodayService = async (companyId: string) => {
+export type TodayShiftStatusStat = {
+  status: string;
+  count: number;
+};
+
+export const getShiftStatusTodayService = async (
+  companyId: string,
+): Promise<TodayShiftStatusStat[]> => {
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
   const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
@@ -370,7 +478,21 @@ export const getShiftStatusTodayService = async (companyId: string) => {
   ];
 };
 
-export const getTodayGuardsStatusListService = async (companyId: string) => {
+export type GuardAssignmentStatusItem = {
+  id: string;
+  name: string;
+  avatar: string;
+  phone: string;
+  shiftName: string;
+  location: string;
+  checkInTime: string | null;
+  status: string;
+  isReplacement: boolean;
+};
+
+export const getTodayGuardsStatusListService = async (
+  companyId: string,
+): Promise<GuardAssignmentStatusItem[]> => {
   const today = new Date();
   const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0, 0).toISOString();
   const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59, 999).toISOString();
@@ -438,8 +560,10 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
         }
       }
 
-      const contractCode = `HD-${(shift.contracts as any).contract_id.slice(0, 8).toUpperCase()}`;
-      const contractName = (shift.contracts as any).bookings?.services?.name || "Dịch vụ bảo vệ";
+      const contractObj = (shift as any).contracts;
+      const contractIdStr = contractObj?.contract_id || "";
+      const contractCode = `HD-${contractIdStr.slice(0, 8).toUpperCase()}`;
+      const contractName = contractObj?.bookings?.services?.name || "Dịch vụ bảo vệ";
 
       if (origStatus === "checkout" && origCheckIn) {
         // Dòng 1: Check-in (Đang trực)
@@ -493,8 +617,8 @@ export const getTodayGuardsStatusListService = async (companyId: string) => {
             name: repProfile.full_name,
             avatar: repProfile.avatar_url,
             branch: `${shift.shift_name} (Thay ca)`,
-            contractCode: `HD-${(shift.contracts as any).contract_id.slice(0, 8).toUpperCase()}`,
-            contractName: (shift.contracts as any).bookings?.services?.name || "Dịch vụ bảo vệ",
+            contractCode: `HD-${contractIdStr.slice(0, 8).toUpperCase()}`,
+            contractName: contractObj?.bookings?.services?.name || "Dịch vụ bảo vệ",
             status: "Thay ca",
             timeRange: formatTime(shift.start_time),
             _sortTime: shift.start_time,
@@ -581,7 +705,8 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
 
   for (const shift of shifts) {
     const shiftName = shift.shift_name;
-    const contractCode = `HD-${(shift.contracts as any).contract_id.slice(0, 8).toUpperCase()}`;
+    const cId = (shift.contracts as { contract_id?: string })?.contract_id || "";
+    const contractCode = `HD-${cId.slice(0, 8).toUpperCase()}`;
 
     for (const sa of shift.shift_assignments || []) {
       const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
@@ -1022,7 +1147,7 @@ export const getAdminPendingPublicationListService = async (): Promise<PendingPu
     throw new Error(`Không thể lấy danh sách yêu cầu công khai: ${error.message}`);
   }
 
-  return ((data as any) || []).map((row: any) => ({
+  return ((data as unknown as { request_id: string; requested_at: string; notes?: string | null; companies?: { company_name?: string } | null }[]) || []).map((row) => ({
     request_id: row.request_id,
     company_name: row.companies?.company_name || "Doanh nghiệp không tên",
     requested_at: row.requested_at,
@@ -1516,8 +1641,9 @@ export const getCurrentUpcomingShiftsTodayService = async (
   for (const s of rawShifts) {
     const shiftStart = new Date(s.start_time);
     const shiftEnd = new Date(s.end_time);
-    const address = (s.contracts as any)?.bookings?.address;
-    const serviceName = (s.contracts as any)?.bookings?.services?.name;
+    const contractObj = (s as any).contracts;
+    const address = contractObj?.bookings?.address;
+    const serviceName = contractObj?.bookings?.services?.name;
     const shiftName = s.shift_name && s.shift_name !== "a" ? s.shift_name : null;
     let locationName = address
       ? serviceName
@@ -1607,11 +1733,18 @@ export const getCurrentUpcomingShiftsTodayService = async (
   return list;
 };
 
+export interface ReportStatsData {
+  totalReports: number;
+  unresolvedReports: number;
+  currentUpcomingShifts: CurrentUpcomingShiftItem[];
+  filter: string;
+}
+
 export const getCoordinatorReportStatsService = async (
   companyId?: string,
   filter: string = "hientai",
   clientDate?: string
-): Promise<{ totalReports: number; unresolvedReports: number; currentUpcomingShifts: CurrentUpcomingShiftItem[]; filter: string }> => {
+): Promise<ReportStatsData> => {
   const resolvedCompanyId = await resolveCompanyId(companyId);
   const stats = await getCoordinatorReportStats(resolvedCompanyId, filter);
   const currentUpcomingShifts = await getCurrentUpcomingShiftsTodayService(resolvedCompanyId, filter, clientDate);
@@ -1668,14 +1801,14 @@ export const getPastShiftsService = async (
   const data = await getPastShiftsRepository(resolvedCompanyId, filter, clientDate);
   if (!data || data.length === 0) return [];
 
-  const guardIds = Array.from(
-    new Set(
+  const guardIds: string[] = Array.from(
+    new Set<string>(
       data
         .flatMap((s: any) => (s.shift_assignments || []).flatMap((sa: any) => [
           sa.guard_id,
           ...(sa.replacement_guard_ids || []),
         ]))
-        .filter((id): id is string => Boolean(id))
+        .filter((id: any): id is string => Boolean(id))
     )
   );
 
@@ -1694,7 +1827,7 @@ export const getPastShiftsService = async (
   };
 
   const list: PastShiftItem[] = [];
-  for (const s of data as any[]) {
+  for (const s of (data as unknown as { start_time: string; end_time: string; shift_name?: string; contracts?: { contract_id?: string; contract_code?: string; contract_name?: string; bookings?: { address?: string; services?: { name?: string } } }; shift_assignments?: { guard_id: string; status: string; check_in_time?: string; updated_at?: string; replacement_guard_ids?: string[]; is_overtime?: boolean; overtime_minutes?: number }[] }[])) {
     const address = s.contracts?.bookings?.address;
     const serviceName = s.contracts?.bookings?.services?.name;
     const shiftName = s.shift_name && s.shift_name !== "a" ? s.shift_name : null;
@@ -1729,7 +1862,7 @@ export const getPastShiftsService = async (
       });
 
       if (hasRep) {
-        sa.replacement_guard_ids.forEach((repId: string) => {
+        sa.replacement_guard_ids?.forEach((repId: string) => {
           const repProf = getProfile(repId);
           list.push({
             id: `#G-${repId ? repId.slice(0, 4).toUpperCase() : "0000"}`,

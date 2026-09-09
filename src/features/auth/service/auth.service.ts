@@ -1,10 +1,14 @@
-import { RegisterInputService, LoginInputService } from "../types";
+import type { User, AuthResponse } from "@supabase/supabase-js";
+import type { Profile } from "@/types/Profile";
+import type { RegisterInputService, LoginInputService, LoginResponseData } from "../types";
 import {
   registerAccount,
   loginAccount,
   logoutUser,
+  getUserProfile,
+  getCurrentUser,
+  getCompanyIdByUser,
 } from "../repository/auth.repository";
-import { getUserProfile, getCurrentUser, getCompanyIdByUser } from "../repository/auth.repository";
 
 export const registerAccountService = async ({
   email,
@@ -19,7 +23,7 @@ export const registerAccountService = async ({
   businessLicenseNo,
   companyEmail,
   companyPhone,
-}: RegisterInputService) => {
+}: RegisterInputService): Promise<AuthResponse["data"]> => {
   return registerAccount({
     email,
     password,
@@ -39,11 +43,16 @@ export const registerAccountService = async ({
 export const loginAccountService = async ({
   email,
   password,
-}: LoginInputService) => {
+}: LoginInputService): Promise<LoginResponseData> => {
   return loginAccount({ email, password });
 };
 
-export const getUserProfileService = async (userId: string) => {
+// Service function alias with 'Service' suffix per naming convention
+export const loginService = loginAccountService;
+
+export const getUserProfileService = async (
+  userId: string,
+): Promise<Profile> => {
   return getUserProfile(userId);
 };
 
@@ -54,7 +63,7 @@ export const getCompanyIdByUserService = async (
   return getCompanyIdByUser(userId, role);
 };
 
-export const getCurrentUserProfileService = async () => {
+export const getCurrentUserProfileService = async (): Promise<Profile | null> => {
   const currentUser = await getCurrentUser();
 
   if (!currentUser) {
@@ -64,10 +73,10 @@ export const getCurrentUserProfileService = async () => {
   return getUserProfileService(currentUser.id);
 };
 
-export const getUser = async () => {
+export const getUser = async (): Promise<User | null> => {
   return getCurrentUser();
 };
 
-export const logoutUserService = async () => {
+export const logoutUserService = async (): Promise<boolean> => {
   return await logoutUser();
 };

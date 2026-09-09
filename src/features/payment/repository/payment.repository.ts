@@ -2,7 +2,15 @@ import { supabase } from "@/lib/supabase";
 import { Payment } from "@/types/Payment";
 import { BankAccount } from "@/types/BankAccount";
 import { PaymentStatus } from "@/types/Enum";
-import { UpsertBankAccountPayload, GetAllPaymentsAdminOptions, PaginatedPayments, PaymentWithCompany, PaymentSummaryAdminOptions, PaymentSummaryAdminResult } from "../types";
+import {
+  UpsertBankAccountPayload,
+  GetAllPaymentsAdminOptions,
+  PaginatedPayments,
+  PaymentWithCompany,
+  PaymentSummaryAdminOptions,
+  PaymentSummaryAdminResult,
+  CompanyWithImgsRow,
+} from "../types";
 
 export const getPaymentHistoryByCompany = async (
   companyId: string,
@@ -120,10 +128,11 @@ export const getAllPaymentsAdmin = async (): Promise<PaymentWithCompany[]> => {
       .in("company_id", companyIds);
 
     if (companies) {
+      const typedCompanies = companies as unknown as CompanyWithImgsRow[];
       companyInfoMap = Object.fromEntries(
-        (companies as any[]).map((c) => {
+        typedCompanies.map((c) => {
           const logoImg = Array.isArray(c.company_imgs)
-            ? c.company_imgs.find((img: any) => img.image_type === "logo")
+            ? c.company_imgs.find((img) => img.image_type === "logo")
             : null;
           return [
             c.company_id,
@@ -182,7 +191,9 @@ export const getPaymentSummaryAdmin = async (
       .select("company_id")
       .ilike("company_name", `%${keyword}%`);
     if (companies) {
-      matchedCompanyIds = companies.map((c: any) => c.company_id);
+      matchedCompanyIds = (companies as { company_id: string }[]).map(
+        (c) => c.company_id,
+      );
     }
   }
 

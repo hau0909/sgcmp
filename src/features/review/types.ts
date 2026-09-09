@@ -84,6 +84,14 @@ export type ReviewRow = {
   updated_at: string | null;
 };
 
+export type ReviewRatingRow = {
+  rating: number;
+};
+
+export type CompanyRatingAverageRow = {
+  rating_average: number | null;
+};
+
 export type GetAllReviewByCompanyIdControllerParams = {
   company_id: string;
   page: number;
