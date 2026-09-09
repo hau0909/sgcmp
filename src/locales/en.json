@@ -119,6 +119,15 @@
     "shift_status": {
       "guard_count": "Number of Guards"
     },
+    "contracts_trend": {
+      "title": "Active Contracts Statistics",
+      "desc_weekly": "Number of active contracts in the last 7 days",
+      "desc_monthly": "Number of active contracts in the last 30 days",
+      "btn_weekly": "Weekly (7 days)",
+      "btn_monthly": "Monthly (30 days)",
+      "loading": "Loading contract data...",
+      "series_label": "Active Contracts"
+    },
     "charts": {
       "weekly_title": "Guard Shifts (7 Days)",
       "status_title": "Guard Shift Status",
@@ -2745,7 +2754,8 @@
     "pick_specific_day_title": "Select a specific date to jump to week",
     "select_date_title": "Select date",
     "click_today_title": "Click to return to today",
-    "add_shift_button": "ADD SHIFT"
+    "add_shift_button": "ADD SHIFT",
+    "all_locations": "All locations"
   },
   "shift_schedule_table": {
     "unupdated_location": "Location not updated",

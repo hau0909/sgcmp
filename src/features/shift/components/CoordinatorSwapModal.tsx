@@ -21,7 +21,7 @@ import {
   RefreshCw,
   Check,
 } from "lucide-react";
-import { ShiftSwapRequestWithDetails } from "../repository/shift-swap.repository";
+import { ShiftSwapRequestWithDetails } from "../repository/shift.repository";
 import { requestGetAllGuards } from "@/features/guards/api/guard.api";
 import { GuardListItem } from "@/features/guards/type";
 import { requestGetGuardAvailability } from "../api/shift.api";

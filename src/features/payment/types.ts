@@ -31,6 +31,17 @@ export interface GetAllPaymentsAdminOptions {
 }
 
 
+export interface CompanyImgQueryRow {
+  image_url: string;
+  image_type: string;
+}
+
+export interface CompanyWithImgsRow {
+  company_id: string;
+  company_name: string;
+  company_imgs: CompanyImgQueryRow[] | null;
+}
+
 export interface PaymentWithCompany extends DbPayment {
   company_name: string | null;
   company_logo_url: string | null;

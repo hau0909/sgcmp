@@ -90,10 +90,6 @@ const ReviewTableSkeleton = () => {
           <td className="px-5 py-5">
             <div className="h-4 w-[420px] max-w-full rounded bg-slate-200" />
           </td>
-
-          <td className="px-5 py-5 text-center">
-            <div className="mx-auto h-4 w-20 rounded bg-slate-200" />
-          </td>
         </tr>
       ))}
     </>
@@ -394,9 +390,6 @@ export default function ServiceReviewPage() {
                   <th className="px-5 py-4 text-left text-sm font-bold uppercase tracking-wider text-slate-900">
                     {dict.reviews?.col_content || "Nội dung"}
                   </th>
-                  <th className="px-5 py-4 text-center text-sm font-bold uppercase tracking-wider text-slate-900">
-                    {dict.reviews?.col_action || "Thao tác"}
-                  </th>
                 </tr>
               </thead>
 
@@ -456,12 +449,6 @@ export default function ServiceReviewPage() {
                             {review.comment ?? (dict.reviews?.no_comment || "Không có nội dung đánh giá.")}
                           </p>
                         </td>
-
-                        <td className="px-5 py-5 text-center">
-                          <button className="text-sm font-bold uppercase text-blue-600 transition hover:text-blue-800">
-                            {dict.reviews?.view_detail || "Xem chi tiết"}
-                          </button>
-                        </td>
                       </tr>
                     );
                   })
@@ -470,7 +457,7 @@ export default function ServiceReviewPage() {
                 {!isReviewLoading && reviews.length === 0 && (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={3}
                       className="px-5 py-12 text-center text-sm font-medium text-slate-500"
                     >
                       {dict.reviews?.no_feedback || "Không có phản hồi từ khách hàng."}
@@ -481,7 +468,7 @@ export default function ServiceReviewPage() {
                 {!isReviewLoading && reviews.length > 0 && filteredReviews.length === 0 && (
                   <tr>
                     <td
-                      colSpan={4}
+                      colSpan={3}
                       className="px-5 py-12 text-center text-sm font-medium text-slate-500"
                     >
                       {dict.reviews?.no_match || "Không tìm thấy đánh giá phù hợp."}

@@ -184,6 +184,9 @@ export type ContractQueryResult = {
     | {
         booking_id: string;
         company_id: string;
+        company_name?: string | null;
+        company_scope?: string | null;
+        company_position?: string | null;
         address: string | null;
         guards_per_slot: number | null;
         description: string | null;
@@ -217,6 +220,9 @@ export type ContractQueryResult = {
     | {
         booking_id: string;
         company_id: string;
+        company_name?: string | null;
+        company_scope?: string | null;
+        company_position?: string | null;
         address: string | null;
         guards_per_slot: number | null;
         description: string | null;
@@ -249,6 +255,16 @@ export type ContractQueryResult = {
       }[]
     | null;
 };
+
+export interface GuardShiftSimpleItem {
+  guard_id: string;
+  shift_id: string;
+  start_time: string;
+  end_time: string;
+  duration_minutes: number;
+  location?: string;
+  contract_id?: string;
+}
 
 export type ContractGuardsPerSlotQuery = {
   booking:

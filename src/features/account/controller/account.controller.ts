@@ -30,6 +30,27 @@ export const handleGetAccountByUserId = async (
   return { account, banReason };
 };
 
+export const handleGetBanReasonByUserId = async (userId: string) => {
+  if (!userId) {
+    return {
+      success: false,
+      status: 400,
+      message: "User ID là bắt buộc",
+      data: null,
+    };
+  }
+
+  const banReason = await getBanReasonByUserIdService(userId);
+
+  return {
+    success: true,
+    status: 200,
+    message: "Lấy lý do khóa thành công.",
+    data: banReason,
+  };
+};
+
+
 export const handleBanAccount = async (userId: string, reason: string) => {
   if (!userId) throw new Error("Không tìm thấy tài khoản");
 
