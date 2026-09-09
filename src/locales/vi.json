@@ -121,6 +121,15 @@
     "shift_status": {
       "guard_count": "Số bảo vệ"
     },
+    "contracts_trend": {
+      "title": "Thống kê Hợp đồng Hoạt động",
+      "desc_weekly": "Số lượng hợp đồng đang hoạt động trong 7 ngày gần nhất",
+      "desc_monthly": "Số lượng hợp đồng đang hoạt động trong 30 ngày gần nhất",
+      "btn_weekly": "Theo tuần (7 ngày)",
+      "btn_monthly": "Theo tháng (30 ngày)",
+      "loading": "Đang tải dữ liệu hợp đồng...",
+      "series_label": "Hợp đồng đang hoạt động"
+    },
     "charts": {
       "weekly_title": "Ca trực của bảo vệ trong 7 ngày",
       "status_title": "Trạng thái ca trực của bảo vệ",
@@ -2811,7 +2820,8 @@
     "pick_specific_day_title": "Chọn ngày cụ thể để nhảy nhanh đến tuần",
     "select_date_title": "Chọn ngày",
     "click_today_title": "Bấm để quay về hôm nay",
-    "add_shift_button": "THÊM CA TRỰC"
+    "add_shift_button": "THÊM CA TRỰC",
+    "all_locations": "Tất cả địa điểm"
   },
   "shift_schedule_table": {
     "unupdated_location": "Chưa cập nhật địa điểm",

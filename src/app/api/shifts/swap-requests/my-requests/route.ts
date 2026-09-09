@@ -1,4 +1,4 @@
-import { handleGetGuardSwapRequests } from "@/features/shift/controller/shift-swap.controller";
+import { handleGetGuardSwapRequests } from "@/features/shift/controller/shift.controller";
 
 export async function GET() {
   return handleGetGuardSwapRequests();

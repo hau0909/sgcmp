@@ -23,7 +23,7 @@ import {
   requestCreateSwapRequest,
   requestGetMySwapRequests,
 } from "../api/shift-swap.api";
-import { EligibleShiftForSwap, ShiftSwapRequestWithDetails } from "../repository/shift-swap.repository";
+import { EligibleShiftForSwap, ShiftSwapRequestWithDetails } from "../repository/shift.repository";
 import { formatDate } from "@/utils/dateTime";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 

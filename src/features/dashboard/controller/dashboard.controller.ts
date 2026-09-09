@@ -32,12 +32,31 @@ import {
   type RatingWithTrend,
   type PendingTaskItem,
   type ActivityItem,
+  type SubscriptionStatusData,
+  type WeeklyShiftDayStat,
+  type TodayShiftStatusStat,
+  type GuardAssignmentStatusItem,
+  type RecentActivityItem,
+  type ReportStatsData,
+  type CurrentUpcomingShiftItem,
+  type PastShiftItem,
+  type AvailableGuardItem,
+  type GuardPerformanceRadarItem,
+  getActiveContractsTrendService,
+  type ActiveContractTrendItem,
 } from "../service/dashboard.service";
 
 export const handleGetActiveGuardsOnShift = async (
   companyId: string,
 ): Promise<MetricWithTrend> => {
   return await getActiveGuardsOnShiftService(companyId);
+};
+
+export const handleGetActiveContractsTrend = async (
+  companyId: string,
+  view: "weekly" | "monthly" = "weekly",
+): Promise<ActiveContractTrendItem[]> => {
+  return await getActiveContractsTrendService(companyId, view);
 };
 
 export const handleGetActiveContracts = async (
@@ -60,31 +79,31 @@ export const handleGetRating = async (
 
 export const handleGetDashboardSubscription = async (
   companyId: string,
-) => {
+): Promise<SubscriptionStatusData | null> => {
   return await getDashboardSubscriptionService(companyId);
 };
 
 export const handleGetWeeklyShifts = async (
   companyId: string,
-) => {
+): Promise<WeeklyShiftDayStat[]> => {
   return await getWeeklyShiftsService(companyId);
 };
 
 export const handleGetShiftStatusToday = async (
   companyId: string,
-) => {
+): Promise<TodayShiftStatusStat[]> => {
   return await getShiftStatusTodayService(companyId);
 };
 
 export const handleGetTodayGuardsStatusList = async (
   companyId: string,
-) => {
+): Promise<GuardAssignmentStatusItem[]> => {
   return await getTodayGuardsStatusListService(companyId);
 };
 
 export const handleGetRecentActivities = async (
   companyId: string,
-) => {
+): Promise<RecentActivityItem[]> => {
   return await getRecentActivitiesService(companyId);
 };
 
@@ -139,7 +158,7 @@ export const handleGetCoordinatorReportStats = async (
   companyId?: string,
   filter: string = "hientai",
   clientDate?: string
-) => {
+): Promise<ReportStatsData> => {
   return await getCoordinatorReportStatsService(companyId, filter, clientDate);
 };
 
@@ -147,7 +166,7 @@ export const handleGetCurrentUpcomingShiftsToday = async (
   companyId?: string,
   filter: string = "hientai",
   clientDate?: string
-) => {
+): Promise<CurrentUpcomingShiftItem[]> => {
   return await getCurrentUpcomingShiftsTodayService(companyId, filter, clientDate);
 };
 
@@ -155,14 +174,14 @@ export const handleGetPastShifts = async (
   companyId?: string,
   filter: string = "hientai",
   clientDate?: string
-) => {
+): Promise<PastShiftItem[]> => {
   return await getPastShiftsService(companyId, filter, clientDate);
 };
 
 export const handleGetAvailableGuards = async (
   companyId?: string,
   clientDate?: string
-) => {
+): Promise<AvailableGuardItem[]> => {
   return await getAvailableGuardsService(companyId, clientDate);
 };
 
@@ -170,11 +189,9 @@ export const handleGetGuardPerformanceRadar = async (
   companyId?: string,
   filter: string = "hientai",
   clientDate?: string
-) => {
+): Promise<GuardPerformanceRadarItem[]> => {
   return await getGuardPerformanceRadarService(companyId, filter, clientDate);
 };
-
-
 
 export const handleGetAdminPendingPublicationList = async (): Promise<PendingPublicationListItem[]> => {
   return await getAdminPendingPublicationListService();

@@ -1,4 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
+import { NextResponse } from "next/server";
+import type { ShiftSwapRequestItem } from "@/types/ShiftSwapRequest";
 import fs from "fs";
 import path from "path";
 
@@ -35,12 +37,21 @@ import {
   getCoordinatorByCompanyIdService,
 } from "@/features/guards/service/guard.service";
 import { getUser } from "@/features/auth/service/auth.service";
+import type { Shift_Assignment } from "@/types/ShiftAssignment";
 import type { CreateShiftInput, GuardShiftDetailItem, ShiftAssignmentStatus } from "../type";
 import {
   validateCreateShiftInput,
   validateShiftDateInContract,
 } from "../validator/shift.validate";
-import { deleteShift } from "../repository/shift.repository";
+import {
+  deleteShift,
+  getGuardEligibleShiftsForSwapRepository,
+  createShiftSwapRequestRepository,
+  getGuardSwapRequestsRepository,
+  getCompanySwapRequestsRepository,
+  rejectShiftSwapRequestRepository,
+  approveShiftSwapRequestRepository,
+} from "../repository/shift.repository";
 import { parseBookingSlot, calculateDurationMinutes } from "../utils/shift.utils";
 import { getContractIdsByCompanyService } from "@/features/contract/service/contract.service";
 import {
@@ -95,7 +106,7 @@ export class ShiftApiError extends Error {
   }
 }
 
-export const handleGetShiftContracts = async () => {
+export const handleGetShiftContracts = async (): Promise<Response> => {
   const user = await getUser();
 
   if (!user) {
@@ -197,7 +208,9 @@ export const handleGetShiftContracts = async () => {
   }
 };
 
-export const handleCreateWorkShift = async (request: Request) => {
+export const handleCreateWorkShift = async (
+  request: Request,
+): Promise<Response> => {
   try {
     const user = await getUser();
 
@@ -674,7 +687,9 @@ const getShiftQueryParams = (request: Request) => {
   };
 };
 
-export const handleGetAllShiftsByDay = async (request: Request) => {
+export const handleGetAllShiftsByDay = async (
+  request: Request,
+): Promise<Response> => {
   try {
     const { date, location } = getShiftQueryParams(request);
 
@@ -721,7 +736,9 @@ export const handleGetAllShiftsByDay = async (request: Request) => {
   }
 };
 
-export const handleGetAllShiftsByWeek = async (request: Request) => {
+export const handleGetAllShiftsByWeek = async (
+  request: Request,
+): Promise<Response> => {
   try {
     const { date, location } = getShiftQueryParams(request);
 
@@ -768,20 +785,22 @@ export const handleGetAllShiftsByWeek = async (request: Request) => {
   }
 };
 
-export const handleGetGuardShiftsByDay = async (request: Request) => {
+export const handleGetGuardShiftsByDay = async (
+  request: Request,
+): Promise<Response> => {
   try {
     const { date } = getGuardShiftQueryParams(request);
 
     const guardResult = await resolveGuardIdForShift();
 
-    if ("response" in guardResult) {
+    if (guardResult.response) {
       return guardResult.response;
     }
 
     const { startTime, endTime } = getDayDateRange(date);
 
     const result = await getGuardShiftsService({
-      guard_id: guardResult.guardId,
+      guard_id: guardResult.guardId!,
       start_date: date,
       end_date: addDaysToDateKey(date, 1),
       start_time: startTime,
@@ -814,13 +833,15 @@ export const handleGetGuardShiftsByDay = async (request: Request) => {
   }
 };
 
-export const handleGetGuardShiftsByWeek = async (request: Request) => {
+export const handleGetGuardShiftsByWeek = async (
+  request: Request,
+): Promise<Response> => {
   try {
     const { date } = getGuardShiftQueryParams(request);
 
     const guardResult = await resolveGuardIdForShift();
 
-    if ("response" in guardResult) {
+    if (guardResult.response) {
       return guardResult.response;
     }
 
@@ -1000,7 +1021,7 @@ export const handleGetGuardShiftDetail = async ({
     location: shift.location || "Chưa cập nhật vị trí",
     shift_name: shift.shift_name || "Chưa cập nhật ca trực",
     address: booking?.address || shift.location || "Chưa cập nhật địa chỉ",
-    company_name: (booking as any)?.company_name || undefined,
+    company_name: booking?.company_name || undefined,
     status: assignment.status,
     check_in_time: assignment.check_in_time,
     is_overtime: assignment.is_overtime,
@@ -1020,7 +1041,7 @@ export const handleGetGuardShiftDetail = async ({
     company: (booking || company)
       ? {
         company_id: company?.company_id || "",
-        company_name: (booking as any)?.company_name || company?.company_name || "Chưa cập nhật công ty",
+        company_name: booking?.company_name || company?.company_name || "Chưa cập nhật công ty",
         address: typeof company?.address === "string" ? company.address : null,
         allowed_late_minutes: company?.allowed_late_minutes ?? 5,
         allowed_absent_minutes: company?.allowed_absent_minutes ?? 35,
@@ -1059,7 +1080,14 @@ export const handleCheckinGuardShift = async ({
   shiftId: string;
   file?: File;
   fakeTime?: string;
-}) => {
+}): Promise<{
+  assignment: Shift_Assignment;
+  checkin_window: {
+    server_time: string;
+    can_checkin_from: string;
+    absent_after: string;
+  };
+}> => {
   if (!shiftId || !isValidUuid(shiftId)) {
     throw new ShiftApiError("Mã ca trực không hợp lệ.", 400);
   }
@@ -1219,7 +1247,9 @@ export const handleCheckinGuardShift = async ({
   };
 };
 
-export const handleGetGuardAvailability = async (request: Request) => {
+export const handleGetGuardAvailability = async (
+  request: Request,
+): Promise<Response> => {
   try {
     const user = await getUser();
 
@@ -1582,7 +1612,9 @@ export const handleGetGuardAvailability = async (request: Request) => {
   }
 };
 
-export const handleGetLatestShiftDate = async (contractId: string) => {
+export const handleGetLatestShiftDate = async (
+  contractId: string,
+): Promise<Response> => {
   const user = await getUser();
 
   if (!user) {
@@ -1620,7 +1652,9 @@ export const handleGetLatestShiftDate = async (contractId: string) => {
   }
 };
 
-export const handleGetScheduledShiftDates = async (contractId: string) => {
+export const handleGetScheduledShiftDates = async (
+  contractId: string,
+): Promise<Response> => {
   const user = await getUser();
 
   if (!user) {
@@ -1658,7 +1692,7 @@ export const handleGetScheduledShiftDates = async (contractId: string) => {
 export const handleGetReplacementGuards = async (
   request: Request,
   { params }: { params: { shiftId: string } }
-) => {
+): Promise<Response> => {
   try {
     const { shiftId } = params;
     const { searchParams } = new URL(request.url);
@@ -1847,7 +1881,7 @@ export const handleGetReplacementGuards = async (
 export const handleUpdateReplacementGuards = async (
   request: Request,
   { params }: { params: { shiftId: string; assignmentId: string } }
-) => {
+): Promise<Response> => {
   try {
     const { shiftId, assignmentId } = params;
     const body = (await request.json()) as { replacementGuardIds?: string[] };
@@ -2035,4 +2069,183 @@ export const handleUpdateReplacementGuards = async (
     );
   }
 };
+
+export const handleGetEligibleShiftsForSwap = async (): Promise<Response> => {
+  try {
+    const authResult = await resolveGuardIdForShift();
+    if (authResult.response) return authResult.response;
+
+    const data = await getGuardEligibleShiftsForSwapRepository(authResult.guardId!);
+    return NextResponse.json({ success: true, data });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error?.message || "Không thể lấy danh sách ca làm" },
+      { status: 500 }
+    );
+  }
+};
+
+export const handleCreateShiftSwapRequest = async (
+  request: Request,
+): Promise<Response> => {
+  try {
+    const authResult = await resolveGuardIdForShift();
+    if (authResult.response) return authResult.response;
+
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ message: "Người dùng chưa đăng nhập" }, { status: 401 });
+    }
+    const profileRes = await handleGetUserProfile(user.id);
+    const profile = profileRes.data;
+
+    if (!profile?.company_id) {
+      return NextResponse.json({ message: "Tài khoản chưa gán công ty" }, { status: 400 });
+    }
+
+    const body = await request.json();
+    const { reason, items } = body as { reason: string; items: ShiftSwapRequestItem[] };
+
+    if (!reason || typeof reason !== "string" || !reason.trim()) {
+      return NextResponse.json({ message: "Vui lòng nhập lý do đổi ca" }, { status: 400 });
+    }
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ message: "Vui lòng chọn ít nhất 1 ca làm để đổi" }, { status: 400 });
+    }
+
+    const created = await createShiftSwapRequestRepository({
+      company_id: profile.company_id,
+      requester_guard_id: authResult.guardId!,
+      reason: reason.trim(),
+      items,
+    });
+
+    return NextResponse.json({ success: true, data: created });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error?.message || "Không thể tạo yêu cầu đổi ca" },
+      { status: 500 }
+    );
+  }
+};
+
+export const handleGetGuardSwapRequests = async (): Promise<Response> => {
+  try {
+    const authResult = await resolveGuardIdForShift();
+    if (authResult.response) return authResult.response;
+
+    const data = await getGuardSwapRequestsRepository(authResult.guardId!);
+    return NextResponse.json({ success: true, data });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error?.message || "Không thể lấy lịch sử yêu cầu đổi ca" },
+      { status: 500 }
+    );
+  }
+};
+
+export const handleGetCompanySwapRequests = async (): Promise<Response> => {
+  try {
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ message: "Người dùng chưa đăng nhập" }, { status: 401 });
+    }
+    const profileRes = await handleGetUserProfile(user.id);
+    const profile = profileRes.data;
+
+    if (!profile) {
+      return NextResponse.json({ message: "Không tìm thấy thông tin người dùng" }, { status: 404 });
+    }
+
+    if (!["coordinator", "company-admin", "admin"].includes(profile.role)) {
+      return NextResponse.json({ message: "Bạn không có quyền xem danh sách yêu cầu" }, { status: 403 });
+    }
+
+    if (!profile.company_id) {
+      return NextResponse.json({ message: "Tài khoản không thuộc công ty nào" }, { status: 400 });
+    }
+
+    const data = await getCompanySwapRequestsRepository(profile.company_id);
+    return NextResponse.json({ success: true, data });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error?.message || "Không thể lấy danh sách yêu cầu đổi ca" },
+      { status: 500 }
+    );
+  }
+};
+
+export const handleRejectShiftSwapRequest = async (
+  requestId: string,
+  request: Request,
+): Promise<Response> => {
+  try {
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ message: "Người dùng chưa đăng nhập" }, { status: 401 });
+    }
+    const profileRes = await handleGetUserProfile(user.id);
+    const profile = profileRes.data;
+
+    if (!profile || !["coordinator", "company-admin", "admin"].includes(profile.role)) {
+      return NextResponse.json({ message: "Bạn không có quyền từ chối yêu cầu đổi ca" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { rejectionReason } = body as { rejectionReason: string };
+
+    if (!rejectionReason || !rejectionReason.trim()) {
+      return NextResponse.json({ message: "Vui lòng nhập lý do từ chối" }, { status: 400 });
+    }
+
+    const updated = await rejectShiftSwapRequestRepository(requestId, rejectionReason.trim());
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error?.message || "Không thể từ chối yêu cầu đổi ca" },
+      { status: 500 }
+    );
+  }
+};
+
+export const handleApproveShiftSwapRequest = async (
+  requestId: string,
+  request: Request,
+): Promise<Response> => {
+  try {
+    const user = await getUser();
+    if (!user) {
+      return NextResponse.json({ message: "Người dùng chưa đăng nhập" }, { status: 401 });
+    }
+    const profileRes = await handleGetUserProfile(user.id);
+    const profile = profileRes.data;
+
+    if (!profile || !["coordinator", "company-admin", "admin"].includes(profile.role)) {
+      return NextResponse.json({ message: "Bạn không có quyền duyệt yêu cầu đổi ca" }, { status: 403 });
+    }
+
+    const body = await request.json();
+    const { items } = body as { items: ShiftSwapRequestItem[] };
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return NextResponse.json({ message: "Danh sách ca đổi không hợp lệ" }, { status: 400 });
+    }
+
+    // Ensure all items have a replacement guard selected
+    const unassignedItem = items.find((it) => !it.replacement_guard_id);
+    if (unassignedItem) {
+      return NextResponse.json({ message: "Vui lòng chọn bảo vệ thay thế cho tất cả các ca" }, { status: 400 });
+    }
+
+    const updated = await approveShiftSwapRequestRepository(requestId, items);
+    return NextResponse.json({ success: true, data: updated });
+  } catch (error: any) {
+    return NextResponse.json(
+      { success: false, message: error?.message || "Không thể duyệt yêu cầu đổi ca" },
+      { status: 500 }
+    );
+  }
+};
+
 

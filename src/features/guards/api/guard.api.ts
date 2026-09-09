@@ -6,6 +6,7 @@ import type {
   UploadGuardAvatarResponse,
   GetAllGuardsResponse,
   GetGuardDetailResponse,
+  GetGuardMyProfileResponse,
   GetAllGuardsParams,
   UpdateGuardAccountInput,
   GetGuardPerformanceSummaryResponse,
@@ -136,6 +137,7 @@ export const requestApproveRejectGuard = async (
 
 export const requestCompleteGuardProfile = async (
   data: {
+    phone_number?: string;
     date_of_birth: string;
     gender: string;
     address: string;
@@ -161,7 +163,7 @@ export const requestCompleteGuardProfile = async (
   });
 };
 
-export const requestGetGuardMyProfile = async () => {
+export const requestGetGuardMyProfile = async (): Promise<GetGuardMyProfileResponse> => {
   return fetcher("/api/guard/my-profile", {
     method: "GET",
   });

@@ -1,5 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
-import { RegisterParams, LoginParams } from "../types";
+import type { User, AuthResponse } from "@supabase/supabase-js";
+import type { Profile } from "@/types/Profile";
+import type { RegisterParams, LoginParams, LoginResponseData } from "../types";
 
 export const registerAccount = async ({
   email,
@@ -14,7 +16,7 @@ export const registerAccount = async ({
   business_license_no,
   company_email,
   company_phone,
-}: RegisterParams) => {
+}: RegisterParams): Promise<AuthResponse["data"]> => {
   const supabase = await createClient();
 
   const isTemporaryAccount = role === "guard" || role === "coordinator";
@@ -50,7 +52,10 @@ export const registerAccount = async ({
   return data;
 };
 
-export const loginAccount = async ({ email, password }: LoginParams) => {
+export const loginAccount = async ({
+  email,
+  password,
+}: LoginParams): Promise<LoginResponseData> => {
   const supabase = await createClient();
 
   const { data: loginData, error: loginError } =
@@ -69,7 +74,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
     throw new Error("Không tìm thấy thông tin tài khoản.");
   }
 
-  let tempUserProfile: Awaited<ReturnType<typeof getUserProfile>> | null = null;
+  let tempUserProfile: Profile | null = null;
   try {
     tempUserProfile = await getUserProfile(userId);
   } catch (err) {
@@ -165,7 +170,7 @@ export const loginAccount = async ({ email, password }: LoginParams) => {
   };
 };
 
-export const getUserProfile = async (userId: string) => {
+export const getUserProfile = async (userId: string): Promise<Profile> => {
   const supabase = await createClient();
 
   if (!userId) {
@@ -213,7 +218,7 @@ export const getUserProfile = async (userId: string) => {
   };
 };
 
-export const getCurrentUser = async () => {
+export const getCurrentUser = async (): Promise<User | null> => {
   const supabase = await createClient();
 
   const {
@@ -228,7 +233,7 @@ export const getCurrentUser = async () => {
   return user;
 };
 
-export const logoutUser = async () => {
+export const logoutUser = async (): Promise<boolean> => {
   const supabase = await createClient();
 
   const { error } = await supabase.auth.signOut();

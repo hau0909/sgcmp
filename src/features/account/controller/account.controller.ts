@@ -3,7 +3,7 @@ import type { ReasonBan } from "@/types/ReasonBan";
 import {
   getAllAccountsService,
   getAccountByUserIdService,
-  banAcountService,
+  banAccountService,
   getBanReasonByUserIdService,
 } from "../service/account.service";
 import {
@@ -15,6 +15,8 @@ export const handleGetAllAccounts = async (): Promise<Profile[]> => {
   const result = await getAllAccountsService();
   return result;
 };
+
+export const handleGetAccountList = handleGetAllAccounts;
 
 export const handleGetAccountByUserId = async (
   userId: string,
@@ -30,7 +32,42 @@ export const handleGetAccountByUserId = async (
   return { account, banReason };
 };
 
-export const handleBanAccount = async (userId: string, reason: string) => {
+export const handleGetBanReasonByUserId = async (
+  userId: string
+): Promise<{
+  success: boolean;
+  status: number;
+  message: string;
+  data: ReasonBan | null;
+}> => {
+  if (!userId) {
+    return {
+      success: false,
+      status: 400,
+      message: "User ID là bắt buộc",
+      data: null,
+    };
+  }
+
+  const banReason = await getBanReasonByUserIdService(userId);
+
+  return {
+    success: true,
+    status: 200,
+    message: "Lấy lý do khóa thành công.",
+    data: banReason,
+  };
+};
+
+export const handleBanAccount = async (
+  userId: string,
+  reason: string
+): Promise<{
+  success: boolean;
+  status: number;
+  message: string;
+  data?: any;
+}> => {
   if (!userId) throw new Error("Không tìm thấy tài khoản");
 
   if (!reason || !reason.trim()) {
@@ -80,7 +117,7 @@ export const handleBanAccount = async (userId: string, reason: string) => {
     };
   }
 
-  const account = await banAcountService(userId, reason.trim(), user.user_id);
+  const account = await banAccountService(userId, reason.trim(), user.user_id);
 
   return {
     success: true,
@@ -89,4 +126,3 @@ export const handleBanAccount = async (userId: string, reason: string) => {
     data: account,
   };
 };
-

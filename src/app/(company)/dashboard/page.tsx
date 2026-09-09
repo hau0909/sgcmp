@@ -40,24 +40,17 @@ import {
   requestGetActiveContracts,
   requestGetPendingReports,
   requestGetDashboardSubscription,
-  requestGetWeeklyShifts,
-  requestGetShiftStatusToday,
+  requestGetActiveContractsTrend,
   requestGetRecentActivities,
   type MetricWithTrend,
   type DashboardSubscriptionResult,
-  type WeeklyShiftsResultItem,
-  type ShiftStatusResultItem,
+  type ActiveContractTrendItem,
   type RecentActivityItem,
 } from "@/features/dashboard/api/dashboard.api";
 import {
   CartesianGrid,
   Line,
   LineChart,
-  PolarAngleAxis,
-  PolarGrid,
-  PolarRadiusAxis,
-  Radar,
-  RadarChart,
   XAxis,
   YAxis,
 } from "recharts";
@@ -403,33 +396,12 @@ const formatActivity = (act: RecentActivityItem, locale: string) => {
 export default function CompanyDashboardPage() {
   const { dict, locale } = useTranslation();
 
-  const weeklyShiftChartConfig = {
-    totalAssignments: {
-      label: dict.company_dashboard.weekly_shift.total_assignments,
+  const activeContractsChartConfig = {
+    activeContracts: {
+      label: dict.company_dashboard?.contracts_trend?.series_label || dict.company_dashboard?.active_contracts || "Hợp đồng đang hoạt động",
       color: "#3b82f6", // Blue
     },
-    onTimeCheckins: {
-      label: dict.company_dashboard.weekly_shift.on_time_checkins,
-      color: "#10b981", // Green
-    },
-    lateCheckins: {
-      label: dict.company_dashboard.weekly_shift.late_checkins,
-      color: "#f59e0b", // Yellow/Orange
-    },
-    absentGuards: {
-      label: dict.company_dashboard.weekly_shift.absent,
-      color: "#ef4444", // Red
-    },
   } satisfies ChartConfig;
-
-  const shiftStatusChartConfig = {
-    count: {
-      label: dict.company_dashboard.shift_status.guard_count,
-      color: "#6495ED", // Xanh nước biển
-    },
-  } satisfies ChartConfig;
-  const [chartView, setChartView] = useState<ChartView>("line");
-  const [animateChart, setAnimateChart] = useState(false);
 
   // Dữ liệu metric: bảo vệ đang trực
   const company_id = useAuthStore((s) => s.company_id);
@@ -454,30 +426,20 @@ export default function CompanyDashboardPage() {
       .finally(() => setPendingReportsLoading(false));
   }, [company_id]);
 
-  // Dữ liệu biểu đồ ca trực 7 ngày
-  const [weeklyShiftData, setWeeklyShiftData] = useState<WeeklyShiftsResultItem[]>([]);
-  const [weeklyShiftDataLoading, setWeeklyShiftDataLoading] = useState(false);
+  // Dữ liệu xu hướng hợp đồng hoạt động (Theo tuần / Theo tháng)
+  const [contractsTrendView, setContractsTrendView] = useState<"weekly" | "monthly">("weekly");
+  const [contractsTrendData, setContractsTrendData] = useState<ActiveContractTrendItem[]>([]);
+  const [contractsTrendLoading, setContractsTrendLoading] = useState(false);
 
-  // Dữ liệu biểu đồ radar trạng thái ca trực hôm nay
-  const [shiftStatusData, setShiftStatusData] = useState<ShiftStatusResultItem[]>([]);
-  const [shiftStatusDataLoading, setShiftStatusDataLoading] = useState(false);
-
-  const formattedShiftStatusData = useMemo(() => {
-    return shiftStatusData.map((item) => ({
-      ...item,
-      statusLabel: getEmployeeStatusLabel(item.status, dict),
-    }));
-  }, [shiftStatusData, dict]);
-
-  // Dữ liệu hoạt động gần đây
-  const [recentActivities, setRecentActivities] = useState<RecentActivityItem[]>([]);
-  const [recentActivitiesLoading, setRecentActivitiesLoading] = useState(false);
-
-  // Trạng thái mở modal xem toàn bộ hoạt động gần đây
-  const [isActivitiesModalOpen, setIsActivitiesModalOpen] = useState(false);
-
-  // Bộ lọc loại hoạt động trong modal
-  const [activityFilter, setActivityFilter] = useState<string>("all");
+  // Fetch dữ liệu xu hướng hợp đồng
+  useEffect(() => {
+    if (!company_id) return;
+    setContractsTrendLoading(true);
+    requestGetActiveContractsTrend(company_id, contractsTrendView)
+      .then(setContractsTrendData)
+      .catch((err) => console.error("[dashboard] contractsTrendData:", err))
+      .finally(() => setContractsTrendLoading(false));
+  }, [company_id, contractsTrendView]);
 
   const [isRefreshing, setIsRefreshing] = useState(false);
 
@@ -489,36 +451,24 @@ export default function CompanyDashboardPage() {
       setActiveContractsLoading(true);
       setPendingReportsLoading(true);
       setSubInfoLoading(true);
-      setWeeklyShiftDataLoading(true);
-      setShiftStatusDataLoading(true);
-      setRecentActivitiesLoading(true);
+      setContractsTrendLoading(true);
 
       await Promise.all([
         requestGetActiveGuardsOnShift(company_id).then(setActiveGuards).catch((err) => console.error(err)),
         requestGetActiveContracts(company_id).then(setActiveContracts).catch((err) => console.error(err)),
         requestGetPendingReports(company_id).then(setPendingReports).catch((err) => console.error(err)),
         requestGetDashboardSubscription(company_id).then(setSubInfo).catch((err) => console.error(err)),
-        requestGetWeeklyShifts(company_id).then(setWeeklyShiftData).catch((err) => console.error(err)),
-        requestGetShiftStatusToday(company_id).then(setShiftStatusData).catch((err) => console.error(err)),
-        requestGetRecentActivities(company_id).then(setRecentActivities).catch((err) => console.error(err)),
+        requestGetActiveContractsTrend(company_id, contractsTrendView).then(setContractsTrendData).catch((err) => console.error(err)),
       ]);
     } finally {
       setActiveGuardsLoading(false);
       setActiveContractsLoading(false);
       setPendingReportsLoading(false);
       setSubInfoLoading(false);
-      setWeeklyShiftDataLoading(false);
-      setShiftStatusDataLoading(false);
-      setRecentActivitiesLoading(false);
+      setContractsTrendLoading(false);
       setTimeout(() => setIsRefreshing(false), 300);
     }
   };
-
-  // Trigger animation for the bars on mount
-  useEffect(() => {
-    const timer = setTimeout(() => setAnimateChart(true), 100);
-    return () => clearTimeout(timer);
-  }, []);
 
   // Fetch số bảo vệ đang trực
   useEffect(() => {
@@ -552,36 +502,6 @@ export default function CompanyDashboardPage() {
       .then(setSubInfo)
       .catch((err) => console.error("[dashboard] subInfo:", err))
       .finally(() => setSubInfoLoading(false));
-  }, [company_id]);
-
-  // Fetch dữ liệu ca trực của bảo vệ trong 7 ngày
-  useEffect(() => {
-    if (!company_id) return;
-    setWeeklyShiftDataLoading(true);
-    requestGetWeeklyShifts(company_id)
-      .then(setWeeklyShiftData)
-      .catch((err) => console.error("[dashboard] weeklyShiftData:", err))
-      .finally(() => setWeeklyShiftDataLoading(false));
-  }, [company_id]);
-
-  // Fetch dữ liệu biểu đồ radar trạng thái ca trực hôm nay
-  useEffect(() => {
-    if (!company_id) return;
-    setShiftStatusDataLoading(true);
-    requestGetShiftStatusToday(company_id)
-      .then(setShiftStatusData)
-      .catch((err) => console.error("[dashboard] shiftStatusData:", err))
-      .finally(() => setShiftStatusDataLoading(false));
-  }, [company_id]);
-
-  // Fetch dữ liệu hoạt động gần đây
-  useEffect(() => {
-    if (!company_id) return;
-    setRecentActivitiesLoading(true);
-    requestGetRecentActivities(company_id)
-      .then(setRecentActivities)
-      .catch((err) => console.error("[dashboard] recentActivities:", err))
-      .finally(() => setRecentActivitiesLoading(false));
   }, [company_id]);
 
   const employeeStatusConfig: Record<
@@ -685,13 +605,6 @@ export default function CompanyDashboardPage() {
     },
   };
 
-  const displayedActivities = recentActivities.slice(0, 8);
-
-  const filteredActivities = recentActivities.filter((act) => {
-    if (activityFilter === "all") return true;
-    return act.type === activityFilter;
-  });
-
   return (
     <div className="flex-1 p-6 lg:p-8 max-w-[1440px] mx-auto w-full space-y-8">
       {/* Page Header */}
@@ -735,33 +648,6 @@ export default function CompanyDashboardPage() {
                 (activeGuards?.count ?? 0)
               )}
             </div>
-            {activeGuardsLoading ? (
-              <div className="flex items-center gap-1">
-                <span className="inline-block w-32 h-4 bg-surface-container rounded animate-pulse" />
-              </div>
-            ) : activeGuards?.percentChange !== null && activeGuards?.percentChange !== undefined ? (
-              <div
-                className={`flex items-center gap-1 text-sm font-semibold ${activeGuards.trend === "up"
-                  ? "text-emerald-700"
-                  : activeGuards.trend === "down"
-                    ? "text-red-600"
-                    : "text-on-surface-variant"
-                  }`}
-              >
-                {activeGuards.trend === "up" && <TrendingUp className="w-4 h-4" />}
-                {activeGuards.trend === "down" && <TrendingDown className="w-4 h-4" />}
-                {activeGuards.trend === "neutral" && <Minus className="w-4 h-4" />}
-                <span>
-                  {activeGuards.trend === "up" ? "+" : ""}
-                  {activeGuards.percentChange}% {dict.company_dashboard.compared_yesterday}
-                </span>
-              </div>
-            ) : (
-              <div className="flex items-center gap-1 text-sm text-on-surface-variant font-medium">
-                <Minus className="w-4 h-4" />
-                <span>{dict.company_dashboard.no_data_yesterday}</span>
-              </div>
-            )}
           </div>
         </div>
 
@@ -848,19 +734,17 @@ export default function CompanyDashboardPage() {
 
       {/* Middle Section: Chart & Subscription Widget */}
       <div className="grid grid-cols-1 xl:grid-cols-12 gap-6">
-        {/* Operational Overview Charts */}
+        {/* Operational Overview Charts: Active Contracts Trend */}
         <Card className="xl:col-span-8 border-outline-variant bg-surface-container-lowest shadow-sm">
           <CardHeader className="flex flex-col gap-4 border-b border-outline-variant/60 pb-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="space-y-1">
               <CardTitle className="text-base text-on-surface">
-                {chartView === "line"
-                  ? dict.company_dashboard.charts.weekly_title
-                  : dict.company_dashboard.charts.status_title}
+                {dict.company_dashboard?.contracts_trend?.title || "Thống kê Hợp đồng Hoạt động"}
               </CardTitle>
               <CardDescription className="text-xs text-on-surface-variant">
-                {chartView === "line"
-                  ? dict.company_dashboard.charts.weekly_desc
-                  : dict.company_dashboard.charts.status_desc}
+                {contractsTrendView === "weekly"
+                  ? (dict.company_dashboard?.contracts_trend?.desc_weekly || "Số lượng hợp đồng đang hoạt động trong 7 ngày gần nhất")
+                  : (dict.company_dashboard?.contracts_trend?.desc_monthly || "Số lượng hợp đồng đang hoạt động trong 30 ngày gần nhất")}
               </CardDescription>
             </div>
 
@@ -869,192 +753,79 @@ export default function CompanyDashboardPage() {
                 type="button"
                 size="sm"
                 variant="ghost"
-                aria-pressed={chartView === "line"}
-                onClick={() => setChartView("line")}
-                className={`h-8 flex-1 px-3 text-xs font-semibold transition-all sm:flex-none ${chartView === "line"
+                aria-pressed={contractsTrendView === "weekly"}
+                onClick={() => setContractsTrendView("weekly")}
+                className={`h-8 flex-1 px-3 text-xs font-semibold transition-all sm:flex-none ${contractsTrendView === "weekly"
                   ? "bg-sky-600 text-white shadow-sm hover:bg-sky-700 hover:text-white"
                   : "text-sky-700 hover:bg-sky-100 hover:text-sky-900"
                   }`}
               >
-                {dict.company_dashboard.charts.weekly_btn}
+                {dict.company_dashboard?.contracts_trend?.btn_weekly || "Theo tuần (7 ngày)"}
               </Button>
 
               <Button
                 type="button"
                 size="sm"
                 variant="ghost"
-                aria-pressed={chartView === "radar"}
-                onClick={() => setChartView("radar")}
-                className={`h-8 flex-1 px-3 text-xs font-semibold transition-all sm:flex-none ${chartView === "radar"
+                aria-pressed={contractsTrendView === "monthly"}
+                onClick={() => setContractsTrendView("monthly")}
+                className={`h-8 flex-1 px-3 text-xs font-semibold transition-all sm:flex-none ${contractsTrendView === "monthly"
                   ? "bg-sky-600 text-white shadow-sm hover:bg-sky-700 hover:text-white"
                   : "text-sky-700 hover:bg-sky-100 hover:text-sky-900"
                   }`}
               >
-                {dict.company_dashboard.charts.status_btn}
+                {dict.company_dashboard?.contracts_trend?.btn_monthly || "Theo tháng (30 ngày)"}
               </Button>
             </div>
           </CardHeader>
 
           <CardContent className="pt-6">
-            {chartView === "line" ? (
-              weeklyShiftDataLoading ? (
-                <div className="h-[300px] min-h-[300px] w-full flex items-center justify-center bg-surface-container-low/20 rounded-lg animate-pulse border border-outline-variant/30">
-                  <span className="text-sm font-medium text-on-surface-variant">Đang tải dữ liệu biểu đồ...</span>
-                </div>
-              ) : (
-                <ChartContainer
-                  config={weeklyShiftChartConfig}
-                  className="h-[300px] min-h-[300px] w-full"
-                >
-                  <LineChart
-                    accessibilityLayer
-                    data={weeklyShiftData}
-                    margin={{ top: 8, right: 12, left: 0, bottom: 0 }}
-                  >
-                    <CartesianGrid vertical={false} strokeDasharray="3 3" />
-                    <XAxis
-                      dataKey="day"
-                      tickLine={false}
-                      axisLine={false}
-                      tickMargin={10}
-                    />
-                    <YAxis
-                      allowDecimals={false}
-                      tickLine={false}
-                      axisLine={false}
-                      width={30}
-                    />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent indicator="line" />}
-                    />
-                    <ChartLegend content={<ChartLegendContent />} />
-                    <Line
-                      type="monotone"
-                      dataKey="totalAssignments"
-                      stroke="var(--color-totalAssignments)"
-                      strokeWidth={2.5}
-                      dot={{ fill: "var(--color-totalAssignments)", r: 3 }}
-                      activeDot={{ r: 5 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="onTimeCheckins"
-                      stroke="var(--color-onTimeCheckins)"
-                      strokeWidth={2.5}
-                      dot={{ fill: "var(--color-onTimeCheckins)", r: 3 }}
-                      activeDot={{ r: 5 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="lateCheckins"
-                      stroke="var(--color-lateCheckins)"
-                      strokeWidth={2.5}
-                      dot={{ fill: "var(--color-lateCheckins)", r: 3 }}
-                      activeDot={{ r: 5 }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="absentGuards"
-                      stroke="var(--color-absentGuards)"
-                      strokeWidth={2.5}
-                      dot={{ fill: "var(--color-absentGuards)", r: 3 }}
-                      activeDot={{ r: 5 }}
-                    />
-                  </LineChart>
-                </ChartContainer>
-              )
+            {contractsTrendLoading ? (
+              <div className="h-[300px] min-h-[300px] w-full flex items-center justify-center bg-surface-container-low/20 rounded-lg animate-pulse border border-outline-variant/30">
+                <span className="text-sm font-medium text-on-surface-variant">
+                  {dict.company_dashboard?.contracts_trend?.loading || "Đang tải dữ liệu hợp đồng..."}
+                </span>
+              </div>
             ) : (
-              shiftStatusDataLoading ? (
-                <div className="h-[300px] min-h-[300px] w-full flex items-center justify-center bg-surface-container-low/20 rounded-lg animate-pulse border border-outline-variant/30">
-                  <span className="text-sm font-medium text-on-surface-variant">Đang tải trạng thái ca trực...</span>
-                </div>
-              ) : (
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-5">
-                  {/* Radar chart bên trái */}
-                  <div className="lg:col-span-3">
-                    <ChartContainer
-                      config={shiftStatusChartConfig}
-                      className="h-[300px] min-h-[300px] w-full"
-                    >
-                      <RadarChart
-                        accessibilityLayer
-                        data={formattedShiftStatusData}
-                        outerRadius="68%"
-                      >
-                        <ChartTooltip
-                          cursor={false}
-                          content={<ChartTooltipContent hideLabel />}
-                        />
-
-                        <PolarGrid />
-
-                        <PolarAngleAxis
-                          dataKey="statusLabel"
-                          tickLine={false}
-                          tick={{ fontSize: 11 }}
-                        />
-
-                        <PolarRadiusAxis tick={false} axisLine={false} />
-
-                        <Radar
-                          dataKey="count"
-                          fill="var(--color-count)"
-                          fillOpacity={0.3}
-                          stroke="var(--color-count)"
-                          strokeWidth={2}
-                          dot={{
-                            r: 3,
-                            fill: "var(--color-count)",
-                          }}
-                        />
-                      </RadarChart>
-                    </ChartContainer>
-                  </div>
-
-                  {/* Thông tin trạng thái bên phải */}
-                  <div className="flex flex-col justify-center gap-4 lg:col-span-2">
-                    <div className="mb-1">
-                      <h4 className="text-sm font-bold text-on-surface">
-                        {dict.company_dashboard.charts.status_details}
-                      </h4>
-
-                      <p className="mt-1 text-xs text-on-surface-variant">
-                        {dict.company_dashboard.charts.status_desc_2}
-                      </p>
-                    </div>
-
-                    <div className="space-y-3">
-                      {shiftStatusData.map((item) => {
-                        const status = item.status as EmployeeStatus;
-                        const config = employeeStatusConfig[status] || { dotClass: "bg-surface-container", animate: false };
-
-                        return (
-                          <div
-                            key={item.status}
-                            className="flex items-center justify-between"
-                          >
-                            <div className="flex items-center gap-2.5">
-                              <span
-                                className={`h-2.5 w-2.5 shrink-0 rounded-full ${config.dotClass
-                                  } ${config.animate ? "animate-pulse" : ""}`}
-                              />
-
-                              <span className="text-sm font-medium text-on-surface-variant">
-                                {getEmployeeStatusLabel(item.status, dict)}
-                              </span>
-                            </div>
-
-                            <span className="text-base font-bold text-on-surface">
-                              {item.count}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )
+              <ChartContainer
+                config={activeContractsChartConfig}
+                className="h-[300px] min-h-[300px] w-full"
+              >
+                <LineChart
+                  accessibilityLayer
+                  data={contractsTrendData}
+                  margin={{ top: 8, right: 40, left: 0, bottom: 0 }}
+                >
+                  <CartesianGrid vertical={false} strokeDasharray="3 3" />
+                  <XAxis
+                    dataKey="label"
+                    tickLine={false}
+                    axisLine={false}
+                    tickMargin={10}
+                    interval={contractsTrendView === "monthly" ? 4 : 0}
+                    padding={{ left: 10, right: 10 }}
+                  />
+                  <YAxis
+                    allowDecimals={false}
+                    tickLine={false}
+                    axisLine={false}
+                    width={30}
+                  />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent indicator="line" />}
+                  />
+                  <ChartLegend content={<ChartLegendContent />} />
+                  <Line
+                    type="monotone"
+                    dataKey="activeContracts"
+                    stroke="var(--color-activeContracts)"
+                    strokeWidth={2.5}
+                    dot={{ fill: "var(--color-activeContracts)", r: 3 }}
+                    activeDot={{ r: 5 }}
+                  />
+                </LineChart>
+              </ChartContainer>
             )}
           </CardContent>
         </Card>
@@ -1155,170 +926,6 @@ export default function CompanyDashboardPage() {
         </div>
       </div>
 
-      {/* Bottom Section: Recent Activity Feed */}
-      <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-6 flex flex-col shadow-sm">
-        <div className="flex justify-between items-center mb-6">
-          <h3 className="text-base font-bold text-on-surface">
-            {dict.company_dashboard.activities.title}
-          </h3>
-          <button className="text-on-surface-variant hover:text-primary transition-colors p-1.5 rounded-full hover:bg-surface-container-low">
-            <Filter className="w-4 h-4" />
-          </button>
-        </div>
-
-        <div className="flex flex-col gap-6 relative flex-1">
-          {/* Connecting line for timeline */}
-          <div className="absolute left-[15px] top-4 bottom-4 w-[1px] bg-outline-variant/60" />
-
-          {recentActivitiesLoading ? (
-            Array.from({ length: 4 }).map((_, idx) => (
-              <div key={idx} className="flex gap-4 relative z-10 animate-pulse">
-                <div className="w-8 h-8 rounded-full bg-surface-container shrink-0 mt-0.5" />
-                <div className="space-y-2 flex-1">
-                  <div className="h-4 bg-surface-container rounded w-3/4" />
-                  <div className="h-3 bg-surface-container rounded w-1/2" />
-                </div>
-              </div>
-            ))
-          ) : displayedActivities.length > 0 ? (
-            displayedActivities.map((rawAct) => {
-              const act = formatActivity(rawAct, locale);
-              const config = getActivityConfig(act.subType);
-
-              return (
-                <div key={act.id} className="flex gap-4 relative z-10">
-                  <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 mt-0.5 shadow-sm ${config.className}`}>
-                    {config.icon}
-                  </div>
-                  <div>
-                    <p className="text-xs text-on-surface font-medium leading-relaxed">
-                      {act.boldText && (
-                        <span className={`font-bold ${act.type === "report" && act.status === "PENDING" ? "text-red-600" : ""}`}>
-                          {act.boldText}
-                        </span>
-                      )}
-                      {act.normalText}
-                    </p>
-                    <p className="text-[10px] text-on-surface-variant/80 mt-1 font-mono">
-                      {act.timeLabel}
-                      {act.metaLabel && ` • ${act.metaLabel}`}
-                    </p>
-                  </div>
-                </div>
-              );
-            })
-          ) : (
-            <div className="text-xs text-on-surface-variant/60 text-center py-8">
-              {dict.company_dashboard.activities.no_data}
-            </div>
-          )}
-        </div>
-        <button
-          onClick={() => setIsActivitiesModalOpen(true)}
-          className="mt-6 pt-4 cursor-pointer border-t border-outline-variant/40 text-secondary font-bold text-xs text-center hover:underline"
-        >
-          {dict.company_dashboard.activities.view_more}
-        </button>
-      </div>
-      {/* Modal xem toàn bộ hoạt động gần đây */}
-      {isActivitiesModalOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-200">
-            {/* Header */}
-            <div className="p-6 border-b border-outline-variant flex items-center justify-between bg-surface-container-low/20">
-              <div>
-                <h3 className="text-lg font-bold text-on-surface">
-                  {dict.company_dashboard.modals.activities_title}
-                </h3>
-                <p className="text-xs text-on-surface-variant mt-0.5">
-                  {dict.company_dashboard.modals.activities_desc}
-                </p>
-              </div>
-              <button
-                onClick={() => setIsActivitiesModalOpen(false)}
-                className="text-on-surface-variant hover:text-primary transition-colors p-2 rounded-full hover:bg-surface-container-high"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            {/* Filter Tabs */}
-            <div className="px-6 py-4 border-b border-outline-variant/40 bg-surface-container-lowest flex flex-wrap gap-2">
-              {[
-                { label: dict.company_dashboard.activities.filter_all, value: "all" },
-                { label: dict.company_dashboard.activities.filter_attendance, value: "attendance" },
-                { label: dict.company_dashboard.activities.filter_shift, value: "replacement" },
-                { label: dict.company_dashboard.activities.filter_incident, value: "report" },
-                { label: dict.company_dashboard.activities.filter_contract, value: "contract" },
-                { label: dict.company_dashboard.activities.filter_system, value: "system" },
-              ].map((tab) => (
-                <button
-                  key={tab.value}
-                  onClick={() => setActivityFilter(tab.value)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-semibold transition-all ${activityFilter === tab.value
-                    ? "bg-primary text-on-primary shadow-sm"
-                    : "bg-surface-container-low text-on-surface-variant hover:bg-surface-container-high"
-                    }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Timeline Scroll Area */}
-            <div className="overflow-y-auto flex-1 p-6 relative">
-              {filteredActivities.length > 0 && (
-                <div className="absolute left-[39px] top-6 bottom-6 w-[1px] bg-outline-variant/60" />
-              )}
-
-              <div className="flex flex-col gap-6 relative">
-                {filteredActivities.length > 0 ? (
-                  filteredActivities.map((rawAct) => {
-                    const act = formatActivity(rawAct, locale);
-                    const config = getActivityConfig(act.subType);
-
-                    return (
-                      <div key={act.id} className="flex gap-4 relative z-10">
-                        <div className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 shadow-sm ${config.className}`}>
-                          {config.icon}
-                        </div>
-                        <div>
-                          <p className="text-xs text-on-surface font-medium leading-relaxed">
-                            {act.boldText && (
-                              <span className={`font-bold ${act.type === "report" && act.status === "PENDING" ? "text-red-600" : ""}`}>
-                                {act.boldText}
-                              </span>
-                            )}
-                            {act.normalText}
-                          </p>
-                          <p className="text-[10px] text-on-surface-variant/80 mt-1 font-mono">
-                            {act.timeLabel}
-                            {act.metaLabel && ` • ${act.metaLabel}`}
-                          </p>
-                        </div>
-                      </div>
-                    );
-                  })
-                ) : (
-                  <div className="text-xs text-on-surface-variant/60 text-center py-12">
-                    {dict.company_dashboard.activities.no_data_filter}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Footer */}
-            <div className="p-4 border-t border-outline-variant bg-surface-container-low/30 flex justify-end">
-              <button
-                onClick={() => setIsActivitiesModalOpen(false)}
-                className="px-4 py-2 border border-outline-variant rounded-md text-xs font-bold text-on-surface hover:bg-surface-container-high transition-colors"
-              >
-                {dict.company_dashboard.modals.close}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
