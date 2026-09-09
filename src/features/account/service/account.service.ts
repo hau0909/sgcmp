@@ -12,6 +12,8 @@ export const getAllAccountsService = async (): Promise<Profile[]> => {
   return result;
 };
 
+export const getAccountListService = getAllAccountsService;
+
 export const getAccountByUserIdService = async (
   userId: string,
 ): Promise<Profile | null> => {
@@ -21,13 +23,15 @@ export const getAccountByUserIdService = async (
   return await getAccountByUserId(userId);
 };
 
-export const banAcountService = async (
+export const banAccountService = async (
   userId: string,
   reason: string,
   bannedBy: string
-) => {
+): Promise<{ status: string }[] | null> => {
   return banAccount(userId, reason, bannedBy);
 };
+
+export const banAcountService = banAccountService;
 
 export const getBanReasonByUserIdService = async (
   userId: string
@@ -35,4 +39,3 @@ export const getBanReasonByUserIdService = async (
   if (!userId) return null;
   return getBanReasonByUserId(userId);
 };
-

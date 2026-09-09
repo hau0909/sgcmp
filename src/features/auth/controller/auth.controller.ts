@@ -12,8 +12,9 @@ import {
   checkPhoneNumberExists,
   checkEmailExists,
 } from "../validator/auth.validator";
-import type { RegisterInput, LoginInput } from "../types";
-import type { AuthError } from "@supabase/supabase-js";
+import type { RegisterInput, LoginInput, LoginResponseData } from "../types";
+import type { AuthError, AuthResponse } from "@supabase/supabase-js";
+import type { Profile } from "@/types/Profile";
 
 export const handleRegisterAccount = async ({
   email,
@@ -26,7 +27,18 @@ export const handleRegisterAccount = async ({
   businessLicenseNo,
   companyEmail,
   companyPhone,
-}: RegisterInput) => {
+}: RegisterInput): Promise<{
+  success: boolean;
+  message: string;
+  registrationType?: "company" | "individual";
+  companyInfo?: {
+    companyName: string;
+    businessLicenseNo: string;
+    companyEmail: string;
+    companyPhone: string;
+  } | null;
+  account?: AuthResponse["data"];
+}> => {
   const trimmedPassword = password.trim();
   const trimmedConfirmPassword = confirmPassword.trim();
 
@@ -105,7 +117,14 @@ export const handleRegisterAccount = async ({
   }
 };
 
-export const handleLoginAccount = async ({ email, password }: LoginInput) => {
+export const handleLoginAccount = async ({
+  email,
+  password,
+}: LoginInput): Promise<{
+  success: boolean;
+  message: string;
+  data?: LoginResponseData;
+}> => {
   const trimmedPassword = password.trim();
 
   const validateError = validateLoginInput({ email, password: trimmedPassword });
@@ -146,7 +165,13 @@ export const handleLoginAccount = async ({ email, password }: LoginInput) => {
   }
 };
 
-export const handleGetUserProfile = async (userId: string) => {
+export const handleGetUserProfile = async (
+  userId: string,
+): Promise<{
+  success: boolean;
+  message: string;
+  data: (Profile & { id: string; company_id: string | null }) | null;
+}> => {
   if (!userId) {
     return {
       success: false,
@@ -191,7 +216,9 @@ export const handleGetUserProfile = async (userId: string) => {
   }
 };
 
-export const handleLogout = async () => {
+export const handleLogout = async (): Promise<{
+  message: string;
+}> => {
   await logoutUserService();
 
   return {
