@@ -3558,17 +3558,17 @@ export function CreateShiftModal({ open, onClose, onCreated }: CreateShiftModalP
                     </span>
                     <span className="truncate font-medium text-slate-900">{p?.email || unupdatedText}</span>
                   </div>
-                  {(hoveredGuardInfo.guard.height_cm || hoveredGuardInfo.guard.weight_kg) && (
-                    <div className="flex items-center gap-2">
-                      <Activity size={14} className="text-blue-700 shrink-0" />
-                      <span className="text-slate-500 font-medium">
-                        {dict?.create_shift_modal?.guard_tooltip_physical || "Thể chất:"}
-                      </span>
-                      <span className="font-medium text-slate-900">
-                        {hoveredGuardInfo.guard.height_cm ? `${hoveredGuardInfo.guard.height_cm} cm` : "—"} · {hoveredGuardInfo.guard.weight_kg ? `${hoveredGuardInfo.guard.weight_kg} kg` : "—"}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Activity size={14} className="text-blue-700 shrink-0" />
+                    <span className="text-slate-500 font-medium">
+                      {dict?.create_shift_modal?.guard_tooltip_physical || "Thể chất:"}
+                    </span>
+                    <span className="font-medium text-slate-900">
+                      {hoveredGuardInfo.guard.height_cm || hoveredGuardInfo.guard.weight_kg
+                        ? `${hoveredGuardInfo.guard.height_cm ? `${hoveredGuardInfo.guard.height_cm} cm` : "—"} · ${hoveredGuardInfo.guard.weight_kg ? `${hoveredGuardInfo.guard.weight_kg} kg` : "—"}`
+                        : unupdatedText}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Notable Skills */}

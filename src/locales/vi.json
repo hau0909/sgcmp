@@ -7,11 +7,16 @@
     "myRequests": "Quản lý yêu cầu",
     "myContracts": "Quản lý hợp đồng",
     "myReports": "Báo cáo",
+    "guardSchedule": "Lịch trực bảo vệ",
     "loading": "Đang tải...",
     "startNow": "Đăng ký công ty",
     "myRegistration": "Hồ sơ đăng ký",
     "dashboard": "Quay về trang chính",
     "overtime": "TĂNG CA"
+  },
+  "customer_guard_schedule": {
+    "title": "Lịch Trực Bảo Vệ",
+    "subtitle": "Xem ca trực của bảo vệ theo tuần tại các vị trí hợp đồng"
   },
   "company_requests": {
     "title": "Danh sách Yêu cầu Khách hàng",
@@ -2764,7 +2769,8 @@
     "continuous_shifts": "ca liên tục",
     "contract_location_subtitle": "Địa điểm hợp đồng",
     "location_header": "ĐỊA ĐIỂM / VỊ TRÍ",
-    "no_shifts_today": "Không có ca trực trong ngày hôm nay."
+    "no_shifts_today": "Không có ca trực trong ngày hôm nay.",
+    "error_fetch": "Không thể tải danh sách ca trực"
   },
   "shift_week": {
     "shift_name": "Tên ca trực",

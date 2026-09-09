@@ -162,7 +162,141 @@ export const getShiftContractsByCompanyId = async (
           if (dObj >= cStart && dObj <= cEnd && targetDays.includes(dObj.getDay())) {
             scheduledDays++;
           }
-        } catch {}
+        } catch { }
+      }
+    }
+
+    return {
+      contract_id: contract.contract_id,
+      code: `HD-${String(index + 1).padStart(3, "0")}`,
+      customer_name: customer?.full_name ?? "Chưa cập nhật",
+      company_name: booking?.company_name ?? "Chưa cập nhật",
+      company_scope: booking?.company_scope ?? null,
+      company_position: booking?.company_position ?? null,
+      service_name: service?.name ?? "Chưa cập nhật",
+      address: booking?.address ?? "Chưa cập nhật",
+      guards_per_slot: booking?.guards_per_slot ?? 1,
+      description: booking?.description ?? "Chưa cập nhật",
+      start_date: contract.start_date,
+      end_date: contract.end_date,
+      status: contract.status,
+      time_slots,
+      day_per_week,
+      scheduled_days_count: scheduledDays,
+      total_working_days_count: totalWorkingDays,
+    };
+  });
+};
+
+export const getShiftContractsByCustomerId = async (
+  customerId: string,
+): Promise<ContractOption[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("contracts")
+    .select(
+      `
+      contract_id,
+      start_date,
+      end_date,
+      status,
+      booking:bookings!inner (
+        booking_id,
+        company_id,
+        customer_id,
+        company_name,
+        company_scope,
+        company_position,
+        address,
+        description,
+        guards_per_slot,
+        time_slots,
+        day_per_week,
+        customer:profiles!bookings_customer_id_fkey (
+          full_name
+        ),
+        company:companies!bookings_company_id_fkey (
+          company_name
+        ),
+        service:services!bookings_service_id_fkey (
+          name
+        )
+      )
+    `,
+    )
+    .eq("status", "active")
+    .eq("booking.customer_id", customerId)
+    .eq("booking.status", "accepted")
+    .order("created_at", {
+      ascending: false,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const contractsData = (data ?? []) as unknown as ContractQueryResult[];
+  if (contractsData.length === 0) return [];
+
+  const contractIds = contractsData.map((c) => c.contract_id);
+  const { data: shiftsData, error: shiftsError } = await supabase
+    .from("shifts")
+    .select("contract_id, start_time")
+    .in("contract_id", contractIds);
+
+  if (shiftsError) {
+    throw new Error(shiftsError.message);
+  }
+
+  const contractScheduledDatesMap: Record<string, Set<string>> = {};
+  for (const shift of shiftsData || []) {
+    if (shift.contract_id && shift.start_time) {
+      if (!contractScheduledDatesMap[shift.contract_id]) {
+        contractScheduledDatesMap[shift.contract_id] = new Set<string>();
+      }
+      contractScheduledDatesMap[shift.contract_id].add(shift.start_time.split(/[T ]/)[0]);
+    }
+  }
+
+  return contractsData.map((contract, index) => {
+    const booking = getSingleRelation(contract.booking);
+    const customer = getSingleRelation(booking?.customer);
+    const company = getSingleRelation(booking?.company);
+    const service = getSingleRelation(booking?.service);
+
+    const time_slots = toStringArray(booking?.time_slots) ?? [];
+    const day_per_week = toStringArray(booking?.day_per_week) ?? [];
+
+    const targetDays = day_per_week
+      .map((d) => DAY_LABEL_MAP[d.toLowerCase().trim()])
+      .filter((n): n is number => n !== undefined);
+
+    let totalWorkingDays = 0;
+    if (contract.start_date && contract.end_date && targetDays.length > 0) {
+      const cStart = new Date(`${contract.start_date}T00:00:00`);
+      const cEnd = new Date(`${contract.end_date}T00:00:00`);
+      const cur = new Date(cStart);
+      while (cur <= cEnd) {
+        if (targetDays.includes(cur.getDay())) {
+          totalWorkingDays++;
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    const scheduledDatesSet = contractScheduledDatesMap[contract.contract_id] || new Set();
+    let scheduledDays = 0;
+    if (contract.start_date && contract.end_date && targetDays.length > 0) {
+      const cStart = new Date(`${contract.start_date}T00:00:00`);
+      const cEnd = new Date(`${contract.end_date}T00:00:00`);
+      for (const dStr of Array.from(scheduledDatesSet)) {
+        try {
+          const dObj = new Date(`${dStr}T00:00:00`);
+          if (dObj >= cStart && dObj <= cEnd && targetDays.includes(dObj.getDay())) {
+            scheduledDays++;
+          }
+        } catch { }
       }
     }
 
@@ -874,9 +1008,9 @@ const mapShiftAssignment = (
     guard_name: profile?.full_name ?? "Chưa cập nhật",
     checkin_image: shiftImg
       ? {
-          image_url: shiftImg.image_url,
-          image_path: shiftImg.image_path,
-        }
+        image_url: shiftImg.image_url,
+        image_path: shiftImg.image_path,
+      }
       : null,
   };
 };
@@ -969,44 +1103,117 @@ export const getAllShiftsByDateRange = async ({
 
   const rawShifts = ((data ?? []) as unknown as ShiftQuery[]).map(mapShiftWithAssignments);
 
-  // Collect all replacement guard ids across shifts
-  const replacementGuardIds = new Set<string>();
+  // Fetch approved swap requests to mark any assignments that were swapped via guard swap requests
+  const { data: swapRequests } = await supabase
+    .from("shift_swap_requests")
+    .select("items")
+    .eq("status", "APPROVED");
+
+  const approvedSwapAssignmentIds = new Set<string>();
+  if (swapRequests) {
+    swapRequests.forEach((req: any) => {
+      if (Array.isArray(req.items)) {
+        req.items.forEach((it: any) => {
+          if (it.assignment_id) {
+            approvedSwapAssignmentIds.add(it.assignment_id);
+          }
+        });
+      }
+    });
+  }
+
+  // Mark swapped assignments with is_swap_approved and collect guard ids for profiles & skills lookup
+  const allGuardIds = new Set<string>();
   rawShifts.forEach((s) => {
     s.assignments.forEach((a) => {
+      if (approvedSwapAssignmentIds.has(a.assignment_id)) {
+        a.is_swap_approved = true;
+      }
+      if (a.guard_id) allGuardIds.add(a.guard_id);
       if (a.replacement_guard_ids) {
-        a.replacement_guard_ids.forEach((id) => replacementGuardIds.add(id));
+        a.replacement_guard_ids.forEach((id) => allGuardIds.add(id));
       }
     });
   });
 
-  if (replacementGuardIds.size > 0) {
-    const { data: dbGuards } = await supabase
+  if (allGuardIds.size > 0) {
+    const { data: dbGuards, error: guardsError } = await supabase
       .from("guards")
       .select(`
         guard_id,
         user_id,
+        notable_skills,
+        height_cm,
+        weight_kg,
         profiles!guards_user_id_fkey (
+          user_id,
           full_name,
           phone_number,
-          avatar_url
+          avatar_url,
+          email
         )
-      `)
-      .in("guard_id", Array.from(replacementGuardIds));
+      `);
+
+    if (guardsError) {
+      console.error("[getAllShiftsByDateRange] Guards Query Error:", guardsError);
+    }
 
     const guardsMapping = dbGuards || [];
 
+    const userIds = Array.from(
+      new Set(
+        guardsMapping
+          .map((g) => g.user_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    const identitiesMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: dbIdentities } = await supabase
+        .from("identities")
+        .select("user_id, identity_id")
+        .in("user_id", userIds);
+
+      (dbIdentities || []).forEach((item: any) => {
+        if (item.user_id && item.identity_id) {
+          identitiesMap[item.user_id] = item.identity_id;
+        }
+      });
+    }
+
     rawShifts.forEach((s) => {
       s.assignments.forEach((a) => {
+        // Map main guard profile info & skills
+        const mainGuard = guardsMapping.find((g) => g.guard_id === a.guard_id || g.user_id === a.guard_id);
+        if (mainGuard) {
+          const profile = Array.isArray(mainGuard.profiles) ? mainGuard.profiles[0] : mainGuard.profiles;
+          const identityId = profile?.user_id ? identitiesMap[profile.user_id] : (mainGuard.user_id ? identitiesMap[mainGuard.user_id] : null);
+          a.notable_skills = Array.isArray(mainGuard.notable_skills) ? mainGuard.notable_skills : [];
+          a.phone_number = profile?.phone_number ?? null;
+          a.avatar_url = profile?.avatar_url ?? null;
+          a.email = profile?.email ?? null;
+          a.height_cm = mainGuard.height_cm ?? null;
+          a.weight_kg = mainGuard.weight_kg ?? null;
+          (a as any).identity_card_number = identityId ?? null;
+        }
+
         if (a.replacement_guard_ids && a.replacement_guard_ids.length > 0) {
           a.replacement_guards = a.replacement_guard_ids.map((repId) => {
-            const mapped = guardsMapping.find((g) => g.guard_id === repId);
+            const mapped = guardsMapping.find((g) => g.guard_id === repId || g.user_id === repId);
             const profile = mapped ? (Array.isArray(mapped.profiles) ? mapped.profiles[0] : mapped.profiles) : null;
+            const identityId = profile?.user_id ? identitiesMap[profile.user_id] : (mapped?.user_id ? identitiesMap[mapped.user_id] : null);
             return {
               guard_id: repId,
               user_id: mapped?.user_id ?? "",
               full_name: profile?.full_name ?? "Chưa có tên",
               phone_number: profile?.phone_number ?? null,
               avatar_url: profile?.avatar_url ?? null,
+              notable_skills: Array.isArray(mapped?.notable_skills) ? mapped.notable_skills : [],
+              height_cm: mapped?.height_cm ?? null,
+              weight_kg: mapped?.weight_kg ?? null,
+              email: profile?.email ?? null,
+              identity_card_number: identityId ?? null,
             };
           });
         } else {
@@ -1050,7 +1257,7 @@ const mapShiftRowToItem = (
   // Determine if this guard is a replacement (their guard_id appears in replacement_guard_ids)
   const isReplacement = guardContext
     ? (row.replacement_guard_ids ?? []).includes(guardContext.guardId) &&
-      row.guard_id !== guardContext.assignmentGuardId
+    row.guard_id !== guardContext.assignmentGuardId
     : false;
 
   return {

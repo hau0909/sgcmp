@@ -8,10 +8,11 @@ type ShiftToolbarProps = {
   selectedLocation: string;
   locations: { address: string; status: string; customer_name?: string; company_name?: string; code?: string }[];
   currentDate: string;
-  onChangeViewMode: (mode: "day" | "week") => void;
+  onChangeViewMode?: (mode: "day" | "week") => void;
   onChangeLocation: (location: string) => void;
   onChangeDate: (date: string) => void;
-  onClickAdd: () => void;
+  onClickAdd?: () => void;
+  hideViewModeToggle?: boolean;
 };
 
 const getContractStatusLabel = (status: string, dict?: any) => {
@@ -546,6 +547,7 @@ export function ShiftToolbar({
   onChangeLocation,
   onChangeDate,
   onClickAdd,
+  hideViewModeToggle = false,
 }: ShiftToolbarProps) {
   const { dict, locale: appLocale } = useTranslation();
   const isEn = appLocale === "en";
@@ -662,31 +664,33 @@ export function ShiftToolbar({
 
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <div className="flex h-10 items-center border border-slate-300 bg-white p-1 rounded-lg">
-        <button
-          type="button"
-          onClick={() => onChangeViewMode("day")}
-          className={`h-8 px-5 text-sm font-medium rounded-md ${
-            viewMode === "day"
-              ? "bg-blue-700 text-white"
-              : "text-slate-600 hover:bg-slate-100"
-          }`}
-        >
-          {dict.shift_toolbar?.view_day || "Ngày"}
-        </button>
+      {!hideViewModeToggle && (
+        <div className="flex h-10 items-center border border-slate-300 bg-white p-1 rounded-lg">
+          <button
+            type="button"
+            onClick={() => onChangeViewMode?.("day")}
+            className={`h-8 px-5 text-sm font-medium rounded-md ${
+              viewMode === "day"
+                ? "bg-blue-700 text-white"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {dict.shift_toolbar?.view_day || "Ngày"}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onChangeViewMode("week")}
-          className={`h-8 px-5 text-sm font-medium rounded-md ${
-            viewMode === "week"
-              ? "bg-blue-700 text-white"
-              : "text-slate-600 hover:bg-slate-100"
-          }`}
-        >
-          {dict.shift_toolbar?.view_week || "Tuần"}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => onChangeViewMode?.("week")}
+            className={`h-8 px-5 text-sm font-medium rounded-md ${
+              viewMode === "week"
+                ? "bg-blue-700 text-white"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {dict.shift_toolbar?.view_week || "Tuần"}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -864,14 +868,16 @@ export function ShiftToolbar({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onClickAdd}
-          className="flex h-10 cursor-pointer items-center gap-2 bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 rounded-lg"
-        >
-          <Plus size={16} />
-          {dict.shift_toolbar?.add_shift_button || "THÊM CA TRỰC"}
-        </button>
+        {onClickAdd && (
+          <button
+            type="button"
+            onClick={onClickAdd}
+            className="flex h-10 cursor-pointer items-center gap-2 bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 rounded-lg"
+          >
+            <Plus size={16} />
+            {dict.shift_toolbar?.add_shift_button || "THÊM CA TRỰC"}
+          </button>
+        )}
       </div>
     </div>
   );

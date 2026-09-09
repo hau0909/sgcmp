@@ -12,6 +12,7 @@ type ShiftScheduleTableProps = {
   shifts: ShiftWithAssignments[];
   selectedLocation?: string;
   weekStartDate?: string;
+  readOnly?: boolean;
 };
 
 type ShiftSegment = {
@@ -223,6 +224,7 @@ export function ShiftScheduleTable({
   shifts,
   selectedLocation = "all",
   weekStartDate,
+  readOnly = false,
 }: ShiftScheduleTableProps) {
   const { dict, locale } = useTranslation();
   const isEn = locale === "en";
@@ -250,6 +252,7 @@ export function ShiftScheduleTable({
         shifts={uniqueShifts}
         selectedLocation={selectedLocation}
         weekStartDate={weekStartDate}
+        readOnly={readOnly}
       />
     );
   }

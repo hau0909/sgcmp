@@ -37,9 +37,21 @@ export type ShiftAssignment = {
     full_name: string;
     phone_number: string | null;
     avatar_url: string | null;
+    notable_skills?: string[];
+    height_cm?: number | null;
+    weight_kg?: number | null;
+    email?: string | null;
   }[];
   is_overtime?: boolean;
   overtime_minutes?: number;
+  is_replacement?: boolean;
+  is_swap_approved?: boolean;
+  notable_skills?: string[];
+  phone_number?: string | null;
+  avatar_url?: string | null;
+  email?: string | null;
+  height_cm?: number | null;
+  weight_kg?: number | null;
 };
 
 export type ShiftWithAssignments = Shift & {
@@ -181,79 +193,79 @@ export type ContractQueryResult = {
   end_date: string;
   status: string;
   booking:
+  | {
+    booking_id: string;
+    company_id: string;
+    company_name?: string | null;
+    company_scope?: string | null;
+    company_position?: string | null;
+    address: string | null;
+    guards_per_slot: number | null;
+    description: string | null;
+    time_slots: string[] | null;
+    day_per_week: string[] | null;
+    customer:
     | {
-        booking_id: string;
-        company_id: string;
-        company_name?: string | null;
-        company_scope?: string | null;
-        company_position?: string | null;
-        address: string | null;
-        guards_per_slot: number | null;
-        description: string | null;
-        time_slots: string[] | null;
-        day_per_week: string[] | null;
-        customer:
-          | {
-              full_name: string | null;
-            }
-          | {
-              full_name: string | null;
-            }[]
-          | null;
-        company:
-          | {
-              company_name: string | null;
-            }
-          | {
-              company_name: string | null;
-            }[]
-          | null;
-        service:
-          | {
-              name: string | null;
-            }
-          | {
-              name: string | null;
-            }[]
-          | null;
-      }
+      full_name: string | null;
+    }
     | {
-        booking_id: string;
-        company_id: string;
-        company_name?: string | null;
-        company_scope?: string | null;
-        company_position?: string | null;
-        address: string | null;
-        guards_per_slot: number | null;
-        description: string | null;
-        time_slots: string[] | null;
-        day_per_week: string[] | null;
-        customer:
-          | {
-              full_name: string | null;
-            }
-          | {
-              full_name: string | null;
-            }[]
-          | null;
-        company:
-          | {
-              company_name: string | null;
-            }
-          | {
-              company_name: string | null;
-            }[]
-          | null;
-        service:
-          | {
-              name: string | null;
-            }
-          | {
-              name: string | null;
-            }[]
-          | null;
-      }[]
+      full_name: string | null;
+    }[]
     | null;
+    company:
+    | {
+      company_name: string | null;
+    }
+    | {
+      company_name: string | null;
+    }[]
+    | null;
+    service:
+    | {
+      name: string | null;
+    }
+    | {
+      name: string | null;
+    }[]
+    | null;
+  }
+  | {
+    booking_id: string;
+    company_id: string;
+    company_name?: string | null;
+    company_scope?: string | null;
+    company_position?: string | null;
+    address: string | null;
+    guards_per_slot: number | null;
+    description: string | null;
+    time_slots: string[] | null;
+    day_per_week: string[] | null;
+    customer:
+    | {
+      full_name: string | null;
+    }
+    | {
+      full_name: string | null;
+    }[]
+    | null;
+    company:
+    | {
+      company_name: string | null;
+    }
+    | {
+      company_name: string | null;
+    }[]
+    | null;
+    service:
+    | {
+      name: string | null;
+    }
+    | {
+      name: string | null;
+    }[]
+    | null;
+  }[]
+  | null;
 };
 
 export interface GuardShiftSimpleItem {
@@ -268,13 +280,13 @@ export interface GuardShiftSimpleItem {
 
 export type ContractGuardsPerSlotQuery = {
   booking:
-    | {
-        guards_per_slot: number | null;
-      }
-    | {
-        guards_per_slot: number | null;
-      }[]
-    | null;
+  | {
+    guards_per_slot: number | null;
+  }
+  | {
+    guards_per_slot: number | null;
+  }[]
+  | null;
 };
 
 export type GetShiftContractsResponse = {
@@ -318,13 +330,13 @@ export type ContractShiftRuleQuery = {
   start_date: string;
   end_date: string;
   booking:
-    | {
-        guards_per_slot: number | null;
-      }
-    | {
-        guards_per_slot: number | null;
-      }[]
-    | null;
+  | {
+    guards_per_slot: number | null;
+  }
+  | {
+    guards_per_slot: number | null;
+  }[]
+  | null;
 };
 
 export type OverlappingGuardShiftQuery = {
@@ -332,19 +344,19 @@ export type OverlappingGuardShiftQuery = {
   guard_id: string;
   replacement_guard_ids: string[] | null;
   shifts:
-    | {
-        shift_id: string;
-        shift_name: string;
-        start_time: string;
-        end_time: string;
-      }
-    | {
-        shift_id: string;
-        shift_name: string;
-        start_time: string;
-        end_time: string;
-      }[]
-    | null;
+  | {
+    shift_id: string;
+    shift_name: string;
+    start_time: string;
+    end_time: string;
+  }
+  | {
+    shift_id: string;
+    shift_name: string;
+    start_time: string;
+    end_time: string;
+  }[]
+  | null;
 };
 
 export type OverlappingGuardShift = {
@@ -383,34 +395,34 @@ export type ShiftAssignmentQuery = {
   created_at: string;
   updated_at: string;
   profiles:
-    | {
-        full_name: string | null;
-      }
-    | {
-        full_name: string | null;
-      }[]
-    | null;
+  | {
+    full_name: string | null;
+  }
+  | {
+    full_name: string | null;
+  }[]
+  | null;
   shift_img?:
-    | {
-        image_url: string;
-        image_path: string | null;
-      }
-    | {
-        image_url: string;
-        image_path: string | null;
-      }[]
-    | null;
+  | {
+    image_url: string;
+    image_path: string | null;
+  }
+  | {
+    image_url: string;
+    image_path: string | null;
+  }[]
+  | null;
 };
 
 export type ShiftContractQuery = {
   bookings:
-    | {
-        address: string | null;
-      }
-    | {
-        address: string | null;
-      }[]
-    | null;
+  | {
+    address: string | null;
+  }
+  | {
+    address: string | null;
+  }[]
+  | null;
 };
 
 export type ShiftQuery = {
@@ -478,81 +490,81 @@ export type ShiftRow = {
   created_at: string;
   updated_at: string;
   shifts:
+  | {
+    shift_id: string;
+    contract_id: string | null;
+    shift_name: string | null;
+    start_time: string;
+    end_time: string;
+    required_guards: number;
+    location: string | null;
+    contracts:
     | {
-        shift_id: string;
-        contract_id: string | null;
-        shift_name: string | null;
-        start_time: string;
-        end_time: string;
-        required_guards: number;
-        location: string | null;
-        contracts:
-          | {
-              contract_id: string;
-              bookings:
-                | {
-                    booking_id: string;
-                    address: string | null;
-                  }
-                | {
-                    booking_id: string;
-                    address: string | null;
-                  }[]
-                | null;
-            }
-          | {
-              contract_id: string;
-              bookings:
-                | {
-                    booking_id: string;
-                    address: string | null;
-                  }
-                | {
-                    booking_id: string;
-                    address: string | null;
-                  }[]
-                | null;
-            }[]
-          | null;
+      contract_id: string;
+      bookings:
+      | {
+        booking_id: string;
+        address: string | null;
       }
-    | {
-        shift_id: string;
-        contract_id: string | null;
-        shift_name: string | null;
-        start_time: string;
-        end_time: string;
-        required_guards: number;
-        location: string | null;
-        contracts:
-          | {
-              contract_id: string;
-              bookings:
-                | {
-                    booking_id: string;
-                    address: string | null;
-                  }
-                | {
-                    booking_id: string;
-                    address: string | null;
-                  }[]
-                | null;
-            }
-          | {
-              contract_id: string;
-              bookings:
-                | {
-                    booking_id: string;
-                    address: string | null;
-                  }
-                | {
-                    booking_id: string;
-                    address: string | null;
-                  }[]
-                | null;
-            }[]
-          | null;
+      | {
+        booking_id: string;
+        address: string | null;
       }[]
+      | null;
+    }
+    | {
+      contract_id: string;
+      bookings:
+      | {
+        booking_id: string;
+        address: string | null;
+      }
+      | {
+        booking_id: string;
+        address: string | null;
+      }[]
+      | null;
+    }[]
     | null;
+  }
+  | {
+    shift_id: string;
+    contract_id: string | null;
+    shift_name: string | null;
+    start_time: string;
+    end_time: string;
+    required_guards: number;
+    location: string | null;
+    contracts:
+    | {
+      contract_id: string;
+      bookings:
+      | {
+        booking_id: string;
+        address: string | null;
+      }
+      | {
+        booking_id: string;
+        address: string | null;
+      }[]
+      | null;
+    }
+    | {
+      contract_id: string;
+      bookings:
+      | {
+        booking_id: string;
+        address: string | null;
+      }
+      | {
+        booking_id: string;
+        address: string | null;
+      }[]
+      | null;
+    }[]
+    | null;
+  }[]
+  | null;
 };
 
 export type GetGuardShiftsServiceParams = {

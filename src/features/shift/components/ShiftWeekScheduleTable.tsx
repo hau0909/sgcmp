@@ -28,6 +28,7 @@ type ShiftWeekScheduleTableProps = {
   shifts: ShiftWithAssignments[];
   selectedLocation: string;
   weekStartDate?: string;
+  readOnly?: boolean;
 };
 
 type WeekDay = {
@@ -152,6 +153,8 @@ function GuardRow({
     setShowSubTooltip(false);
   };
 
+  const isSwapApproved = Boolean(assignment.is_swap_approved);
+
   return (
     <>
       <div
@@ -161,14 +164,19 @@ function GuardRow({
         className="flex items-center justify-between gap-3 rounded bg-slate-50 px-2 py-1.5 hover:bg-blue-50 cursor-pointer transition-colors"
       >
         <div className="flex min-w-0 items-center gap-2">
-          <UserRound size={15} className="shrink-0 text-slate-500" />
+          <UserRound size={15} className={`shrink-0 ${isSwapApproved ? "text-orange-600" : "text-slate-500"}`} />
 
-          <p className="truncate text-sm font-medium text-slate-800">
+          <p className={`truncate text-sm ${isSwapApproved ? "font-extrabold text-orange-900 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-300" : "font-medium text-slate-800"}`}>
             {assignment.guard_name || (dict?.shift_week?.unupdated || "Chưa cập nhật")}
           </p>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {isSwapApproved && (
+            <span className="rounded-full border border-orange-300 bg-orange-100 px-1.5 py-0.5 text-[9px] font-bold text-orange-800">
+              ĐỔI CA
+            </span>
+          )}
           {assignment.is_overtime && (
             <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
               {String(dict?.common?.overtime || "TĂNG CA").toUpperCase()}
@@ -198,7 +206,8 @@ function GuardRow({
 
 type WeekShiftCardProps = {
   shift: ShiftWithAssignments;
-  onShiftClick: (shift: ShiftWithAssignments) => void;
+  onShiftClick?: (shift: ShiftWithAssignments) => void;
+  readOnly?: boolean;
 };
 
 const TOOLTIP_WIDTH = 340;
@@ -569,6 +578,7 @@ export function ShiftWeekScheduleTable({
   shifts,
   selectedLocation,
   weekStartDate,
+  readOnly = false,
 }: ShiftWeekScheduleTableProps) {
   const [selectedShift, setSelectedShift] = useState<ShiftWithAssignments | null>(null);
   const { dict, locale: appLocale } = useTranslation();
@@ -646,6 +656,10 @@ export function ShiftWeekScheduleTable({
     );
   }
 
+  const COLUMN_MIN_WIDTH = 220;
+  const gridTemplateColumns = `repeat(${visibleWeekDays.length}, minmax(${COLUMN_MIN_WIDTH}px, 1fr))`;
+  const minTableWidth = visibleWeekDays.length * COLUMN_MIN_WIDTH;
+
   return (
     <>
       <div
@@ -657,21 +671,15 @@ export function ShiftWeekScheduleTable({
         className={`overflow-x-auto overflow-y-visible rounded-sm border border-slate-300 bg-white ${isDragging ? "cursor-grabbing select-none" : "cursor-grab"
           }`}
       >
-        <div
-          style={{
-            width: `${WEEK_DAY_COLUMN_WIDTH * visibleWeekDays.length}px`,
-          }}
-        >
+        <div className="w-full" style={{ minWidth: `${minTableWidth}px` }}>
           <div
             className="grid border-b border-slate-300"
-            style={{
-              gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
-            }}
+            style={{ gridTemplateColumns }}
           >
             {visibleWeekDays.map((day) => (
               <div
                 key={day.date}
-                className={`border-r border-slate-300 px-4 py-3 text-center ${day.isToday ? "bg-blue-700 text-white" : "bg-slate-100"
+                className={`border-r border-slate-300 px-3 py-3 text-center last:border-r-0 ${day.isToday ? "bg-blue-700 text-white" : "bg-slate-100"
                   }`}
               >
                 <p
@@ -693,21 +701,20 @@ export function ShiftWeekScheduleTable({
 
           <div
             className="grid min-h-[640px]"
-            style={{
-              gridTemplateColumns: `repeat(${visibleWeekDays.length}, ${WEEK_DAY_COLUMN_WIDTH}px)`,
-            }}
+            style={{ gridTemplateColumns }}
           >
             {visibleWeekDays.map((day) => (
               <div
                 key={day.date}
-                className="min-h-[640px] border-r border-slate-300 bg-white p-3"
+                className="min-h-[640px] border-r border-slate-300 bg-white p-2.5 last:border-r-0"
               >
                 <div className="space-y-3">
                   {day.shifts.map((shift) => (
                     <WeekShiftCard
                       key={shift.shift_id}
                       shift={shift}
-                      onShiftClick={(s) => setSelectedShift(s)}
+                      onShiftClick={(s) => !readOnly && setSelectedShift(s)}
+                      readOnly={readOnly}
                     />
                   ))}
                 </div>
@@ -717,7 +724,7 @@ export function ShiftWeekScheduleTable({
         </div>
       </div>
 
-      {selectedShift && (
+      {selectedShift && !readOnly && (
         <ShiftDetailModal
           open={!!selectedShift}
           shift={selectedShift}
@@ -728,7 +735,7 @@ export function ShiftWeekScheduleTable({
   );
 }
 
-function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
+function WeekShiftCard({ shift, onShiftClick, readOnly = false }: WeekShiftCardProps) {
   const { dict } = useTranslation();
   const cardRef = useRef<HTMLButtonElement | null>(null);
   const [tooltipPosition, setTooltipPosition] =
@@ -740,8 +747,9 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
     return (
       <button
         type="button"
-        onClick={() => onShiftClick(shift)}
-        className="w-full rounded-md border border-dashed border-orange-400 bg-orange-50 px-3 py-2 text-left text-orange-700"
+        onClick={() => !readOnly && onShiftClick?.(shift)}
+        className={`w-full rounded-md border border-dashed border-orange-400 bg-orange-50 px-3 py-2 text-left text-orange-700 ${readOnly ? "cursor-default" : "cursor-pointer"
+          }`}
       >
         <div className="flex items-start justify-between gap-2">
           <p className="whitespace-nowrap text-xs font-bold">
@@ -816,14 +824,17 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
       <button
         ref={cardRef}
         type="button"
-        onClick={() => onShiftClick(shift)}
+        onClick={() => !readOnly && onShiftClick?.(shift)}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
-        className={`w-full rounded-md border px-3 py-2 text-left shadow-sm transition-all duration-300 ${
-          hasOvertime
-            ? "border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100/80"
-            : "border-blue-200 bg-blue-100 text-blue-900 hover:bg-blue-200"
-        }`}
+        className={`w-full rounded-md border px-3 py-2 text-left shadow-sm transition-all duration-300 ${readOnly
+          ? hasOvertime
+            ? "border-amber-300 bg-amber-50 text-amber-950 cursor-default"
+            : "border-blue-200 bg-blue-100 text-blue-900 cursor-default"
+          : hasOvertime
+            ? "border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100/80 cursor-pointer"
+            : "border-blue-200 bg-blue-100 text-blue-900 hover:bg-blue-200 cursor-pointer"
+          }`}
       >
         <div className="mb-1.5 flex items-center gap-1.5 flex-wrap">
           {getGroupedStatusBadges(shift, dict).map((badge) => (
@@ -836,17 +847,26 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
           ))}
         </div>
 
-        <div className="space-y-1">
-          <div className="flex items-center gap-2 overflow-visible">
-            <UserRound size={14} className={`shrink-0 ${hasOvertime ? "text-amber-700" : ""}`} />
-            <p className={`whitespace-nowrap text-sm font-bold leading-5 ${hasOvertime ? "text-amber-950" : "text-blue-900"}`}>
-              {getMainGuardName(firstAssignment, dict)}
-              {extraGuardCount > 0 ? (
-                <span className={`ml-1 font-bold ${hasOvertime ? "text-amber-800" : "text-blue-700"}`}>
-                  +{extraGuardCount}
-                </span>
-              ) : null}
-            </p>
+        <div className="space-y-1 min-w-0">
+          <div className="flex items-center gap-2 min-w-0">
+            {(() => {
+              const isFirstSwapApproved = Boolean(firstAssignment?.is_swap_approved);
+              return (
+                <>
+                  <UserRound size={14} className={`shrink-0 ${isFirstSwapApproved ? "text-orange-600" : (hasOvertime ? "text-amber-700" : "")}`} />
+                  <p className="truncate min-w-0 flex-1 text-sm font-bold leading-5" title={getMainGuardName(firstAssignment, dict)}>
+                    <span className={`truncate inline-block max-w-full align-bottom ${isFirstSwapApproved ? "font-extrabold text-orange-900 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-300" : (hasOvertime ? "text-amber-950" : "text-blue-900")}`}>
+                      {getMainGuardName(firstAssignment, dict)}
+                    </span>
+                    {extraGuardCount > 0 ? (
+                      <span className={`ml-1 shrink-0 font-bold ${hasOvertime ? "text-amber-800" : "text-blue-700"}`}>
+                        +{extraGuardCount}
+                      </span>
+                    ) : null}
+                  </p>
+                </>
+              );
+            })()}
           </div>
 
           {shift.assignments.slice(1).map((sa, idx) => {
@@ -865,16 +885,16 @@ function WeekShiftCard({ shift, onShiftClick }: WeekShiftCardProps) {
           })}
         </div>
 
-        <div className={`mt-1.5 flex items-center gap-1.5 text-sm font-medium ${hasOvertime ? "text-amber-900" : "text-blue-800"}`}>
+        <div className={`mt-1.5 flex items-center gap-1.5 text-sm font-medium min-w-0 ${hasOvertime ? "text-amber-900" : "text-blue-800"}`}>
           <Clock size={13} className="shrink-0" />
-          <span className="whitespace-nowrap">
+          <span className="truncate">
             {formatTime(shift.start_time)} - {formatTime(shift.end_time)}
           </span>
         </div>
 
-        <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-semibold ${hasOvertime ? "text-amber-800" : "text-blue-700"}`}>
+        <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-semibold min-w-0 ${hasOvertime ? "text-amber-800" : "text-blue-700"}`}>
           <SquarePen size={12} className="shrink-0" />
-          <span className="whitespace-nowrap">{shift.shift_name}</span>
+          <span className="truncate" title={shift.shift_name}>{shift.shift_name}</span>
         </div>
 
         <div className={`mt-1.5 flex items-center gap-1.5 text-xs font-semibold ${hasOvertime ? "text-amber-800" : "text-blue-700"} min-w-0`}>

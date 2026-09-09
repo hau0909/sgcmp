@@ -77,6 +77,30 @@ export const requestGetAllShiftsByWeek = async ({
   });
 };
 
+export const requestGetCustomerShiftContracts =
+  async (): Promise<GetShiftContractsResponse> => {
+    return fetcher("/api/shifts/customer/contracts", {
+      method: "GET",
+    });
+  };
+
+export const requestGetCustomerShiftsByWeek = async ({
+  date,
+  location = "all",
+}: {
+  date: string;
+  location?: string;
+}): Promise<GetAllShiftsResponse> => {
+  const params = new URLSearchParams({
+    date,
+    location,
+  });
+
+  return fetcher(`/api/shifts/customer/week?${params.toString()}`, {
+    method: "GET",
+  });
+};
+
 export const requestGetGuardShiftsByDay = async ({
   date,
 }: {

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { Dictionary, Locale, getDictionary } from "../../utils/i18n";
+import { Dictionary, Locale, getDictionary, defaultLocale } from "../../utils/i18n";
 
 type LanguageContextType = {
   locale: Locale;
@@ -9,9 +9,15 @@ type LanguageContextType = {
   dict: Dictionary;
 };
 
-const LanguageContext = createContext<LanguageContextType | undefined>(
-  undefined,
-);
+const defaultDict = getDictionary(defaultLocale);
+
+const defaultContextValue: LanguageContextType = {
+  locale: defaultLocale,
+  setLocale: () => {},
+  dict: defaultDict,
+};
+
+const LanguageContext = createContext<LanguageContextType>(defaultContextValue);
 
 export function LanguageProvider({
   children,
@@ -20,13 +26,13 @@ export function LanguageProvider({
   children: React.ReactNode;
   initialLocale: Locale;
 }) {
-  const [locale, setLocaleState] = useState<Locale>(initialLocale);
-  const [dict, setDict] = useState<Dictionary>(getDictionary(initialLocale));
+  const [locale, setLocaleState] = useState<Locale>(initialLocale || defaultLocale);
+  const [dict, setDict] = useState<Dictionary>(getDictionary(initialLocale || defaultLocale));
 
   // Đồng bộ state khi initialLocale đổi từ Server
   useEffect(() => {
-    setLocaleState(initialLocale);
-    setDict(getDictionary(initialLocale));
+    setLocaleState(initialLocale || defaultLocale);
+    setDict(getDictionary(initialLocale || defaultLocale));
   }, [initialLocale]);
 
   // Đồng bộ cookie và localStorage khi component mount
@@ -39,8 +45,8 @@ export function LanguageProvider({
         setDict(getDictionary(savedLocale));
       }
     } else {
-      localStorage.setItem("NEXT_LOCALE", initialLocale);
-      document.cookie = `NEXT_LOCALE=${initialLocale}; path=/; max-age=31536000; SameSite=Lax`;
+      localStorage.setItem("NEXT_LOCALE", initialLocale || defaultLocale);
+      document.cookie = `NEXT_LOCALE=${initialLocale || defaultLocale}; path=/; max-age=31536000; SameSite=Lax`;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -61,8 +67,5 @@ export function LanguageProvider({
 
 export function useTranslation() {
   const context = useContext(LanguageContext);
-  if (!context) {
-    throw new Error("useTranslation must be used within a LanguageProvider");
-  }
-  return context;
+  return context || defaultContextValue;
 }

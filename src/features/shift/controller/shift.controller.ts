@@ -19,6 +19,7 @@ import {
   createWorkShiftService,
   getContractShiftRuleService,
   getShiftContractOptionsService,
+  getCustomerShiftContractOptionsService,
   getOverlappingGuardShiftsService,
   getGuardsShiftsOnDateService,
   getGuardsShiftsInWeekService,
@@ -53,7 +54,10 @@ import {
   approveShiftSwapRequestRepository,
 } from "../repository/shift.repository";
 import { parseBookingSlot, calculateDurationMinutes } from "../utils/shift.utils";
-import { getContractIdsByCompanyService } from "@/features/contract/service/contract.service";
+import {
+  getContractIdsByCompanyService,
+  getContractIdsByCustomerService,
+} from "@/features/contract/service/contract.service";
 import {
   getDayDateRange,
   getWeekDateRange,
@@ -771,6 +775,119 @@ export const handleGetAllShiftsByWeek = async (
     return Response.json(
       {
         message: "Lấy danh sách ca trực theo tuần thành công",
+        data: shifts,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Lấy danh sách ca trực theo tuần thất bại";
+
+    return Response.json({ message }, { status: 400 });
+  }
+};
+
+export const handleGetCustomerShiftContracts = async (): Promise<Response> => {
+  const user = await getUser();
+
+  if (!user) {
+    return Response.json(
+      { message: "Người dùng chưa đăng nhập" },
+      { status: 401 },
+    );
+  }
+
+  try {
+    const profileResponse = await handleGetUserProfile(user.id);
+    const profile = profileResponse.data;
+
+    if (!profile) {
+      return Response.json(
+        { message: "Không tìm thấy thông tin người dùng" },
+        { status: 404 },
+      );
+    }
+
+    if (profile.role !== "customer") {
+      return Response.json(
+        { message: "Bạn không có quyền xem danh sách hợp đồng" },
+        { status: 403 },
+      );
+    }
+
+    const contracts = await getCustomerShiftContractOptionsService(user.id);
+
+    return Response.json(
+      {
+        message: "Lấy danh sách hợp đồng thành công",
+        data: contracts,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Lấy danh sách hợp đồng thất bại";
+
+    return Response.json({ message }, { status: 400 });
+  }
+};
+
+export const handleGetCustomerShiftsByWeek = async (
+  request: Request,
+): Promise<Response> => {
+  try {
+    const user = await getUser();
+
+    if (!user) {
+      return Response.json(
+        { message: "Người dùng chưa đăng nhập" },
+        { status: 401 },
+      );
+    }
+
+    const profileResponse = await handleGetUserProfile(user.id);
+    const profile = profileResponse.data;
+
+    if (!profile || profile.role !== "customer") {
+      return Response.json(
+        { message: "Bạn không có quyền xem ca trực bảo vệ" },
+        { status: 403 },
+      );
+    }
+
+    const { date, location } = getShiftQueryParams(request);
+
+    const contractId = await getContractIdsByCustomerService(
+      user.id,
+      location,
+    );
+
+    if (contractId.length === 0) {
+      return Response.json(
+        {
+          message: "Khách hàng chưa có hợp đồng nào",
+          data: [],
+        },
+        { status: 200 },
+      );
+    }
+
+    const { startTime, endTime } = getWeekDateRange(date);
+
+    const shifts = await getAllShiftsByDateRangeService({
+      contractId,
+      startTime,
+      endTime,
+      location,
+    });
+
+    return Response.json(
+      {
+        message: "Lấy danh sách ca trực theo tuần cho khách hàng thành công",
         data: shifts,
       },
       { status: 200 },
@@ -1754,6 +1871,9 @@ export const handleGetReplacementGuards = async (
         user_id,
         company_id,
         approval_status,
+        notable_skills,
+        height_cm,
+        weight_kg,
         profiles!guards_user_id_fkey (
           user_id,
           full_name,
@@ -1782,6 +1902,10 @@ export const handleGetReplacementGuards = async (
           email: profile?.email ?? "",
           status: profile?.status ?? "active",
           approval_status: g.approval_status ?? "approved",
+          notable_skills: Array.isArray(g.notable_skills) ? g.notable_skills : [],
+          height_cm: g.height_cm ?? null,
+          weight_kg: g.weight_kg ?? null,
+          profiles: profile,
         };
       })
       .filter((g) => g.status !== "unactive" && g.status !== "rejected");
