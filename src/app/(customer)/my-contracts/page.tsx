@@ -34,6 +34,11 @@ export default function CustomerContractsPage() {
 
   // Fetch contracts from API
   useEffect(() => {
+    if (!customerId) {
+      setIsLoading(false);
+      return;
+    }
+
     let active = true;
 
     async function fetchData() {

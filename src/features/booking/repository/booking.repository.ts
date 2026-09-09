@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { BookingWithCustomerProfile, BookingStatus } from "../types";
-import type { Booking } from "@/types/Booking";
+import type { Booking, QuotationType } from "@/types/Booking";
+import { formatAddressService } from "@/features/address/service/address.service";
 
 export const getBookings = async (
   companyId: string,
@@ -77,7 +78,7 @@ export const getBookings = async (
   };
 };
 
-export const getBookingDetail = async (id: string): Promise<any | null> => {
+export const getBookingDetail = async (id: string): Promise<Booking | null> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bookings")
@@ -137,7 +138,7 @@ export const getBookingDetail = async (id: string): Promise<any | null> => {
     throw error;
   }
 
-  return data;
+  return (data as unknown as Booking) || null;
 };
 
 export const getBookingById = async (
@@ -272,7 +273,9 @@ export const updateBookingStatusAndPrice = async (
 
   const { data: booking, error: fetchError } = await supabase
     .from("bookings")
-    .select("company_id, status, start_date, end_date")
+    .select(
+      "company_id, customer_id, status, start_date, end_date, address, company_name, company_scope, company_position",
+    )
     .eq("booking_id", bookingId)
     .maybeSingle();
 
@@ -288,6 +291,7 @@ export const updateBookingStatusAndPrice = async (
   const targetStatus = updates.status;
 
   const isValidTransition =
+    (currentStatus === targetStatus && targetStatus === "accepted") ||
     (currentStatus === "pending" && (targetStatus === "quoted" || targetStatus === "rejected" || targetStatus === "canceled")) ||
     (currentStatus === "quoted" && (targetStatus === "accepted" || targetStatus === "rejected" || targetStatus === "canceled")) ||
     (currentStatus === "rejected" && (targetStatus === "quoted" || targetStatus === "canceled"));
@@ -309,7 +313,7 @@ export const updateBookingStatusAndPrice = async (
     }
   }
 
-  const updatePayload: any = {
+  const updatePayload: Partial<Booking> = {
     status: updates.status,
     updated_at: new Date().toISOString(),
   };
@@ -318,7 +322,7 @@ export const updateBookingStatusAndPrice = async (
     updatePayload.quoted_price = updates.quoted_price;
   }
   if (updates.quotation_type !== undefined) {
-    updatePayload.quotation_type = updates.quotation_type;
+    updatePayload.quotation_type = updates.quotation_type as QuotationType;
   }
   if (updates.hourly_rate !== undefined) {
     updatePayload.hourly_rate = updates.hourly_rate;
@@ -341,42 +345,113 @@ export const updateBookingStatusAndPrice = async (
   let contractId: string | undefined = undefined;
 
   if (updates.status === "accepted") {
-    let signedCompanyName: string | null = null;
-    const companyId = data?.company_id || booking?.company_id;
-    if (companyId) {
-      const { data: companyData } = await supabase
-        .from("companies")
-        .select("company_name")
-        .eq("company_id", companyId)
-        .maybeSingle();
-      if (companyData) {
-        signedCompanyName = companyData.company_name;
+    // Check if contract already exists for this booking
+    const { data: existingContract } = await supabase
+      .from("contracts")
+      .select("contract_id, status")
+      .eq("booking_id", bookingId)
+      .maybeSingle();
+
+    if (existingContract) {
+      contractId = existingContract.contract_id;
+    } else {
+      const companyId = data?.company_id || booking?.company_id;
+      const customerId = data?.customer_id || booking?.customer_id;
+
+      // 1. Insert contract record (valid columns only)
+      const { data: contract, error: contractError } = await supabase
+        .from("contracts")
+        .insert([
+          {
+            booking_id: bookingId,
+            customer_id: customerId,
+            company_id: companyId,
+            start_date: booking.start_date,
+            end_date: booking.end_date,
+            status: "pending_signatures",
+            customer_agreed: false,
+            company_agreed: false,
+          },
+        ])
+        .select("contract_id")
+        .single();
+
+      if (contractError) {
+        console.error("Lỗi khi tự động tạo hợp đồng:", contractError);
+        throw contractError;
+      }
+
+      contractId = contract?.contract_id;
+
+      // 2. Query Party A (Customer) profile snapshot
+      let customerProfile: { full_name?: string; phone_number?: string; email?: string; address?: string } | null = null;
+      if (customerId) {
+        const { data: profData } = await supabase
+          .from("profiles")
+          .select("full_name, phone_number, email, address")
+          .eq("user_id", customerId)
+          .maybeSingle();
+        customerProfile = profData;
+      }
+
+      // 3. Query Party B (Company) snapshot & its legal representative
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      let companyData: { company_name?: string; business_license_no?: string; address?: any; owner_id?: string } | null = null;
+      let ownerProfile: { full_name?: string; phone_number?: string; email?: string } | null = null;
+      let formattedCompanyAddress: string | null = null;
+
+      if (companyId) {
+        const { data: compData } = await supabase
+          .from("companies")
+          .select("company_name, business_license_no, address, owner_id")
+          .eq("company_id", companyId)
+          .maybeSingle();
+        companyData = compData;
+
+        if (compData?.address) {
+          formattedCompanyAddress = await formatAddressService(compData.address);
+        }
+
+        if (compData?.owner_id) {
+          const { data: oProf } = await supabase
+            .from("profiles")
+            .select("full_name, phone_number, email")
+            .eq("user_id", compData.owner_id)
+            .maybeSingle();
+          ownerProfile = oProf;
+        }
+      }
+
+      // 4. Insert snapshot into contract_parties
+      if (contractId) {
+        const { error: partiesError } = await supabase
+          .from("contract_parties")
+          .insert([
+            {
+              contract_id: contractId,
+              customer_name: customerProfile?.full_name || "Khách hàng không tên",
+              customer_phone: customerProfile?.phone_number || null,
+              customer_email: customerProfile?.email || null,
+              customer_address: customerProfile?.address || booking.address || null,
+              customer_company_name: booking.company_name || null,
+              customer_company_scope: booking.company_scope || null,
+              customer_position: booking.company_position || null,
+              company_name: companyData?.company_name || "Doanh nghiệp bảo vệ",
+              business_license_no: companyData?.business_license_no || null,
+              company_address: formattedCompanyAddress || null,
+              company_phone: ownerProfile?.phone_number || null,
+              company_email: ownerProfile?.email || null,
+              representative_name: ownerProfile?.full_name || "Đại diện pháp luật",
+            },
+          ]);
+
+        if (partiesError) {
+          console.error("Lỗi khi tạo bản ghi contract_parties:", partiesError);
+        }
       }
     }
-
-    const { data: contract, error: contractError } = await supabase
-      .from("contracts")
-      .insert([
-        {
-          booking_id: bookingId,
-          start_date: booking.start_date,
-          end_date: booking.end_date,
-          status: "pending_signatures",
-          customer_agreed: false,
-          company_agreed: false,
-          signed_company_name: signedCompanyName,
-        }
-      ])
-      .select("contract_id")
-      .single();
-
-    if (contractError) {
-      console.error("Lỗi khi tự động tạo hợp đồng:", contractError);
-      throw contractError;
-    }
-
-    contractId = contract?.contract_id;
   }
+
 
   return { booking: data as Booking, contract_id: contractId, contract_status: contractId ? "pending_signatures" : undefined };
 };

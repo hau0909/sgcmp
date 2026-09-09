@@ -1,4 +1,5 @@
 import { Contract } from "@/types/Contract";
+import { Booking } from "@/types/Booking";
 import { ContractStatus } from "@/types/Enum";
 import { checkCompanySubscriptionService } from "@/features/subscription/service/subscription.service";
 import {
@@ -14,7 +15,6 @@ import {
   assignGuardsToContractService,
   updateContractDatesService,
 } from "../service/contract.service";
-import { CustomerContract } from "../types";
 
 export const handleGetContracts = async (params: {
   page: number;
@@ -47,31 +47,38 @@ export const handleGetContracts = async (params: {
   );
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const handleGetContractDetail = async (id: string): Promise<any | null> => {
-  return await getContractDetailService(id);
+export const handleGetContractDetail = async (
+  id: string,
+  companyId?: string,
+): Promise<(Contract & { booking?: Booking | null; assigned_guards_list?: { full_name: string; phone_number: string; cccd: string }[]; formatted_price?: string }) | null> => {
+  return await getContractDetailService(id, companyId);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const handleGetCustomerContractDetail = async (id: string, customerId: string): Promise<any | null> => {
+export const handleGetCustomerContractDetail = async (
+  id: string,
+  customerId: string,
+): Promise<(Contract & {
+  booking?: Booking | null;
+  assigned_guards_list?: { full_name: string; phone_number: string; cccd: string }[];
+  formatted_price?: string;
+  has_reviewed?: boolean;
+  review_rating?: number;
+  review_comment?: string;
+}) | null> => {
   return await getCustomerContractDetailService(id, customerId);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const handleSignContractCompany = async (id: string): Promise<any> => {
+export const handleSignContractCompany = async (id: string): Promise<Contract> => {
   return await signContractCompanyService(id);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const handleSignContractCustomer = async (id: string, customerId: string): Promise<any> => {
+export const handleSignContractCustomer = async (id: string, customerId: string): Promise<Contract> => {
   return await signContractCustomerService(id, customerId);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const handleCompleteContractCustomer = async (id: string, customerId: string): Promise<any> => {
+export const handleCompleteContractCustomer = async (id: string, customerId: string): Promise<Contract> => {
   return await completeContractCustomerService(id, customerId);
 };
-
 
 export const handleUploadContractFile = async (id: string, file: File): Promise<string> => {
   return await uploadContractFileService(id, file);
@@ -90,8 +97,8 @@ export const handleGetCustomerContracts = async (
     status?: string;
     startDate?: string;
     endDate?: string;
-  }
-): Promise<{ contracts: CustomerContract[]; totalCount: number }> => {
+  },
+): Promise<{ contracts: Contract[]; totalCount: number }> => {
   const validStatus = (params.status && params.status !== "")
     ? (params.status as ContractStatus)
     : undefined;
@@ -103,14 +110,16 @@ export const handleGetCustomerContracts = async (
     params.search,
     validStatus,
     params.startDate,
-    params.endDate
+    params.endDate,
   );
 };
+
+
 
 export const handleAssignGuardsToContract = async (
   contractId: string,
   guardIds: string[],
-): Promise<{ success: boolean; message: string; contract?: unknown }> => {
+): Promise<{ success: boolean; message: string; contract?: Contract }> => {
   const contract = await assignGuardsToContractService(contractId, guardIds);
   return {
     success: true,
@@ -119,12 +128,11 @@ export const handleAssignGuardsToContract = async (
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const handleUpdateContractDates = async (
   id: string,
   startDate?: string,
   endDate?: string
-): Promise<any> => {
+): Promise<Contract> => {
   return await updateContractDatesService(id, startDate, endDate);
 };
 

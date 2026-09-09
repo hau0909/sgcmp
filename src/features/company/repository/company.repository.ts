@@ -7,6 +7,9 @@ import {
   UpdateCompanyProfileInput,
   UploadCompanyImageServiceParams,
   CompanyPublishRequestItem,
+  UploadCompanyImageResult,
+  PublishRequestRow,
+  AdminCompanyListItem,
 } from "../types";
 import type { Company } from "@/types/Company";
 
@@ -79,7 +82,7 @@ export const getAllActiveCompanies = async (): Promise<DbCompany[]> => {
     throw error;
   }
 
-  return (data as any[]) || [];
+  return (data as unknown as DbCompany[]) || [];
 };
 
 export const getServices = async (): Promise<Service[]> => {
@@ -180,7 +183,7 @@ export const getCompanyByIdWithDetails = async (
     throw error;
   }
 
-  return (data as any) || null;
+  return (data as unknown as DbCompanyDetail) || null;
 };
 
 export const getCompanyById = async (
@@ -207,7 +210,7 @@ export const updateCompanyprofile = async ({
 }: {
   company_id: string;
   input: UpdateCompanyProfileInput;
-}) => {
+}): Promise<Company> => {
   const supabase = await createClient();
 
   const updatePayload: Record<string, any> = {
@@ -235,26 +238,14 @@ export const updateCompanyprofile = async ({
     .from("companies")
     .update(updatePayload)
     .eq("company_id", company_id)
-    .select(
-      `
-      company_id,
-      company_name,
-      description,
-      email,
-      phone,
-      address,
-      business_license_no,
-      allowed_late_minutes,
-      allowed_absent_minutes
-    `,
-    )
+    .select("*")
     .single();
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return data;
+  return data as unknown as Company;
 };
 
 export const updateRegistrationCodeByCompanyId = async ({
@@ -289,7 +280,7 @@ export const uploadCompanyImage = async ({
   company_id,
   file,
   image_type,
-}: UploadCompanyImageServiceParams) => {
+}: UploadCompanyImageServiceParams): Promise<UploadCompanyImageResult> => {
   const supabase = await createClient();
 
   const file_extension = file.name.split(".").pop()?.toLowerCase();
@@ -451,12 +442,12 @@ export const getCompanyPublishRequests = async (): Promise<CompanyPublishRequest
     throw new Error(error.message);
   }
 
-  return (data as any) || [];
+  return (data as unknown as CompanyPublishRequestItem[]) || [];
 };
 
 export const getCompanyPublishRequestById = async (
   requestId: string,
-): Promise<any | null> => {
+): Promise<PublishRequestRow | null> => {
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("company_publish_requests")
@@ -468,7 +459,7 @@ export const getCompanyPublishRequestById = async (
     throw new Error(error.message);
   }
 
-  return data;
+  return (data as unknown as PublishRequestRow) || null;
 };
 
 export const updateCompanyPublishRequestStatus = async (
@@ -526,7 +517,7 @@ export const updateCompanyPublishRequestStatus = async (
   }
 };
 
-export const getAdminCompaniesList = async (): Promise<any[]> => {
+export const getAdminCompaniesList = async (): Promise<AdminCompanyListItem[]> => {
   const supabaseServer = await createClient();
   const { data: companies, error } = await supabaseServer
     .from("companies")
@@ -593,7 +584,7 @@ export const getAdminCompaniesList = async (): Promise<any[]> => {
     console.error("Guards count error:", err);
   }
 
-  return companies.map((c: any) => {
+  return companies.map((c: any): AdminCompanyListItem => {
     const logoObj = c.company_imgs?.find(
       (img: any) => img.image_type === "logo",
     );

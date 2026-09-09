@@ -31,6 +31,8 @@ import {
   UploadCompanyImageServiceParams,
   CompanyPublishRequestItem,
   PublishRequestDetailData,
+  UploadCompanyImageResult,
+  AdminCompanyListItem,
 } from "../types";
 import { getProfileByUserId } from "@/features/profile/repository/profile.repository";
 import { Company } from "@/types/Company";
@@ -447,7 +449,7 @@ export const updateCompanyProfileService = async ({
 }: {
   company_id: string;
   input: UpdateCompanyProfileInput;
-}) => {
+}): Promise<{ company: Company; registration: null }> => {
   const company = await updateCompanyprofile({ company_id, input });
 
   return {
@@ -460,7 +462,7 @@ export const uploadCompanyImageService = async ({
   company_id,
   file,
   image_type,
-}: UploadCompanyImageServiceParams) => {
+}: UploadCompanyImageServiceParams): Promise<UploadCompanyImageResult> => {
   const image = await uploadCompanyImage({
     company_id,
     file,
@@ -554,7 +556,7 @@ export const updateCompanyPublishRequestStatusService = async (
   await updateCompanyPublishRequestStatus(requestId, status, approvedBy, note);
 };
 
-export const getAdminCompaniesListService = async (): Promise<any[]> => {
+export const getAdminCompaniesListService = async (): Promise<AdminCompanyListItem[]> => {
   return await getAdminCompaniesList();
 };
 

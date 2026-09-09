@@ -5,12 +5,11 @@ import { ChevronLeft, ChevronRight, FileText } from "lucide-react";
 import { Contract } from "@/types/Contract";
 import { ContractStatus } from "@/types/Enum";
 import Link from "next/link";
-import { CustomerContract } from "../types";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 import { ContractProgressBar } from "./ContractProgressBar";
 
 interface CustomerContractTableProps {
-  contracts: CustomerContract[];
+  contracts: Contract[];
   totalCount: number;
   page: number;
   limit: number;
@@ -126,8 +125,8 @@ export function CustomerContractTable({
                   <td className="px-3 py-2 whitespace-nowrap text-on-surface font-medium max-w-[160px] truncate" title={contract.service_name || "—"}>
                     {contract.service_name || "—"}
                   </td>
-                  <td className="px-3 py-2 whitespace-nowrap text-on-surface-variant max-w-[200px] truncate" title={contract.company_name || "—"}>
-                    {contract.company_name || "—"}
+                  <td className="px-3 py-2 whitespace-nowrap text-on-surface-variant max-w-[200px] truncate" title={contract.contract_parties?.company_name || "—"}>
+                    {contract.contract_parties?.company_name || "—"}
                   </td>
                   <td className="px-3 py-2 whitespace-nowrap font-mono text-on-surface-variant">
                     {contract.created_at ? new Date(contract.created_at).toLocaleDateString("vi-VN") : "—"}
