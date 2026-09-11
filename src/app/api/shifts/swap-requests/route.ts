@@ -1,7 +1,7 @@
 import {
   handleCreateShiftSwapRequest,
   handleGetCompanySwapRequests,
-} from "@/features/shift/controller/shift-swap.controller";
+} from "@/features/shift/controller/shift.controller";
 
 export async function GET() {
   return handleGetCompanySwapRequests();

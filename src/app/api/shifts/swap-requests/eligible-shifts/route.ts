@@ -1,4 +1,4 @@
-import { handleGetEligibleShiftsForSwap } from "@/features/shift/controller/shift-swap.controller";
+import { handleGetEligibleShiftsForSwap } from "@/features/shift/controller/shift.controller";
 
 export async function GET() {
   return handleGetEligibleShiftsForSwap();

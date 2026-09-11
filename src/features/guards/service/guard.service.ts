@@ -18,12 +18,15 @@ import { getCurrentActivePlanService } from "@/features/subscription/service/sub
 import type {
   InsertGuardInformationRepositoryParams,
   UploadGuardAvatarRepositoryParams,
+  UploadGuardAvatarResult,
   GuardDetail,
   GuardDetailDatabase,
   GuardListPaginatedData,
   GetAllGuardsServiceParams,
   GetGuardPerformanceSummaryParams,
+  GuardPerformanceSummaryData,
   GetGuardPerformanceListParams,
+  GuardPerformanceListItem,
 } from "../type";
 import type { Guard } from "@/types/Guard";
 import {
@@ -43,14 +46,14 @@ export const insertGuardRecordService = async (params: {
   user_id: string;
   company_id: string;
   approval_status?: string;
-}) => {
+}): Promise<{ guard_id: string; user_id: string; company_id: string; approval_status: string; created_at: string }> => {
   return insertGuardRecord(params);
 };
 
 export const approveGuardService = async (params: {
   guard_id: string;
   coordinator_id: string;
-}) => {
+}): Promise<{ guard_id: string; user_id: string; approval_status: string }> => {
   return approveGuardRepository(params);
 };
 
@@ -58,12 +61,13 @@ export const rejectGuardService = async (params: {
   guard_id: string;
   coordinator_id: string;
   rejection_note: string;
-}) => {
+}): Promise<{ guard_id: string; user_id: string; approval_status: string; rejection_note: string | null }> => {
   return rejectGuardRepository(params);
 };
 
 export const completeGuardProfileService = async (params: {
   user_id: string;
+  phone_number?: string | null;
   date_of_birth: string;
   gender: string;
   address: string;
@@ -78,21 +82,21 @@ export const completeGuardProfileService = async (params: {
   notable_skills?: string[] | null;
   health_certificate_path?: string | null;
   skill_certificate_paths?: string[] | null;
-}) => {
+}): Promise<any> => {
   return completeGuardProfileRepository(params);
 };
 
-export const getGuardDetailByUserIdService = async (user_id: string) => {
+export const getGuardDetailByUserIdService = async (user_id: string): Promise<GuardDetailDatabase | null> => {
   return getGuardDetailByUserId(user_id);
 };
 
 export const insertGuardInformationService = async (
   input: InsertGuardInformationRepositoryParams,
-) => {
+): Promise<{ profile: any; guard: any }> => {
   return insertGuardInformation(input);
 };
 
-export const getCoordinatorByCompanyIdService = async (user_id: string) => {
+export const getCoordinatorByCompanyIdService = async (user_id: string): Promise<string> => {
   return getCoordinatorCompanyId(user_id);
 };
 
@@ -135,7 +139,7 @@ export const getAllGuardService = async ({
 export const uploadGuardAvatarService = async ({
   user_id,
   file,
-}: UploadGuardAvatarRepositoryParams) => {
+}: UploadGuardAvatarRepositoryParams): Promise<UploadGuardAvatarResult> => {
   const normalizedUserId = user_id.trim();
 
   if (!normalizedUserId) {
@@ -172,7 +176,7 @@ export const uploadGuardFileService = async ({
   user_id: string;
   file: File;
   type: "avatar" | "cccd_front" | "cccd_back" | "health_certificate" | "skill_certificate";
-}) => {
+}): Promise<UploadGuardAvatarResult> => {
   const normalizedUserId = user_id.trim();
 
   if (!normalizedUserId) {
@@ -321,7 +325,7 @@ export const updateGuardDetailService = async (
     front_url?: string | null;
     back_url?: string | null;
   }
-) => {
+): Promise<void> => {
   if (!params.full_name.trim()) throw new Error("Họ và tên không được để trống");
   if (!params.phone_number.trim()) throw new Error("Số điện thoại không được để trống");
   if (!params.email.trim()) throw new Error("Email không được để trống");
@@ -332,12 +336,12 @@ export const updateGuardDetailService = async (
 
 export const getGuardPerformanceSummaryService = async (
   params: GetGuardPerformanceSummaryParams
-) => {
+): Promise<GuardPerformanceSummaryData> => {
   return getGuardPerformanceSummary(params);
 };
 
 export const getGuardPerformanceListService = async (
   params: GetGuardPerformanceListParams
-) => {
+): Promise<{ guards: GuardPerformanceListItem[]; total: number; totalPages: number }> => {
   return getGuardPerformanceList(params);
 };

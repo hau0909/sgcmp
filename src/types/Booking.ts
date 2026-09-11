@@ -1,4 +1,5 @@
 import type { BookingStatus, QuotationType } from "./Enum";
+import type { Service } from "./Service";
 export type { BookingStatus, QuotationType };
 
 export interface Booking {
@@ -27,10 +28,22 @@ export interface Booking {
   company_position?: string | null;
 
 
-  // Virtual fields for UI rendering
+  // Virtual & joined relation fields for UI rendering
   customer_name?: string;
-  company_contact_person?: string;
+  contact_person?: string;
+  phone?: string;
+  email?: string;
   service_name?: string;
-  contract_status?: string;
+  service_price?: number | null;
+  contract_id?: string | null;
+  contract_status?: string | null;
+  company_contact_person?: string;
+  company_phone?: string;
+  company_email?: string;
+  company_address?: string;
+  client_company_name?: string | null;
+  monthly_discount_percent?: number | null;
+  package_discount_percent?: number | null;
+  services?: Partial<Service> | { name: string | null } | { name: string | null }[] | null;
 }
 

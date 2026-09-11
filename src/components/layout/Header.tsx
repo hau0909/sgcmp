@@ -324,6 +324,16 @@ export default function Header() {
 
                     {profile?.role === "customer" && (
                       <Link
+                        href="/contract-schedule"
+                        onClick={closeMenus}
+                        className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"
+                      >
+                        {dict.common.guardSchedule || "Lịch trực bảo vệ"}
+                      </Link>
+                    )}
+
+                    {profile?.role === "customer" && (
+                      <Link
                         href="/my-reports"
                         onClick={closeMenus}
                         className="block px-4 py-3 text-sm font-medium text-on-surface hover:bg-primary/5 hover:text-primary transition-colors"

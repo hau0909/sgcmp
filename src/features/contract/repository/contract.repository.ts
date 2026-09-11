@@ -3,6 +3,9 @@ import { createClient } from "@/lib/supabase/server";
 import { ContractStatus } from "@/types/Enum";
 import type { CompanyContractQuery } from "@/features/shift/type";
 import { Contract } from "@/types/Contract";
+import { Booking } from "@/types/Booking";
+import { ContractParties } from "@/types/ContractParties";
+import { Review } from "@/types/Review";
 
 export const getContracts = async (
   page: number,
@@ -12,14 +15,15 @@ export const getContracts = async (
   status?: ContractStatus,
   startDate?: string,
   endDate?: string,
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-): Promise<{ data: any[]; count: number }> => {
+): Promise<{ data: Contract[]; count: number }> => {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
   let query = supabase.from("contracts").select(
     `
     contract_id,
+    customer_id,
+    company_id,
     status,
     contract_file_url,
     created_at,
@@ -30,16 +34,10 @@ export const getContracts = async (
     updated_at,
     booking_id,
     guard_assigned,
-    bookings!inner (
+    contract_parties (*),
+    bookings (
       booking_id,
-      address,
-      profiles!inner (
-        full_name
-      ),
-      companies!inner (
-        company_name
-      ),
-      services!inner (
+      services (
         name
       )
     )
@@ -48,7 +46,7 @@ export const getContracts = async (
   );
 
   if (companyId) {
-    query = query.eq("bookings.company_id", companyId);
+    query = query.eq("company_id", companyId);
   }
 
   if (status) {
@@ -76,7 +74,7 @@ export const getContracts = async (
       throw error;
     }
     return {
-      data: data || [],
+      data: ((data as unknown) as Contract[]) || [],
       count: count || 0,
     };
   }
@@ -87,18 +85,18 @@ export const getContracts = async (
   }
 
   const searchClean = search.trim().toLowerCase().replace(/^hd-/i, "");
+  const rawList = ((data as unknown) as Contract[]) || [];
 
-  const filtered = (data || []).filter((item: any) => {
+  const filtered = rawList.filter((item) => {
     const contractId = (item.contract_id || "").toLowerCase();
     const contractCode = `hd-${contractId.slice(0, 8)}`.toLowerCase();
-    const customerName = (item.bookings?.profiles?.full_name || "").toLowerCase();
-    const companyName = (
-      item.signed_company_name ||
-      item.bookings?.company_name ||
-      item.bookings?.companies?.company_name ||
-      ""
-    ).toLowerCase();
-    const serviceName = (item.bookings?.services?.name || "").toLowerCase();
+    const parties = Array.isArray(item.contract_parties)
+      ? item.contract_parties[0]
+      : item.contract_parties;
+    const customerName = (parties?.customer_name || "").toLowerCase();
+    const companyName = (parties?.company_name || "").toLowerCase();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const serviceName = (((item as any).bookings?.services?.name) || item.service_name || "").toLowerCase();
 
     return (
       contractId.includes(searchClean) ||
@@ -110,22 +108,26 @@ export const getContracts = async (
   });
 
   const totalCount = filtered.length;
-  const pagedData = filtered.slice(from, from + limit);
+  const pagedContracts = filtered.slice(from, from + limit);
 
   return {
-    data: pagedData,
+    data: pagedContracts,
     count: totalCount,
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getContractDetail = async (id: string): Promise<any | null> => {
+export const getContractDetail = async (
+  id: string,
+  companyId?: string,
+): Promise<(Contract & { bookings?: Booking | null }) | null> => {
   const supabaseServer = await createClient();
-  const { data, error } = await supabaseServer
+  let query = supabaseServer
     .from("contracts")
     .select(
       `
       contract_id,
+      customer_id,
+      company_id,
       booking_id,
       contract_file_url,
       customer_agreed,
@@ -136,62 +138,34 @@ export const getContractDetail = async (id: string): Promise<any | null> => {
       created_at,
       updated_at,
       guard_assigned,
-      signed_company_name,
-      bookings!inner (
-        booking_id,
-        company_id,
-        address,
-        description,
-        guards_per_slot,
-        time_slots,
-        day_per_week,
-        start_date,
-        end_date,
-        quoted_price,
-        quotation_type,
-        hourly_rate,
-        monthly_rate,
-        status,
-        created_at,
-        updated_at,
-        company_name,
-        company_scope,
-        company_position,
-        profiles!inner (
-          user_id,
-          full_name,
-          phone_number,
-          email,
-          address
-        ),
-        services!inner (
+      contract_parties (*),
+      bookings (
+        *,
+        services (
           service_id,
-          name,
-          description
-        ),
-        companies!inner (
-          company_id,
-          company_name,
-          phone,
-          email,
-          address,
-          business_license_no,
-          owner_id
+          name
         )
       )
     `,
     )
-    .eq("contract_id", id)
-    .maybeSingle();
+    .eq("contract_id", id);
+
+  if (companyId) {
+    query = query.eq("company_id", companyId);
+  }
+
+  const { data, error } = await query.maybeSingle();
 
   if (error) {
     throw error;
   }
-  return data;
+  return ((data as unknown) as (Contract & { bookings?: Booking | null })) || null;
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const updateContract = async (id: string, payload: any): Promise<any> => {
+export const updateContract = async (
+  id: string,
+  payload: Partial<Contract>,
+): Promise<Contract> => {
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("contracts")
@@ -201,15 +175,39 @@ export const updateContract = async (id: string, payload: any): Promise<any> => 
     })
     .eq("contract_id", id)
     .select()
-    .maybeSingle();
+    .single();
 
   if (error) {
     throw error;
   }
-  return data;
+  return data as Contract;
 };
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getCustomerContracts = async (customerId: string, page: number, limit: number, search?: string, status?: ContractStatus, startDate?: string, endDate?: string): Promise<{ data: any[]; count: number }> => {
+
+export const updateContractParties = async (
+  contractId: string,
+  payload: Partial<ContractParties>,
+): Promise<void> => {
+  const supabaseServer = await createClient();
+  const { error } = await supabaseServer
+    .from("contract_parties")
+    .update(payload)
+    .eq("contract_id", contractId);
+
+  if (error) {
+    console.error("Lỗi khi cập nhật contract_parties:", error);
+    throw error;
+  }
+};
+
+export const getCustomerContracts = async (
+  customerId: string,
+  page: number,
+  limit: number,
+  search?: string,
+  status?: ContractStatus,
+  startDate?: string,
+  endDate?: string,
+): Promise<{ data: Contract[]; count: number }> => {
   const from = (page - 1) * limit;
   const to = from + limit - 1;
 
@@ -218,24 +216,30 @@ export const getCustomerContracts = async (customerId: string, page: number, lim
     .select(
       `
         contract_id,
+        booking_id,
+        customer_id,
+        company_id,
         status,
         created_at,
+        updated_at,
         start_date,
         end_date,
+        contract_file_url,
+        customer_agreed,
+        company_agreed,
         guard_assigned,
-        bookings!inner (
-          customer_id,
-          companies!inner (
-            company_name
-          ),
-          services!inner (
+        contract_parties (*),
+        bookings (
+          booking_id,
+          company_name,
+          services (
             name
           )
         )
       `,
       { count: "exact" },
     )
-    .eq("bookings.customer_id", customerId);
+    .eq("customer_id", customerId);
 
   if (status) {
     query = query.eq("status", status);
@@ -260,7 +264,7 @@ export const getCustomerContracts = async (customerId: string, page: number, lim
       throw error;
     }
     return {
-      data: data || [],
+      data: ((data as unknown) as Contract[]) || [],
       count: count || 0,
     };
   }
@@ -272,13 +276,20 @@ export const getCustomerContracts = async (customerId: string, page: number, lim
 
   const searchClean = search.trim().toLowerCase().replace(/^hd-/i, "");
 
-  const filtered = (data || []).filter((item: any) => {
+  const allContracts =
+    ((data as unknown) as (Contract & {
+      bookings?: { company_name?: string; services?: { name?: string } };
+    })[]) || [];
+
+  const filtered = allContracts.filter((item) => {
     const contractId = (item.contract_id || "").toLowerCase();
     const contractCode = `hd-${contractId.slice(0, 8)}`.toLowerCase();
+    const parties = Array.isArray(item.contract_parties)
+      ? item.contract_parties[0]
+      : item.contract_parties;
     const companyName = (
-      item.signed_company_name ||
+      parties?.company_name ||
       item.bookings?.company_name ||
-      item.bookings?.companies?.company_name ||
       ""
     ).toLowerCase();
     const serviceName = (item.bookings?.services?.name || "").toLowerCase();
@@ -292,16 +303,18 @@ export const getCustomerContracts = async (customerId: string, page: number, lim
   });
 
   const totalCount = filtered.length;
-  const pagedData = filtered.slice(from, from + limit);
+  const pagedContracts = filtered.slice(from, from + limit);
 
   return {
-    data: pagedData,
+    data: pagedContracts,
     count: totalCount,
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getCustomerContractDetail = async (id: string, customerId: string): Promise<any | null> => {
+export const getCustomerContractDetail = async (
+  id: string,
+  customerId: string,
+): Promise<(Contract & { bookings?: Booking | null; reviews?: Review[] | null }) | null> => {
   const supabaseServer = await createClient();
   const { data, error } = await supabaseServer
     .from("contracts")
@@ -309,6 +322,8 @@ export const getCustomerContractDetail = async (id: string, customerId: string):
       `
       contract_id,
       booking_id,
+      customer_id,
+      company_id,
       contract_file_url,
       customer_agreed,
       company_agreed,
@@ -318,63 +333,30 @@ export const getCustomerContractDetail = async (id: string, customerId: string):
       created_at,
       updated_at,
       guard_assigned,
-      signed_company_name,
-      reviews (
-        rating,
-        comment
-      ),
-      bookings!inner (
-        booking_id,
-        customer_id,
-        address,
-        description,
-        guards_per_slot,
-        time_slots,
-        day_per_week,
-        start_date,
-        end_date,
-        quoted_price,
-        quotation_type,
-        hourly_rate,
-        monthly_rate,
-        status,
-        created_at,
-        updated_at,
-        company_name,
-        company_scope,
-        company_position,
-        companies!inner (
-          company_id,
-          company_name,
-          phone,
-          email,
-          address,
-          business_license_no,
-          owner_id
-        ),
-        services!inner (
+      reviews (*),
+      contract_parties (*),
+      bookings (
+        *,
+        services (
           service_id,
-          name,
-          description
-        ),
-        profiles!inner (
-          user_id,
-          full_name,
-          phone_number,
-          email,
-          address
+          name
         )
       )
     `,
     )
     .eq("contract_id", id)
-    .eq("bookings.customer_id", customerId)
+    .eq("customer_id", customerId)
     .maybeSingle();
 
   if (error) {
     throw error;
   }
-  return data;
+  return (
+    ((data as unknown) as Contract & {
+      bookings?: Booking | null;
+      reviews?: Review[] | null;
+    }) || null
+  );
 };
 
 export const getContractIdsByCompany = async (
@@ -383,32 +365,66 @@ export const getContractIdsByCompany = async (
 ): Promise<string[]> => {
   const supabase = await createClient();
 
-  let query = supabase
-    .from("contracts")
-    .select(
-      `
-        contract_id,
-        bookings!inner (
-          company_id,
-          address
-        )
-      `,
-    )
-    .eq("bookings.company_id", companyId);
-
   if (location && location !== "all") {
-    query = query.eq("bookings.address", location);
+    const { data, error } = await supabase
+      .from("contracts")
+      .select("contract_id, bookings!inner(address)")
+      .eq("company_id", companyId)
+      .eq("bookings.address", location);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const contracts = (data ?? []) as unknown as CompanyContractQuery[];
+    return contracts.map((contract) => contract.contract_id);
   }
 
-  const { data, error } = await query;
+  const { data, error } = await supabase
+    .from("contracts")
+    .select("contract_id")
+    .eq("company_id", companyId);
 
   if (error) {
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as CompanyContractQuery[]).map(
-    (contract) => contract.contract_id,
-  );
+  const contracts = (data ?? []) as unknown as CompanyContractQuery[];
+  return contracts.map((contract) => contract.contract_id);
+};
+
+export const getContractIdsByCustomer = async (
+  customerId: string,
+  location?: string,
+): Promise<string[]> => {
+  const supabase = await createClient();
+
+  if (location && location !== "all") {
+    const { data, error } = await supabase
+      .from("contracts")
+      .select("contract_id, bookings!inner(address, customer_id)")
+      .eq("bookings.customer_id", customerId)
+      .eq("bookings.address", location);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const contracts = (data ?? []) as unknown as CompanyContractQuery[];
+    return contracts.map((contract) => contract.contract_id);
+  }
+
+  const { data, error } = await supabase
+    .from("contracts")
+    .select("contract_id, bookings!inner(customer_id)")
+    .eq("bookings.customer_id", customerId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const contracts = (data ?? []) as unknown as CompanyContractQuery[];
+  return contracts.map((contract) => contract.contract_id);
 };
 
 export const getContractById = async (

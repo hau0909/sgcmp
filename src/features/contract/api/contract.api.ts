@@ -23,8 +23,9 @@ export async function requestGetContracts(params: {
   });
 }
 
-export async function requestGetContractDetail(id: string) {
-  return await fetcher(`/api/contracts/${id}`, {
+export async function requestGetContractDetail(id: string, companyId?: string) {
+  const query = companyId ? `?companyId=${encodeURIComponent(companyId)}` : "";
+  return await fetcher(`/api/contracts/${id}${query}`, {
     method: "GET",
   });
 }

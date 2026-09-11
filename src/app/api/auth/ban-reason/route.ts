@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import { getBanReasonByUserId } from "@/features/account/repository/account.repository";
+import { handleGetBanReasonByUserId } from "@/features/account/controller/account.controller";
 
 export const GET = async () => {
   try {
@@ -18,9 +18,9 @@ export const GET = async () => {
       );
     }
 
-    const banReason = await getBanReasonByUserId(user.id);
+    const result = await handleGetBanReasonByUserId(user.id);
 
-    return NextResponse.json({ success: true, data: banReason });
+    return NextResponse.json(result, { status: result.status });
   } catch (err: unknown) {
     const message =
       err instanceof Error ? err.message : "Lấy lý do khóa thất bại";

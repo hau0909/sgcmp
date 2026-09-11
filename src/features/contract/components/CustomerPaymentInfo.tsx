@@ -23,22 +23,22 @@ export function CustomerPaymentInfo({
     switch (quotationType) {
       case "hourly":
         return {
-          label: "Theo Giờ",
+          label: dict.contract?.detail?.type_hourly || "Theo Giờ",
           className: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800",
         };
       case "monthly":
         return {
-          label: "Theo Tháng",
+          label: dict.contract?.detail?.type_monthly || "Theo Tháng",
           className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
         };
       case "package":
         return {
-          label: "Theo Gói",
+          label: dict.contract?.detail?.type_package || "Theo Gói",
           className: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800",
         };
       default:
         return {
-          label: "Theo Tháng",
+          label: dict.contract?.detail?.type_monthly || "Theo Tháng",
           className: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
         };
     }
@@ -62,7 +62,7 @@ export function CustomerPaymentInfo({
       <div className="space-y-4">
         <div className="flex flex-col">
           <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-            {dict.contract.detail.total_amount || "GIÁ THUÊ HỢP ĐỒNG"}
+            {dict.contract?.detail?.total_rental_price || dict.contract.detail.total_amount || "GIÁ THUÊ HỢP ĐỒNG"}
           </span>
           <span className="text-2xl font-black text-primary font-mono tracking-tight flex items-center gap-1">
             {totalValue}
@@ -72,7 +72,7 @@ export function CustomerPaymentInfo({
         {unitPriceDetail && (
           <div className="flex flex-col pt-2 border-t border-outline-variant/30">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-              CHI TIẾT ĐƠN GIÁ
+              {dict.contract?.detail?.unit_price_details || "CHI TIẾT ĐƠN GIÁ"}
             </span>
             <span className="text-sm font-semibold text-on-surface">
               {unitPriceDetail}
@@ -83,10 +83,10 @@ export function CustomerPaymentInfo({
         {totalHours && quotationType === "hourly" && (
           <div className="flex flex-col pt-2 border-t border-outline-variant/30">
             <span className="text-[11px] font-bold text-on-surface-variant uppercase tracking-wider mb-1">
-              TỔNG SỐ GIỜ THUÊ
+              {dict.contract?.detail?.total_rental_hours || "TỔNG SỐ GIỜ THUÊ"}
             </span>
             <span className="text-sm font-semibold text-on-surface">
-              {totalHours} giờ
+              {totalHours} {dict.contract?.detail?.hours_unit || "giờ"}
             </span>
           </div>
         )}

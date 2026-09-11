@@ -16,6 +16,8 @@ export const getAllAccounts = async (): Promise<Profile[]> => {
   return (data as Profile[]) || [];
 };
 
+export const getAccountList = getAllAccounts;
+
 export const getAccountByUserId = async (
   userId: string,
 ): Promise<Profile | null> => {
@@ -36,7 +38,7 @@ export const banAccount = async (
   userId: string,
   reason: string,
   bannedBy: string
-) => {
+): Promise<{ status: string }[] | null> => {
   const { error, data } = await supabase
     .from("profiles")
     .update({ status: "banned" })
@@ -79,4 +81,3 @@ export const getBanReasonByUserId = async (
 
   return (data as ReasonBan) || null;
 };
-

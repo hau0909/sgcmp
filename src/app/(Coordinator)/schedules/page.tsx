@@ -143,7 +143,7 @@ function ShiftScheduleSkeleton({ viewMode }: ShiftScheduleSkeletonProps) {
 
 export default function ShiftSchedulePage() {
   const [viewMode, setViewMode] = useState<"day" | "week">("day");
-  const [selectedLocation, setSelectedLocation] = useState("");
+  const [selectedLocation, setSelectedLocation] = useState("all");
   const [currentDate, setCurrentDate] = useState(getTodayKey());
   const [shifts, setShifts] = useState<ShiftWithAssignments[]>([]);
   const [contracts, setContracts] = useState<ContractOption[]>([]);
@@ -234,14 +234,34 @@ export default function ShiftSchedulePage() {
     return getUniqueLocationsFromContracts(contracts);
   }, [contracts]);
 
+  const handleChangeViewMode = useCallback(
+    (mode: "day" | "week") => {
+      setViewMode(mode);
+      if (mode === "week" && selectedLocation === "all") {
+        if (locationOptions.length > 0) {
+          setSelectedLocation(locationOptions[0].address);
+        }
+      }
+    },
+    [selectedLocation, locationOptions],
+  );
+
   useEffect(() => {
-    if (locationOptions.length > 0 && !selectedLocation) {
-      setSelectedLocation(locationOptions[0].address);
+    if (locationOptions.length > 0) {
+      if (viewMode === "week" && selectedLocation === "all") {
+        setSelectedLocation(locationOptions[0].address);
+      } else if (!selectedLocation) {
+        setSelectedLocation(viewMode === "day" ? "all" : locationOptions[0].address);
+      }
     }
-  }, [locationOptions, selectedLocation]);
+  }, [locationOptions, selectedLocation, viewMode]);
 
   const tableLocations = useMemo(() => {
     const contractLocations = getUniqueLocationsFromContracts(contracts).map((c) => c.address);
+
+    if (selectedLocation === "all") {
+      return contractLocations;
+    }
 
     return contractLocations.filter(
       (location) => location === selectedLocation,
@@ -255,7 +275,7 @@ export default function ShiftSchedulePage() {
         selectedLocation={selectedLocation}
         locations={locationOptions}
         currentDate={currentDate}
-        onChangeViewMode={setViewMode}
+        onChangeViewMode={handleChangeViewMode}
         onChangeLocation={setSelectedLocation}
         onChangeDate={setCurrentDate}
         onClickAdd={() => setIsCreateShiftModalOpen(true)}
@@ -271,6 +291,7 @@ export default function ShiftSchedulePage() {
         <ShiftScheduleTable
           viewMode={viewMode}
           locations={tableLocations}
+          contracts={contracts}
           shifts={shifts}
           selectedLocation={selectedLocation}
           weekStartDate={currentDate}

@@ -1,20 +1,20 @@
 import { Contract } from "@/types/Contract";
+import { Booking } from "@/types/Booking";
 import { ContractStatus } from "@/types/Enum";
-import { CustomerContract } from "../types";
 import { getCurrentUserProfileService } from "@/features/auth/service/auth.service";
-import { getProfileByUserIdService } from "@/features/profile/service/profile.service";
 import { getCompanyByOwnerIdService, getCoordinatorByCompanyIdService } from "@/features/guards/service/guard.service";
 import {
   getContracts,
   getContractDetail,
   updateContract,
+  updateContractParties,
   getCustomerContracts,
   getCustomerContractDetail,
   getContractIdsByCompany,
+  getContractIdsByCustomer,
   getContractById
 } from "../repository/contract.repository";
 import { createClient } from "@/lib/supabase/server";
-import { formatAddressService } from "@/features/address/service/address.service";
 import { 
   validateContractExpiration, 
   validateAssignGuardsRules, 
@@ -41,16 +41,20 @@ export const getContractsService = async (
     endDate,
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const formattedContracts: Contract[] = data.map((item: any) => {
-    const booking = item.bookings;
-    const profile = booking?.profiles;
+  const formattedContracts: Contract[] = data.map((item: Contract) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const booking = (item as any).bookings;
     const service = booking?.services;
-    const serviceName = service?.name || "Dịch vụ chưa xác định";
+    const serviceName = service?.name || item.service_name || "Dịch vụ chưa xác định";
+    const parties = Array.isArray(item.contract_parties)
+      ? item.contract_parties[0]
+      : item.contract_parties;
 
     return {
       contract_id: item.contract_id,
       booking_id: item.booking_id || booking?.booking_id || "",
+      customer_id: item.customer_id || booking?.customer_id || null,
+      company_id: item.company_id || booking?.company_id || null,
       contract_file_url: item.contract_file_url,
       customer_agreed: item.customer_agreed || false,
       company_agreed: item.company_agreed || false,
@@ -61,9 +65,11 @@ export const getContractsService = async (
       updated_at: item.updated_at,
       guard_assigned: item.guard_assigned || [],
 
+      // Snapshot parties information
+      contract_parties: parties || null,
+
       // Virtual/mapped fields for UI rendering
       contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
-      customer_name: profile?.full_name || "Khách hàng không tên",
       service_name: serviceName,
     };
   });
@@ -74,21 +80,20 @@ export const getContractsService = async (
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getContractDetailService = async (id: string): Promise<any | null> => {
-  const item = await getContractDetail(id);
+export const getContractDetailService = async (
+  id: string,
+  companyId?: string,
+): Promise<(Contract & { booking?: Booking | null; assigned_guards_list?: { full_name: string; phone_number: string; cccd: string }[]; formatted_price?: string }) | null> => {
+  const item = await getContractDetail(id, companyId);
   if (!item) return null;
 
-  const booking = item.bookings;
-  const profile = booking?.profiles;
-  const service = booking?.services;
-  const company = booking?.companies;
-  const serviceName = service?.name || "Dịch vụ chưa xác định";
+  const rawBooking = item.bookings;
+  const booking = Array.isArray(rawBooking) ? rawBooking[0] : rawBooking;
+  const parties = Array.isArray(item.contract_parties)
+    ? item.contract_parties[0]
+    : item.contract_parties;
 
   // Helper function to format package price per user requirement:
-  // theo giờ: 30.000 đ/giờ
-  // theo tháng: 3.000.000 đ/tháng
-  // theo gói: 30.000.000 đ
   const quotationType = booking?.quotation_type || "monthly";
   const rawPrice = Number(booking?.quoted_price || 0);
   const hourlyRate = booking?.hourly_rate ? Number(booking.hourly_rate) : null;
@@ -99,25 +104,12 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
   let formattedPrice = "";
   if (quotationType === "hourly") {
     const rate = hourlyRate || rawPrice;
-    formattedPrice = `${formatVND(rate)} đ/giờ`;
+    formattedPrice = `${formatVND(rate)} VNĐ / giờ / nhân sự`;
   } else if (quotationType === "monthly") {
     const rate = monthlyRate || rawPrice;
-    formattedPrice = `${formatVND(rate)} đ/tháng`;
+    formattedPrice = `${formatVND(rate)} VNĐ/tháng`;
   } else {
-    formattedPrice = `${formatVND(rawPrice)} đ`;
-  }
-
-  const currentCompanyName = company?.company_name || "Công ty chưa xác định";
-  const signedCompanyName = item.signed_company_name || null;
-  const isCompanyNameChanged = !!signedCompanyName && signedCompanyName !== currentCompanyName;
-
-  // Fetch company owner (representative) profile
-  let ownerName = "Chưa cập nhật";
-  if (company?.owner_id) {
-    const ownerProfile = await getProfileByUserIdService(company.owner_id);
-    if (ownerProfile) {
-      ownerName = ownerProfile.full_name || "Chưa cập nhật";
-    }
+    formattedPrice = `${formatVND(rawPrice)} VNĐ`;
   }
 
   // Fetch assigned guards profiles
@@ -136,6 +128,7 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
       `)
       .in("user_id", guardIds);
     if (profilesData) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       assignedGuards = profilesData.map((p: any) => ({
         full_name: p.full_name || "Bảo vệ chưa đặt tên",
         phone_number: p.phone_number || "Chưa có SĐT",
@@ -144,11 +137,11 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
     }
   }
 
-  const formattedCompanyAddress = await formatAddressService(company?.address);
-
   return {
     contract_id: item.contract_id,
     booking_id: item.booking_id || booking?.booking_id || "",
+    customer_id: item.customer_id || null,
+    company_id: item.company_id || null,
     contract_file_url: item.contract_file_url,
     customer_agreed: item.customer_agreed || false,
     company_agreed: item.company_agreed || false,
@@ -159,77 +152,19 @@ export const getContractDetailService = async (id: string): Promise<any | null> 
     updated_at: item.updated_at,
     guard_assigned: item.guard_assigned || [],
 
+    // Snapshot parties information
+    contract_parties: parties || null,
+
     // Virtual/mapped fields for UI rendering
     contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
-    customer_name: profile?.full_name || "Khách hàng không tên",
-    service_name: serviceName,
+    service_name:
+      booking?.services?.name ||
+      booking?.service_name ||
+      "Dịch vụ bảo vệ",
 
     // Booking details
-    booking: booking
-      ? {
-        booking_id: booking.booking_id,
-        company_id: booking.company_id,
-        address: booking.address,
-        description: booking.description || null,
-        guards_per_slot: booking.guards_per_slot || 1,
-        time_slots: booking.time_slots || [],
-        day_per_week: booking.day_per_week || [],
-        start_date: booking.start_date,
-        end_date: booking.end_date,
-        quoted_price: booking.quoted_price,
-        quotation_type: booking.quotation_type || null,
-        hourly_rate: booking.hourly_rate || null,
-        monthly_rate: booking.monthly_rate || null,
-        formatted_price: formattedPrice,
-        status: booking.status,
-        company_name: booking.company_name || null,
-        company_scope: booking.company_scope || null,
-        company_position: booking.company_position || null,
-        profiles: profile
-          ? {
-            user_id: profile.user_id,
-            full_name: profile.full_name || "Khách hàng không tên",
-            phone_number: profile.phone_number || "Không có SĐT",
-            email: profile.email || "Không có Email",
-            address: profile.address || "Chưa cập nhật địa chỉ",
-          }
-          : null,
-        services: service
-          ? {
-            service_id: service.service_id,
-            name: service.name,
-            description: service.description || null,
-          }
-          : null,
-      }
-      : null,
-
-    // Compiled company, customer, and guard fields for contract exporting
-    company: {
-      name: currentCompanyName,
-      signed_name: signedCompanyName || currentCompanyName,
-      is_name_changed: isCompanyNameChanged,
-      phone: company?.phone || "Chưa cập nhật",
-      email: company?.email || "Chưa cập nhật",
-      address: formattedCompanyAddress || "Chưa cập nhật",
-      tax_code: company?.business_license_no || "Chưa cập nhật",
-      representative: ownerName,
-      position: "Đại diện pháp luật",
-    },
-    signed_company_name: signedCompanyName,
-    is_company_name_changed: isCompanyNameChanged,
-    quotation_type: quotationType,
+    booking: booking || null,
     formatted_price: formattedPrice,
-    customer: {
-      company_name: booking?.company_name || "",
-      address: booking?.address || profile?.address || "Chưa cập nhật",
-      tax_code: "",
-      phone: profile?.phone_number || "Chưa cập nhật",
-      email: profile?.email || "Chưa cập nhật",
-      representative: profile?.full_name || "Khách hàng không tên",
-      position: booking?.company_position || "",
-      company_scope: booking?.company_scope || "",
-    },
     assigned_guards_list: assignedGuards,
   };
 };
@@ -258,21 +193,23 @@ export const deleteContractFileFromStorage = async (
   }
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const signContractCompanyService = async (id: string): Promise<any> => {
+export const signContractCompanyService = async (id: string): Promise<Contract> => {
   const contract = await getContractDetail(id);
   if (!contract) {
     throw new Error("Không tìm thấy hợp đồng");
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payload: any = {
+  const payload: Partial<Contract> = {
     company_agreed: true,
   };
 
   if (contract.customer_agreed) {
     payload.status = "active";
   }
+
+  await updateContractParties(id, {
+    company_signed_at: new Date().toISOString(),
+  });
 
   return await updateContract(id, payload);
 };
@@ -352,7 +289,7 @@ export const getCustomerContractsService = async (
   status?: ContractStatus,
   startDate?: string,
   endDate?: string,
-): Promise<{ contracts: CustomerContract[]; totalCount: number }> => {
+): Promise<{ contracts: Contract[]; totalCount: number }> => {
   const { data, count } = await getCustomerContracts(
     customerId,
     page,
@@ -363,33 +300,36 @@ export const getCustomerContractsService = async (
     endDate,
   );
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const formattedContracts: CustomerContract[] = data.map((item: any) => {
-    const booking = item.bookings;
+  const formattedContracts: Contract[] = data.map((item: Contract) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const booking = (item as any).bookings;
     const service = booking?.services;
-    const company = booking?.companies;
-    const serviceName = service?.name || "Dịch vụ chưa xác định";
-    const companyName = company?.company_name || "Công ty chưa xác định";
+    const parties = Array.isArray(item.contract_parties)
+      ? item.contract_parties[0]
+      : item.contract_parties;
+    const serviceName = service?.name || item.service_name || "Dịch vụ chưa xác định";
 
     return {
       contract_id: item.contract_id,
-      status: item.status,
-      created_at: item.created_at,
+      booking_id: item.booking_id || booking?.booking_id || "",
+      customer_id: item.customer_id || booking?.customer_id || null,
+      company_id: item.company_id || booking?.company_id || null,
+      contract_file_url: item.contract_file_url,
+      customer_agreed: item.customer_agreed || false,
+      company_agreed: item.company_agreed || false,
       start_date: item.start_date || null,
       end_date: item.end_date || null,
+      status: item.status,
+      created_at: item.created_at,
+      updated_at: item.updated_at,
       guard_assigned: item.guard_assigned || [],
 
-      // Secondary fields: provided as defaults per Contract interface but excluded from DB query
-      booking_id: "",
-      contract_file_url: null,
-      customer_agreed: false,
-      company_agreed: false,
-      updated_at: item.created_at,
+      // Snapshot parties
+      contract_parties: parties || null,
 
-      // UI specific virtual fields
+      // Virtual fields
       contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
       service_name: serviceName,
-      company_name: companyName,
     };
   });
 
@@ -399,8 +339,7 @@ export const getCustomerContractsService = async (
   };
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const signContractCustomerService = async (id: string, customerId: string): Promise<any> => {
+export const signContractCustomerService = async (id: string, customerId: string): Promise<Contract> => {
   const contract = await getCustomerContractDetail(id, customerId);
   if (!contract) {
     throw new Error("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập");
@@ -408,8 +347,7 @@ export const signContractCustomerService = async (id: string, customerId: string
 
   validateCustomerSignatureEligibility(contract.customer_agreed, contract.guard_assigned);
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payload: any = {
+  const payload: Partial<Contract> = {
     customer_agreed: true,
   };
 
@@ -419,11 +357,14 @@ export const signContractCustomerService = async (id: string, customerId: string
     }
   }
 
+  await updateContractParties(id, {
+    customer_signed_at: new Date().toISOString(),
+  });
+
   return await updateContract(id, payload);
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const completeContractCustomerService = async (id: string, customerId: string): Promise<any> => {
+export const completeContractCustomerService = async (id: string, customerId: string): Promise<Contract> => {
   const contract = await getCustomerContractDetail(id, customerId);
   if (!contract) {
     throw new Error("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập");
@@ -441,17 +382,25 @@ export const completeContractCustomerService = async (id: string, customerId: st
 };
 
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-export const getCustomerContractDetailService = async (id: string, customerId: string): Promise<any | null> => {
+export const getCustomerContractDetailService = async (
+  id: string,
+  customerId: string,
+): Promise<(Contract & {
+  booking?: Booking | null;
+  assigned_guards_list?: { full_name: string; phone_number: string; cccd: string }[];
+  formatted_price?: string;
+  has_reviewed?: boolean;
+  review_rating?: number;
+  review_comment?: string;
+}) | null> => {
   const item = await getCustomerContractDetail(id, customerId);
   if (!item) return null;
 
-  const booking = item.bookings;
-  const service = booking?.services;
-  const company = booking?.companies;
-  const profile = booking?.profiles;
-  const serviceName = service?.name || "Dịch vụ chưa xác định";
-  const companyName = company?.company_name || "Công ty chưa xác định";
+  const rawBooking = item.bookings;
+  const booking = Array.isArray(rawBooking) ? rawBooking[0] : rawBooking;
+  const parties = Array.isArray(item.contract_parties)
+    ? item.contract_parties[0]
+    : item.contract_parties;
 
   const reviewData = item.reviews?.[0] || null;
 
@@ -465,25 +414,12 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
   let formattedPrice = "";
   if (quotationType === "hourly") {
     const rate = hourlyRate || rawPrice;
-    formattedPrice = `${formatVND(rate)} đ/giờ`;
+    formattedPrice = `${formatVND(rate)} VNĐ / giờ / nhân sự`;
   } else if (quotationType === "monthly") {
     const rate = monthlyRate || rawPrice;
-    formattedPrice = `${formatVND(rate)} đ/tháng`;
+    formattedPrice = `${formatVND(rate)} VNĐ/tháng`;
   } else {
-    formattedPrice = `${formatVND(rawPrice)} đ`;
-  }
-
-  const currentCompanyName = company?.company_name || "Công ty chưa xác định";
-  const signedCompanyName = item.signed_company_name || null;
-  const isCompanyNameChanged = !!signedCompanyName && signedCompanyName !== currentCompanyName;
-
-  // Fetch company owner (representative) profile
-  let ownerName = "Chưa cập nhật";
-  if (company?.owner_id) {
-    const ownerProfile = await getProfileByUserIdService(company.owner_id);
-    if (ownerProfile) {
-      ownerName = ownerProfile.full_name || "Chưa cập nhật";
-    }
+    formattedPrice = `${formatVND(rawPrice)} VNĐ`;
   }
 
   // Fetch assigned guards profiles
@@ -502,6 +438,7 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
       `)
       .in("user_id", guardIds);
     if (profilesData) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       assignedGuards = profilesData.map((p: any) => ({
         full_name: p.full_name || "Bảo vệ chưa đặt tên",
         phone_number: p.phone_number || "Chưa có SĐT",
@@ -510,71 +447,55 @@ export const getCustomerContractDetailService = async (id: string, customerId: s
     }
   }
 
-  const formattedCompanyAddress = await formatAddressService(company?.address);
-
   return {
     contract_id: item.contract_id,
-    customer_id: booking?.customer_id,
-    company_id: company?.company_id,
-    contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
-    status: item.status,
+    booking_id: item.booking_id || booking?.booking_id || "",
+    customer_id: item.customer_id || booking?.customer_id || null,
+    company_id: item.company_id || booking?.company_id || null,
+    contract_file_url: item.contract_file_url || null,
     customer_agreed: item.customer_agreed || false,
     company_agreed: item.company_agreed || false,
-    created_at: item.created_at,
-    updated_at: item.updated_at,
     start_date: item.start_date || null,
     end_date: item.end_date || null,
-    contract_file_url: item.contract_file_url || null,
+    status: item.status,
+    created_at: item.created_at,
+    updated_at: item.updated_at,
     guard_assigned: item.guard_assigned || [],
 
-    // Review specific virtual fields
+    // Snapshot parties
+    contract_parties: parties || null,
+
+    // Virtual fields
+    contract_code: `HD-${item.contract_id.slice(0, 8).toUpperCase()}`,
+    service_name:
+      booking?.services?.name ||
+      booking?.service_name ||
+      "Dịch vụ bảo vệ",
+
+    // Booking & pricing
+    booking: booking || null,
+    formatted_price: formattedPrice,
+    assigned_guards_list: assignedGuards,
+
+    // Review fields
     has_reviewed: !!reviewData,
     review_rating: reviewData?.rating || 0,
     review_comment: reviewData?.comment || "",
-
-    // UI specific virtual fields
-    service_name: serviceName,
-    company_name: companyName,
-    guards_per_slot: booking?.guards_per_slot || 1,
-    duration: `${item.start_date ? new Date(item.start_date).toLocaleDateString("vi-VN") : "..."} - ${item.end_date ? new Date(item.end_date).toLocaleDateString("vi-VN") : "..."}`,
-    location: booking?.address || "Chưa cập nhật địa chỉ",
-    time_slots: booking?.time_slots || [],
-    description: booking?.description || null,
-    formatted_price: formattedPrice || "Chưa báo giá",
-
-    company: {
-      name: currentCompanyName,
-      signed_name: signedCompanyName || currentCompanyName,
-      is_name_changed: isCompanyNameChanged,
-      phone: company?.phone || "Chưa cập nhật",
-      email: company?.email || "Chưa cập nhật",
-      address: formattedCompanyAddress || "Chưa cập nhật",
-      tax_code: company?.business_license_no || "Chưa cập nhật",
-      representative: ownerName,
-      position: "Đại diện pháp luật",
-    },
-    signed_company_name: signedCompanyName,
-    is_company_name_changed: isCompanyNameChanged,
-    quotation_type: quotationType,
-    customer: {
-      company_name: booking?.company_name || "",
-      address: booking?.address || profile?.address || "Chưa cập nhật",
-      tax_code: "",
-      phone: profile?.phone_number || "Chưa cập nhật",
-      email: profile?.email || "Chưa cập nhật",
-      representative: profile?.full_name || "Khách hàng không tên",
-      position: booking?.company_position || "",
-      company_scope: booking?.company_scope || "",
-    },
-    assigned_guards_list: assignedGuards,
   };
 };
 
 export const getContractIdsByCompanyService = async (
   companyId: string,
   location?: string,
-) => {
+): Promise<string[]> => {
   return getContractIdsByCompany(companyId, location);
+};
+
+export const getContractIdsByCustomerService = async (
+  customerId: string,
+  location?: string,
+) => {
+  return getContractIdsByCustomer(customerId, location);
 };
 
 export const getContractByIdService = async (
@@ -586,7 +507,7 @@ export const getContractByIdService = async (
 export const assignGuardsToContractService = async (
   contractId: string,
   guardIds: string[],
-): Promise<unknown> => {
+): Promise<Contract> => {
   const profile = await getCurrentUserProfileService();
   if (!profile) {
     throw new Error("Bạn chưa đăng nhập");
@@ -607,9 +528,9 @@ export const assignGuardsToContractService = async (
     throw new Error("Không tìm thấy công ty của tài khoản");
   }
 
-  const contract = await getContractDetail(contractId);
+  const contract = await getContractDetail(contractId, companyId);
   if (!contract) {
-    throw new Error("Không tìm thấy hợp đồng");
+    throw new Error("Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập");
   }
 
   // Validate company ownership
@@ -631,19 +552,17 @@ export const assignGuardsToContractService = async (
   });
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const updateContractDatesService = async (
   id: string,
   startDate?: string | null,
   endDate?: string | null,
-): Promise<any> => {
+): Promise<Contract> => {
   const contract = await getContractDetail(id);
   if (!contract) {
     throw new Error("Không tìm thấy hợp đồng");
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const payload: any = {};
+  const payload: Partial<Contract> = {};
   if (startDate !== undefined && startDate !== null) {
     payload.start_date = startDate ? new Date(startDate).toISOString() : null;
   }

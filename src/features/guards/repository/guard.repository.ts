@@ -26,7 +26,7 @@ export const insertGuardInformation = async ({
   gender,
   address,
   avatar_url,
-}: InsertGuardInformationParams) => {
+}: InsertGuardInformationParams): Promise<{ profile: any; guard: any }> => {
   const supabase = await createClient();
 
   const { data: profile, error: profile_error } = await supabase
@@ -77,7 +77,7 @@ export const insertGuardRecord = async ({
   user_id: string;
   company_id: string;
   approval_status?: string;
-}) => {
+}): Promise<{ guard_id: string; user_id: string; company_id: string; approval_status: string; created_at: string }> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -457,7 +457,20 @@ export const getAllGuards = async ({
       throw new Error(activeErr.message);
     }
 
-    const activeUserIds = Array.from(new Set((activeAssignments ?? []).map((a) => a.guard_id)));
+    // Helper to resolve user_ids from a list of guard_id or user_id
+    const resolveUserIdsFromAssignmentGuardIds = async (rawIds: string[]): Promise<string[]> => {
+      const uniqueIds = Array.from(new Set(rawIds.filter(Boolean)));
+      if (uniqueIds.length === 0) return [];
+      const { data: gList } = await supabase
+        .from("guards")
+        .select("guard_id, user_id")
+        .or(`guard_id.in.(${uniqueIds.join(",")}),user_id.in.(${uniqueIds.join(",")})`);
+      const userIds = (gList || []).map((g: any) => g.user_id).filter(Boolean);
+      return Array.from(new Set(userIds));
+    };
+
+    const rawActiveIds = Array.from(new Set((activeAssignments ?? []).map((a) => a.guard_id)));
+    const activeUserIds = await resolveUserIdsFromAssignmentGuardIds(rawActiveIds);
 
     // 2. Get user IDs that have any shift today (active or future today)
     const todayEnd = getEndOfDayInTimeZone(now, timeZone);
@@ -473,7 +486,8 @@ export const getAllGuards = async ({
       throw new Error(upcomingErr.message);
     }
 
-    const upcomingUserIds = Array.from(new Set((upcomingAssignments ?? []).map((a) => a.guard_id)));
+    const rawUpcomingIds = Array.from(new Set((upcomingAssignments ?? []).map((a) => a.guard_id)));
+    const upcomingUserIds = await resolveUserIdsFromAssignmentGuardIds(rawUpcomingIds);
 
     // 3. Compute matching user IDs for this workStatus
     let workStatusMatchedUserIds: string[] = [];
@@ -493,7 +507,8 @@ export const getAllGuards = async ({
         .lt("shifts.start_time", todayEnd)
         .gt("shifts.end_time", todayStart.toISOString());
 
-      workStatusMatchedUserIds = Array.from(new Set((absentAssignments ?? []).map((a) => a.guard_id)));
+      const rawAbsentIds = Array.from(new Set((absentAssignments ?? []).map((a) => a.guard_id)));
+      workStatusMatchedUserIds = await resolveUserIdsFromAssignmentGuardIds(rawAbsentIds);
     } else if (workStatus === "late") {
       const todayStart = new Date(now);
       todayStart.setHours(0, 0, 0, 0);
@@ -514,7 +529,8 @@ export const getAllGuards = async ({
         })
         .map((a: any) => a.guard_id);
 
-      workStatusMatchedUserIds = Array.from(new Set(lateIds));
+      const rawLateIds = Array.from(new Set(lateIds));
+      workStatusMatchedUserIds = await resolveUserIdsFromAssignmentGuardIds(rawLateIds);
     } else if (workStatus === "substitute" || workStatus === "replacement") {
       const todayStart = new Date(now);
       todayStart.setHours(0, 0, 0, 0);
@@ -671,7 +687,22 @@ export const getAllGuards = async ({
     throw new Error(error.message);
   }
 
-  const guardsList = (data ?? []) as unknown as GuardListItem[];
+  const mapToGuardListItem = (item: any): GuardListItem => ({
+    guard_id: item.guard_id,
+    user_id: item.user_id,
+    company_id: item.company_id,
+    approval_status: item.approval_status,
+    rejection_note: item.rejection_note,
+    verified_at: item.verified_at,
+    verified_by: item.verified_by,
+    created_at: item.created_at,
+    height_cm: item.height_cm,
+    weight_kg: item.weight_kg,
+    notable_skills: item.notable_skills,
+    profiles: item.profiles ?? null,
+  });
+
+  const guardsList = (data ?? []).map(mapToGuardListItem);
 
   if (checkContractId) {
     try {
@@ -852,7 +883,24 @@ export const getGuardDetail = async (
     throw new Error(error.message);
   }
 
-  return data as unknown as GuardDetailDatabase | null;
+  if (!data) return null;
+
+  return {
+    guard_id: data.guard_id,
+    user_id: data.user_id,
+    company_id: data.company_id,
+    approval_status: data.approval_status,
+    rejection_note: data.rejection_note,
+    verified_at: data.verified_at,
+    verified_by: data.verified_by,
+    created_at: data.created_at,
+    height_cm: data.height_cm,
+    weight_kg: data.weight_kg,
+    health_certificate_path: data.health_certificate_path,
+    skill_certificate_paths: data.skill_certificate_paths,
+    notable_skills: data.notable_skills,
+    profiles: data.profiles as any ?? null,
+  };
 };
 
 export const approveGuardRepository = async ({
@@ -861,7 +909,7 @@ export const approveGuardRepository = async ({
 }: {
   guard_id: string;
   coordinator_id: string;
-}) => {
+}): Promise<{ guard_id: string; user_id: string; approval_status: string }> => {
   const supabase = await createClient();
 
   const { data: guard, error: guardError } = await supabase
@@ -901,7 +949,7 @@ export const rejectGuardRepository = async ({
   guard_id: string;
   coordinator_id: string;
   rejection_note: string;
-}) => {
+}): Promise<{ guard_id: string; user_id: string; approval_status: string; rejection_note: string | null }> => {
   const supabase = await createClient();
 
   const { data: guard, error: guardError } = await supabase
@@ -925,6 +973,7 @@ export const rejectGuardRepository = async ({
 
 export const completeGuardProfileRepository = async ({
   user_id,
+  phone_number,
   date_of_birth,
   gender,
   address,
@@ -941,6 +990,7 @@ export const completeGuardProfileRepository = async ({
   skill_certificate_paths,
 }: {
   user_id: string;
+  phone_number?: string | null;
   date_of_birth: string;
   gender: string;
   address: string;
@@ -955,7 +1005,7 @@ export const completeGuardProfileRepository = async ({
   notable_skills?: string[] | null;
   health_certificate_path?: string | null;
   skill_certificate_paths?: string[] | null;
-}) => {
+}): Promise<any> => {
   const supabase = await createClient();
 
   // 1. Update profile
@@ -965,6 +1015,9 @@ export const completeGuardProfileRepository = async ({
     address,
     updated_at: new Date().toISOString(),
   };
+  if (phone_number !== undefined && phone_number !== null) {
+    profileUpdates.phone_number = phone_number;
+  }
   if (avatar_url) {
     profileUpdates.avatar_url = avatar_url;
   }
@@ -1079,7 +1132,24 @@ export const getGuardDetailByUserId = async (
     throw new Error(error.message);
   }
 
-  return data as unknown as GuardDetailDatabase | null;
+  if (!data) return null;
+
+  return {
+    guard_id: data.guard_id,
+    user_id: data.user_id,
+    company_id: data.company_id,
+    approval_status: data.approval_status,
+    rejection_note: data.rejection_note,
+    verified_at: data.verified_at,
+    verified_by: data.verified_by,
+    created_at: data.created_at,
+    height_cm: data.height_cm,
+    weight_kg: data.weight_kg,
+    health_certificate_path: data.health_certificate_path,
+    skill_certificate_paths: data.skill_certificate_paths,
+    notable_skills: data.notable_skills,
+    profiles: data.profiles as any ?? null,
+  };
 };
 
 export const getGuardIdByUserId = async (
@@ -1181,7 +1251,9 @@ export const getGuardsByContract = async ({
     throw new Error(contractError.message);
   }
 
-  const guardAssigned = contract?.guard_assigned as string[] | null;
+  const guardAssigned = Array.isArray(contract?.guard_assigned)
+    ? (contract.guard_assigned as string[])
+    : null;
   if (!guardAssigned || guardAssigned.length === 0) {
     return { guards: [], total: 0 };
   }
@@ -1266,8 +1338,23 @@ export const getGuardsByContract = async ({
     throw new Error(error.message);
   }
 
+  const mapToGuardListItem = (item: any): GuardListItem => ({
+    guard_id: item.guard_id,
+    user_id: item.user_id,
+    company_id: item.company_id,
+    approval_status: item.approval_status,
+    rejection_note: item.rejection_note,
+    verified_at: item.verified_at,
+    verified_by: item.verified_by,
+    created_at: item.created_at,
+    height_cm: item.height_cm,
+    weight_kg: item.weight_kg,
+    notable_skills: item.notable_skills,
+    profiles: item.profiles ?? null,
+  });
+
   return {
-    guards: (data ?? []) as unknown as GuardListItem[],
+    guards: (data ?? []).map(mapToGuardListItem),
     total: count ?? 0,
   };
 };
@@ -1350,6 +1437,20 @@ export const getGuardPerformanceSummary = async ({
   endDate,
 }: GetGuardPerformanceSummaryParams): Promise<GuardPerformanceSummaryData> => {
   const supabase = await createClient();
+
+  let targetGuardIds: string[] = [];
+  if (guard_id) {
+    const { data: gData } = await supabase
+      .from("guards")
+      .select("guard_id, user_id")
+      .or(`guard_id.eq.${guard_id},user_id.eq.${guard_id}`)
+      .maybeSingle();
+    if (gData) {
+      targetGuardIds = [gData.guard_id, gData.user_id].filter(Boolean);
+    } else {
+      targetGuardIds = [guard_id];
+    }
+  }
 
   let query = supabase.from("shifts").select(`
     shift_id,
@@ -1440,7 +1541,7 @@ export const getGuardPerformanceSummary = async ({
     const shiftStartTime = shift.start_time ? new Date(shift.start_time).getTime() : null;
     const assignments = shift.shift_assignments || [];
     assignments.forEach((assignment: any) => {
-      if (guard_id && assignment.guard_id !== guard_id) {
+      if (guard_id && !targetGuardIds.includes(assignment.guard_id)) {
         return;
       }
       guardShiftsSet.add(shift.shift_id);
@@ -1466,13 +1567,18 @@ export const getGuardPerformanceSummary = async ({
         totalOvertimeMinutes += Number(assignment.overtime_minutes) || 0;
       }
 
-      if (isReplacement) {
+      const isReplacementStatus = status === "replacement" || status === "thay ca";
+      const hasReplacement = isReplacement || isReplacementStatus;
+
+      if (hasReplacement) {
         replacementShifts += 1;
-      } else if (isFutureUnstarted) {
+      }
+
+      if (isFutureUnstarted) {
         // Shift scheduled in the future that hasn't started yet - exclude from attendance evaluation denominator
       } else {
         evaluableAssignedShifts += 1;
-        if (status === "absent" || status === "vắng mặt") {
+        if (status === "absent" || status === "vắng mặt" || isReplacementStatus || (hasReplacement && !checkInTime)) {
           absentShifts += 1;
         } else if (status === "assigned") {
           if (shiftStartTime && nowMs >= shiftStartTime) {
@@ -1483,6 +1589,8 @@ export const getGuardPerformanceSummary = async ({
             attendedShifts += 1;
             lateCheckInShifts += 1;
             lateCheckInTimeShifts += 1;
+          } else {
+            absentShifts += 1;
           }
         } else if (status === "completed" || status === "checkout" || status === "present" || status === "đúng giờ" || status === "ontime") {
           attendedShifts += 1;
@@ -1604,6 +1712,8 @@ export const getGuardPerformanceList = async ({
   }
 
   const guardUserIds = guardsData.map((g: any) => g.user_id).filter(Boolean);
+  const guardDbIds = guardsData.map((g: any) => g.guard_id).filter(Boolean);
+  const allTargetGuardIds = Array.from(new Set([...guardDbIds, ...guardUserIds]));
 
   // 2. Fetch profiles for these guards
   const profilesByUserId: Record<string, any> = {};
@@ -1634,7 +1744,7 @@ export const getGuardPerformanceList = async ({
     shifts!inner (
       start_time
     )
-  `).in("guard_id", guardUserIds);
+  `).in("guard_id", allTargetGuardIds);
 
   if (startDate) {
     assignQuery = assignQuery.gte("shifts.start_time", startDate);
@@ -1659,7 +1769,7 @@ export const getGuardPerformanceList = async ({
   const keyword = search.trim().toLowerCase();
 
   let items: GuardPerformanceListItem[] = guardsData.map((g: any) => {
-    const list = assignmentsByGuard[g.user_id] || [];
+    const list = assignmentsByGuard[g.guard_id] || assignmentsByGuard[g.user_id] || [];
     let totalAssigned = 0;
     let evaluableAssigned = 0;
     let attended = 0;
@@ -1693,13 +1803,14 @@ export const getGuardPerformanceList = async ({
         guardOvertimeMinutes += Number(assignment.overtime_minutes) || 0;
       }
 
-      if (isReplacement) {
-        // Replacement shift - no check-in, do not count as absent, late, or onTime
-      } else if (isFutureUnstarted) {
+      const isReplacementStatus = status === "replacement" || status === "thay ca";
+      const hasReplacement = isReplacement || isReplacementStatus;
+
+      if (isFutureUnstarted) {
         // Unstarted future shift - exclude from attendance evaluation denominator
       } else {
         evaluableAssigned += 1;
-        if (status === "absent" || status === "vắng mặt") {
+        if (status === "absent" || status === "vắng mặt" || isReplacementStatus || (hasReplacement && !checkInTime)) {
           absent += 1;
         } else if (status === "assigned") {
           if (shiftStartTime && nowMs >= shiftStartTime) {
@@ -1709,6 +1820,8 @@ export const getGuardPerformanceList = async ({
           if (checkInTime) {
             attended += 1;
             late += 1;
+          } else {
+            absent += 1;
           }
         } else if (status === "completed" || status === "checkout" || status === "present" || status === "đúng giờ" || status === "ontime") {
           attended += 1;

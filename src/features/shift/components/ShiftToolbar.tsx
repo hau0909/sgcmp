@@ -8,10 +8,11 @@ type ShiftToolbarProps = {
   selectedLocation: string;
   locations: { address: string; status: string; customer_name?: string; company_name?: string; code?: string }[];
   currentDate: string;
-  onChangeViewMode: (mode: "day" | "week") => void;
+  onChangeViewMode?: (mode: "day" | "week") => void;
   onChangeLocation: (location: string) => void;
   onChangeDate: (date: string) => void;
-  onClickAdd: () => void;
+  onClickAdd?: () => void;
+  hideViewModeToggle?: boolean;
 };
 
 const getContractStatusLabel = (status: string, dict?: any) => {
@@ -546,11 +547,32 @@ export function ShiftToolbar({
   onChangeLocation,
   onChangeDate,
   onClickAdd,
+  hideViewModeToggle = false,
 }: ShiftToolbarProps) {
   const { dict, locale: appLocale } = useTranslation();
   const isEn = appLocale === "en";
   const [isLocationOpen, setIsLocationOpen] = useState(false);
-  const selectedLocObj = useMemo(() => locations.find((l) => l.address === selectedLocation) || locations[0], [locations, selectedLocation]);
+
+  const allLocationsLabel = dict?.shift_toolbar?.all_locations || (isEn ? "All locations" : "Tất cả địa điểm");
+
+  const displayedLocations = useMemo<ShiftToolbarProps["locations"]>(() => {
+    if (viewMode === "day") {
+      return [
+        {
+          address: "all",
+          status: "",
+          company_name: allLocationsLabel,
+        },
+        ...locations,
+      ];
+    }
+    return locations;
+  }, [viewMode, locations, allLocationsLabel]);
+
+  const selectedLocObj = useMemo(
+    () => displayedLocations.find((l) => l.address === selectedLocation) || displayedLocations[0],
+    [displayedLocations, selectedLocation]
+  );
 
   const bcp47Locale = appLocale === "en" ? "en-US" : "vi-VN";
   const dateTitle =
@@ -642,31 +664,33 @@ export function ShiftToolbar({
 
   return (
     <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
-      <div className="flex h-10 items-center border border-slate-300 bg-white p-1 rounded-lg">
-        <button
-          type="button"
-          onClick={() => onChangeViewMode("day")}
-          className={`h-8 px-5 text-sm font-medium rounded-md ${
-            viewMode === "day"
-              ? "bg-blue-700 text-white"
-              : "text-slate-600 hover:bg-slate-100"
-          }`}
-        >
-          {dict.shift_toolbar?.view_day || "Ngày"}
-        </button>
+      {!hideViewModeToggle && (
+        <div className="flex h-10 items-center border border-slate-300 bg-white p-1 rounded-lg">
+          <button
+            type="button"
+            onClick={() => onChangeViewMode?.("day")}
+            className={`h-8 px-5 text-sm font-medium rounded-md ${
+              viewMode === "day"
+                ? "bg-blue-700 text-white"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {dict.shift_toolbar?.view_day || "Ngày"}
+          </button>
 
-        <button
-          type="button"
-          onClick={() => onChangeViewMode("week")}
-          className={`h-8 px-5 text-sm font-medium rounded-md ${
-            viewMode === "week"
-              ? "bg-blue-700 text-white"
-              : "text-slate-600 hover:bg-slate-100"
-          }`}
-        >
-          {dict.shift_toolbar?.view_week || "Tuần"}
-        </button>
-      </div>
+          <button
+            type="button"
+            onClick={() => onChangeViewMode?.("week")}
+            className={`h-8 px-5 text-sm font-medium rounded-md ${
+              viewMode === "week"
+                ? "bg-blue-700 text-white"
+                : "text-slate-600 hover:bg-slate-100"
+            }`}
+          >
+            {dict.shift_toolbar?.view_week || "Tuần"}
+          </button>
+        </div>
+      )}
 
       <div className="flex flex-wrap items-center gap-2">
         <button
@@ -735,20 +759,28 @@ export function ShiftToolbar({
               <MapPin size={17} className="text-blue-600 shrink-0" />
               {selectedLocObj ? (
                 <span className="truncate">
-                  {selectedLocObj.code && (
-                    <span className="font-bold text-slate-900 mr-1.5 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
-                      {selectedLocObj.code}
+                  {selectedLocObj.address === "all" ? (
+                    <span className="font-bold text-slate-900 text-xs">
+                      {selectedLocObj.company_name}
                     </span>
+                  ) : (
+                    <>
+                      {selectedLocObj.code && (
+                        <span className="font-bold text-slate-900 mr-1.5 bg-slate-100 px-1.5 py-0.5 rounded text-[11px]">
+                          {selectedLocObj.code}
+                        </span>
+                      )}
+                      <span className="font-bold text-slate-900 mr-1.5 text-xs">
+                        {(!selectedLocObj.company_name || selectedLocObj.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : selectedLocObj.company_name} •
+                      </span>
+                      {selectedLocObj.customer_name && (
+                        <span className="text-slate-600 mr-1.5 text-xs">
+                          ({selectedLocObj.customer_name}) •
+                        </span>
+                      )}
+                      <span className="text-slate-600 text-xs">{selectedLocObj.address}</span>
+                    </>
                   )}
-                  <span className="font-bold text-slate-900 mr-1.5 text-xs">
-                    {(!selectedLocObj.company_name || selectedLocObj.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : selectedLocObj.company_name} •
-                  </span>
-                  {selectedLocObj.customer_name && (
-                    <span className="text-slate-600 mr-1.5 text-xs">
-                      ({selectedLocObj.customer_name}) •
-                    </span>
-                  )}
-                  <span className="text-slate-600 text-xs">{selectedLocObj.address}</span>
                 </span>
               ) : (
                 <span className="text-slate-400 text-xs">Chọn địa điểm...</span>
@@ -768,9 +800,10 @@ export function ShiftToolbar({
                 className="fixed inset-0 z-40"
                 onClick={() => setIsLocationOpen(false)}
               />
-              <div className="absolute right-0 top-12 z-50 min-w-[340px] max-w-[480px] max-h-80 overflow-y-auto space-y-1 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150">
-                {locations.map((loc) => {
+              <div className="absolute left-0 top-12 z-50 min-w-[320px] max-w-[480px] max-h-80 overflow-y-auto space-y-1 rounded-2xl border border-slate-200/90 bg-white p-2 shadow-xl animate-in fade-in zoom-in-95 duration-150">
+                {displayedLocations.map((loc) => {
                   const isSelected = loc.address === selectedLocation;
+                  const isAll = loc.address === "all";
                   return (
                     <button
                       key={loc.address}
@@ -792,29 +825,37 @@ export function ShiftToolbar({
                               {loc.code}
                             </span>
                           )}
-                          <span className="flex items-center gap-1 font-bold text-slate-900 text-[13px]">
-                            <Building2 size={13} className="text-slate-500 shrink-0" />
-                            {(!loc.company_name || loc.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : loc.company_name}
+                          <span className="flex items-center gap-1.5 font-bold text-slate-900 text-[13px]">
+                            {isAll ? (
+                              <MapPin size={14} className="text-blue-600 shrink-0" />
+                            ) : (
+                              <Building2 size={13} className="text-slate-500 shrink-0" />
+                            )}
+                            {isAll ? loc.company_name : ((!loc.company_name || loc.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : loc.company_name)}
                           </span>
-                          {loc.customer_name && (
+                          {!isAll && loc.customer_name && (
                             <span className="flex items-center gap-1 text-slate-600 text-[12px]">
                               <User size={12} className="text-slate-400 shrink-0" />
                               ({loc.customer_name})
                             </span>
                           )}
-                          <span
-                            className="ml-auto text-[11px] font-medium px-2 py-0.5 rounded-full"
-                            style={{
-                              color: getContractStatusColor(loc.status),
-                              backgroundColor: `${getContractStatusColor(loc.status)}18`,
-                            }}
-                          >
-                            {getContractStatusLabel(loc.status, dict)}
-                          </span>
+                          {!isAll && loc.status && (
+                            <span
+                              className="ml-auto text-[11px] font-medium px-2 py-0.5 rounded-full"
+                              style={{
+                                color: getContractStatusColor(loc.status),
+                                backgroundColor: `${getContractStatusColor(loc.status)}18`,
+                              }}
+                            >
+                              {getContractStatusLabel(loc.status, dict)}
+                            </span>
+                          )}
                         </div>
-                        <p className={`mt-1 text-xs truncate ${isSelected ? "text-blue-800 font-medium" : "text-slate-600"}`}>
-                          {loc.address}
-                        </p>
+                        {!isAll && (
+                          <p className={`mt-1 text-xs truncate ${isSelected ? "text-blue-800 font-medium" : "text-slate-600"}`}>
+                            {loc.address}
+                          </p>
+                        )}
                       </div>
                       {isSelected && (
                         <Check size={16} className="text-blue-600 shrink-0 ml-1" />
@@ -827,14 +868,16 @@ export function ShiftToolbar({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={onClickAdd}
-          className="flex h-10 cursor-pointer items-center gap-2 bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 rounded-lg"
-        >
-          <Plus size={16} />
-          {dict.shift_toolbar?.add_shift_button || "THÊM CA TRỰC"}
-        </button>
+        {onClickAdd && (
+          <button
+            type="button"
+            onClick={onClickAdd}
+            className="flex h-10 cursor-pointer items-center gap-2 bg-blue-700 px-4 text-sm font-semibold text-white hover:bg-blue-800 rounded-lg"
+          >
+            <Plus size={16} />
+            {dict.shift_toolbar?.add_shift_button || "THÊM CA TRỰC"}
+          </button>
+        )}
       </div>
     </div>
   );

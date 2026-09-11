@@ -1,7 +1,8 @@
 import React, { useState } from "react";
-import { X, FileText, CheckCircle, Clock } from "lucide-react";
+import { X, FileText, CheckCircle, Clock, Users, User, Phone } from "lucide-react";
 import { Report, REPORT_TYPE_LABELS } from "../types";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { formatTime } from "@/utils/dateTime";
 
 interface CoorReportDetailModalProps {
   report: Report;
@@ -37,6 +38,51 @@ export function CoorReportDetailModal({ report, onClose, onUpdateStatus }: CoorR
         return (
           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 border border-blue-200">
             <Clock className="w-3.5 h-3.5" /> {dict.report?.filters?.status_pending}
+          </span>
+        );
+    }
+  };
+
+  const getGuardStatusBadge = (status?: string | null) => {
+    if (!status) return null;
+    const s = status.toLowerCase();
+    const guardStatusDict = dict.report?.guard_status;
+
+    switch (s) {
+      case "completed":
+        return (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200">
+            {guardStatusDict?.completed || "Completed"}
+          </span>
+        );
+      case "checkout":
+        return (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700 border border-blue-200">
+            {guardStatusDict?.checkout || "Checked Out"}
+          </span>
+        );
+      case "assigned":
+        return (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200">
+            {guardStatusDict?.assigned || "Assigned"}
+          </span>
+        );
+      case "late":
+        return (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200">
+            {guardStatusDict?.late || "Late"}
+          </span>
+        );
+      case "absent":
+        return (
+          <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-red-50 text-red-700 border border-red-200">
+            {guardStatusDict?.absent || "Absent"}
+          </span>
+        );
+      default:
+        return (
+          <span className="text-[10px] font-medium px-2 py-0.5 rounded-full bg-slate-50 text-slate-600 border border-slate-200">
+            {status}
           </span>
         );
     }
@@ -159,6 +205,83 @@ export function CoorReportDetailModal({ report, onClose, onUpdateStatus }: CoorR
                 {report.type ? (REPORT_TYPE_LABELS[report.type] || report.type) : (dict.report?.detail?.no_type ?? "Unclassified")}
               </p>
             </div>
+          </div>
+
+          {/* Related Shift info */}
+          <div className="p-4 bg-slate-50 border border-slate-200/80 rounded-xl space-y-3">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <span className="text-xs text-on-surface-variant font-medium flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                {dict.report?.detail?.field_shift || "Ca trực liên quan"}
+              </span>
+              {report.shift_start_time && report.shift_end_time && (
+                <span className="text-xs font-medium text-slate-600 bg-white px-2.5 py-0.5 rounded border border-slate-200">
+                  {formatTime(report.shift_start_time)} – {formatTime(report.shift_end_time)}
+                </span>
+              )}
+            </div>
+
+            {report.shift_name || report.shift_id ? (
+              <>
+                <div className="font-bold text-on-surface text-sm text-indigo-700">
+                  {report.shift_name || dict.report?.table?.shift || "Ca trực"}
+                </div>
+
+                {/* Assigned Guards List */}
+                <div className="pt-2 border-t border-slate-200/60">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+                      <Users className="w-3.5 h-3.5 text-slate-500" />
+                      {dict.report?.detail?.shift_guards || "Bảo vệ ca trực"}
+                    </span>
+                    <span className="text-[11px] font-medium text-slate-500 bg-slate-200/60 px-2 py-0.5 rounded-full">
+                      {report.guards?.length || 0} {dict.report?.detail?.guards_count || "bảo vệ"}
+                    </span>
+                  </div>
+
+                  {report.guards && report.guards.length > 0 ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      {report.guards.map((g, idx) => (
+                        <div
+                          key={g.guard_id || idx}
+                          className="bg-white border border-slate-200/80 rounded-lg p-2.5 flex items-center justify-between gap-2 shadow-2xs hover:border-slate-300 transition-colors"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className="w-7 h-7 rounded-full bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-700 text-xs font-bold shrink-0 overflow-hidden">
+                              {g.avatar_url ? (
+                                <img src={g.avatar_url} alt={g.guard_name} className="w-full h-full object-cover" />
+                              ) : (
+                                <User className="w-3.5 h-3.5 text-blue-600" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <p className="text-xs font-semibold text-slate-800 truncate">{g.guard_name}</p>
+                              {g.phone_number ? (
+                                <p className="text-[10px] text-slate-500 flex items-center gap-1">
+                                  <Phone className="w-2.5 h-2.5" />
+                                  {g.phone_number}
+                                </p>
+                              ) : (
+                                <p className="text-[10px] text-slate-400">Không có SĐT</p>
+                              )}
+                            </div>
+                          </div>
+                          {getGuardStatusBadge(g.status)}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-xs text-slate-400 italic bg-white/60 p-2 rounded border border-dashed border-slate-200 text-center">
+                      {dict.report?.detail?.no_guards_assigned || "Chưa có bảo vệ nào được phân công trong ca này"}
+                    </p>
+                  )}
+                </div>
+              </>
+            ) : (
+              <p className="text-xs text-slate-400 italic pt-0.5">
+                {dict.report?.detail?.no_shift || "Không gắn với ca trực cụ thể"}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1">

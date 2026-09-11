@@ -43,6 +43,10 @@ import {
 import type {
   CreateGuardAccountBody,
   CreateGuardAccountInput,
+  CreateGuardAccountResponse,
+  UploadGuardAvatarResponse,
+  GetGuardPerformanceSummaryResponse,
+  GetGuardPerformanceListResponse,
   CompleteGuardProfileInput,
   ApproveGuardInput,
   gender,
@@ -50,6 +54,7 @@ import type {
   InsertGuardInformationInput,
   HandleGetAllGuardsResult,
   GetGuardDetailResponse,
+  GetGuardMyProfileResponse,
   GuardDetail,
   GuardListPaginatedData,
   HandleGetAllGuardsInput,
@@ -71,7 +76,7 @@ const generateTemporaryPassword = (): string => {
   return `Bv${random_number}`;
 };
 
-const checkCoordinatorPermission = async () => {
+const checkCoordinatorPermission = async (): Promise<any> => {
   const current_profile = await getCurrentUserProfileService();
 
   if (!current_profile) {
@@ -88,7 +93,7 @@ const checkCoordinatorPermission = async () => {
 
 export const handleCreateGuardAccount = async (
   body: CreateGuardAccountBody,
-) => {
+): Promise<CreateGuardAccountResponse> => {
   try {
     const current_profile = await checkCoordinatorPermission();
 
@@ -231,7 +236,7 @@ export const handleCreateGuardAccount = async (
   }
 };
 
-export const handleUploadGuardAvatar = async (form_data: FormData) => {
+export const handleUploadGuardAvatar = async (form_data: FormData): Promise<UploadGuardAvatarResponse> => {
   try {
     const current_profile = await getCurrentUserProfileService();
 
@@ -299,7 +304,7 @@ export const handleUploadGuardAvatar = async (form_data: FormData) => {
   }
 };
 
-export const handleUploadGuardFile = async (form_data: FormData) => {
+export const handleUploadGuardFile = async (form_data: FormData): Promise<UploadGuardAvatarResponse> => {
   try {
     const current_profile = await getCurrentUserProfileService();
 
@@ -376,7 +381,7 @@ export const handleUploadGuardFile = async (form_data: FormData) => {
 
 export const handleInsertGuardInformation = async (
   body: InsertGuardInformationBody,
-) => {
+): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
     const current_profile = await checkCoordinatorPermission();
 
@@ -407,7 +412,9 @@ export const handleInsertGuardInformation = async (
 
       date_of_birth: String(body.date_of_birth ?? "").trim(),
 
-      gender: String(body.gender ?? "").trim() as gender,
+      gender: (["female", "nữ", "nu"].includes(String(body.gender ?? "").trim().toLowerCase())
+        ? "female"
+        : "male") as gender,
 
       address: String(body.address ?? "").trim(),
 
@@ -819,7 +826,7 @@ export const handleUpdateGuardDetail = async (
   }
 };
 
-export const handleCheckGuardQuota = async () => {
+export const handleCheckGuardQuota = async (): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
     const current_profile = await checkCoordinatorPermission();
 
@@ -977,7 +984,7 @@ export const handleGetCustomerGuardsByContract = async ({
       };
     }
 
-    const company_id = contract.bookings?.companies?.company_id;
+    const company_id = contract.company_id || contract.bookings?.company_id;
     if (!company_id) {
       return {
         success: false,
@@ -1026,7 +1033,7 @@ export const handleGetCustomerGuardsByContract = async ({
   }
 };
 
-export const handleGetGuardPerformanceSummary = async (request: Request) => {
+export const handleGetGuardPerformanceSummary = async (request: Request): Promise<GetGuardPerformanceSummaryResponse | { success: boolean; message: string; data: any }> => {
   try {
     const { searchParams } = new URL(request.url);
     let company_id = searchParams.get("company_id") || undefined;
@@ -1097,14 +1104,15 @@ export const handleGetGuardPerformanceSummary = async (request: Request) => {
   }
 };
 
-export const handleGetGuardPerformanceList = async (request: Request) => {
+export const handleGetGuardPerformanceList = async (request: Request): Promise<GetGuardPerformanceListResponse | { success: boolean; message: string; data: any }> => {
   try {
     const { searchParams } = new URL(request.url);
     let company_id = searchParams.get("company_id") || undefined;
     const startDate = searchParams.get("startDate") || undefined;
     const endDate = searchParams.get("endDate") || undefined;
     const search = searchParams.get("search") || undefined;
-    const tab = (searchParams.get("tab") as "all" | "top10") || "all";
+    const rawTab = searchParams.get("tab");
+    const tab: "all" | "top10" = rawTab === "top10" ? "top10" : "all";
     const page = parseInt(searchParams.get("page") || "1", 10);
     const limit = parseInt(searchParams.get("limit") || "10", 10);
 
@@ -1158,7 +1166,7 @@ export const handleGetGuardPerformanceList = async (request: Request) => {
 export const handleApproveRejectGuard = async (
   guard_id: string,
   body: ApproveGuardInput,
-) => {
+): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
     const current_profile = await checkCoordinatorPermission();
 
@@ -1224,7 +1232,7 @@ export const handleApproveRejectGuard = async (
 
 export const handleCompleteGuardProfile = async (
   body: any,
-) => {
+): Promise<{ success: boolean; message: string; data?: any }> => {
   try {
     const profile = await getCurrentUserProfileService();
 
@@ -1243,6 +1251,7 @@ export const handleCompleteGuardProfile = async (
     }
 
     const input = {
+      phone_number: typeof body.phone_number === "string" ? body.phone_number.trim() || null : null,
       date_of_birth: String(body.date_of_birth ?? "").trim(),
       gender: String(body.gender ?? "").trim(),
       address: String(body.address ?? "").trim(),
@@ -1306,7 +1315,7 @@ export const handleCompleteGuardProfile = async (
   }
 };
 
-export const handleGetGuardMyProfile = async () => {
+export const handleGetGuardMyProfile = async (): Promise<GetGuardMyProfileResponse> => {
   try {
     const profile = await getCurrentUserProfileService();
 

@@ -14,6 +14,8 @@ interface RouteParams {
 export async function GET(request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params;
+    const { searchParams } = new URL(request.url);
+    const companyId = searchParams.get("companyId") || undefined;
 
     if (!id) {
       return NextResponse.json(
@@ -22,10 +24,10 @@ export async function GET(request: NextRequest, { params }: RouteParams) {
       );
     }
 
-    const result = await handleGetContractDetail(id);
+    const result = await handleGetContractDetail(id, companyId);
     if (!result) {
       return NextResponse.json(
-        { error: "Không tìm thấy hợp đồng" },
+        { error: "Không tìm thấy hợp đồng hoặc bạn không có quyền truy cập" },
         { status: 404 }
       );
     }

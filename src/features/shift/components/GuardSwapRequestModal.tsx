@@ -23,7 +23,7 @@ import {
   requestCreateSwapRequest,
   requestGetMySwapRequests,
 } from "../api/shift-swap.api";
-import { EligibleShiftForSwap, ShiftSwapRequestWithDetails } from "../repository/shift-swap.repository";
+import { EligibleShiftForSwap, ShiftSwapRequestWithDetails } from "../repository/shift.repository";
 import { formatDate } from "@/utils/dateTime";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 
@@ -198,11 +198,10 @@ export function GuardSwapRequestModal({ isOpen, onClose }: GuardSwapRequestModal
           <button
             type="button"
             onClick={() => setActiveTab("create")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all cursor-pointer ${
-              activeTab === "create"
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all cursor-pointer ${activeTab === "create"
                 ? "border-blue-600 text-blue-600 bg-white"
                 : "border-transparent text-slate-500 hover:text-slate-800"
-            }`}
+              }`}
           >
             <PlusCircle className="h-4 w-4" />
             <span>{dict?.guard_swap_modal?.tab_create || "Tạo yêu cầu đổi ca"}</span>
@@ -210,11 +209,10 @@ export function GuardSwapRequestModal({ isOpen, onClose }: GuardSwapRequestModal
           <button
             type="button"
             onClick={() => setActiveTab("history")}
-            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all cursor-pointer ${
-              activeTab === "history"
+            className={`flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-bold transition-all cursor-pointer ${activeTab === "history"
                 ? "border-blue-600 text-blue-600 bg-white"
                 : "border-transparent text-slate-500 hover:text-slate-800"
-            }`}
+              }`}
           >
             <History className="h-4 w-4" />
             <span>{dict?.guard_swap_modal?.tab_history || "Lịch sử gửi yêu cầu"}</span>
@@ -276,16 +274,15 @@ export function GuardSwapRequestModal({ isOpen, onClose }: GuardSwapRequestModal
                         <div
                           key={shift.shift_id}
                           onClick={() => toggleShiftSelect(shift.shift_id)}
-                          className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${
-                            isSelected
+                          className={`flex items-start gap-3 p-3.5 rounded-xl border transition-all cursor-pointer ${isSelected
                               ? "border-blue-600 bg-blue-50/60 shadow-xs"
                               : "border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50"
-                          }`}
+                            }`}
                         >
                           <input
                             type="checkbox"
                             checked={isSelected}
-                            onChange={() => {}} // handled by parent div click
+                            onChange={() => { }} // handled by parent div click
                             className="mt-1 h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                           />
                           <div className="flex-1 min-w-0">

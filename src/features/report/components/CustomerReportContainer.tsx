@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { ClipboardList, Plus, CheckCircle, X } from "lucide-react";
 import { useAuthStore } from "@/store/auth.store";
+import { useSearchParams } from "next/navigation";
 // Removed requestGetCustomerContracts import from contract api
 import { createClient } from "@/lib/supabase/client";
 import { Contract } from "@/types/Contract";
@@ -19,9 +20,17 @@ import { useTranslation } from "@/components/providers/LanguageProvider";
 export function CustomerReportContainer() {
   const customerId = useAuthStore((state) => state.user_id) || "";
   const { dict } = useTranslation();
+  const searchParams = useSearchParams();
 
-  // UI state
-  const [activeTab, setActiveTab] = useState<"list" | "create">("list");
+  // Read pre-fill params from URL (e.g. from contract-schedule page)
+  const prefilledContractId = searchParams.get("contractId") ?? undefined;
+  const prefilledShiftId = searchParams.get("shiftId") ?? undefined;
+  const prefilledDate = searchParams.get("date") ?? undefined;
+
+  // UI state — auto switch to "create" tab if URL has prefill params
+  const [activeTab, setActiveTab] = useState<"list" | "create">(
+    prefilledContractId ? "create" : "list",
+  );
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
   // Data state
@@ -88,6 +97,7 @@ export function CustomerReportContainer() {
 
   const handleFormSubmit = async (payload: {
     contractId: string;
+    shiftId: string | null;
     type: ReportType;
     description: string;
     imageUrl: string | null;
@@ -122,6 +132,7 @@ export function CustomerReportContainer() {
       await requestCreateReport({
         customer_id: customerId,
         contract_id: payload.contractId,
+        shift_id: payload.shiftId ?? undefined,
         type: payload.type,
         description: payload.description,
         image_url: finalImageUrl,
@@ -226,6 +237,9 @@ export function CustomerReportContainer() {
             onSubmit={handleFormSubmit}
             isSubmitting={isSubmitting}
             onCancel={() => setActiveTab("list")}
+            defaultContractId={prefilledContractId}
+            defaultShiftId={prefilledShiftId}
+            defaultDate={prefilledDate}
           />
         </div>
       )}

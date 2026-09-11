@@ -36,10 +36,10 @@ export const countActiveGuardsOnShift = async (
           )
         )
       ),
-      profiles:profiles!shift_assignments_guard_id_fkey!inner (
-        status,
-        guards!inner (
-          company_id
+      guards:guards!shift_assignments_guard_id_fkey!inner (
+        company_id,
+        profiles:profiles!guards_user_id_fkey!inner (
+          status
         )
       )
     `,
@@ -50,8 +50,8 @@ export const countActiveGuardsOnShift = async (
     .gt("shifts.end_time", now)
     .eq("shifts.contracts.status", "active")
     .eq("shifts.contracts.bookings.company_id", companyId)
-    .eq("profiles.guards.company_id", companyId)
-    .eq("profiles.status", "active");
+    .eq("guards.company_id", companyId)
+    .eq("guards.profiles.status", "active");
 
   if (error) {
     throw new Error(`Không thể đếm bảo vệ đang trực: ${error.message}`);
@@ -87,10 +87,10 @@ export const countActiveGuardsOnShiftYesterday = async (
           )
         )
       ),
-      profiles:profiles!shift_assignments_guard_id_fkey!inner (
-        status,
-        guards!inner (
-          company_id
+      guards:guards!shift_assignments_guard_id_fkey!inner (
+        company_id,
+        profiles:profiles!guards_user_id_fkey!inner (
+          status
         )
       )
     `,
@@ -101,8 +101,8 @@ export const countActiveGuardsOnShiftYesterday = async (
     .gt("shifts.end_time", yesterday)
     .eq("shifts.contracts.status", "active")
     .eq("shifts.contracts.bookings.company_id", companyId)
-    .eq("profiles.guards.company_id", companyId)
-    .eq("profiles.status", "active");
+    .eq("guards.company_id", companyId)
+    .eq("guards.profiles.status", "active");
 
   if (error) {
     throw new Error(
@@ -342,7 +342,7 @@ export const getWeeklyShiftsData = async (
   companyId: string,
   startDate: string,
   endDate: string,
-) => {
+): Promise<any[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -377,7 +377,7 @@ export const getShiftStatusTodayData = async (
   companyId: string,
   startDate: string,
   endDate: string,
-) => {
+): Promise<any[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -414,7 +414,7 @@ export const getTodayGuardsStatusList = async (
   companyId: string,
   startDate: string,
   endDate: string,
-) => {
+): Promise<any[]> => {
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -457,7 +457,7 @@ export const getTodayGuardsStatusList = async (
   return data || [];
 };
 
-export const getProfilesByIds = async (ids: string[]) => {
+export const getProfilesByIds = async (ids: string[]): Promise<any[]> => {
   if (!ids || ids.length === 0) return [];
   const supabase = await createClient();
 
@@ -475,7 +475,7 @@ export const getProfilesByIds = async (ids: string[]) => {
     .select(`
       guard_id,
       user_id,
-      profiles (
+      profiles!guards_user_id_fkey (
         full_name,
         avatar_url,
         phone_number
@@ -499,7 +499,7 @@ export const getProfilesByIds = async (ids: string[]) => {
   }
 
   if (guardsData) {
-    for (const g of guardsData as any[]) {
+    for (const g of (guardsData as unknown as { guard_id: string; user_id: string; profiles?: { full_name?: string; avatar_url?: string; phone_number?: string } | null }[])) {
       const prof = g.profiles || {};
       const item = {
         id: g.guard_id,
@@ -521,7 +521,7 @@ export const getRecentShiftsAndAssignments = async (
   companyId: string,
   startDate?: string,
   endDate?: string,
-) => {
+): Promise<any[]> => {
   const supabase = await createClient();
   let query = supabase
     .from("shifts")
@@ -564,7 +564,7 @@ export const getRecentShiftsAndAssignments = async (
   return data || [];
 };
 
-export const getRecentReports = async (companyId: string, limitVal: number) => {
+export const getRecentReports = async (companyId: string, limitVal: number): Promise<any[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("report")
@@ -591,7 +591,7 @@ export const getRecentReports = async (companyId: string, limitVal: number) => {
   return data || [];
 };
 
-export const getRecentContracts = async (companyId: string, limitVal: number) => {
+export const getRecentContracts = async (companyId: string, limitVal: number): Promise<any[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("contracts")
@@ -615,7 +615,7 @@ export const getRecentContracts = async (companyId: string, limitVal: number) =>
   return data || [];
 };
 
-export const getRecentBookings = async (companyId: string, limitVal: number) => {
+export const getRecentBookings = async (companyId: string, limitVal: number): Promise<any[]> => {
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("bookings")
@@ -899,7 +899,7 @@ export const getPendingRegistrations = async (): Promise<PendingRegistrationRaw[
     throw new Error(`Không thể lấy danh sách doanh nghiệp chờ duyệt: ${error.message}`);
   }
 
-  return (data as any) || [];
+  return (data as unknown as PendingRegistrationRaw[]) || [];
 };
 
 export const getPendingPublishRequests = async (): Promise<PendingPublishRequestRaw[]> => {
@@ -914,7 +914,7 @@ export const getPendingPublishRequests = async (): Promise<PendingPublishRequest
     throw new Error(`Không thể lấy danh sách yêu cầu công khai: ${error.message}`);
   }
 
-  return (data as any) || [];
+  return (data as unknown as PendingPublishRequestRaw[]) || [];
 };
 
 export const getFirstAdminName = async (): Promise<string> => {
@@ -963,7 +963,7 @@ export const getRecentRegistrationsForActivities = async (): Promise<ActivityReg
     throw new Error(`Không thể lấy danh sách đăng ký cho hoạt động: ${error.message}`);
   }
 
-  return (data as any) || [];
+  return (data as unknown as ActivityRegistrationRaw[]) || [];
 };
 
 export const getRecentPublishRequestsForActivities = async (): Promise<ActivityPublishRequestRaw[]> => {
@@ -977,7 +977,7 @@ export const getRecentPublishRequestsForActivities = async (): Promise<ActivityP
     throw new Error(`Không thể lấy danh sách yêu cầu công khai cho hoạt động: ${error.message}`);
   }
 
-  return (data as any) || [];
+  return (data as unknown as ActivityPublishRequestRaw[]) || [];
 };
 
 /**
@@ -1391,6 +1391,36 @@ export const getGuardPerformanceRadarRepository = async (
   }
 
   return { onDutyCount, completedCount, overtimeCount, lateCount, absentCount, replacementCount };
+};
+
+/**
+ * Lấy tất cả hợp đồng thuộc công ty để tính toán xu hướng hợp đồng active.
+ */
+export const getCompanyActiveContractsData = async (
+  companyId: string,
+): Promise<any[]> => {
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("contracts")
+    .select(
+      `
+      contract_id,
+      start_date,
+      end_date,
+      created_at,
+      status,
+      bookings!inner (
+        company_id
+      )
+    `,
+    )
+    .eq("bookings.company_id", companyId);
+
+  if (error) {
+    throw new Error(`Không thể lấy danh sách hợp đồng công ty: ${error.message}`);
+  }
+
+  return data || [];
 };
 
 
