@@ -8,8 +8,6 @@ export interface Shift_Img {
     image_path: string | null;
     image_type: ShiftImgType;
 
-    note: string | null;
-
     created_at: string;
     updated_at: string;
 }

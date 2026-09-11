@@ -7,11 +7,16 @@
     "myRequests": "Quản lý yêu cầu",
     "myContracts": "Quản lý hợp đồng",
     "myReports": "Báo cáo",
+    "guardSchedule": "Lịch trực bảo vệ",
     "loading": "Đang tải...",
     "startNow": "Đăng ký công ty",
     "myRegistration": "Hồ sơ đăng ký",
     "dashboard": "Quay về trang chính",
     "overtime": "TĂNG CA"
+  },
+  "customer_guard_schedule": {
+    "title": "Lịch Trực Bảo Vệ",
+    "subtitle": "Xem ca trực của bảo vệ theo tuần tại các vị trí hợp đồng"
   },
   "company_requests": {
     "title": "Danh sách Yêu cầu Khách hàng",
@@ -1613,7 +1618,18 @@
         "title": "Nội dung báo cáo/khiếu nại",
         "subtitle": "Cung cấp đầy đủ thông tin giúp chúng tôi xử lý nhanh chóng.",
         "contract_label": "Hợp đồng áp dụng",
-        "contract_placeholder": "Chọn hợp đồng đang hiệu lực...",
+        "contract_placeholder": "Chọn hợp đồng...",
+        "contract_expiry": "Hết hạn",
+        "default_service": "Dịch vụ bảo vệ",
+        "contract_status": {
+          "active": "Đang hiệu lực",
+          "pending_signatures": "Chờ ký kết",
+          "completed": "Đã hoàn thành",
+          "cancelled": "Đã hủy"
+        },
+        "completed_contract_title": "Hợp đồng đã hoàn thành",
+        "completed_contract_note": "Hệ thống chỉ hỗ trợ tiếp nhận phản ánh/khiếu nại trong vòng 14 ngày kể từ ngày kết thúc hợp đồng.",
+        "completed_contract_hint": "Lưu ý về hợp đồng đã hoàn thành",
         "type_label": "Loại vấn đề / Khiếu nại",
         "desc_label": "Nội dung chi tiết",
         "desc_placeholder": "Vui lòng mô tả rõ sự việc xảy ra, thời gian, địa điểm, nhân sự liên quan...",
@@ -2828,7 +2844,8 @@
     "continuous_shifts": "ca liên tục",
     "contract_location_subtitle": "Địa điểm hợp đồng",
     "location_header": "ĐỊA ĐIỂM / VỊ TRÍ",
-    "no_shifts_today": "Không có ca trực trong ngày hôm nay."
+    "no_shifts_today": "Không có ca trực trong ngày hôm nay.",
+    "error_fetch": "Không thể tải danh sách ca trực"
   },
   "shift_week": {
     "shift_name": "Tên ca trực",
@@ -2843,7 +2860,16 @@
     "shift_time": "Thời gian ca trực",
     "assigned_guards": "Bảo vệ trực ({0}/{1})",
     "specific_location": "Vị trí trực cụ thể",
-    "no_shifts_this_week": "Không có ca trực trong tuần này"
+    "no_shifts_this_week": "Không có ca trực trong tuần này",
+    "report_btn": "Báo cáo sự cố ca này",
+    "report_btn_disabled": "Chỉ báo cáo được ca hôm nay",
+    "report_btn_tooltip": "Chỉ có thể báo cáo ca trực trong ngày hôm nay",
+    "today_shifts_label": "Ca trực hôm nay",
+    "today_shifts_optional": "(tùy chọn)",
+    "today_shifts_loading": "Đang tải ca trực hôm nay...",
+    "today_shifts_empty": "Không có ca trực nào hôm nay cho hợp đồng này",
+    "shift_no_specific": "-- Không chọn ca cụ thể --",
+    "shift_default_name": "Ca trực"
   },
   "guard_shift_detail": {
     "title": "Chi tiết ca trực",
@@ -2915,6 +2941,8 @@
       "customer": "Khách hàng",
       "contract": "Hợp đồng",
       "issue": "Vấn đề khiếu nại",
+      "shift": "Ca trực",
+      "guards": "Bảo vệ",
       "no_type": "Chưa phân loại",
       "no_desc": "(Không có mô tả)",
       "sent_at": "Thời gian gửi"
@@ -2931,6 +2959,11 @@
       "field_phone": "Số điện thoại",
       "field_contract": "Hợp đồng liên quan",
       "field_issue": "Vấn đề khiếu nại",
+      "field_shift": "Ca trực liên quan",
+      "no_shift": "Không gắn với ca trực cụ thể",
+      "shift_guards": "Bảo vệ ca trực",
+      "guards_count": "bảo vệ",
+      "no_guards_assigned": "Chưa có bảo vệ nào được phân công trong ca này",
       "field_description": "Nội dung phản ánh chi tiết",
       "field_image": "Ảnh đính kèm",
       "field_sent_at": "Thời gian gửi",
@@ -2940,6 +2973,13 @@
     "toast": {
       "update_success": "Cập nhật trạng thái báo cáo khiếu nại thành công.",
       "update_failed": "Cập nhật trạng thái báo cáo thất bại."
+    },
+    "guard_status": {
+      "assigned": "Đã phân công",
+      "completed": "Hoàn thành",
+      "checkout": "Đã checkout",
+      "late": "Đi muộn",
+      "absent": "Vắng mặt"
     }
   },
   "admin_dashboard": {

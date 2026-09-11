@@ -119,7 +119,7 @@ export const getShiftContractsByCompanyId = async (
       if (!contractScheduledDatesMap[shift.contract_id]) {
         contractScheduledDatesMap[shift.contract_id] = new Set<string>();
       }
-      contractScheduledDatesMap[shift.contract_id].add(shift.start_time.split(/[T ]/)[0]);
+      contractScheduledDatesMap[shift.contract_id].add(formatDateKey(shift.start_time));
     }
   }
 
@@ -162,7 +162,7 @@ export const getShiftContractsByCompanyId = async (
           if (dObj >= cStart && dObj <= cEnd && targetDays.includes(dObj.getDay())) {
             scheduledDays++;
           }
-        } catch {}
+        } catch { }
       }
     }
 
@@ -170,7 +170,141 @@ export const getShiftContractsByCompanyId = async (
       contract_id: contract.contract_id,
       code: `HD-${String(index + 1).padStart(3, "0")}`,
       customer_name: customer?.full_name ?? "Chưa cập nhật",
-      company_name: booking?.company_name ?? "Chưa cập nhật",
+      company_name: booking?.company_name || company?.company_name || "Chưa cập nhật",
+      company_scope: booking?.company_scope ?? null,
+      company_position: booking?.company_position ?? null,
+      service_name: service?.name ?? "Chưa cập nhật",
+      address: booking?.address ?? "Chưa cập nhật",
+      guards_per_slot: booking?.guards_per_slot ?? 1,
+      description: booking?.description ?? "Chưa cập nhật",
+      start_date: contract.start_date,
+      end_date: contract.end_date,
+      status: contract.status,
+      time_slots,
+      day_per_week,
+      scheduled_days_count: scheduledDays,
+      total_working_days_count: totalWorkingDays,
+    };
+  });
+};
+
+export const getShiftContractsByCustomerId = async (
+  customerId: string,
+): Promise<ContractOption[]> => {
+  const supabase = await createClient();
+
+  const { data, error } = await supabase
+    .from("contracts")
+    .select(
+      `
+      contract_id,
+      start_date,
+      end_date,
+      status,
+      booking:bookings!inner (
+        booking_id,
+        company_id,
+        customer_id,
+        company_name,
+        company_scope,
+        company_position,
+        address,
+        description,
+        guards_per_slot,
+        time_slots,
+        day_per_week,
+        customer:profiles!bookings_customer_id_fkey (
+          full_name
+        ),
+        company:companies!bookings_company_id_fkey (
+          company_name
+        ),
+        service:services!bookings_service_id_fkey (
+          name
+        )
+      )
+    `,
+    )
+    .eq("status", "active")
+    .eq("booking.customer_id", customerId)
+    .eq("booking.status", "accepted")
+    .order("created_at", {
+      ascending: false,
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const contractsData = (data ?? []) as unknown as ContractQueryResult[];
+  if (contractsData.length === 0) return [];
+
+  const contractIds = contractsData.map((c) => c.contract_id);
+  const { data: shiftsData, error: shiftsError } = await supabase
+    .from("shifts")
+    .select("contract_id, start_time")
+    .in("contract_id", contractIds);
+
+  if (shiftsError) {
+    throw new Error(shiftsError.message);
+  }
+
+  const contractScheduledDatesMap: Record<string, Set<string>> = {};
+  for (const shift of shiftsData || []) {
+    if (shift.contract_id && shift.start_time) {
+      if (!contractScheduledDatesMap[shift.contract_id]) {
+        contractScheduledDatesMap[shift.contract_id] = new Set<string>();
+      }
+      contractScheduledDatesMap[shift.contract_id].add(formatDateKey(shift.start_time));
+    }
+  }
+
+  return contractsData.map((contract, index) => {
+    const booking = getSingleRelation(contract.booking);
+    const customer = getSingleRelation(booking?.customer);
+    const company = getSingleRelation(booking?.company);
+    const service = getSingleRelation(booking?.service);
+
+    const time_slots = toStringArray(booking?.time_slots) ?? [];
+    const day_per_week = toStringArray(booking?.day_per_week) ?? [];
+
+    const targetDays = day_per_week
+      .map((d) => DAY_LABEL_MAP[d.toLowerCase().trim()])
+      .filter((n): n is number => n !== undefined);
+
+    let totalWorkingDays = 0;
+    if (contract.start_date && contract.end_date && targetDays.length > 0) {
+      const cStart = new Date(`${contract.start_date}T00:00:00`);
+      const cEnd = new Date(`${contract.end_date}T00:00:00`);
+      const cur = new Date(cStart);
+      while (cur <= cEnd) {
+        if (targetDays.includes(cur.getDay())) {
+          totalWorkingDays++;
+        }
+        cur.setDate(cur.getDate() + 1);
+      }
+    }
+
+    const scheduledDatesSet = contractScheduledDatesMap[contract.contract_id] || new Set();
+    let scheduledDays = 0;
+    if (contract.start_date && contract.end_date && targetDays.length > 0) {
+      const cStart = new Date(`${contract.start_date}T00:00:00`);
+      const cEnd = new Date(`${contract.end_date}T00:00:00`);
+      for (const dStr of Array.from(scheduledDatesSet)) {
+        try {
+          const dObj = new Date(`${dStr}T00:00:00`);
+          if (dObj >= cStart && dObj <= cEnd && targetDays.includes(dObj.getDay())) {
+            scheduledDays++;
+          }
+        } catch { }
+      }
+    }
+
+    return {
+      contract_id: contract.contract_id,
+      code: `HD-${String(index + 1).padStart(3, "0")}`,
+      customer_name: customer?.full_name ?? "Chưa cập nhật",
+      company_name: booking?.company_name || company?.company_name || "Chưa cập nhật",
       company_scope: booking?.company_scope ?? null,
       company_position: booking?.company_position ?? null,
       service_name: service?.name ?? "Chưa cập nhật",
@@ -252,6 +386,27 @@ export const createShiftAssignments = async ({
 }): Promise<Shift_Assignment[]> => {
   const supabase = await createClient();
 
+  // Resolve guard_id from guards table in case user_id is passed
+  const { data: guardsInfo } = await supabase
+    .from("guards")
+    .select("guard_id, user_id")
+    .or(`guard_id.in.(${guardIds.join(",")}),user_id.in.(${guardIds.join(",")})`);
+
+  const idToGuardIdMap: Record<string, string> = {};
+  const allSearchIds: string[] = [...guardIds];
+  (guardsInfo || []).forEach((g: any) => {
+    if (g.guard_id) {
+      idToGuardIdMap[g.guard_id] = g.guard_id;
+      allSearchIds.push(g.guard_id);
+    }
+    if (g.user_id && g.guard_id) {
+      idToGuardIdMap[g.user_id] = g.guard_id;
+      allSearchIds.push(g.user_id);
+    }
+  });
+
+  const normalizedGuardIds = Array.from(new Set(guardIds.map((id) => idToGuardIdMap[id] || id)));
+
   // 1. Get current shift start_time and end_time
   const { data: currentShift } = await supabase
     .from("shifts")
@@ -286,7 +441,7 @@ export const createShiftAssignments = async ({
           end_time
         )
       `)
-      .in("guard_id", guardIds)
+      .in("guard_id", allSearchIds)
       .neq("shift_id", shiftId)
       .gte("shifts.start_time", startOfDayISO)
       .lte("shifts.start_time", endOfDayISO);
@@ -295,12 +450,13 @@ export const createShiftAssignments = async ({
       const s = ea.shifts;
       if (s?.start_time && s?.end_time) {
         const dur = Math.max(0, Math.round((new Date(s.end_time).getTime() - new Date(s.start_time).getTime()) / (1000 * 60)));
-        priorAssignedMap[ea.guard_id] = (priorAssignedMap[ea.guard_id] || 0) + dur;
+        const mappedGid = idToGuardIdMap[ea.guard_id] || ea.guard_id;
+        priorAssignedMap[mappedGid] = (priorAssignedMap[mappedGid] || 0) + dur;
       }
     });
   }
 
-  const assignments = guardIds.map((guardId) => {
+  const assignments = normalizedGuardIds.map((guardId) => {
     const priorMinutes = priorAssignedMap[guardId] || 0;
     const totalMinutes = priorMinutes + shiftDuration;
     let is_overtime = false;
@@ -437,14 +593,16 @@ export const getOverlappingGuardShifts = async ({
 }): Promise<OverlappingGuardShift[]> => {
   const supabase = await createClient();
 
-  // Find their guard_ids from guards table (since replacement_guard_ids stores guards.guard_id)
+  // Find their guard_ids from guards table
   const { data: guardsData } = await supabase
     .from("guards")
     .select("guard_id, user_id")
-    .in("user_id", guardId);
+    .or(`guard_id.in.(${guardId.join(",")}),user_id.in.(${guardId.join(",")})`);
 
   const guardIdMap = guardsData || [];
   const dbGuardIds = guardIdMap.map(g => g.guard_id);
+  const dbUserIds = guardIdMap.map(g => g.user_id).filter(Boolean);
+  const allTargetIds = Array.from(new Set([...guardId, ...dbGuardIds, ...dbUserIds]));
 
   let query = supabase
     .from("shift_assignments")
@@ -466,11 +624,7 @@ export const getOverlappingGuardShifts = async ({
     .lt("shifts.start_time", endTime)
     .gt("shifts.end_time", startTime);
 
-  if (dbGuardIds.length > 0) {
-    query = query.or(`guard_id.in.(${guardId.join(",")}),replacement_guard_ids.ov.{${dbGuardIds.join(",")}}`);
-  } else {
-    query = query.in("guard_id", guardId);
-  }
+  query = query.or(`guard_id.in.(${allTargetIds.join(",")}),replacement_guard_ids.ov.{${allTargetIds.join(",")}}`);
 
   const { data, error } = await query;
 
@@ -532,14 +686,16 @@ export const getGuardsShiftsOnDate = async ({
 
   if (guardIds.length === 0) return [];
 
-  // Find their guard_ids from guards table (since replacement_guard_ids stores guards.guard_id)
+  // Find their guard_ids and user_ids from guards table
   const { data: guardsData } = await supabase
     .from("guards")
     .select("guard_id, user_id")
-    .in("user_id", guardIds);
+    .or(`guard_id.in.(${guardIds.join(",")}),user_id.in.(${guardIds.join(",")})`);
 
   const guardIdMap = guardsData || [];
   const dbGuardIds = guardIdMap.map((g) => g.guard_id);
+  const dbUserIds = guardIdMap.map((g) => g.user_id).filter(Boolean);
+  const allTargetIds = Array.from(new Set([...guardIds, ...dbGuardIds, ...dbUserIds]));
 
   // Range in UTC corresponding to local ICT timezone (UTC+7)
   const startOfDay = new Date(`${date}T00:00:00+07:00`).toISOString();
@@ -565,13 +721,9 @@ export const getGuardsShiftsOnDate = async ({
     .gte("shifts.start_time", startOfDay)
     .lte("shifts.start_time", endOfDay);
 
-  if (dbGuardIds.length > 0) {
-    query = query.or(
-      `guard_id.in.(${guardIds.join(",")}),replacement_guard_ids.ov.{${dbGuardIds.join(",")}}`,
-    );
-  } else {
-    query = query.in("guard_id", guardIds);
-  }
+  query = query.or(
+    `guard_id.in.(${allTargetIds.join(",")}),replacement_guard_ids.ov.{${allTargetIds.join(",")}}`,
+  );
 
   const { data, error } = await query;
   if (error) {
@@ -596,9 +748,12 @@ export const getGuardsShiftsOnDate = async ({
     const duration = (end.getTime() - start.getTime()) / (1000 * 60);
 
     // 1. Original guard
-    if (guardIds.includes(item.guard_id)) {
+    const mappedOriginal = guardIdMap.find((g) => g.guard_id === item.guard_id || g.user_id === item.guard_id);
+    const originalMatches = guardIds.includes(item.guard_id) || (mappedOriginal && (guardIds.includes(mappedOriginal.guard_id) || guardIds.includes(mappedOriginal.user_id)));
+    if (originalMatches) {
+      const matchId = guardIds.includes(item.guard_id) ? item.guard_id : (mappedOriginal && guardIds.includes(mappedOriginal.guard_id) ? mappedOriginal.guard_id : mappedOriginal?.user_id || item.guard_id);
       results.push({
-        guard_id: item.guard_id,
+        guard_id: matchId,
         shift_id: shift.shift_id,
         start_time: shift.start_time,
         end_time: shift.end_time,
@@ -609,10 +764,11 @@ export const getGuardsShiftsOnDate = async ({
     // 2. Replacement guards
     if (item.replacement_guard_ids && item.replacement_guard_ids.length > 0) {
       for (const repGuardId of item.replacement_guard_ids) {
-        const mappedGuard = guardIdMap.find((g) => g.guard_id === repGuardId);
-        if (mappedGuard && guardIds.includes(mappedGuard.user_id)) {
+        const mappedGuard = guardIdMap.find((g) => g.guard_id === repGuardId || g.user_id === repGuardId);
+        if (mappedGuard && (guardIds.includes(mappedGuard.guard_id) || guardIds.includes(mappedGuard.user_id))) {
+          const matchId = guardIds.includes(mappedGuard.guard_id) ? mappedGuard.guard_id : mappedGuard.user_id;
           results.push({
-            guard_id: mappedGuard.user_id,
+            guard_id: matchId,
             shift_id: shift.shift_id,
             start_time: shift.start_time,
             end_time: shift.end_time,
@@ -643,14 +799,16 @@ export const getGuardsShiftsInWeek = async ({
   const startOfWeek = new Date(`${startOfWeekKey}T00:00:00+07:00`).toISOString();
   const endOfWeek = new Date(`${endOfWeekKey}T23:59:59+07:00`).toISOString();
 
-  // Find their guard_ids from guards table
+  // Find their guard_ids and user_ids from guards table
   const { data: guardsData } = await supabase
     .from("guards")
     .select("guard_id, user_id")
-    .in("user_id", guardIds);
+    .or(`guard_id.in.(${guardIds.join(",")}),user_id.in.(${guardIds.join(",")})`);
 
   const guardIdMap = guardsData || [];
   const dbGuardIds = guardIdMap.map((g) => g.guard_id);
+  const dbUserIds = guardIdMap.map((g) => g.user_id).filter(Boolean);
+  const allTargetIds = Array.from(new Set([...guardIds, ...dbGuardIds, ...dbUserIds]));
 
   let query = supabase
     .from("shift_assignments")
@@ -672,13 +830,9 @@ export const getGuardsShiftsInWeek = async ({
     .gte("shifts.start_time", startOfWeek)
     .lte("shifts.start_time", endOfWeek);
 
-  if (dbGuardIds.length > 0) {
-    query = query.or(
-      `guard_id.in.(${guardIds.join(",")}),replacement_guard_ids.ov.{${dbGuardIds.join(",")}}`,
-    );
-  } else {
-    query = query.in("guard_id", guardIds);
-  }
+  query = query.or(
+    `guard_id.in.(${allTargetIds.join(",")}),replacement_guard_ids.ov.{${allTargetIds.join(",")}}`,
+  );
 
   const { data, error } = await query;
   if (error) {
@@ -702,9 +856,12 @@ export const getGuardsShiftsInWeek = async ({
     const end = new Date(shift.end_time);
     const duration = (end.getTime() - start.getTime()) / (1000 * 60);
 
-    if (guardIds.includes(item.guard_id)) {
+    const mappedOriginal = guardIdMap.find((g) => g.guard_id === item.guard_id || g.user_id === item.guard_id);
+    const originalMatches = guardIds.includes(item.guard_id) || (mappedOriginal && (guardIds.includes(mappedOriginal.guard_id) || guardIds.includes(mappedOriginal.user_id)));
+    if (originalMatches) {
+      const matchId = guardIds.includes(item.guard_id) ? item.guard_id : (mappedOriginal && guardIds.includes(mappedOriginal.guard_id) ? mappedOriginal.guard_id : mappedOriginal?.user_id || item.guard_id);
       results.push({
-        guard_id: item.guard_id,
+        guard_id: matchId,
         shift_id: shift.shift_id,
         start_time: shift.start_time,
         end_time: shift.end_time,
@@ -714,10 +871,11 @@ export const getGuardsShiftsInWeek = async ({
 
     if (item.replacement_guard_ids && item.replacement_guard_ids.length > 0) {
       for (const repGuardId of item.replacement_guard_ids) {
-        const mappedGuard = guardIdMap.find((g) => g.guard_id === repGuardId);
-        if (mappedGuard && guardIds.includes(mappedGuard.user_id)) {
+        const mappedGuard = guardIdMap.find((g) => g.guard_id === repGuardId || g.user_id === repGuardId);
+        if (mappedGuard && (guardIds.includes(mappedGuard.guard_id) || guardIds.includes(mappedGuard.user_id))) {
+          const matchId = guardIds.includes(mappedGuard.guard_id) ? mappedGuard.guard_id : mappedGuard.user_id;
           results.push({
-            guard_id: mappedGuard.user_id,
+            guard_id: matchId,
             shift_id: shift.shift_id,
             start_time: shift.start_time,
             end_time: shift.end_time,
@@ -856,7 +1014,9 @@ export const getGuardsShiftsInRange = async ({
 const mapShiftAssignment = (
   assignment: ShiftAssignmentQuery,
 ): ShiftAssignment => {
-  const profile = getSingleRelation(assignment.profiles);
+  const guardRel = getSingleRelation(assignment.guards);
+  const guardProfile = getSingleRelation(guardRel?.profiles);
+  const profile = guardProfile || getSingleRelation(assignment.profiles);
   const shiftImg = getSingleRelation(assignment.shift_img);
 
   return {
@@ -874,9 +1034,9 @@ const mapShiftAssignment = (
     guard_name: profile?.full_name ?? "Chưa cập nhật",
     checkin_image: shiftImg
       ? {
-          image_url: shiftImg.image_url,
-          image_path: shiftImg.image_path,
-        }
+        image_url: shiftImg.image_url,
+        image_path: shiftImg.image_path,
+      }
       : null,
   };
 };
@@ -894,7 +1054,7 @@ const mapShiftWithAssignments = (shift: ShiftQuery): ShiftWithAssignments => {
     required_guards: shift.required_guards,
     location: shift.location,
     contract_address: booking?.address ?? "",
-    company_name: (booking as any)?.company_name || undefined,
+    company_name: (booking as any)?.company_name || (booking as any)?.company?.company_name || undefined,
     created_at: shift.created_at,
     updated_at: shift.updated_at,
     assignments: (shift.shift_assignments ?? []).map(mapShiftAssignment),
@@ -946,8 +1106,11 @@ export const getAllShiftsByDateRange = async ({
           overtime_minutes,
           created_at,
           updated_at,
-          profiles!shift_assignments_guard_id_fkey (
-            full_name
+          guards!shift_assignments_guard_id_fkey (
+            guard_id,
+            profiles!guards_user_id_fkey (
+              full_name
+            )
           ),
           shift_img (
             image_url,
@@ -969,44 +1132,117 @@ export const getAllShiftsByDateRange = async ({
 
   const rawShifts = ((data ?? []) as unknown as ShiftQuery[]).map(mapShiftWithAssignments);
 
-  // Collect all replacement guard ids across shifts
-  const replacementGuardIds = new Set<string>();
+  // Fetch approved swap requests to mark any assignments that were swapped via guard swap requests
+  const { data: swapRequests } = await supabase
+    .from("shift_swap_requests")
+    .select("items")
+    .eq("status", "APPROVED");
+
+  const approvedSwapAssignmentIds = new Set<string>();
+  if (swapRequests) {
+    swapRequests.forEach((req: any) => {
+      if (Array.isArray(req.items)) {
+        req.items.forEach((it: any) => {
+          if (it.assignment_id) {
+            approvedSwapAssignmentIds.add(it.assignment_id);
+          }
+        });
+      }
+    });
+  }
+
+  // Mark swapped assignments with is_swap_approved and collect guard ids for profiles & skills lookup
+  const allGuardIds = new Set<string>();
   rawShifts.forEach((s) => {
     s.assignments.forEach((a) => {
+      if (approvedSwapAssignmentIds.has(a.assignment_id)) {
+        a.is_swap_approved = true;
+      }
+      if (a.guard_id) allGuardIds.add(a.guard_id);
       if (a.replacement_guard_ids) {
-        a.replacement_guard_ids.forEach((id) => replacementGuardIds.add(id));
+        a.replacement_guard_ids.forEach((id) => allGuardIds.add(id));
       }
     });
   });
 
-  if (replacementGuardIds.size > 0) {
-    const { data: dbGuards } = await supabase
+  if (allGuardIds.size > 0) {
+    const { data: dbGuards, error: guardsError } = await supabase
       .from("guards")
       .select(`
         guard_id,
         user_id,
+        notable_skills,
+        height_cm,
+        weight_kg,
         profiles!guards_user_id_fkey (
+          user_id,
           full_name,
           phone_number,
-          avatar_url
+          avatar_url,
+          email
         )
-      `)
-      .in("guard_id", Array.from(replacementGuardIds));
+      `);
+
+    if (guardsError) {
+      console.error("[getAllShiftsByDateRange] Guards Query Error:", guardsError);
+    }
 
     const guardsMapping = dbGuards || [];
 
+    const userIds = Array.from(
+      new Set(
+        guardsMapping
+          .map((g) => g.user_id)
+          .filter((id): id is string => Boolean(id))
+      )
+    );
+
+    const identitiesMap: Record<string, string> = {};
+    if (userIds.length > 0) {
+      const { data: dbIdentities } = await supabase
+        .from("identities")
+        .select("user_id, identity_id")
+        .in("user_id", userIds);
+
+      (dbIdentities || []).forEach((item: any) => {
+        if (item.user_id && item.identity_id) {
+          identitiesMap[item.user_id] = item.identity_id;
+        }
+      });
+    }
+
     rawShifts.forEach((s) => {
       s.assignments.forEach((a) => {
+        // Map main guard profile info & skills
+        const mainGuard = guardsMapping.find((g) => g.guard_id === a.guard_id || g.user_id === a.guard_id);
+        if (mainGuard) {
+          const profile = Array.isArray(mainGuard.profiles) ? mainGuard.profiles[0] : mainGuard.profiles;
+          const identityId = profile?.user_id ? identitiesMap[profile.user_id] : (mainGuard.user_id ? identitiesMap[mainGuard.user_id] : null);
+          a.notable_skills = Array.isArray(mainGuard.notable_skills) ? mainGuard.notable_skills : [];
+          a.phone_number = profile?.phone_number ?? null;
+          a.avatar_url = profile?.avatar_url ?? null;
+          a.email = profile?.email ?? null;
+          a.height_cm = mainGuard.height_cm ?? null;
+          a.weight_kg = mainGuard.weight_kg ?? null;
+          (a as any).identity_card_number = identityId ?? null;
+        }
+
         if (a.replacement_guard_ids && a.replacement_guard_ids.length > 0) {
           a.replacement_guards = a.replacement_guard_ids.map((repId) => {
-            const mapped = guardsMapping.find((g) => g.guard_id === repId);
+            const mapped = guardsMapping.find((g) => g.guard_id === repId || g.user_id === repId);
             const profile = mapped ? (Array.isArray(mapped.profiles) ? mapped.profiles[0] : mapped.profiles) : null;
+            const identityId = profile?.user_id ? identitiesMap[profile.user_id] : (mapped?.user_id ? identitiesMap[mapped.user_id] : null);
             return {
               guard_id: repId,
               user_id: mapped?.user_id ?? "",
               full_name: profile?.full_name ?? "Chưa có tên",
               phone_number: profile?.phone_number ?? null,
               avatar_url: profile?.avatar_url ?? null,
+              notable_skills: Array.isArray(mapped?.notable_skills) ? mapped.notable_skills : [],
+              height_cm: mapped?.height_cm ?? null,
+              weight_kg: mapped?.weight_kg ?? null,
+              email: profile?.email ?? null,
+              identity_card_number: identityId ?? null,
             };
           });
         } else {
@@ -1050,7 +1286,8 @@ const mapShiftRowToItem = (
   // Determine if this guard is a replacement (their guard_id appears in replacement_guard_ids)
   const isReplacement = guardContext
     ? (row.replacement_guard_ids ?? []).includes(guardContext.guardId) &&
-      row.guard_id !== guardContext.assignmentGuardId
+    row.guard_id !== guardContext.assignmentGuardId &&
+    row.guard_id !== guardContext.guardId
     : false;
 
   return {
@@ -1068,7 +1305,7 @@ const mapShiftRowToItem = (
     shift_name: shift.shift_name ?? "Chưa cập nhật tên ca trực",
     location: shift.location ?? "Chưa cập nhật vị trí",
     address: booking?.address ?? "Chưa cập nhật địa chỉ",
-    company_name: (booking as any)?.company_name ?? undefined,
+    company_name: (booking as any)?.company_name || (booking as any)?.company?.company_name || undefined,
 
     status: row.status,
     check_in_time: row.check_in_time,
@@ -1111,8 +1348,8 @@ export const getGuardShiftsByRange = async ({
 
   const { data: guardData, error: guardError } = await supabase
     .from("guards")
-    .select("user_id")
-    .eq("guard_id", guard_id)
+    .select("guard_id, user_id")
+    .or(`guard_id.eq.${guard_id},user_id.eq.${guard_id}`)
     .maybeSingle();
 
   if (guardError) {
@@ -1120,7 +1357,8 @@ export const getGuardShiftsByRange = async ({
     throw new Error(guardError.message);
   }
 
-  const assignmentGuardId = guardData?.user_id ?? guard_id;
+  const dbGuardId = guardData?.guard_id || guard_id;
+  const dbUserId = guardData?.user_id || guard_id;
 
   const { data, error } = await supabase
     .from("shift_assignments")
@@ -1156,7 +1394,7 @@ export const getGuardShiftsByRange = async ({
       )
     `,
     )
-    .or(`guard_id.eq.${assignmentGuardId},replacement_guard_ids.cs.{${guard_id}}`)
+    .or(`guard_id.eq.${dbGuardId},guard_id.eq.${dbUserId},replacement_guard_ids.cs.{${dbGuardId}}`)
     .lt("shifts.start_time", end_time)
     .gt("shifts.end_time", start_time);
 
@@ -1166,7 +1404,7 @@ export const getGuardShiftsByRange = async ({
   }
 
   return ((data ?? []) as ShiftRow[])
-    .map((row) => mapShiftRowToItem(row, { assignmentGuardId, guardId: guard_id }))
+    .map((row) => mapShiftRowToItem(row, { assignmentGuardId: dbUserId, guardId: dbGuardId }))
     .filter((shift): shift is GuardShiftItem => Boolean(shift))
     .sort((first, second) => {
       return (
@@ -1201,25 +1439,22 @@ export const getShiftAssignmentByShiftAndGuard = async ({
 }): Promise<Shift_Assignment | null> => {
   const supabase = await createClient();
 
-  // Find their guard_id from guards table (since replacement_guard_ids stores guards.guard_id)
+  // Find both guard_id and user_id from guards table
   const { data: guardData } = await supabase
     .from("guards")
-    .select("guard_id")
-    .eq("user_id", guardId)
+    .select("guard_id, user_id")
+    .or(`guard_id.eq.${guardId},user_id.eq.${guardId}`)
     .maybeSingle();
 
-  const dbGuardId = guardData?.guard_id;
+  const dbGuardId = guardData?.guard_id || guardId;
+  const dbUserId = guardData?.user_id || guardId;
 
   let query = supabase
     .from("shift_assignments")
     .select("*")
     .eq("shift_id", shiftId);
 
-  if (dbGuardId) {
-    query = query.or(`guard_id.eq.${guardId},replacement_guard_ids.cs.{${dbGuardId}}`);
-  } else {
-    query = query.eq("guard_id", guardId);
-  }
+  query = query.or(`guard_id.eq.${dbGuardId},guard_id.eq.${dbUserId},replacement_guard_ids.cs.{${dbGuardId}}`);
 
   const { data, error } = await query.maybeSingle();
 
@@ -1255,6 +1490,16 @@ export const updateShiftAssignmentStatusByShiftAndGuard = async ({
 }: UpdateShiftAssignmentStatusParams): Promise<Shift_Assignment | null> => {
   const supabase = await createClient();
 
+  const { data: guardData } = await supabase
+    .from("guards")
+    .select("guard_id, user_id")
+    .or(`guard_id.eq.${guardId},user_id.eq.${guardId}`)
+    .maybeSingle();
+
+  const targetGuardIds = guardData
+    ? [guardData.guard_id, guardData.user_id].filter(Boolean)
+    : [guardId];
+
   const { data, error } = await supabase
     .from("shift_assignments")
     .update({
@@ -1263,7 +1508,7 @@ export const updateShiftAssignmentStatusByShiftAndGuard = async ({
       updated_at: new Date().toISOString(),
     })
     .eq("shift_id", shiftId)
-    .eq("guard_id", guardId)
+    .in("guard_id", targetGuardIds)
     .select("*")
     .maybeSingle();
 
@@ -1303,13 +1548,11 @@ export const createShiftImage = async ({
   imageUrl,
   imagePath,
   imageType,
-  note,
 }: {
   assignmentId: string;
   imageUrl: string;
   imagePath: string | null;
   imageType: string;
-  note?: string | null;
 }): Promise<Shift_Img | null> => {
   const supabase = await createClient();
 
@@ -1321,7 +1564,6 @@ export const createShiftImage = async ({
       image_url: imageUrl,
       image_path: imagePath,
       image_type: imageType,
-      note: note || null,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
@@ -1404,7 +1646,7 @@ export const getLatestShiftByContract = async (
 
   if (!data?.start_time) return null;
 
-  return data.start_time.split(/[T ]/)[0];
+  return formatDateKey(data.start_time);
 };
 
 export const getScheduledShiftDatesByContract = async (
@@ -1426,7 +1668,7 @@ export const getScheduledShiftDatesByContract = async (
   const uniqueDates = new Set<string>();
   for (const row of data) {
     if (row.start_time) {
-      uniqueDates.add(row.start_time.split(/[T ]/)[0]);
+      uniqueDates.add(formatDateKey(row.start_time));
     }
   }
 
@@ -1710,11 +1952,13 @@ export const approveShiftSwapRequestRepository = async (
       .select("guard_id, user_id")
       .or(`guard_id.in.(${replacementGuardIds.join(",")}),user_id.in.(${replacementGuardIds.join(",")})`);
 
-    const guardIdToUserIdMap: Record<string, string> = {};
+    const guardIdMap: Record<string, { guard_id: string; user_id: string }> = {};
     (guardsData || []).forEach((g: any) => {
-      if (g.guard_id && g.user_id) {
-        guardIdToUserIdMap[g.guard_id] = g.user_id;
-        guardIdToUserIdMap[g.user_id] = g.user_id;
+      if (g.guard_id) {
+        guardIdMap[g.guard_id] = { guard_id: g.guard_id, user_id: g.user_id };
+      }
+      if (g.user_id) {
+        guardIdMap[g.user_id] = { guard_id: g.guard_id, user_id: g.user_id };
       }
     });
 
@@ -1757,13 +2001,17 @@ export const approveShiftSwapRequestRepository = async (
       return tA.localeCompare(tB);
     });
 
-    // Collect all target user IDs
-    const allTargetUserIds = Array.from(new Set(Object.values(guardIdToUserIdMap)));
+    // Collect all target search IDs (both guard_id and user_id)
+    const allSearchIds = Array.from(
+      new Set(
+        (guardsData || []).flatMap((g: any) => [g.guard_id, g.user_id]).filter(Boolean)
+      )
+    );
 
     // Pre-query prior DB minutes for targetUserIds excluding ALL swap items being replaced
     const initialGuardDailyMinutesMap: Record<string, Record<string, number>> = {};
 
-    if (allTargetUserIds.length > 0) {
+    if (allSearchIds.length > 0) {
       const { data: priorDbAssignments } = await supabase
         .from("shift_assignments")
         .select(
@@ -1776,7 +2024,7 @@ export const approveShiftSwapRequestRepository = async (
           )
         `
         )
-        .in("guard_id", allTargetUserIds)
+        .in("guard_id", allSearchIds)
         .neq("status", "absent");
 
       (priorDbAssignments || []).forEach((ea: any) => {
@@ -1787,24 +2035,27 @@ export const approveShiftSwapRequestRepository = async (
         if (s?.start_time && s?.end_time) {
           const localD = new Date(s.start_time);
           localD.setUTCHours(localD.getUTCHours() + 7);
-          const dStr = localD.toISOString().split("T")[0];
-          const d = Math.max(0, Math.round((new Date(s.end_time).getTime() - new Date(s.start_time).getTime()) / (1000 * 60)));
+          const dateKey = localD.toISOString().split("T")[0];
+          const dur = Math.max(0, Math.round((new Date(s.end_time).getTime() - new Date(s.start_time).getTime()) / (1000 * 60)));
 
-          if (!initialGuardDailyMinutesMap[ea.guard_id]) {
-            initialGuardDailyMinutesMap[ea.guard_id] = {};
+          const gInfo = guardIdMap[ea.guard_id];
+          const mappedKey = gInfo?.guard_id || ea.guard_id;
+
+          if (!initialGuardDailyMinutesMap[mappedKey]) {
+            initialGuardDailyMinutesMap[mappedKey] = {};
           }
-          initialGuardDailyMinutesMap[ea.guard_id][dStr] = (initialGuardDailyMinutesMap[ea.guard_id][dStr] || 0) + d;
+          initialGuardDailyMinutesMap[mappedKey][dateKey] = (initialGuardDailyMinutesMap[mappedKey][dateKey] || 0) + dur;
         }
       });
     }
 
-    // Track running daily minutes per targetUserId and date
+    // Track running daily minutes per target guard and date
     const guardDailyMinutesMap: Record<string, Record<string, number>> = structuredClone(initialGuardDailyMinutesMap);
 
     for (const item of sortedItems) {
       if (item.assignment_id && item.replacement_guard_id) {
-        const targetUserId =
-          guardIdToUserIdMap[item.replacement_guard_id] || item.replacement_guard_id;
+        const targetGuardDbId =
+          guardIdMap[item.replacement_guard_id]?.guard_id || item.replacement_guard_id;
         const shiftInfo = assignmentShiftInfoMap[item.assignment_id];
         const shiftDuration = shiftInfo?.durationMinutes || 480;
 
@@ -1815,11 +2066,11 @@ export const approveShiftSwapRequestRepository = async (
           dateStr = localD.toISOString().split("T")[0];
         }
 
-        if (!guardDailyMinutesMap[targetUserId]) {
-          guardDailyMinutesMap[targetUserId] = {};
+        if (!guardDailyMinutesMap[targetGuardDbId]) {
+          guardDailyMinutesMap[targetGuardDbId] = {};
         }
 
-        const accumulatedBefore = guardDailyMinutesMap[targetUserId][dateStr] || 0;
+        const accumulatedBefore = guardDailyMinutesMap[targetGuardDbId][dateStr] || 0;
         const totalMinutes = accumulatedBefore + shiftDuration;
 
         let is_overtime = false;
@@ -1830,12 +2081,12 @@ export const approveShiftSwapRequestRepository = async (
           overtime_minutes = Math.min(shiftDuration, totalMinutes - 480);
         }
 
-        guardDailyMinutesMap[targetUserId][dateStr] = accumulatedBefore + shiftDuration;
+        guardDailyMinutesMap[targetGuardDbId][dateStr] = accumulatedBefore + shiftDuration;
 
         const { error: assignError } = await supabase
           .from("shift_assignments")
           .update({
-            guard_id: targetUserId,
+            guard_id: targetGuardDbId,
             is_overtime,
             overtime_minutes,
             updated_at: new Date().toISOString(),

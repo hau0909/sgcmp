@@ -1,6 +1,6 @@
 import { useTranslation } from "@/components/providers/LanguageProvider";
 import { Building2 } from "lucide-react";
-import type { ShiftWithAssignments, TimeSlot } from "../type";
+import type { ContractOption, ShiftWithAssignments, TimeSlot } from "../type";
 import { getShiftCellKey, getSlotIdByShift } from "../utils/shift.utils";
 import { formatTime as formatTimeHelper } from "@/utils/dateTime";
 import { ShiftCard } from "./ShiftCard";
@@ -12,6 +12,9 @@ type ShiftScheduleTableProps = {
   shifts: ShiftWithAssignments[];
   selectedLocation?: string;
   weekStartDate?: string;
+  readOnly?: boolean;
+  onReportShift?: (shiftId: string, contractId: string, shiftDate?: string) => void;
+  contracts?: ContractOption[];
 };
 
 type ShiftSegment = {
@@ -223,6 +226,9 @@ export function ShiftScheduleTable({
   shifts,
   selectedLocation = "all",
   weekStartDate,
+  readOnly = false,
+  onReportShift,
+  contracts,
 }: ShiftScheduleTableProps) {
   const { dict, locale } = useTranslation();
   const isEn = locale === "en";
@@ -243,13 +249,25 @@ export function ShiftScheduleTable({
     }
   });
   const uniqueShifts = Array.from(uniqueShiftMap.values());
+  const enrichedShifts = uniqueShifts.map((s) => {
+    if (s.company_name && s.company_name !== "Chưa cập nhật") return s;
+    const contract = (s.contract_id ? contracts?.find((c) => c.contract_id === s.contract_id) : null)
+      || contracts?.find((c) => c.address === s.contract_address);
+    if (contract?.company_name && contract.company_name !== "Chưa cập nhật") {
+      return { ...s, company_name: contract.company_name };
+    }
+    return s;
+  });
 
   if (viewMode === "week") {
     return (
       <ShiftWeekScheduleTable
-        shifts={uniqueShifts}
+        shifts={enrichedShifts}
         selectedLocation={selectedLocation}
         weekStartDate={weekStartDate}
+        readOnly={readOnly}
+        onReportShift={onReportShift}
+        contracts={contracts}
       />
     );
   }
@@ -259,7 +277,7 @@ export function ShiftScheduleTable({
       ? locations
       : locations.filter((location) => location === selectedLocation);
 
-  const visibleShifts = uniqueShifts.filter((shift) =>
+  const visibleShifts = enrichedShifts.filter((shift) =>
     displayLocations.includes(getShiftContractAddress(shift, dict)),
   );
 
@@ -409,7 +427,10 @@ export function ShiftScheduleTable({
               >
                 {(() => {
                   const matchShift = visibleShifts.find((s) => getShiftContractAddress(s, dict) === contractAddress);
-                  const companyName = (!matchShift?.company_name || matchShift.company_name === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : matchShift.company_name;
+                  const matchContract = (matchShift?.contract_id ? contracts?.find((c) => c.contract_id === matchShift.contract_id) : null)
+                    || contracts?.find((c) => c.address === contractAddress);
+                  const rawCompanyName = matchContract?.company_name || matchShift?.company_name;
+                  const companyName = (!rawCompanyName || rawCompanyName === "Chưa cập nhật") ? (dict?.coor_guards?.unupdated || (isEn ? "Not updated" : "Chưa cập nhật")) : rawCompanyName;
                   return (
                     <>
                       <p className="flex items-center gap-1.5 font-bold text-blue-700 text-sm mb-1.5">

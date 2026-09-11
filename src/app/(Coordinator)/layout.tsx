@@ -286,7 +286,7 @@ export default function CoordinatorLayout({
                 <Menu className="w-6 h-6" />
               </button>
               <div className="md:flex flex-col items-start gap-0.5 hidden">
-                <h1 className="text-sm font-bold text-on-surface tracking-tight leading-tight truncate max-w-[280px]" title={companyInfo?.name || ""}>
+                <h1 className="text-sm font-bold text-on-surface tracking-tight leading-tight" title={companyInfo?.name || ""}>
                   {companyInfo ? companyInfo.name : dict.common.loading}
                 </h1>
                 {(role === "company-admin" ? (companyInfo?.ownerName || userProfile?.full_name) : userProfile?.full_name) && (

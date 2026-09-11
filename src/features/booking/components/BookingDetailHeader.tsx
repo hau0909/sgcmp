@@ -187,7 +187,7 @@ export function BookingDetailHeader({
               </button>
             )}
 
-          {/* Verification action button — only shown for non-customers */}
+          {/* Verification action button — only shown for non-customers and non-coordinators */}
           {!isCustomer &&
             (verificationStatus ? (
               <button
@@ -201,21 +201,23 @@ export function BookingDetailHeader({
                 </span>
               </button>
             ) : (
-              <button
-                onClick={onCreateVerification}
-                disabled={isCreatingVerification}
-                className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-semibold rounded-lg text-xs transition-all duration-100 active:scale-95 border border-outline-variant cursor-pointer disabled:opacity-50"
-              >
-                {isCreatingVerification ? (
-                  <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
-                ) : (
-                  <Plus className="w-4 h-4 shrink-0" />
-                )}
-                <span>
-                  {dict.booking.detail.header.create_verification ||
-                    "Tạo khảo sát"}
-                </span>
-              </button>
+              role?.toLowerCase() !== "coordinator" && (
+                <button
+                  onClick={onCreateVerification}
+                  disabled={isCreatingVerification}
+                  className="inline-flex items-center gap-1.5 px-3.5 py-1.5 bg-surface-container-high hover:bg-surface-container-highest text-on-surface font-semibold rounded-lg text-xs transition-all duration-100 active:scale-95 border border-outline-variant cursor-pointer disabled:opacity-50"
+                >
+                  {isCreatingVerification ? (
+                    <span className="w-4 h-4 border-2 border-current border-t-transparent rounded-full animate-spin" />
+                  ) : (
+                    <Plus className="w-4 h-4 shrink-0" />
+                  )}
+                  <span>
+                    {dict.booking.detail.header.create_verification ||
+                      "Tạo khảo sát"}
+                  </span>
+                </button>
+              )
             ))}
           {renderStatusBadge()}
           {contractId && (role === "company-admin" || isCustomer) && (
