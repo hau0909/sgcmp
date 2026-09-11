@@ -1,4 +1,4 @@
-import { Report, ReportStatus, ReportType } from "../types";
+import { Report, ReportGuard, ReportStatus, ReportType } from "../types";
 import {
   getCustomerReports,
   createCustomerReport,
@@ -14,11 +14,31 @@ const formatReport = (item: any): Report => {
   const booking = contract?.bookings;
   const service = booking?.services;
   const serviceName = service?.name || "Dịch vụ bảo vệ";
+  const shift = item.shifts;
+  const rawAssignments = Array.isArray(shift?.shift_assignments)
+    ? shift.shift_assignments
+    : [];
+
+  const guards: ReportGuard[] = rawAssignments.map((sa: any) => {
+    const guardRel = Array.isArray(sa.guards) ? sa.guards[0] : sa.guards;
+    const profile = guardRel?.profiles
+      ? (Array.isArray(guardRel.profiles) ? guardRel.profiles[0] : guardRel.profiles)
+      : (Array.isArray(sa.profiles) ? sa.profiles[0] : sa.profiles);
+    return {
+      guard_id: sa.guard_id,
+      guard_name: profile?.full_name || "Chưa cập nhật",
+      phone_number: profile?.phone_number || null,
+      avatar_url: profile?.avatar_url || null,
+      status: sa.status || null,
+      check_in_time: sa.check_in_time || null,
+    };
+  });
 
   return {
     id: item.id,
     contract_id: item.contract_id,
     customer_id: item.customer_id,
+    shift_id: item.shift_id || null,
     type: item.type as ReportType,
     description: item.description || "",
     status: item.status as ReportStatus,
@@ -29,6 +49,10 @@ const formatReport = (item: any): Report => {
     report_code: `BC-${item.id.slice(0, 8).toUpperCase()}`,
     customer_name: item.customer_name,
     customer_phone: item.customer_phone,
+    shift_name: shift?.shift_name || null,
+    shift_start_time: shift?.start_time || null,
+    shift_end_time: shift?.end_time || null,
+    guards,
   };
 };
 
@@ -60,6 +84,7 @@ export const getCustomerReportsService = async (
 export const createCustomerReportService = async (payload: {
   contract_id: string;
   customer_id: string;
+  shift_id?: string | null;
   type: ReportType;
   description: string;
   image_url?: string | null;

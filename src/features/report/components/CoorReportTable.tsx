@@ -2,6 +2,7 @@ import React from "react";
 import { ChevronRight, ShieldAlert, CheckCircle, Clock } from "lucide-react";
 import { Report, REPORT_TYPE_LABELS } from "../types";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { formatTime } from "@/utils/dateTime";
 
 interface CoorReportTableProps {
   reports: Report[];
@@ -86,6 +87,20 @@ export function CoorReportTable({ reports, onViewDetail }: CoorReportTableProps)
               <span className="text-xs text-on-surface-variant/80 font-medium">
                 {dict.report?.table?.issue}: <span className="font-bold text-on-surface">{report.type ? (REPORT_TYPE_LABELS[report.type] || report.type) : (dict.report?.table?.no_type ?? "Unclassified")}</span>
               </span>
+              {(report.shift_name || report.shift_id) && (
+                <>
+                  <span className="text-xs text-on-surface-variant/50">•</span>
+                  <span className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-md bg-indigo-50 text-indigo-800 border border-indigo-200">
+                    <Clock className="w-3 h-3 text-indigo-600 shrink-0" />
+                    <span className="font-semibold">{report.shift_name || dict.report?.table?.shift || "Ca trực"}</span>
+                    {report.shift_start_time && report.shift_end_time && (
+                      <span className="text-indigo-600 text-[11px]">
+                        ({formatTime(report.shift_start_time)} – {formatTime(report.shift_end_time)})
+                      </span>
+                    )}
+                  </span>
+                </>
+              )}
             </div>
 
             <p className="text-sm text-on-surface line-clamp-2 leading-relaxed">

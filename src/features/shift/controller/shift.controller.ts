@@ -303,14 +303,19 @@ export const handleCreateWorkShift = async (
     const { data: guardsData, error: guardsError } = await supabase
       .from("guards")
       .select("guard_id, user_id, company_id")
-      .in("user_id", allGuardIds);
+      .or(`guard_id.in.(${allGuardIds.join(",")}),user_id.in.(${allGuardIds.join(",")})`);
 
     if (guardsError) {
       return Response.json({ message: "Lỗi truy vấn thông tin bảo vệ" }, { status: 500 });
     }
 
-    const guardIdsInDb = (guardsData || []).map((g) => g.user_id);
-    const missingGuards = allGuardIds.filter((id) => !guardIdsInDb.includes(id));
+    const guardMapByAnyId: Record<string, { guard_id: string; user_id: string; company_id: string }> = {};
+    (guardsData || []).forEach((g) => {
+      if (g.guard_id) guardMapByAnyId[g.guard_id] = g;
+      if (g.user_id) guardMapByAnyId[g.user_id] = g;
+    });
+
+    const missingGuards = allGuardIds.filter((id) => !guardMapByAnyId[id]);
     if (missingGuards.length > 0) {
       return Response.json(
         { message: "Một hoặc nhiều bảo vệ không tồn tại trong hệ thống hoặc không hợp lệ" },
@@ -326,19 +331,30 @@ export const handleCreateWorkShift = async (
       );
     }
 
+    const allUserIds = Array.from(new Set((guardsData || []).map((g) => g.user_id).filter(Boolean)));
+
     // 2. Fetch profiles and check if status is active
     const { data: profilesData, error: profilesError } = await supabase
       .from("profiles")
       .select("user_id, status, full_name")
-      .in("user_id", allGuardIds);
+      .in("user_id", allUserIds);
 
     if (profilesError) {
       return Response.json({ message: "Lỗi truy vấn hồ sơ bảo vệ" }, { status: 500 });
     }
 
-    const profileMap: Record<string, { status: string; full_name: string }> = {};
+    const profileMapByUserId: Record<string, { status: string; full_name: string }> = {};
     for (const p of profilesData || []) {
-      profileMap[p.user_id] = { status: p.status || "", full_name: p.full_name || "" };
+      profileMapByUserId[p.user_id] = { status: p.status || "", full_name: p.full_name || "" };
+    }
+
+    const profileMap: Record<string, { status: string; full_name: string }> = {};
+    for (const g of guardsData || []) {
+      const p = profileMapByUserId[g.user_id];
+      if (p) {
+        profileMap[g.guard_id] = p;
+        profileMap[g.user_id] = p;
+      }
     }
 
     for (const id of allGuardIds) {
@@ -551,7 +567,7 @@ export const handleCreateWorkShift = async (
             shift_name: split.shift_name || input.shift_name,
             start_time: split.start_time,
             end_time: split.end_time,
-            guard_id: split.guard_id,
+            guard_id: split.guard_id.map((gid) => guardMapByAnyId[gid]?.guard_id || gid),
           };
           const result = await createWorkShiftService({
             input: splitInput,
@@ -608,8 +624,13 @@ export const handleCreateWorkShift = async (
         );
       }
 
+      const normalizedInput = {
+        ...input,
+        guard_id: input.guard_id.map((gid) => guardMapByAnyId[gid]?.guard_id || gid),
+      };
+
       const result = await createWorkShiftService({
-        input,
+        input: normalizedInput,
         assignedBy: user.id,
       });
 
@@ -990,14 +1011,7 @@ export const handleGetGuardShiftsByWeek = async (
         ? error.message
         : "Lấy lịch trực theo tuần thất bại";
 
-    return Response.json(
-      {
-        message,
-      },
-      {
-        status: 400,
-      },
-    );
+    return Response.json({ message }, { status: 400 });
   }
 };
 
@@ -1024,7 +1038,7 @@ export const handleGetGuardShiftDetail = async ({
 
   const assignment = await getShiftAssignmentByShiftAndGuardService({
     shiftId,
-    guardId: user.id,
+    guardId: guard.guard_id,
   });
 
   if (!assignment) {
@@ -1064,36 +1078,43 @@ export const handleGetGuardShiftDetail = async ({
     shift.shift_id,
   );
 
-  const userIds = shiftAssignments.map((item) => item.guard_id);
+  const rawGuardIds = shiftAssignments.map((item) => item.guard_id);
   const replacementGuardIds = shiftAssignments.flatMap((item) => item.replacement_guard_ids || []);
-  const supabase = await createClient();
-  let replacementUserIds: string[] = [];
-  let guardsMapping: any[] = [];
-  if (replacementGuardIds.length > 0) {
-    const cleanRepIds = Array.from(new Set(replacementGuardIds.filter(Boolean)));
-    const { data: dbGuards } = await supabase
-      .from("guards")
-      .select("guard_id, user_id")
-      .in("guard_id", cleanRepIds);
-    guardsMapping = dbGuards || [];
-    replacementUserIds = Array.from(
-      new Set([...guardsMapping.map((g) => g.user_id), ...cleanRepIds])
-    );
-  }
+  const allIdsToResolve = Array.from(new Set([...rawGuardIds, ...replacementGuardIds].filter(Boolean)));
 
-  const allUserIds = [...new Set([...userIds, ...replacementUserIds])];
+  const supabase = await createClient();
+  const { data: dbGuards } = await supabase
+    .from("guards")
+    .select("guard_id, user_id")
+    .or(`guard_id.in.(${allIdsToResolve.join(",")}),user_id.in.(${allIdsToResolve.join(",")})`);
+
+  const guardMap: Record<string, { guard_id: string; user_id: string }> = {};
+  (dbGuards || []).forEach((g: any) => {
+    if (g.guard_id) guardMap[g.guard_id] = g;
+    if (g.user_id) guardMap[g.user_id] = g;
+  });
+
+  const allUserIds = Array.from(
+    new Set(allIdsToResolve.map((id) => guardMap[id]?.user_id || id).filter(Boolean))
+  );
   const profiles = await getProfilesByUserIdsService(allUserIds);
+  const profileMap: Record<string, any> = {};
+  for (const p of profiles) {
+    profileMap[p.user_id] = p;
+  }
 
   const guardList: any[] = [];
 
   shiftAssignments.forEach((sa) => {
-    const profile = profiles.find((item) => item.user_id === sa.guard_id);
+    const gInfo = guardMap[sa.guard_id];
+    const saUserId = gInfo?.user_id || sa.guard_id;
+    const profile = profileMap[saUserId];
     const hasRep = sa.replacement_guard_ids && sa.replacement_guard_ids.length > 0;
 
     // Add original guard
     guardList.push({
-      guard_id: sa.guard_id,
-      user_id: sa.guard_id,
+      guard_id: gInfo?.guard_id || sa.guard_id,
+      user_id: saUserId,
       full_name: profile?.full_name || "Chưa có tên",
       phone_number: profile?.phone_number || null,
       avatar_url: profile?.avatar_url || null,
@@ -1105,16 +1126,12 @@ export const handleGetGuardShiftDetail = async ({
 
     // Add replacement guards
     if (hasRep) {
-      sa.replacement_guard_ids.forEach((repGuardId) => {
-        const mappedGuard = guardsMapping.find(
-          (g) => g.guard_id === repGuardId || g.user_id === repGuardId
-        );
-        const repUserId = mappedGuard ? mappedGuard.user_id : repGuardId;
-        const repProfile = profiles.find(
-          (item) => item.user_id === repUserId || item.user_id === repGuardId
-        );
+      sa.replacement_guard_ids.forEach((repGuardId: string) => {
+        const repInfo = guardMap[repGuardId];
+        const repUserId = repInfo?.user_id || repGuardId;
+        const repProfile = profileMap[repUserId];
         guardList.push({
-          guard_id: repUserId,
+          guard_id: repInfo?.guard_id || repGuardId,
           user_id: repUserId,
           full_name: repProfile?.full_name || "Bảo vệ thay thế",
           phone_number: repProfile?.phone_number || null,
@@ -1229,7 +1246,7 @@ export const handleCheckinGuardShift = async ({
 
   const assignment = await getShiftAssignmentByShiftAndGuardService({
     shiftId,
-    guardId: user.id,
+    guardId: guard.guard_id,
   });
 
   if (!assignment) {
@@ -1240,7 +1257,7 @@ export const handleCheckinGuardShift = async ({
   }
 
   // Prevent replacement guards from checking in
-  if (assignment.guard_id !== user.id) {
+  if (assignment.guard_id !== guard.guard_id && assignment.guard_id !== user.id) {
     throw new ShiftApiError(
       "Bảo vệ thay thế không cần điểm danh cho ca trực này.",
       403,
@@ -1301,7 +1318,7 @@ export const handleCheckinGuardShift = async ({
   if (now >= absentLimit) {
     await updateShiftAssignmentStatusByShiftAndGuardService({
       shiftId,
-      guardId: user.id,
+      guardId: guard.guard_id,
       status: "absent",
     });
     assignment.status = "absent";
@@ -1324,7 +1341,7 @@ export const handleCheckinGuardShift = async ({
   const updatedAssignment =
     await updateShiftAssignmentStatusByShiftAndGuardService({
       shiftId,
-      guardId: user.id,
+      guardId: guard.guard_id,
       status: determinedStatus,
       check_in_time: now.toISOString(),
     });
@@ -1958,13 +1975,13 @@ export const handleGetReplacementGuards = async (
     // Group active guards
     const candidateGuards = activeGuards.filter(g => {
       // 1. Cannot be the original guard of this assignment
-      if (g.user_id === originalGuardUserId) return false;
+      if (g.user_id === originalGuardUserId || g.guard_id === originalGuardUserId) return false;
       // 2. Cannot be already assigned as a main guard on this shift
-      if (assignedUserIds.includes(g.user_id)) return false;
+      if (assignedUserIds.includes(g.user_id) || assignedUserIds.includes(g.guard_id)) return false;
       // 3. Cannot be a replacement guard on this shift for another assignment
-      if (otherReplacementGuardIds.includes(g.guard_id)) return false;
+      if (otherReplacementGuardIds.includes(g.guard_id) || otherReplacementGuardIds.includes(g.user_id)) return false;
       // 4. Cannot have a conflicting shift
-      if (conflictedUserIds.has(g.user_id)) return false;
+      if (conflictedUserIds.has(g.user_id) || conflictedUserIds.has(g.guard_id)) return false;
       return true;
     });
 
@@ -2066,11 +2083,21 @@ export const handleUpdateReplacementGuards = async (
 
     // Find all assignments of this guard in all of these merged shifts
     const supabase = await createClient();
+    const { data: origGuardData } = await supabase
+      .from("guards")
+      .select("guard_id, user_id")
+      .or(`guard_id.eq.${assignment.guard_id},user_id.eq.${assignment.guard_id}`)
+      .maybeSingle();
+
+    const origGuardIds = origGuardData
+      ? [origGuardData.guard_id, origGuardData.user_id].filter(Boolean)
+      : [assignment.guard_id];
+
     const { data: dbAssignments } = await supabase
       .from("shift_assignments")
       .select("*")
       .in("shift_id", shiftIds)
-      .eq("guard_id", assignment.guard_id);
+      .in("guard_id", origGuardIds);
 
     const targetAssignments = dbAssignments || [];
     if (targetAssignments.length === 0) {
@@ -2127,8 +2154,8 @@ export const handleUpdateReplacementGuards = async (
         if (!profile || profile.status !== "active") {
           return Response.json({ message: `Bảo vệ với ID ${dg.guard_id} đang bị khóa hoặc không hoạt động` }, { status: 400 });
         }
-        // Original guard user ID cannot be in replacement list
-        if (dg.user_id === assignment.guard_id) {
+        // Original guard cannot be in replacement list
+        if (origGuardIds.includes(dg.guard_id) || origGuardIds.includes(dg.user_id)) {
           return Response.json({ message: "Bảo vệ thay thế không thể là bảo vệ gốc" }, { status: 400 });
         }
       }
@@ -2152,16 +2179,16 @@ export const handleUpdateReplacementGuards = async (
         shiftIds.map(id => getShiftAssignmentsByShiftIdService(id))
       );
       const flatAssignments = allShiftAssignments.flat();
-      const assignedUserIds = flatAssignments.filter(a => a.guard_id !== assignment.guard_id).map(a => a.guard_id);
+      const assignedUserIds = flatAssignments.filter(a => !origGuardIds.includes(a.guard_id)).map(a => a.guard_id);
       const otherReplacementGuardIds = flatAssignments
-        .filter(a => a.guard_id !== assignment.guard_id)
+        .filter(a => !origGuardIds.includes(a.guard_id))
         .flatMap(a => a.replacement_guard_ids || []);
 
       for (const dg of dbGuards) {
-        if (assignedUserIds.includes(dg.user_id)) {
+        if (assignedUserIds.includes(dg.user_id) || assignedUserIds.includes(dg.guard_id)) {
           return Response.json({ message: `Bảo vệ với ID ${dg.guard_id} đã được gán làm bảo vệ chính trong một trong các ca trực này` }, { status: 400 });
         }
-        if (otherReplacementGuardIds.includes(dg.guard_id)) {
+        if (otherReplacementGuardIds.includes(dg.guard_id) || otherReplacementGuardIds.includes(dg.user_id)) {
           return Response.json({ message: `Bảo vệ với ID ${dg.guard_id} đã được điều phối thay thế cho người khác trong các ca trực này` }, { status: 400 });
         }
       }
@@ -2372,4 +2399,84 @@ export const handleApproveShiftSwapRequest = async (
   }
 };
 
+/**
+ * GET /api/shifts/customer/today?contractId=xxx&date=YYYY-MM-DD
+ * Lấy danh sách ca trực của một ngày cụ thể theo hợp đồng (dùng cho dropdown báo cáo).
+ * date do client gửi lên để fake date khi test vẫn hoạt động chính xác.
+ */
+export const handleGetCustomerTodayShifts = async (
+  request: Request,
+): Promise<Response> => {
+  try {
+    const user = await getUser();
 
+    if (!user) {
+      return Response.json(
+        { message: "Người dùng chưa đăng nhập" },
+        { status: 401 },
+      );
+    }
+
+    const profileResponse = await handleGetUserProfile(user.id);
+    const profile = profileResponse.data;
+
+    if (!profile || profile.role !== "customer") {
+      return Response.json(
+        { message: "Bạn không có quyền xem ca trực bảo vệ" },
+        { status: 403 },
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const contractId = searchParams.get("contractId");
+    const dateParam = searchParams.get("date");
+
+    if (!contractId || contractId === "undefined" || contractId === "null") {
+      return Response.json(
+        { message: "Thiếu tham số contractId" },
+        { status: 400 },
+      );
+    }
+
+    // Ưu tiên date do client gửi lên (phục vụ test / fake date), nếu không có mới fallback server date
+    const dateKey =
+      dateParam && /^\d{4}-\d{2}-\d{2}$/.test(dateParam)
+        ? dateParam
+        : (() => {
+            const parts = new Intl.DateTimeFormat("en-US", {
+              timeZone: "Asia/Ho_Chi_Minh",
+              year: "numeric",
+              month: "2-digit",
+              day: "2-digit",
+            }).formatToParts(new Date());
+            const year = parts.find((p) => p.type === "year")?.value ?? "";
+            const month = parts.find((p) => p.type === "month")?.value ?? "";
+            const day = parts.find((p) => p.type === "day")?.value ?? "";
+            return `${year}-${month}-${day}`;
+          })();
+
+    const { startTime, endTime } = getDayDateRange(dateKey);
+
+    const shifts = await getAllShiftsByDateRangeService({
+      contractId: [contractId],
+      startTime,
+      endTime,
+      location: "all",
+    });
+
+    return Response.json(
+      {
+        message: "Lấy danh sách ca trực thành công",
+        data: shifts,
+      },
+      { status: 200 },
+    );
+  } catch (error) {
+    const message =
+      error instanceof Error
+        ? error.message
+        : "Lấy danh sách ca trực thất bại";
+
+    return Response.json({ message }, { status: 400 });
+  }
+};

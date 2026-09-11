@@ -16,10 +16,20 @@ export const REPORT_STATUS_LABELS: Record<ReportStatus, string> = {
   CLOSED: "Đã đóng",
 };
 
+export interface ReportGuard {
+  guard_id: string;
+  guard_name: string;
+  phone_number?: string | null;
+  avatar_url?: string | null;
+  status?: string | null;
+  check_in_time?: string | null;
+}
+
 export interface Report {
   id: string; // uuid
   contract_id: string; // uuid
   customer_id: string; // uuid
+  shift_id?: string | null; // uuid — ca trực liên quan (nullable)
   type: ReportType;
   description: string;
   status: ReportStatus;
@@ -32,11 +42,17 @@ export interface Report {
   report_code?: string;
   customer_name?: string;
   customer_phone?: string;
+  // Shift info (joined)
+  shift_name?: string | null;
+  shift_start_time?: string | null;
+  shift_end_time?: string | null;
+  guards?: ReportGuard[];
 }
 
 export interface CreateReportPayload {
   contract_id: string;
   customer_id: string;
+  shift_id?: string | null;
   type: ReportType;
   description: string;
   image_url?: string | null;

@@ -394,12 +394,44 @@ export type ShiftAssignmentQuery = {
   replacement_guard_ids: string[] | null;
   created_at: string;
   updated_at: string;
-  profiles:
+  profiles?:
   | {
     full_name: string | null;
   }
   | {
     full_name: string | null;
+  }[]
+  | null;
+  guards?:
+  | {
+    guard_id?: string;
+    profiles?:
+    | {
+      full_name: string | null;
+      avatar_url?: string | null;
+      phone_number?: string | null;
+    }
+    | {
+      full_name: string | null;
+      avatar_url?: string | null;
+      phone_number?: string | null;
+    }[]
+    | null;
+  }
+  | {
+    guard_id?: string;
+    profiles?:
+    | {
+      full_name: string | null;
+      avatar_url?: string | null;
+      phone_number?: string | null;
+    }
+    | {
+      full_name: string | null;
+      avatar_url?: string | null;
+      phone_number?: string | null;
+    }[]
+    | null;
   }[]
   | null;
   shift_img?:

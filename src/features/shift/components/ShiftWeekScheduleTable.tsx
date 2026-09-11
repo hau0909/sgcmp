@@ -10,12 +10,14 @@ import {
   Building2,
   CalendarX,
   Clock,
+  ClipboardList,
   MapPin,
   UserRound,
   SquarePen,
   Camera,
 } from "lucide-react";
 import type {
+  ContractOption,
   ShiftAssignment,
   ShiftAssignmentStatus,
   ShiftWithAssignments,
@@ -29,6 +31,8 @@ type ShiftWeekScheduleTableProps = {
   selectedLocation: string;
   weekStartDate?: string;
   readOnly?: boolean;
+  onReportShift?: (shiftId: string, contractId: string, shiftDate?: string) => void;
+  contracts?: ContractOption[];
 };
 
 type WeekDay = {
@@ -50,6 +54,7 @@ type WeekShiftTooltipProps = {
   position: TooltipPosition;
   onMouseEnter: () => void;
   onMouseLeave: () => void;
+  onReport?: (shiftId: string, contractId: string, shiftDate?: string) => void;
 };
 
 function GuardSubTooltip({
@@ -208,6 +213,7 @@ type WeekShiftCardProps = {
   shift: ShiftWithAssignments;
   onShiftClick?: (shift: ShiftWithAssignments) => void;
   readOnly?: boolean;
+  onReport?: (shiftId: string, contractId: string, shiftDate?: string) => void;
 };
 
 const TOOLTIP_WIDTH = 340;
@@ -464,9 +470,15 @@ function WeekShiftTooltip({
   position,
   onMouseEnter,
   onMouseLeave,
+  onReport,
 }: WeekShiftTooltipProps) {
   const { dict } = useTranslation();
   const firstAssignment = shift.assignments[0];
+
+  // Check if this shift belongs to today
+  const isShiftToday =
+    getShiftDateKey(shift.start_time) === getLocalDateKey(new Date());
+
   return createPortal(
     <div
       onMouseEnter={onMouseEnter}
@@ -568,6 +580,28 @@ function WeekShiftTooltip({
             <span className="break-words whitespace-normal min-w-0 flex-1">{shift.location || (dict?.shift_week?.unupdated_position || "Chưa cập nhật vị trí trực")}</span>
           </div>
         </div>
+
+        {/* Report button — only visible when onReport handler is provided (customer role) */}
+        {onReport && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              disabled={!isShiftToday}
+              onClick={() => isShiftToday && onReport(shift.shift_id, shift.contract_id, getShiftDateKey(shift.start_time))}
+              title={!isShiftToday ? (dict?.shift_week?.report_btn_tooltip || "Chỉ có thể báo cáo ca trực trong ngày hôm nay") : undefined}
+              className={`w-full flex items-center justify-center gap-2 px-3 py-2 rounded-md border text-xs font-semibold transition-colors ${
+                isShiftToday
+                  ? "bg-amber-50 hover:bg-amber-100 border-amber-300 text-amber-800 cursor-pointer"
+                  : "bg-slate-50 border-slate-200 text-slate-400 cursor-not-allowed"
+              }`}
+            >
+              <ClipboardList size={13} className="shrink-0" />
+              {isShiftToday
+                ? (dict?.shift_week?.report_btn || "Báo cáo sự cố ca này")
+                : (dict?.shift_week?.report_btn_disabled || "Chỉ báo cáo được ca hôm nay")}
+            </button>
+          </div>
+        )}
       </div>
     </div>,
     document.body,
@@ -579,6 +613,8 @@ export function ShiftWeekScheduleTable({
   selectedLocation,
   weekStartDate,
   readOnly = false,
+  onReportShift,
+  contracts,
 }: ShiftWeekScheduleTableProps) {
   const [selectedShift, setSelectedShift] = useState<ShiftWithAssignments | null>(null);
   const { dict, locale: appLocale } = useTranslation();
@@ -715,6 +751,7 @@ export function ShiftWeekScheduleTable({
                       shift={shift}
                       onShiftClick={(s) => !readOnly && setSelectedShift(s)}
                       readOnly={readOnly}
+                      onReport={onReportShift}
                     />
                   ))}
                 </div>
@@ -735,7 +772,7 @@ export function ShiftWeekScheduleTable({
   );
 }
 
-function WeekShiftCard({ shift, onShiftClick, readOnly = false }: WeekShiftCardProps) {
+function WeekShiftCard({ shift, onShiftClick, readOnly = false, onReport }: WeekShiftCardProps) {
   const { dict } = useTranslation();
   const cardRef = useRef<HTMLButtonElement | null>(null);
   const [tooltipPosition, setTooltipPosition] =
@@ -911,6 +948,7 @@ function WeekShiftCard({ shift, onShiftClick, readOnly = false }: WeekShiftCardP
           position={tooltipPosition}
           onMouseEnter={handleTooltipMouseEnter}
           onMouseLeave={handleTooltipMouseLeave}
+          onReport={onReport}
         />
       ) : null}
     </>

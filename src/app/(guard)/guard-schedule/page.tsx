@@ -6,7 +6,6 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { requestGetGuardShiftsByWeek } from "@/features/shift/api/shift.api";
 import { getUserLocale, formatDate, getUserTimeZone } from "@/utils/dateTime";
 import type { GuardShiftItem } from "@/features/shift/type";
-import { useAuthStore } from "@/store/auth.store";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 import {
   type ShiftItem,
@@ -96,6 +95,10 @@ const mapGuardShiftToShiftItem = (shift: GuardShiftItem): ShiftItem => {
     address: shift.address,
     company_name: shift.company_name,
     status: shift.status,
+    check_in_time: shift.check_in_time,
+    is_replacement: Boolean(shift.is_replacement),
+    is_overtime: shift.is_overtime || (Number(shift.overtime_minutes) > 0),
+    overtime_minutes: shift.overtime_minutes,
   };
 };
 
@@ -137,7 +140,6 @@ const EmptyScheduleSkeleton = () => {
 };
 
 export default function GuardSchedulePage() {
-  const userId = useAuthStore((state) => state.user_id);
   const { locale: appLocale, dict } = useTranslation();
   const bcp47Locale = appLocale === "en" ? "en-US" : "vi-VN";
   const today = useMemo(() => new Date(), []);
@@ -172,19 +174,7 @@ export default function GuardSchedulePage() {
         const mappedShiftsByDate: Record<string, ShiftItem[]> = {};
 
         Object.entries(groupedShifts).forEach(([dateKey, shifts]) => {
-          mappedShiftsByDate[dateKey] = shifts.map((s) => ({
-            id: s.id,
-            time: s.time,
-            shift_name: s.shift_name,
-            location: s.location,
-            address: s.address,
-            company_name: s.company_name,
-            status: s.status,
-            check_in_time: s.check_in_time,
-            is_replacement: s.guard_id ? s.guard_id !== userId : false,
-            is_overtime: s.is_overtime || (Number(s.overtime_minutes) > 0),
-            overtime_minutes: s.overtime_minutes,
-          }));
+          mappedShiftsByDate[dateKey] = shifts.map(mapGuardShiftToShiftItem);
         });
 
         setShiftsByDate(mappedShiftsByDate);

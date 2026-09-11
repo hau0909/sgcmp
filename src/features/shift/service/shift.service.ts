@@ -224,7 +224,6 @@ export const createShiftImageService = async (params: {
   imageUrl: string;
   imagePath: string | null;
   imageType: string;
-  note?: string | null;
 }): Promise<Shift_Img | null> => {
   return await createShiftImage(params);
 };

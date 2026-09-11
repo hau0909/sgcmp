@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Calendar } from "lucide-react";
 import { useTranslation } from "@/components/providers/LanguageProvider";
 import { ShiftScheduleTable } from "@/features/shift/components/ShiftScheduleTable";
@@ -14,6 +15,7 @@ import type {
   ShiftWithAssignments,
 } from "@/features/shift/type";
 import { getUserTimeZone } from "@/utils/dateTime";
+import { useAuthStore } from "@/store/auth.store";
 
 const getTodayKey = () => {
   const parts = new Intl.DateTimeFormat("en-US", {
@@ -90,6 +92,8 @@ function ShiftScheduleSkeleton() {
 
 export default function CustomerGuardSchedulePage() {
   const { dict } = useTranslation();
+  const router = useRouter();
+  const role = useAuthStore((state) => state.role);
   const [selectedLocation, setSelectedLocation] = useState("");
   const [currentDate, setCurrentDate] = useState(getTodayKey());
   const [shifts, setShifts] = useState<ShiftWithAssignments[]>([]);
@@ -214,10 +218,19 @@ export default function CustomerGuardSchedulePage() {
         <ShiftScheduleTable
           viewMode="week"
           locations={tableLocations}
+          contracts={contracts}
           shifts={shifts}
           selectedLocation={selectedLocation}
           weekStartDate={currentDate}
           readOnly={true}
+          onReportShift={
+            role === "customer"
+              ? (shiftId, contractId, shiftDate) =>
+                  router.push(
+                    `/my-reports?contractId=${encodeURIComponent(contractId)}&shiftId=${encodeURIComponent(shiftId)}${shiftDate ? `&date=${encodeURIComponent(shiftDate)}` : ""}`,
+                  )
+              : undefined
+          }
         />
       )}
     </div>

@@ -101,6 +101,34 @@ export const requestGetCustomerShiftsByWeek = async ({
   });
 };
 
+export const requestGetTodayShiftsByContract = async (
+  arg: string | { contractId: string; date?: string },
+  dateArg?: string,
+): Promise<GetAllShiftsResponse> => {
+  let contractId = "";
+  let date: string | undefined;
+
+  if (typeof arg === "string") {
+    contractId = arg;
+    date = dateArg;
+  } else if (arg && typeof arg === "object") {
+    contractId = arg.contractId;
+    date = arg.date;
+  }
+
+  const params = new URLSearchParams();
+  if (contractId) {
+    params.append("contractId", contractId);
+  }
+  if (date) {
+    params.append("date", date);
+  }
+
+  return fetcher(`/api/shifts/customer/today?${params.toString()}`, {
+    method: "GET",
+  });
+};
+
 export const requestGetGuardShiftsByDay = async ({
   date,
 }: {
