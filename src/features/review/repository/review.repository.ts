@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { calculateRatingDistribution } from "../utils/review-calculator.utils";
 import { Review } from "@/types/Review";
 import {
   CreateReviewPayload,
@@ -215,33 +216,5 @@ export const getRatingDistributionByCompanyId = async (
   }
 
   const ratings = (data ?? []) as unknown as ReviewRatingRow[];
-  const total_reviews = ratings.length;
-
-  const getStarCount = (star: 1 | 2 | 3 | 4 | 5) => {
-    return ratings.filter((item) => {
-      const rating = Number(item.rating);
-
-      if (star === 5) {
-        return rating === 5;
-      }
-
-      return rating >= star && rating < star + 1;
-    }).length;
-  };
-
-  const rating_distribution = ([5, 4, 3, 2, 1] as const).map((star) => {
-    const count = getStarCount(star);
-
-    return {
-      star,
-      count,
-      percent:
-        total_reviews === 0 ? 0 : Math.round((count / total_reviews) * 100),
-    };
-  });
-
-  return {
-    total_reviews,
-    rating_distribution,
-  };
+  return calculateRatingDistribution(ratings);
 };
