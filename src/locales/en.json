@@ -7,11 +7,16 @@
     "myRequests": "Manage Requests",
     "myContracts": "Manage Contracts",
     "myReports": "Reports",
+    "guardSchedule": "Guard Schedule",
     "loading": "Loading...",
     "startNow": "Company Registration",
     "myRegistration": "My Registration",
     "dashboard": "Back to main page",
     "overtime": "OVERTIME"
+  },
+  "customer_guard_schedule": {
+    "title": "Guard Schedule",
+    "subtitle": "View guard shifts by week for your contract locations"
   },
   "company_requests": {
     "title": "Customer Requests List",
@@ -1610,7 +1615,18 @@
         "title": "Report/Incident Content",
         "subtitle": "Provide full details to help us process quickly.",
         "contract_label": "Applicable Contract",
-        "contract_placeholder": "Select an active contract...",
+        "contract_placeholder": "Select a contract...",
+        "contract_expiry": "Expires",
+        "default_service": "Security Service",
+        "contract_status": {
+          "active": "Active",
+          "pending_signatures": "Pending Signatures",
+          "completed": "Completed",
+          "cancelled": "Cancelled"
+        },
+        "completed_contract_title": "Completed Contract",
+        "completed_contract_note": "The system only accepts reports/complaints within 14 days following contract completion date.",
+        "completed_contract_hint": "Note on completed contracts",
         "type_label": "Issue / Complaint Type",
         "desc_label": "Detailed Description",
         "desc_placeholder": "Please describe clearly the incident, time, location, involved personnel...",
@@ -2826,7 +2842,8 @@
     "continuous_shifts": "consecutive shifts",
     "contract_location_subtitle": "Contract Location",
     "location_header": "LOCATION / POSITION",
-    "no_shifts_today": "No shifts today."
+    "no_shifts_today": "No shifts today.",
+    "error_fetch": "Failed to load shift schedule"
   },
   "shift_week": {
     "shift_name": "Shift Name",
@@ -2841,7 +2858,16 @@
     "shift_time": "Shift Duration",
     "assigned_guards": "Assigned Guards ({0}/{1})",
     "specific_location": "Specific Position",
-    "no_shifts_this_week": "No shifts in this week"
+    "no_shifts_this_week": "No shifts in this week",
+    "report_btn": "Report an Incident",
+    "report_btn_disabled": "Can only report today's shifts",
+    "report_btn_tooltip": "You can only report incidents for today's shifts",
+    "today_shifts_label": "Today's Shifts",
+    "today_shifts_optional": "(optional)",
+    "today_shifts_loading": "Loading today's shifts...",
+    "today_shifts_empty": "No shifts today for this contract",
+    "shift_no_specific": "-- No specific shift --",
+    "shift_default_name": "Shift"
   },
   "guard_shift_detail": {
     "title": "Shift Details",
@@ -2908,11 +2934,13 @@
       "status_closed": "Closed"
     },
     "table": {
-      "no_data_title": "No reports found",
+      "no_data_title": "No Reports Found",
       "no_data_desc": "There are no customer reports yet, or your search filters did not match any results.",
       "customer": "Customer",
       "contract": "Contract",
       "issue": "Issue",
+      "shift": "Shift",
+      "guards": "Guards",
       "no_type": "Unclassified",
       "no_desc": "(No description)",
       "sent_at": "Sent at"
@@ -2929,6 +2957,11 @@
       "field_phone": "Phone Number",
       "field_contract": "Related Contract",
       "field_issue": "Issue Type",
+      "field_shift": "Related Shift",
+      "no_shift": "Not linked to a specific shift",
+      "shift_guards": "Shift Guards",
+      "guards_count": "guards",
+      "no_guards_assigned": "No guards assigned to this shift yet",
       "field_description": "Detailed Description",
       "field_image": "Attached Image",
       "field_sent_at": "Sent At",
@@ -2938,6 +2971,13 @@
     "toast": {
       "update_success": "Report status updated successfully.",
       "update_failed": "Failed to update report status."
+    },
+    "guard_status": {
+      "assigned": "Assigned",
+      "completed": "Completed",
+      "checkout": "Checked Out",
+      "late": "Late",
+      "absent": "Absent"
     }
   },
   "admin_dashboard": {

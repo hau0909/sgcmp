@@ -30,6 +30,7 @@ import {
   FileCheck,
   Award,
   HeartPulse,
+  KeyRound,
 } from "lucide-react";
 import { requestGetCities, requestGetWards } from "@/features/address";
 import type { City, Ward } from "@/features/address/types";
@@ -38,7 +39,10 @@ import {
   requestCompleteGuardProfile,
   requestUploadGuardFile,
 } from "@/features/guards/api/guard.api";
+import { requestLogout } from "@/features/auth/api/auth.api";
+import { useAuthStore } from "@/store/auth.store";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import ResetPasswordModal from "@/features/profile/components/ResetPasswordModal";
 
 type Gender = "male" | "female";
 
@@ -61,11 +65,45 @@ const isPdf = (urlOrName?: string | null): boolean => {
 export default function GuardCompleteProfilePage() {
   const router = useRouter();
   const { dict } = useTranslation();
+  const clearAuth = useAuthStore((state) => state.clearAuth);
 
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [profileData, setProfileData] = useState<any>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  // Change password modal state
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
+  const [passwordSuccessMessage, setPasswordSuccessMessage] = useState<{ type: "success" | "error"; text: string } | null>(null);
+  const [isLogoutPendingOnSuccess, setIsLogoutPendingOnSuccess] = useState(false);
+
+  const handlePasswordResetSuccess = () => {
+    setIsLogoutPendingOnSuccess(true);
+    setPasswordSuccessMessage({
+      type: "success",
+      text:
+        dict.pages?.profile_form?.change_password_success ||
+        "Đổi mật khẩu thành công! Bạn sẽ được đăng xuất để đăng nhập lại.",
+    });
+  };
+
+  const handlePasswordModalOkClick = async () => {
+    if (isLogoutPendingOnSuccess) {
+      try {
+        await requestLogout();
+      } catch (e) {
+        console.error("Logout error after password change:", e);
+      } finally {
+        clearAuth();
+        setPasswordSuccessMessage(null);
+        setIsLogoutPendingOnSuccess(false);
+        router.replace("/login");
+        router.refresh();
+      }
+    } else {
+      setPasswordSuccessMessage(null);
+    }
+  };
 
   // Form states - Section 1: Account
   const [fullName, setFullName] = useState("");
@@ -120,6 +158,16 @@ export default function GuardCompleteProfilePage() {
 
   // Skill certificates (Array of existing URLs or newly uploaded object URLs)
   const [skillCertEntries, setSkillCertEntries] = useState<Array<{ url: string; file?: File; isPdf: boolean; name?: string }>>([]);
+
+  const topRef = useRef<HTMLDivElement>(null);
+
+  const scrollToTop = () => {
+    if (topRef.current) {
+      topRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    } else {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+  };
 
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [errorMessage, setErrorMessage] = useState("");
@@ -277,6 +325,7 @@ export default function GuardCompleteProfilePage() {
     setSelectedCityId(cityId);
     setSelectedWardId("");
     setWards([]);
+    if (fieldErrors.address) setFieldErrors((prev) => ({ ...prev, address: "" }));
     if (cityId !== "") {
       try {
         const res = await requestGetWards(Number(cityId));
@@ -290,21 +339,17 @@ export default function GuardCompleteProfilePage() {
   // Build address string
   useEffect(() => {
     if (!isEditing) return;
-    if (selectedCityId !== "" || selectedWardId !== "" || streetInput.trim() !== "") {
-      const parts: string[] = [];
-      if (streetInput.trim()) parts.push(streetInput.trim());
-      if (selectedWardId !== "") {
-        const ward = wards.find((w) => w.ward_id === selectedWardId);
-        if (ward) parts.push(ward.ward_name);
-      }
-      if (selectedCityId !== "") {
-        const city = cities.find((c) => c.city_id === selectedCityId);
-        if (city) parts.push(city.city_name);
-      }
-      if (parts.length > 0) {
-        setAddress(parts.join(", "));
-      }
+    const parts: string[] = [];
+    if (streetInput.trim()) parts.push(streetInput.trim());
+    if (selectedWardId !== "") {
+      const ward = wards.find((w) => w.ward_id === selectedWardId);
+      if (ward) parts.push(ward.ward_name);
     }
+    if (selectedCityId !== "") {
+      const city = cities.find((c) => c.city_id === selectedCityId);
+      if (city) parts.push(city.city_name);
+    }
+    setAddress(parts.join(", "));
   }, [streetInput, selectedWardId, selectedCityId, wards, cities, isEditing]);
 
   // Skill helper actions
@@ -324,6 +369,16 @@ export default function GuardCompleteProfilePage() {
     if (!isEditing || isSubmitting) return;
     const trimmed = customSkillInput.trim();
     if (!trimmed) return;
+
+    const skillRegex = /^[\p{L}\p{M}0-9\s,\/.-]+$/u;
+    if (!skillRegex.test(trimmed)) {
+      setFieldErrors((prev) => ({
+        ...prev,
+        notableSkills: t?.validate_skill_special_chars || "Tên kỹ năng không được chứa ký tự đặc biệt.",
+      }));
+      return;
+    }
+
     if (!notableSkills.includes(trimmed)) {
       setNotableSkills((prev) => [...prev, trimmed]);
       setFieldErrors((prev) => ({ ...prev, notableSkills: "" }));
@@ -397,8 +452,13 @@ export default function GuardCompleteProfilePage() {
       }
     }
 
-    if (!address.trim()) {
-      errors.address = t?.validate_address_required || "Vui lòng nhập địa chỉ thường trú.";
+    if (!address.trim() || selectedCityId === "" || selectedWardId === "" || !streetInput.trim()) {
+      errors.address = t?.validate_address_required || "Vui lòng chọn Tỉnh/Thành phố, Phường/Xã và nhập số nhà, tên đường.";
+    } else {
+      const addressRegex = /^[\p{L}\p{M}0-9\s,\/.-]+$/u;
+      if (!addressRegex.test(streetInput.trim()) || !addressRegex.test(address.trim())) {
+        errors.address = t?.validate_address_special_chars || "Số nhà, tên đường không được chứa ký tự đặc biệt.";
+      }
     }
 
     if (!identityId.trim()) {
@@ -421,6 +481,11 @@ export default function GuardCompleteProfilePage() {
 
     if (!identityIssuePlace.trim()) {
       errors.identityIssuePlace = t?.validate_issue_place_required || "Vui lòng nhập nơi cấp CCCD/CMND.";
+    } else {
+      const issuePlaceRegex = /^[\p{L}\p{M}0-9\s,\/.-]+$/u;
+      if (!issuePlaceRegex.test(identityIssuePlace.trim())) {
+        errors.identityIssuePlace = t?.validate_issue_place_special_chars || "Nơi cấp CCCD/CMND không được chứa ký tự đặc biệt.";
+      }
     }
 
     if (!avatarPreview && !avatarFile) {
@@ -446,6 +511,12 @@ export default function GuardCompleteProfilePage() {
 
     if (!notableSkills || notableSkills.length === 0) {
       errors.notableSkills = t?.validate_skills_required || "Vui lòng chọn hoặc nhập ít nhất một kỹ năng nổi bật.";
+    } else {
+      const skillRegex = /^[\p{L}\p{M}0-9\s,\/.-]+$/u;
+      const invalidSkill = notableSkills.find((s) => !skillRegex.test(s));
+      if (invalidSkill) {
+        errors.notableSkills = t?.validate_skill_special_chars || `Kỹ năng "${invalidSkill}" chứa ký tự đặc biệt không hợp lệ.`;
+      }
     }
 
     if (!healthCertPreview && !healthCertFile) {
@@ -478,6 +549,7 @@ export default function GuardCompleteProfilePage() {
 
     if (!validate()) {
       setErrorMessage(t?.validate_form_error || "Vui lòng kiểm tra lại các trường thông tin còn thiếu hoặc chưa hợp lệ.");
+      scrollToTop();
       return;
     }
 
@@ -548,10 +620,12 @@ export default function GuardCompleteProfilePage() {
 
       setSuccessMessage(t?.submit_success || "Nộp hồ sơ thành công! Hồ sơ của bạn đã được chuyển đến Điều phối viên để xét duyệt.");
       setIsEditing(false);
+      scrollToTop();
       await fetchData();
     } catch (err: any) {
       console.error("Lỗi nộp hồ sơ:", err);
       setErrorMessage(err.message || t?.submit_error || "Không thể nộp hồ sơ xét duyệt.");
+      scrollToTop();
     } finally {
       setIsSubmitting(false);
     }
@@ -624,7 +698,38 @@ export default function GuardCompleteProfilePage() {
 
   return (
     <div className="min-h-screen bg-slate-50 px-4 py-8 sm:px-6 lg:px-8">
-      <div className="mx-auto max-w-4xl space-y-6">
+      {/* Password Success / Logout Notification Modal */}
+      {passwordSuccessMessage && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl p-6 md:p-8 max-w-sm w-full shadow-2xl animate-in zoom-in-95 duration-200 flex flex-col items-center text-center">
+            <CheckCircle2 className="w-16 h-16 text-green-500 mb-4" />
+            <h3 className="text-xl font-bold text-slate-900 mb-2">
+              {dict.pages?.profile_form?.success_modal_title || "Thành công"}
+            </h3>
+            <p className="text-slate-600 mb-6 leading-relaxed">
+              {passwordSuccessMessage.text}
+            </p>
+            <button
+              type="button"
+              onClick={handlePasswordModalOkClick}
+              className="px-6 py-2.5 bg-blue-800 text-white rounded-xl font-semibold w-full hover:bg-blue-900 transition-all cursor-pointer"
+            >
+              {isLogoutPendingOnSuccess
+                ? dict.pages?.profile_form?.ok || "OK"
+                : dict.pages?.profile_form?.modal_close || "Đóng"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Đổi Mật Khẩu */}
+      <ResetPasswordModal
+        isOpen={isPasswordModalOpen}
+        onClose={() => setIsPasswordModalOpen(false)}
+        onSuccess={handlePasswordResetSuccess}
+      />
+
+      <div ref={topRef} className="mx-auto max-w-4xl space-y-6">
         {/* Page Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-slate-200 pb-5">
           <div>
@@ -638,6 +743,16 @@ export default function GuardCompleteProfilePage() {
           </div>
 
           <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsPasswordModalOpen(true)}
+              className="inline-flex items-center gap-2 rounded-lg border border-amber-200/80 bg-amber-50 px-4 py-2 text-sm font-semibold text-amber-700 shadow-xs hover:bg-amber-100 transition cursor-pointer"
+              title={dict.pages?.profile_form?.change_password || "Đổi mật khẩu"}
+            >
+              <KeyRound className="h-4 w-4 text-amber-600" />
+              <span>{dict.pages?.profile_form?.change_password || "Đổi mật khẩu"}</span>
+            </button>
+
             {!isEditing ? (
               <button
                 type="button"
@@ -927,7 +1042,11 @@ export default function GuardCompleteProfilePage() {
                         value={selectedCityId}
                         onChange={(e) => handleCitySelect(e.target.value)}
                         disabled={isSubmitting}
-                        className="h-10 rounded-lg border border-slate-300 bg-slate-50/50 px-3 text-sm text-slate-900 outline-none focus:border-blue-700 focus:bg-white"
+                        className={`h-10 rounded-lg border bg-slate-50/50 px-3 text-sm text-slate-900 outline-none transition focus:bg-white ${
+                          fieldErrors.address && selectedCityId === ""
+                            ? "border-red-500 bg-red-50/30 text-red-900 focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                            : "border-slate-300 focus:border-blue-700"
+                        }`}
                       >
                         <option value="">{t?.select_city || "-- Chọn Tỉnh / Thành phố --"}</option>
                         {cities.map((c) => (
@@ -939,9 +1058,16 @@ export default function GuardCompleteProfilePage() {
 
                       <select
                         value={selectedWardId}
-                        onChange={(e) => setSelectedWardId(e.target.value ? Number(e.target.value) : "")}
+                        onChange={(e) => {
+                          setSelectedWardId(e.target.value ? Number(e.target.value) : "");
+                          if (fieldErrors.address) setFieldErrors((prev) => ({ ...prev, address: "" }));
+                        }}
                         disabled={isSubmitting || selectedCityId === ""}
-                        className="h-10 rounded-lg border border-slate-300 bg-slate-50/50 px-3 text-sm text-slate-900 outline-none focus:border-blue-700 focus:bg-white disabled:bg-slate-100"
+                        className={`h-10 rounded-lg border bg-slate-50/50 px-3 text-sm text-slate-900 outline-none transition focus:bg-white disabled:bg-slate-100 ${
+                          fieldErrors.address && selectedWardId === ""
+                            ? "border-red-500 bg-red-50/30 text-red-900 focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                            : "border-slate-300 focus:border-blue-700"
+                        }`}
                       >
                         <option value="">{t?.select_ward || "-- Chọn Phường / Xã --"}</option>
                         {wards.map((w) => (
@@ -955,10 +1081,17 @@ export default function GuardCompleteProfilePage() {
                     <input
                       type="text"
                       value={streetInput}
-                      onChange={(e) => setStreetInput(e.target.value)}
+                      onChange={(e) => {
+                        setStreetInput(e.target.value);
+                        if (fieldErrors.address) setFieldErrors((prev) => ({ ...prev, address: "" }));
+                      }}
                       placeholder={t?.street_placeholder || "Số nhà, tên đường..."}
                       disabled={isSubmitting}
-                      className="h-10 w-full rounded-lg border border-slate-300 bg-slate-50/50 px-3 text-sm text-slate-900 outline-none focus:border-blue-700 focus:bg-white"
+                      className={`h-10 w-full rounded-lg border bg-slate-50/50 px-3 text-sm text-slate-900 outline-none transition focus:bg-white ${
+                        fieldErrors.address
+                          ? "border-red-500 bg-red-50/30 text-red-900 focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                          : "border-slate-300 focus:border-blue-700"
+                      }`}
                     />
 
                     {address && (
@@ -1267,7 +1400,12 @@ export default function GuardCompleteProfilePage() {
                       type="text"
                       value={customSkillInput}
                       disabled={isSubmitting}
-                      onChange={(e) => setCustomSkillInput(e.target.value)}
+                      onChange={(e) => {
+                        setCustomSkillInput(e.target.value);
+                        if (fieldErrors.notableSkills) {
+                          setFieldErrors((prev) => ({ ...prev, notableSkills: "" }));
+                        }
+                      }}
                       onKeyDown={(e) => {
                         if (e.key === "Enter") {
                           e.preventDefault();
@@ -1275,7 +1413,11 @@ export default function GuardCompleteProfilePage() {
                         }
                       }}
                       placeholder={t?.skill_input_placeholder || "Nhập kỹ năng khác rồi nhấn Enter..."}
-                      className="h-10 flex-1 rounded-lg border border-slate-300 bg-slate-50/50 px-3 text-sm text-slate-900 outline-none transition focus:border-blue-700 focus:bg-white"
+                      className={`h-10 flex-1 rounded-lg border bg-slate-50/50 px-3 text-sm text-slate-900 outline-none transition focus:bg-white ${
+                        fieldErrors.notableSkills
+                          ? "border-red-500 bg-red-50/30 text-red-900 focus:border-red-600 focus:ring-1 focus:ring-red-600"
+                          : "border-slate-300 focus:border-blue-700"
+                      }`}
                     />
                     <button
                       type="button"

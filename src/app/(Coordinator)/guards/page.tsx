@@ -589,11 +589,7 @@ export default function GuardListScreen() {
           </table>
         </div>
 
-        <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 md:flex-row md:items-center md:justify-between">
-          <p>
-            {dict.company_verifications?.showing || "Hiển thị"} {startResult}-{endResult} {dict.company_verifications?.in || "trong số"} {totalGuards} {dict.company_verifications?.results || "kết quả"}
-          </p>
-
+        <div className="flex flex-col gap-3 border-t border-slate-200 px-4 py-3 text-sm text-slate-600 md:flex-row md:items-center md:justify-start md:gap-6">
           <div className="flex items-center gap-1">
             <button
               type="button"
@@ -626,6 +622,10 @@ export default function GuardListScreen() {
               <ChevronRight className="h-4 w-4" />
             </button>
           </div>
+
+          <p>
+            {dict.company_verifications?.showing || "Hiển thị"} {startResult}-{endResult} {dict.company_verifications?.in || "trong số"} {totalGuards} {dict.company_verifications?.results || "kết quả"}
+          </p>
         </div>
       </div>
 

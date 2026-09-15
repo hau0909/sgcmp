@@ -14,6 +14,11 @@ import {
   UserCheck,
   ChevronRight,
   ArrowRight,
+  Award,
+  IdCard,
+  Phone,
+  Mail,
+  Activity,
 } from "lucide-react";
 import {
   requestGetReplacementGuards,
@@ -35,6 +40,11 @@ type GuardCandidate = {
   phone_number: string | null;
   avatar_url: string | null;
   email: string;
+  notable_skills?: string[];
+  height_cm?: number | null;
+  weight_kg?: number | null;
+  identity_card_number?: string | null;
+  profiles?: any;
 };
 
 /**
@@ -58,6 +68,11 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
   const [errorMessage, setErrorMessage] = useState("");
   const [isPending, startTransition] = useTransition();
   const [lastAutoOpenedShiftId, setLastAutoOpenedShiftId] = useState<string | null>(null);
+  const [hoveredGuardInfo, setHoveredGuardInfo] = useState<{
+    guard: any;
+    x: number;
+    y: number;
+  } | null>(null);
 
   // ─── Computed helpers ────────────────────────────────────────────────────────
 
@@ -404,22 +419,59 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                     }`}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-2.5 min-w-0">
+                    <div
+                      className="flex items-center gap-2.5 min-w-0 cursor-pointer group"
+                      onMouseEnter={(e) => {
+                        const rect = e.currentTarget.getBoundingClientRect();
+                        setHoveredGuardInfo({
+                          guard: {
+                            full_name: assign.guard_name,
+                            phone_number: assign.phone_number,
+                            avatar_url: assign.avatar_url,
+                            email: assign.email,
+                            notable_skills: assign.notable_skills,
+                            height_cm: assign.height_cm,
+                            weight_kg: assign.weight_kg,
+                            identity_card_number: (assign as any).identity_card_number,
+                          },
+                          x: rect.left,
+                          y: rect.top,
+                        });
+                      }}
+                      onMouseLeave={() => setHoveredGuardInfo(null)}
+                    >
                       <div
-                        className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 ${isDispatchPanelOpen && activeSlotId === assign.assignment_id
+                        className={`h-8 w-8 rounded-full flex items-center justify-center shrink-0 overflow-hidden ${isDispatchPanelOpen && activeSlotId === assign.assignment_id
                           ? "bg-blue-100 text-blue-700"
                           : "bg-slate-100 text-slate-600"
                           }`}
                       >
-                        <UserRound size={15} />
+                        {assign.avatar_url ? (
+                          <img src={assign.avatar_url} alt={assign.guard_name} className="h-full w-full object-cover" />
+                        ) : (
+                          <UserRound size={15} />
+                        )}
                       </div>
                       <div className="min-w-0">
-                        <p className="text-xs font-bold text-slate-800 truncate">
+                        <p className="text-xs font-bold text-slate-800 truncate group-hover:text-blue-600 transition-colors">
                           {assign.guard_name}
                         </p>
-                        <span className="text-[10px] text-slate-400 font-medium">
-                          {dict?.shift_detail_modal?.main_guard || "Bảo vệ chính"}
-                        </span>
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {dict?.shift_detail_modal?.main_guard || "Bảo vệ chính"}
+                          </span>
+                          {Array.isArray(assign.notable_skills) && assign.notable_skills.length > 0 && (
+                            <span className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200/80 px-1.5 py-0.5 text-[9px] font-semibold text-blue-800">
+                              <Award size={9} className="text-blue-600 shrink-0" />
+                              <span className="truncate max-w-[90px]">{assign.notable_skills[0]}</span>
+                              {assign.notable_skills.length > 1 && (
+                                <span className="font-bold text-slate-600">
+                                  +{assign.notable_skills.length - 1}
+                                </span>
+                              )}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 
@@ -482,11 +534,33 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                           {assign.replacement_guards.map((rep) => (
                             <div
                               key={rep.guard_id}
-                              className="flex items-center justify-between text-xs"
+                              className="flex items-center justify-between text-xs cursor-pointer group/rep"
+                              onMouseEnter={(e) => {
+                                const rect = e.currentTarget.getBoundingClientRect();
+                                setHoveredGuardInfo({
+                                  guard: rep,
+                                  x: rect.left,
+                                  y: rect.top,
+                                });
+                              }}
+                              onMouseLeave={() => setHoveredGuardInfo(null)}
                             >
-                              <span className="font-semibold text-slate-700">
-                                • {rep.full_name}
-                              </span>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-semibold text-slate-700 group-hover/rep:text-blue-600 transition-colors">
+                                  • {rep.full_name}
+                                </span>
+                                {Array.isArray(rep.notable_skills) && rep.notable_skills.length > 0 && (
+                                  <span className="inline-flex items-center gap-0.5 rounded bg-blue-50 border border-blue-200/80 px-1 py-0.5 text-[9px] font-semibold text-blue-800">
+                                    <Award size={9} className="text-blue-600 shrink-0" />
+                                    <span>{rep.notable_skills[0]}</span>
+                                    {rep.notable_skills.length > 1 && (
+                                      <span className="font-bold text-slate-600">
+                                        +{rep.notable_skills.length - 1}
+                                      </span>
+                                    )}
+                                  </span>
+                                )}
+                              </div>
                               {rep.phone_number && (
                                 <span className="text-[10px] text-slate-400 font-medium">
                                   {rep.phone_number}
@@ -509,20 +583,19 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
             <button
               disabled={isShiftEnded}
               onClick={handleOpenDispatchPanel}
-              className={`w-full py-2.5 text-xs font-bold uppercase rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 ${
-                isShiftEnded
-                  ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
-                  : isAllDispatched
+              className={`w-full py-2.5 text-xs font-bold uppercase rounded-lg shadow-sm transition-all flex items-center justify-center gap-2 ${isShiftEnded
+                ? "bg-slate-200 text-slate-400 cursor-not-allowed shadow-none"
+                : isAllDispatched
                   ? "bg-purple-600 hover:bg-purple-700 text-white hover:shadow"
                   : "bg-blue-600 hover:bg-blue-700 text-white hover:shadow"
-              }`}
+                }`}
             >
               <UserCheck size={14} />
               {isShiftEnded
                 ? (dict?.shift_detail_modal?.shift_ended || "Ca trực đã kết thúc")
                 : isAllDispatched
-                ? (dict?.shift_detail_modal?.update_replacement_btn || "Đổi bảo vệ thay thế ({0} vị trí)").replace("{0}", String(eligibleAssignments.length))
-                : (dict?.shift_detail_modal?.dispatch_replacement_btn || "Điều phối thay thế ({0} vị trí)").replace("{0}", String(eligibleAssignments.length))}
+                  ? (dict?.shift_detail_modal?.update_replacement_btn || "Đổi bảo vệ thay thế ({0} vị trí)").replace("{0}", String(eligibleAssignments.length))
+                  : (dict?.shift_detail_modal?.dispatch_replacement_btn || "Điều phối thay thế ({0} vị trí)").replace("{0}", String(eligibleAssignments.length))}
               {!isShiftEnded && <ChevronRight size={14} />}
             </button>
           </div>
@@ -640,18 +713,40 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                             key={g.guard_id}
                             disabled={!activeSlotId || isSelectedForOther}
                             onClick={() => handleSelectGuard(g.guard_id)}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setHoveredGuardInfo({
+                                guard: g,
+                                x: rect.left,
+                                y: rect.top,
+                              });
+                            }}
+                            onMouseLeave={() => setHoveredGuardInfo(null)}
                             className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isSelectedForActive
                               ? "border-blue-400 bg-blue-50"
                               : "border-slate-100 bg-slate-50/50 hover:bg-slate-100/50"
                               }`}
                           >
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-slate-800">
+                            <div className="min-w-0 flex-1 pr-2">
+                              <p className="text-xs font-bold text-slate-800 truncate">
                                 {g.full_name}
                               </p>
                               <p className="text-[10px] text-slate-400 mt-0.5">
                                 {g.phone_number || (dict?.shift_detail_modal?.no_phone || "Chưa có SĐT")}
                               </p>
+                              {Array.isArray(g.notable_skills) && g.notable_skills.length > 0 && (
+                                <div className="mt-1 flex items-center gap-1 flex-wrap">
+                                  <span className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200/80 px-1.5 py-0.5 text-[10px] font-semibold text-blue-800">
+                                    <Award size={10} className="text-blue-600 shrink-0" />
+                                    <span className="truncate max-w-[110px]">{g.notable_skills[0]}</span>
+                                  </span>
+                                  {g.notable_skills.length > 1 && (
+                                    <span className="inline-flex items-center rounded bg-slate-100 border border-slate-200 px-1 py-0.5 text-[10px] font-bold text-slate-700">
+                                      +{g.notable_skills.length - 1}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div
                               className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelectedForActive
@@ -695,18 +790,40 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
                             key={g.guard_id}
                             disabled={!activeSlotId || isSelectedForOther}
                             onClick={() => handleSelectGuard(g.guard_id)}
+                            onMouseEnter={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect();
+                              setHoveredGuardInfo({
+                                guard: g,
+                                x: rect.left,
+                                y: rect.top,
+                              });
+                            }}
+                            onMouseLeave={() => setHoveredGuardInfo(null)}
                             className={`w-full flex items-center justify-between text-left p-2.5 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${isSelectedForActive
                               ? "border-blue-400 bg-blue-50"
                               : "border-slate-100 bg-slate-50/50 hover:bg-slate-100/50"
                               }`}
                           >
-                            <div className="min-w-0">
-                              <p className="text-xs font-bold text-slate-800">
+                            <div className="min-w-0 flex-1 pr-2">
+                              <p className="text-xs font-bold text-slate-800 truncate">
                                 {g.full_name}
                               </p>
                               <p className="text-[10px] text-slate-400 mt-0.5">
                                 {g.phone_number || (dict?.shift_detail_modal?.no_phone || "Chưa có SĐT")}
                               </p>
+                              {Array.isArray(g.notable_skills) && g.notable_skills.length > 0 && (
+                                <div className="mt-1 flex items-center gap-1 flex-wrap">
+                                  <span className="inline-flex items-center gap-1 rounded bg-blue-50 border border-blue-200/80 px-1.5 py-0.5 text-[10px] font-semibold text-blue-800">
+                                    <Award size={10} className="text-blue-600 shrink-0" />
+                                    <span className="truncate max-w-[110px]">{g.notable_skills[0]}</span>
+                                  </span>
+                                  {g.notable_skills.length > 1 && (
+                                    <span className="inline-flex items-center rounded bg-slate-100 border border-slate-200 px-1 py-0.5 text-[10px] font-bold text-slate-700">
+                                      +{g.notable_skills.length - 1}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
                             </div>
                             <div
                               className={`h-4 w-4 rounded border flex items-center justify-center shrink-0 ${isSelectedForActive
@@ -752,6 +869,118 @@ export function ShiftDetailModal({ open, onClose, shift }: ShiftDetailModalProps
               {dict?.shift_detail_modal?.cancel || dict?.common?.cancel || "Hủy"}
             </button>
           </div>
+        </div>
+      )}
+
+      {/* ── Hover Tooltip for Guard Info ── */}
+      {hoveredGuardInfo && (
+        <div
+          className="fixed z-[99999] w-72 rounded-2xl border border-slate-200/90 bg-white/95 p-3.5 shadow-2xl backdrop-blur-md pointer-events-none transition-all duration-150 animate-in fade-in zoom-in-95 text-left"
+          style={{
+            top: `${Math.max(16, Math.min(window.innerHeight - 360, hoveredGuardInfo.y - 10))}px`,
+            left: `${hoveredGuardInfo.x > 320 ? hoveredGuardInfo.x - 295 : hoveredGuardInfo.x + 390}px`,
+          }}
+        >
+          {(() => {
+            const p = (hoveredGuardInfo.guard.profiles && (Array.isArray(hoveredGuardInfo.guard.profiles) ? hoveredGuardInfo.guard.profiles[0] : hoveredGuardInfo.guard.profiles)) || hoveredGuardInfo.guard;
+            const cccd = p?.identity_card_number || p?.cccd || hoveredGuardInfo.guard.identity_card_number;
+            const skills = Array.isArray(hoveredGuardInfo.guard.notable_skills)
+              ? hoveredGuardInfo.guard.notable_skills
+              : [];
+            const unupdatedText =
+              dict?.create_shift_modal?.guard_tooltip_unupdated ||
+              (dict?.coor_guards?.unupdated || "Chưa cập nhật");
+            return (
+              <div className="space-y-2.5">
+                {/* Header with Avatar & Name */}
+                <div className="flex items-center gap-2.5 border-b border-slate-100 pb-2.5">
+                  <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full border-2 border-blue-600 bg-slate-100 shadow-sm">
+                    {p?.avatar_url || hoveredGuardInfo.guard.avatar_url ? (
+                      <img
+                        src={p?.avatar_url || hoveredGuardInfo.guard.avatar_url}
+                        alt={p?.full_name || hoveredGuardInfo.guard.full_name || "Guard"}
+                        className="h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex h-full w-full items-center justify-center text-slate-400">
+                        <UserRound size={20} />
+                      </div>
+                    )}
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <h4 className="truncate font-bold text-xs text-slate-900">
+                      {p?.full_name || hoveredGuardInfo.guard.full_name || unupdatedText}
+                    </h4>
+                    <span className="text-[10px] text-emerald-700 font-medium bg-emerald-50 px-2 py-0.5 rounded-full inline-block mt-0.5 border border-emerald-200/60">
+                      {dict?.create_shift_modal?.guard_tooltip_approved || "Bảo vệ đã duyệt"}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Contact & CCCD Info */}
+                <div className="space-y-1 text-xs text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <IdCard size={13} className="text-blue-700 shrink-0" />
+                    <span className="text-slate-500 font-medium">
+                      {dict?.create_shift_modal?.guard_tooltip_cccd || "CCCD:"}
+                    </span>
+                    <span className="font-semibold text-slate-900">{cccd || unupdatedText}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Phone size={13} className="text-blue-700 shrink-0" />
+                    <span className="text-slate-500 font-medium">
+                      {dict?.create_shift_modal?.guard_tooltip_phone || "SĐT:"}
+                    </span>
+                    <span className="font-medium text-slate-900">{p?.phone_number || hoveredGuardInfo.guard.phone_number || unupdatedText}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Mail size={13} className="text-blue-700 shrink-0" />
+                    <span className="text-slate-500 font-medium">
+                      {dict?.create_shift_modal?.guard_tooltip_email || "Email:"}
+                    </span>
+                    <span className="truncate font-medium text-slate-900">{p?.email || hoveredGuardInfo.guard.email || unupdatedText}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Activity size={13} className="text-blue-700 shrink-0" />
+                    <span className="text-slate-500 font-medium">
+                      {dict?.create_shift_modal?.guard_tooltip_physical || "Thể chất:"}
+                    </span>
+                    <span className="font-medium text-slate-900">
+                      {hoveredGuardInfo.guard.height_cm || hoveredGuardInfo.guard.weight_kg
+                        ? `${hoveredGuardInfo.guard.height_cm ? `${hoveredGuardInfo.guard.height_cm} cm` : "—"} · ${hoveredGuardInfo.guard.weight_kg ? `${hoveredGuardInfo.guard.weight_kg} kg` : "—"}`
+                        : unupdatedText}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Notable Skills */}
+                <div className="border-t border-slate-100 pt-2">
+                  <div className="flex items-center gap-1 text-xs font-bold text-slate-700 mb-1">
+                    <Award size={12} className="text-blue-700" />
+                    <span>
+                      {(dict?.create_shift_modal?.guard_tooltip_skills || "Kỹ năng nổi bật ({0}):").replace("{0}", String(skills.length))}
+                    </span>
+                  </div>
+                  {skills.length > 0 ? (
+                    <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto">
+                      {skills.map((skill: string, idx: number) => (
+                        <span
+                          key={idx}
+                          className="inline-flex items-center rounded-md bg-blue-50 border border-blue-200 px-1.5 py-0.5 text-[10px] font-semibold text-blue-900"
+                        >
+                          {skill}
+                        </span>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-slate-400 italic">
+                      {dict?.create_shift_modal?.guard_tooltip_no_skills || "Chưa cập nhật kỹ năng."}
+                    </p>
+                  )}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>,

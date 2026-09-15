@@ -20,6 +20,7 @@ import { groupShiftsByDate } from "../utils/shift.utils";
 
 import {
   getShiftContractsByCompanyId,
+  getShiftContractsByCustomerId,
   createShiftAssignments,
   createShift,
   deleteShift,
@@ -48,6 +49,12 @@ export const getShiftContractOptionsService = async (
   companyId: string,
 ): Promise<ContractOption[]> => {
   return getShiftContractsByCompanyId(companyId);
+};
+
+export const getCustomerShiftContractOptionsService = async (
+  customerId: string,
+): Promise<ContractOption[]> => {
+  return getShiftContractsByCustomerId(customerId);
 };
 
 export const createWorkShiftService = async ({
@@ -217,7 +224,6 @@ export const createShiftImageService = async (params: {
   imageUrl: string;
   imagePath: string | null;
   imageType: string;
-  note?: string | null;
 }): Promise<Shift_Img | null> => {
   return await createShiftImage(params);
 };

@@ -458,7 +458,20 @@ export const getAllGuards = async ({
       throw new Error(activeErr.message);
     }
 
-    const activeUserIds = Array.from(new Set((activeAssignments ?? []).map((a) => a.guard_id)));
+    // Helper to resolve user_ids from a list of guard_id or user_id
+    const resolveUserIdsFromAssignmentGuardIds = async (rawIds: string[]): Promise<string[]> => {
+      const uniqueIds = Array.from(new Set(rawIds.filter(Boolean)));
+      if (uniqueIds.length === 0) return [];
+      const { data: gList } = await supabase
+        .from("guards")
+        .select("guard_id, user_id")
+        .or(`guard_id.in.(${uniqueIds.join(",")}),user_id.in.(${uniqueIds.join(",")})`);
+      const userIds = (gList || []).map((g: any) => g.user_id).filter(Boolean);
+      return Array.from(new Set(userIds));
+    };
+
+    const rawActiveIds = Array.from(new Set((activeAssignments ?? []).map((a) => a.guard_id)));
+    const activeUserIds = await resolveUserIdsFromAssignmentGuardIds(rawActiveIds);
 
     // 2. Get user IDs that have any shift today (active or future today)
     const todayEnd = getEndOfDayInTimeZone(now, timeZone);
@@ -474,7 +487,8 @@ export const getAllGuards = async ({
       throw new Error(upcomingErr.message);
     }
 
-    const upcomingUserIds = Array.from(new Set((upcomingAssignments ?? []).map((a) => a.guard_id)));
+    const rawUpcomingIds = Array.from(new Set((upcomingAssignments ?? []).map((a) => a.guard_id)));
+    const upcomingUserIds = await resolveUserIdsFromAssignmentGuardIds(rawUpcomingIds);
 
     // 3. Compute matching user IDs for this workStatus
     let workStatusMatchedUserIds: string[] = [];
@@ -494,7 +508,8 @@ export const getAllGuards = async ({
         .lt("shifts.start_time", todayEnd)
         .gt("shifts.end_time", todayStart.toISOString());
 
-      workStatusMatchedUserIds = Array.from(new Set((absentAssignments ?? []).map((a) => a.guard_id)));
+      const rawAbsentIds = Array.from(new Set((absentAssignments ?? []).map((a) => a.guard_id)));
+      workStatusMatchedUserIds = await resolveUserIdsFromAssignmentGuardIds(rawAbsentIds);
     } else if (workStatus === "late") {
       const todayStart = new Date(now);
       todayStart.setHours(0, 0, 0, 0);
@@ -515,7 +530,8 @@ export const getAllGuards = async ({
         })
         .map((a: any) => a.guard_id);
 
-      workStatusMatchedUserIds = Array.from(new Set(lateIds));
+      const rawLateIds = Array.from(new Set(lateIds));
+      workStatusMatchedUserIds = await resolveUserIdsFromAssignmentGuardIds(rawLateIds);
     } else if (workStatus === "substitute" || workStatus === "replacement") {
       const todayStart = new Date(now);
       todayStart.setHours(0, 0, 0, 0);
@@ -1423,6 +1439,20 @@ export const getGuardPerformanceSummary = async ({
 }: GetGuardPerformanceSummaryParams): Promise<GuardPerformanceSummaryData> => {
   const supabase = await createClient();
 
+  let targetGuardIds: string[] = [];
+  if (guard_id) {
+    const { data: gData } = await supabase
+      .from("guards")
+      .select("guard_id, user_id")
+      .or(`guard_id.eq.${guard_id},user_id.eq.${guard_id}`)
+      .maybeSingle();
+    if (gData) {
+      targetGuardIds = [gData.guard_id, gData.user_id].filter(Boolean);
+    } else {
+      targetGuardIds = [guard_id];
+    }
+  }
+
   let query = supabase.from("shifts").select(`
     shift_id,
     start_time,
@@ -1496,6 +1526,8 @@ export const getGuardPerformanceList = async ({
   }
 
   const guardUserIds = guardsData.map((g: any) => g.user_id).filter(Boolean);
+  const guardDbIds = guardsData.map((g: any) => g.guard_id).filter(Boolean);
+  const allTargetGuardIds = Array.from(new Set([...guardDbIds, ...guardUserIds]));
 
   // 2. Fetch profiles for these guards
   const profilesByUserId: Record<string, any> = {};
@@ -1526,7 +1558,7 @@ export const getGuardPerformanceList = async ({
     shifts!inner (
       start_time
     )
-  `).in("guard_id", guardUserIds);
+  `).in("guard_id", allTargetGuardIds);
 
   if (startDate) {
     assignQuery = assignQuery.gte("shifts.start_time", startDate);
@@ -1551,7 +1583,7 @@ export const getGuardPerformanceList = async ({
   const keyword = search.trim().toLowerCase();
 
   let items: GuardPerformanceListItem[] = guardsData.map((g: any) => {
-    const list = assignmentsByGuard[g.user_id] || [];
+    const list = assignmentsByGuard[g.guard_id] || assignmentsByGuard[g.user_id] || [];
     let totalAssigned = 0;
     let evaluableAssigned = 0;
     let attended = 0;

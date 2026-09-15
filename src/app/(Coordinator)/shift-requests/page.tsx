@@ -132,19 +132,17 @@ export default function CoordinatorShiftRequestsPage() {
               key={tab.key}
               type="button"
               onClick={() => setFilterStatus(tab.key as any)}
-              className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${
-                filterStatus === tab.key
+              className={`flex items-center gap-2 rounded-lg px-3.5 py-1.5 text-xs font-bold transition-all cursor-pointer ${filterStatus === tab.key
                   ? "bg-white text-blue-900 shadow-xs"
                   : "text-slate-600 hover:text-slate-900"
-              }`}
+                }`}
             >
               <span>{tab.label}</span>
               <span
-                className={`rounded-full px-2 py-0.2 text-[10px] font-extrabold ${
-                  filterStatus === tab.key
+                className={`rounded-full px-2 py-0.2 text-[10px] font-extrabold ${filterStatus === tab.key
                     ? "bg-blue-100 text-blue-800"
                     : "bg-slate-200 text-slate-600"
-                }`}
+                  }`}
               >
                 {tab.count}
               </span>

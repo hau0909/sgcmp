@@ -1,14 +1,41 @@
-import React, { useState } from "react";
-import { AlertTriangle, Loader2, Send, Upload, X } from "lucide-react";
+import React, { useState, useEffect } from "react";
+import { AlertTriangle, Clock, HelpCircle, Loader2, Send, Upload, X } from "lucide-react";
 import { Contract } from "@/types/Contract";
 import { ReportType } from "../types";
 import { useTranslation } from "@/components/providers/LanguageProvider";
+import { requestGetTodayShiftsByContract } from "@/features/shift/api/shift.api";
+import type { ShiftWithAssignments } from "@/features/shift/type";
+import { formatTime, getUserTimeZone } from "@/utils/dateTime";
+
+const CONTRACT_STATUS_BADGE: Record<string, string> = {
+  active: "✅",
+  pending_signatures: "⏳",
+  completed: "☑️",
+  cancelled: "❌",
+};
+
+const CONTRACT_STATUS_FALLBACK: Record<string, string> = {
+  active: "Đang hiệu lực",
+  pending_signatures: "Chờ ký kết",
+  completed: "Đã hoàn thành",
+  cancelled: "Đã hủy",
+};
+
+const getContractStatusText = (status: string, dict?: any) => {
+  const badge = CONTRACT_STATUS_BADGE[status] ?? "";
+  const label =
+    dict?.report?.form?.contract_status?.[status] ??
+    CONTRACT_STATUS_FALLBACK[status] ??
+    status;
+  return badge ? `${badge} ${label}` : label;
+};
 
 interface CustomerReportFormProps {
   contracts: Contract[];
   isLoadingContracts: boolean;
   onSubmit: (payload: {
     contractId: string;
+    shiftId: string | null;
     type: ReportType;
     description: string;
     imageUrl: string | null;
@@ -16,6 +43,9 @@ interface CustomerReportFormProps {
   }) => void;
   isSubmitting: boolean;
   onCancel: () => void;
+  defaultContractId?: string;
+  defaultShiftId?: string;
+  defaultDate?: string;
 }
 
 export function CustomerReportForm({
@@ -24,30 +54,115 @@ export function CustomerReportForm({
   onSubmit,
   isSubmitting,
   onCancel,
+  defaultContractId,
+  defaultShiftId,
+  defaultDate,
 }: CustomerReportFormProps) {
   const { dict } = useTranslation();
-  const [selectedContractId, setSelectedContractId] = useState("");
+  const [selectedContractId, setSelectedContractId] = useState(defaultContractId ?? "");
+  const [selectedShiftId, setSelectedShiftId] = useState(defaultShiftId ?? "");
+  const [todayShifts, setTodayShifts] = useState<ShiftWithAssignments[]>([]);
+  const [isLoadingShifts, setIsLoadingShifts] = useState(false);
   const [type, setType] = useState<ReportType>("LATE");
   const [description, setDescription] = useState("");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Filter for contracts that are not expired yet
-  const displayContracts = contracts.filter((c) => {
-    if (c.status === "cancelled") return false;
+  // Filter for contracts:
+  // 1. Exclude 'pending_signatures' and 'cancelled'
+  // 2. Allow 'active'
+  // 3. Allow 'completed' only if completed within the last 14 days
+  // 4. Always include defaultContractId if provided
+  const displayContracts = contracts
+    .filter((c) => {
+      if (defaultContractId && c.contract_id === defaultContractId) return true;
 
-    const now = new Date();
-    now.setHours(0, 0, 0, 0);
+      // Exclude pending_signatures and cancelled
+      if (c.status === "pending_signatures" || c.status === "cancelled") {
+        return false;
+      }
 
-    if (c.end_date) {
-      const end = new Date(c.end_date);
-      end.setHours(23, 59, 59, 999);
-      if (now > end) return false;
+      // Active contracts are always allowed
+      if (c.status === "active") {
+        return true;
+      }
+
+      // Completed contracts: only if completed within the last 14 days
+      if (c.status === "completed") {
+        if (!c.end_date) return true;
+        const endDate = new Date(c.end_date);
+        if (isNaN(endDate.getTime())) return true;
+        // Đặt mốc hết hạn là cuối ngày kết thúc (23:59:59)
+        endDate.setHours(23, 59, 59, 999);
+
+        const now = new Date();
+        const diffInDays = (now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24);
+        return diffInDays <= 14;
+      }
+
+      return false;
+    })
+    .sort((a, b) => {
+      // Prioritize active contracts at the top
+      if (a.status === "active" && b.status !== "active") return -1;
+      if (a.status !== "active" && b.status === "active") return 1;
+      return 0;
+    });
+
+  const getClientTodayDate = () => {
+    const parts = new Intl.DateTimeFormat("en-US", {
+      timeZone: getUserTimeZone(),
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+    }).formatToParts(new Date());
+
+    const year = parts.find((p) => p.type === "year")?.value ?? "";
+    const month = parts.find((p) => p.type === "month")?.value ?? "";
+    const day = parts.find((p) => p.type === "day")?.value ?? "";
+
+    return `${year}-${month}-${day}`;
+  };
+
+  // Fetch today's shifts when contract changes
+  useEffect(() => {
+    if (!selectedContractId) {
+      setTodayShifts([]);
+      setSelectedShiftId("");
+      return;
     }
 
-    return true;
-  });
+    let cancelled = false;
+    setIsLoadingShifts(true);
+    setTodayShifts([]);
+
+    const queryDate = defaultDate || getClientTodayDate();
+
+    requestGetTodayShiftsByContract(selectedContractId, queryDate)
+      .then((res) => {
+        if (!cancelled) {
+          setTodayShifts(res.data ?? []);
+          // Pre-select defaultShiftId only on first load
+          if (defaultShiftId && res.data?.some((s) => s.shift_id === defaultShiftId)) {
+            setSelectedShiftId(defaultShiftId);
+          } else if (!defaultShiftId) {
+            setSelectedShiftId("");
+          }
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setTodayShifts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoadingShifts(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedContractId, defaultDate]);
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -88,6 +203,7 @@ export function CustomerReportForm({
 
     onSubmit({
       contractId: selectedContractId,
+      shiftId: selectedShiftId || null,
       type,
       description: description.trim(),
       imageUrl: imagePreview,
@@ -125,26 +241,93 @@ export function CustomerReportForm({
               <span className="text-xs text-on-surface-variant">Đang tải danh sách hợp đồng...</span>
             </div>
           ) : (
-            <select
-              value={selectedContractId}
-              onChange={(e) => setSelectedContractId(e.target.value)}
-              className="bg-white rounded border border-outline-variant focus:border-primary outline-none text-sm text-on-surface px-3 py-2 w-full h-10 cursor-pointer"
-              required
-            >
-              <option value="">-- {dict.report.form.contract_placeholder} --</option>
-              {displayContracts.map((c) => {
-                const dateInfo = c.end_date 
-                  ? ` (Hết hạn: ${new Date(c.end_date).toLocaleDateString("vi-VN")})`
-                  : "";
-                return (
-                  <option key={c.contract_id} value={c.contract_id}>
-                    [{c.contract_code || "HD-CỦA-BẠN"}] {c.service_name || "Dịch vụ bảo vệ"}{dateInfo}
-                  </option>
-                );
-              })}
-            </select>
+            <>
+              <select
+                value={selectedContractId}
+                onChange={(e) => {
+                  setSelectedContractId(e.target.value);
+                  setSelectedShiftId("");
+                }}
+                className="bg-white rounded border border-outline-variant focus:border-primary outline-none text-sm text-on-surface px-3 py-2 w-full h-10 cursor-pointer"
+                required
+              >
+                <option value="">-- {dict?.report?.form?.contract_placeholder || "Chọn hợp đồng..."} --</option>
+                {displayContracts.map((c) => {
+                  const dateInfo = c.end_date
+                    ? ` · ${dict?.report?.form?.contract_expiry || "Hết hạn"}: ${new Date(c.end_date).toLocaleDateString()}`
+                    : "";
+                  const statusText = getContractStatusText(c.status, dict);
+                  return (
+                    <option key={c.contract_id} value={c.contract_id}>
+                      [{c.contract_code || "HD-CỦA-BẠN"}] {c.service_name || (dict?.report?.form?.default_service || "Dịch vụ bảo vệ")} — {statusText}{dateInfo}
+                    </option>
+                  );
+                })}
+              </select>
+
+              {/* Ghi chú bình thường, không tô màu, hiển thị tooltip khi hover icon ? */}
+              <div className="flex items-center text-xs text-on-surface-variant mt-0.5">
+                <div className="group relative inline-flex items-center gap-1.5 cursor-help">
+                  <span className="hover:text-on-surface transition-colors">
+                    * {dict?.report?.form?.completed_contract_hint || "Lưu ý về hợp đồng đã hoàn thành"}
+                  </span>
+                  <HelpCircle className="w-3.5 h-3.5 text-on-surface-variant/70 group-hover:text-primary transition-colors shrink-0" />
+                  <div className="absolute left-0 bottom-full mb-1.5 hidden group-hover:block w-72 p-2.5 bg-[#1e293b] text-white text-xs font-normal rounded-lg shadow-xl z-30 leading-relaxed pointer-events-none">
+                    <span className="font-semibold text-slate-100">
+                      {dict?.report?.form?.completed_contract_title || "Hợp đồng đã hoàn thành"}:{" "}
+                    </span>
+                    <span className="text-slate-200">
+                      {dict?.report?.form?.completed_contract_note ||
+                        "Hệ thống chỉ hỗ trợ tiếp nhận phản ánh/khiếu nại trong vòng 14 ngày kể từ ngày kết thúc hợp đồng."}
+                    </span>
+                    <div className="absolute top-full left-3 border-4 border-transparent border-t-[#1e293b]" />
+                  </div>
+                </div>
+              </div>
+            </>
           )}
         </div>
+
+        {/* Shift dropdown — only shows when a contract is selected */}
+        {selectedContractId && (
+          <div className="flex flex-col gap-2">
+            <label className="text-xs font-bold text-on-surface uppercase tracking-wider flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5" />
+              {dict?.shift_week?.today_shifts_label || "Ca trực hôm nay"}
+              <span className="text-on-surface-variant font-normal normal-case tracking-normal ml-1">
+                {dict?.shift_week?.today_shifts_optional || "(tùy chọn)"}
+              </span>
+            </label>
+            {isLoadingShifts ? (
+              <div className="h-10 rounded border border-outline-variant flex items-center px-3 gap-2 bg-slate-50">
+                <Loader2 className="w-4 h-4 animate-spin text-primary" />
+                <span className="text-xs text-on-surface-variant">
+                  {dict?.shift_week?.today_shifts_loading || "Đang tải ca trực hôm nay..."}
+                </span>
+              </div>
+            ) : todayShifts.length === 0 ? (
+              <div className="h-10 rounded border border-outline-variant flex items-center px-3 bg-slate-50">
+                <span className="text-xs text-on-surface-variant italic">
+                  {dict?.shift_week?.today_shifts_empty || "Không có ca trực nào hôm nay cho hợp đồng này"}
+                </span>
+              </div>
+            ) : (
+              <select
+                value={selectedShiftId}
+                onChange={(e) => setSelectedShiftId(e.target.value)}
+                className="bg-white rounded border border-outline-variant focus:border-primary outline-none text-sm text-on-surface px-3 py-2 w-full h-10 cursor-pointer"
+              >
+                <option value="">{dict?.shift_week?.shift_no_specific || "-- Không chọn ca cụ thể --"}</option>
+                {todayShifts.map((s) => (
+                  <option key={s.shift_id} value={s.shift_id}>
+                    {s.shift_name || (dict?.shift_week?.shift_default_name || "Ca trực")}: {formatTime(s.start_time)} – {formatTime(s.end_time)}
+                    {s.location ? ` (${s.location})` : ""}
+                  </option>
+                ))}
+              </select>
+            )}
+          </div>
+        )}
 
         {/* Type of Incident */}
         <div className="flex flex-col gap-2">
@@ -188,7 +371,7 @@ export function CustomerReportForm({
           <label className="text-xs font-bold text-on-surface uppercase tracking-wider">
             {dict.report.form.attachment_label}
           </label>
-          
+
           <div className="flex items-center gap-4">
             {!imagePreview ? (
               <label className="flex flex-col items-center justify-center border-2 border-dashed border-outline-variant hover:border-primary rounded-lg cursor-pointer w-full h-28 hover:bg-slate-50 transition-colors">

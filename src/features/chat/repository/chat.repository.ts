@@ -8,7 +8,7 @@ export const getConversations = async (companyId: string, userId: string): Promi
 
   const { data: convs, error } = await supabase
     .from("conversations")
-    .select("conversation_id, company_id, created_at, updated_at")
+    .select("conversation_id, company_id, customer_id, created_at, updated_at")
     .eq("company_id", companyId)
     .order("updated_at", { ascending: false });
 
@@ -21,17 +21,11 @@ export const getConversations = async (companyId: string, userId: string): Promi
       .order("created_at", { ascending: false }).limit(1);
     const latest = latestData?.[0];
 
-    // 2. Tìm ID của người gửi (khác với userId cố định của Company)
-    const { data: otherData } = await supabase.from("messages")
-      .select("sender_id").eq("conversation_id", conv.conversation_id)
-      .neq("sender_id", userId).limit(1);
-    const other = otherData?.[0];
-
-    // 3. Truy vấn Tên & Avatar từ profile
+    // 2. Truy vấn Tên & Avatar từ profile dựa vào customer_id
     let profileData: { customer_name?: string; customer_avatar?: string } = {};
-    if (other?.sender_id) {
+    if (conv.customer_id) {
       const { data: profile } = await supabase.from("profiles")
-        .select("full_name, avatar_url").eq("user_id", other.sender_id).single();
+        .select("full_name, avatar_url").eq("user_id", conv.customer_id).single();
       profileData = { customer_name: profile?.full_name, customer_avatar: profile?.avatar_url || undefined };
     }
 
@@ -47,22 +41,11 @@ export const getConversationsByCustomerId = async (
 ): Promise<ConversationWithDetails[]> => {
   const supabase = await createClient();
 
-  // Lấy tất cả conversation_id mà customer đã nhắn tin
-  const { data: msgRows, error: msgErr } = await supabase
-    .from("messages")
-    .select("conversation_id")
-    .eq("sender_id", customerId);
-
-  if (msgErr) throw msgErr;
-  if (!msgRows || msgRows.length === 0) return [];
-
-  const conversationIds = [...new Set(msgRows.map(r => r.conversation_id))];
-
-  // Lấy thông tin các conversation đó
+  // Lấy thông tin các conversation có customer_id này
   const { data: convs, error } = await supabase
     .from("conversations")
-    .select("conversation_id, company_id, created_at, updated_at")
-    .in("conversation_id", conversationIds)
+    .select("conversation_id, company_id, customer_id, created_at, updated_at")
+    .eq("customer_id", customerId)
     .order("updated_at", { ascending: false });
 
   if (error) throw error;
@@ -109,30 +92,21 @@ export const getOrCreateConversation = async (
   // Tìm conversation đã tồn tại giữa khách hàng này và công ty
   const { data: existing } = await supabase
     .from("conversations")
-    .select("conversation_id, company_id, created_at, updated_at")
+    .select("conversation_id, company_id, customer_id, created_at, updated_at")
     .eq("company_id", companyId)
-    .order("created_at", { ascending: false });
+    .eq("customer_id", customerId)
+    .order("created_at", { ascending: false })
+    .limit(1);
 
   if (existing && existing.length > 0) {
-    // Kiểm tra xem có conversation nào mà customer đã từng nhắn không
-    for (const conv of existing) {
-      const { data: msg } = await supabase
-        .from("messages")
-        .select("message_id")
-        .eq("conversation_id", conv.conversation_id)
-        .eq("sender_id", customerId)
-        .limit(1);
-      if (msg && msg.length > 0) {
-        return conv as Conversation;
-      }
-    }
+    return existing[0] as Conversation;
   }
 
   // Tạo conversation mới
   const { data: newConv, error } = await supabase
     .from("conversations")
-    .insert({ company_id: companyId })
-    .select("conversation_id, company_id, created_at, updated_at")
+    .insert({ company_id: companyId, customer_id: customerId })
+    .select("conversation_id, company_id, customer_id, created_at, updated_at")
     .single();
 
   if (error) throw error;

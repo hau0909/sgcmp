@@ -31,6 +31,7 @@ function hoist(dict: any) {
     company_contracts: dict.company_contracts || pages.company_contracts,
     contract_detail: dict.contract_detail || pages.contract_detail,
     contract_guards: dict.contract_guards || pages.contract_guards,
+    customer_guard_schedule: dict.customer_guard_schedule || pages.customer_guard_schedule,
     chat: dict.chat || pages.chat,
     billing: dict.billing || pages.billing,
     payment: dict.payment || pages.payment,

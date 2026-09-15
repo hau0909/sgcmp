@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
   await connection();
   try {
     const body = await request.json();
-    const { customer_id, contract_id, type, description, image_url } = body;
+    const { customer_id, contract_id, shift_id, type, description, image_url } = body;
 
     if (!customer_id) {
       return NextResponse.json({ error: "customer_id is required" }, { status: 400 });
@@ -52,6 +52,7 @@ export async function POST(request: NextRequest) {
     const newReport = await handleCreateCustomerReport({
       contract_id,
       customer_id,
+      shift_id: shift_id || null,
       type,
       description,
       image_url,

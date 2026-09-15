@@ -291,6 +291,7 @@ export default function ShiftSchedulePage() {
         <ShiftScheduleTable
           viewMode={viewMode}
           locations={tableLocations}
+          contracts={contracts}
           shifts={shifts}
           selectedLocation={selectedLocation}
           weekStartDate={currentDate}

@@ -36,10 +36,10 @@ export const countActiveGuardsOnShift = async (
           )
         )
       ),
-      profiles:profiles!shift_assignments_guard_id_fkey!inner (
-        status,
-        guards:guards!guards_user_id_fkey!inner (
-          company_id
+      guards:guards!shift_assignments_guard_id_fkey!inner (
+        company_id,
+        profiles:profiles!guards_user_id_fkey!inner (
+          status
         )
       )
     `,
@@ -50,8 +50,8 @@ export const countActiveGuardsOnShift = async (
     .gt("shifts.end_time", now)
     .eq("shifts.contracts.status", "active")
     .eq("shifts.contracts.bookings.company_id", companyId)
-    .eq("profiles.guards.company_id", companyId)
-    .eq("profiles.status", "active");
+    .eq("guards.company_id", companyId)
+    .eq("guards.profiles.status", "active");
 
   if (error) {
     throw new Error(`Không thể đếm bảo vệ đang trực: ${error.message}`);
@@ -87,10 +87,10 @@ export const countActiveGuardsOnShiftYesterday = async (
           )
         )
       ),
-      profiles:profiles!shift_assignments_guard_id_fkey!inner (
-        status,
-        guards:guards!guards_user_id_fkey!inner (
-          company_id
+      guards:guards!shift_assignments_guard_id_fkey!inner (
+        company_id,
+        profiles:profiles!guards_user_id_fkey!inner (
+          status
         )
       )
     `,
@@ -101,8 +101,8 @@ export const countActiveGuardsOnShiftYesterday = async (
     .gt("shifts.end_time", yesterday)
     .eq("shifts.contracts.status", "active")
     .eq("shifts.contracts.bookings.company_id", companyId)
-    .eq("profiles.guards.company_id", companyId)
-    .eq("profiles.status", "active");
+    .eq("guards.company_id", companyId)
+    .eq("guards.profiles.status", "active");
 
   if (error) {
     throw new Error(
@@ -475,7 +475,7 @@ export const getProfilesByIds = async (ids: string[]): Promise<any[]> => {
     .select(`
       guard_id,
       user_id,
-      profiles (
+      profiles!guards_user_id_fkey (
         full_name,
         avatar_url,
         phone_number

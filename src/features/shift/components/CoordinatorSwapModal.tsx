@@ -256,7 +256,7 @@ export function CoordinatorSwapModal({
     if (missingGuardShift) {
       setErrorMsg(
         dict?.coordinator_swap_modal?.val_missing_replacement ||
-          "Vui lòng chọn bảo vệ thay thế cho tất cả các ca làm."
+        "Vui lòng chọn bảo vệ thay thế cho tất cả các ca làm."
       );
       return;
     }
@@ -400,11 +400,10 @@ export function CoordinatorSwapModal({
                     <div
                       key={item.shift_id}
                       onClick={() => setActiveShiftId(item.shift_id)}
-                      className={`p-4 rounded-xl border transition-all cursor-pointer ${
-                        isActive
+                      className={`p-4 rounded-xl border transition-all cursor-pointer ${isActive
                           ? "border-blue-600 bg-blue-50/30 ring-2 ring-blue-500/20 shadow-xs"
                           : "border-slate-200 bg-white hover:border-slate-300"
-                      }`}
+                        }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-3">
                         <div className="flex items-center gap-2">
@@ -551,8 +550,7 @@ export function CoordinatorSwapModal({
                         });
                       }}
                       onMouseLeave={() => setHoveredGuardInfo(null)}
-                      className={`p-3.5 rounded-xl border transition-all shadow-2xs ${
-                        isCheckingConflicts
+                      className={`p-3.5 rounded-xl border transition-all shadow-2xs ${isCheckingConflicts
                           ? "border-slate-200 bg-slate-100/70 opacity-60 pointer-events-none cursor-wait"
                           : isChosen
                             ? "border-emerald-500 ring-2 ring-emerald-500/20 bg-emerald-50/20"
@@ -561,7 +559,7 @@ export function CoordinatorSwapModal({
                               : isOvertimeOnActiveDate || exceedsWeeklyLimit
                                 ? "border-amber-300 bg-amber-50/40 hover:border-amber-400 cursor-pointer"
                                 : "border-slate-200 bg-white hover:border-blue-300 hover:bg-slate-50/80 cursor-pointer"
-                      }`}
+                        }`}
                     >
                       <div className="flex items-start gap-3">
                         {/* Avatar */}
@@ -643,15 +641,14 @@ export function CoordinatorSwapModal({
                           type="button"
                           disabled={isDisabled}
                           onClick={() => !isDisabled && handleSelectGuard(guardId)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${
-                            isCheckingConflicts
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all shrink-0 ${isCheckingConflicts
                               ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60"
                               : isChosen
                                 ? "bg-emerald-600 text-white shadow-xs cursor-pointer"
                                 : (hasConflict || exceedsDailyLimit || exceedsWeeklyLimit)
                                   ? "bg-slate-100 text-slate-400 border border-slate-200 cursor-not-allowed opacity-60"
                                   : "bg-slate-100 text-slate-700 hover:bg-blue-600 hover:text-white cursor-pointer"
-                          }`}
+                            }`}
                         >
                           {isCheckingConflicts
                             ? (dict?.coordinator_swap_modal?.btn_checking || "Đang kiểm tra...")
@@ -759,15 +756,15 @@ export function CoordinatorSwapModal({
                     <span className="text-slate-500 font-medium">{dict?.coordinator_swap_modal?.email_label || "Email:"}</span>
                     <span className="truncate font-medium text-slate-900">{p?.email || (dict?.coordinator_swap_modal?.no_email || "Chưa cập nhật")}</span>
                   </div>
-                  {(hoveredGuardInfo.guard.height_cm || hoveredGuardInfo.guard.weight_kg) && (
-                    <div className="flex items-center gap-2">
-                      <Activity size={14} className="text-blue-700 shrink-0" />
-                      <span className="text-slate-500 font-medium">{dict?.coordinator_swap_modal?.physical_label || "Thể chất:"}</span>
-                      <span className="font-medium text-slate-900">
-                        {hoveredGuardInfo.guard.height_cm ? `${hoveredGuardInfo.guard.height_cm} cm` : "—"} · {hoveredGuardInfo.guard.weight_kg ? `${hoveredGuardInfo.guard.weight_kg} kg` : "—"}
-                      </span>
-                    </div>
-                  )}
+                  <div className="flex items-center gap-2">
+                    <Activity size={14} className="text-blue-700 shrink-0" />
+                    <span className="text-slate-500 font-medium">{dict?.coordinator_swap_modal?.physical_label || "Thể chất:"}</span>
+                    <span className="font-medium text-slate-900">
+                      {hoveredGuardInfo.guard.height_cm || hoveredGuardInfo.guard.weight_kg
+                        ? `${hoveredGuardInfo.guard.height_cm ? `${hoveredGuardInfo.guard.height_cm} cm` : "—"} · ${hoveredGuardInfo.guard.weight_kg ? `${hoveredGuardInfo.guard.weight_kg} kg` : "—"}`
+                        : (dict?.coordinator_swap_modal?.no_physical || "Chưa cập nhật")}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Notable Skills */}

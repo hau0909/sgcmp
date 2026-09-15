@@ -1,11 +1,14 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 export const fetcher = async (url: string, options?: any) => {
   const isFormData = options?.body instanceof FormData;
+  const baseUrl = (process.env.NEXT_PUBLIC_API_URL || "").trim();
+  const requestUrl =
+    typeof window !== "undefined" && url.startsWith("/")
+      ? url
+      : `${baseUrl}${url}`;
 
-  const res = await fetch(API_URL + url, {
+  const res = await fetch(requestUrl, {
     ...options,
     credentials: "include",
     headers: {

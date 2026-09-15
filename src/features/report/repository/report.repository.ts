@@ -85,14 +85,49 @@ export const getCustomerReports = async (
     }
   }
 
+  // Fetch shifts for reports that have shift_id
+  const shiftIds = Array.from(new Set(reports.map((r) => r.shift_id).filter(Boolean)));
+  let shifts: any[] = [];
+  if (shiftIds.length > 0) {
+    const { data: shiftsData } = await supabase
+      .from("shifts")
+      .select(`
+        shift_id,
+        shift_name,
+        start_time,
+        end_time,
+        location,
+        shift_assignments (
+          assignment_id,
+          guard_id,
+          status,
+          check_in_time,
+          guards!shift_assignments_guard_id_fkey (
+            guard_id,
+            profiles!guards_user_id_fkey (
+              full_name,
+              phone_number,
+              avatar_url
+            )
+          )
+        )
+      `)
+      .in("shift_id", shiftIds);
+    if (shiftsData) {
+      shifts = shiftsData;
+    }
+  }
+
   // Combine the reports with contract and service information
   const enrichedReports = reports.map((report) => {
     const contract = contracts.find((c) => c.contract_id === report.contract_id);
     const booking = contract ? bookings.find((b) => b.booking_id === contract.booking_id) : null;
     const service = booking ? services.find((s) => s.service_id === booking.service_id) : null;
+    const shift = shifts.find((s) => s.shift_id === report.shift_id);
 
     return {
       ...report,
+      shifts: shift || null,
       contracts: contract
         ? {
             contract_id: contract.contract_id,
@@ -115,6 +150,7 @@ export const getCustomerReports = async (
 export const createCustomerReport = async (payload: {
   contract_id: string;
   customer_id: string;
+  shift_id?: string | null;
   type: ReportType;
   description: string;
   image_url?: string | null;
@@ -126,6 +162,7 @@ export const createCustomerReport = async (payload: {
       {
         contract_id: payload.contract_id,
         customer_id: payload.customer_id,
+        shift_id: payload.shift_id || null,
         type: payload.type,
         description: payload.description,
         image_url: payload.image_url || null,
@@ -143,6 +180,38 @@ export const createCustomerReport = async (payload: {
   let contract: any = null;
   let booking: any = null;
   let service: any = null;
+  let shift: any = null;
+
+  if (inserted.shift_id) {
+    const { data: shiftData } = await supabase
+      .from("shifts")
+      .select(`
+        shift_id,
+        shift_name,
+        start_time,
+        end_time,
+        location,
+        shift_assignments (
+          assignment_id,
+          guard_id,
+          status,
+          check_in_time,
+          guards!shift_assignments_guard_id_fkey (
+            guard_id,
+            profiles!guards_user_id_fkey (
+              full_name,
+              phone_number,
+              avatar_url
+            )
+          )
+        )
+      `)
+      .eq("shift_id", inserted.shift_id)
+      .maybeSingle();
+    if (shiftData) {
+      shift = shiftData;
+    }
+  }
 
   if (inserted.contract_id) {
     const { data: contractData } = await supabase
@@ -180,6 +249,7 @@ export const createCustomerReport = async (payload: {
 
   return {
     ...inserted,
+    shifts: shift || null,
     contracts: contract
       ? {
           contract_id: contract.contract_id,
@@ -394,15 +464,50 @@ export const getCompanyReports = async (
     }
   }
 
+  // Fetch shifts for reports that have shift_id
+  const shiftIds = Array.from(new Set(reports.map((r) => r.shift_id).filter(Boolean)));
+  let shifts: any[] = [];
+  if (shiftIds.length > 0) {
+    const { data: shiftsData } = await supabase
+      .from("shifts")
+      .select(`
+        shift_id,
+        shift_name,
+        start_time,
+        end_time,
+        location,
+        shift_assignments (
+          assignment_id,
+          guard_id,
+          status,
+          check_in_time,
+          guards!shift_assignments_guard_id_fkey (
+            guard_id,
+            profiles!guards_user_id_fkey (
+              full_name,
+              phone_number,
+              avatar_url
+            )
+          )
+        )
+      `)
+      .in("shift_id", shiftIds);
+    if (shiftsData) {
+      shifts = shiftsData;
+    }
+  }
+
   // Combine enriched reports
   const enrichedReports = reports.map((report) => {
     const contract = contracts.find((c) => c.contract_id === report.contract_id);
     const booking = contract ? bookings.find((b) => b.booking_id === contract.booking_id) : null;
     const service = booking ? services.find((s) => s.service_id === booking.service_id) : null;
     const profile = profiles.find((p) => p.user_id === report.customer_id);
+    const shift = shifts.find((s) => s.shift_id === report.shift_id);
 
     return {
       ...report,
+      shifts: shift || null,
       customer_name: profile ? profile.full_name : "Khách hàng",
       customer_phone: profile ? profile.phone_number : "",
       contracts: contract

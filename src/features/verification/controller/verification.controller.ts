@@ -1,3 +1,4 @@
+import { createClient } from "@/lib/supabase/server";
 import { Verification, VerificationStatus } from "../types";
 import { UpdateVerificationInput } from "../validator/verification.validate";
 import {
@@ -25,9 +26,27 @@ export const handleGetVerification = async (
   return await getVerificationService(bookingId);
 };
 
+
 export const handleCreateVerification = async (
   bookingId: string
 ): Promise<Verification> => {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("role")
+      .eq("user_id", user.id)
+      .single();
+
+    if (profile?.role?.toLowerCase() === "coordinator") {
+      throw new Error("Tài khoản Điều phối viên không có quyền tạo khảo sát.");
+    }
+  }
+
   return await createVerificationService(bookingId);
 };
 

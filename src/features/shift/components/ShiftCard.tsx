@@ -135,6 +135,8 @@ function GuardRow({
   };
 
   const { dict } = useTranslation();
+  const isSwapApproved = Boolean(assignment.is_swap_approved);
+
   return (
     <>
       <div
@@ -144,14 +146,19 @@ function GuardRow({
         className="flex items-center justify-between gap-3 rounded bg-slate-50 px-2 py-1.5 hover:bg-blue-50 cursor-pointer transition-colors"
       >
         <div className="flex min-w-0 items-center gap-2">
-          <UserRound size={15} className="shrink-0 text-slate-500" />
+          <UserRound size={15} className={`shrink-0 ${isSwapApproved ? "text-orange-600" : "text-slate-500"}`} />
 
-          <p className="truncate text-sm font-medium text-slate-800">
+          <p className={`truncate text-sm ${isSwapApproved ? "font-extrabold text-orange-900 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-300" : "font-medium text-slate-800"}`}>
             {assignment.guard_name || (dict?.shift_week?.unupdated || "Chưa cập nhật")}
           </p>
         </div>
 
         <div className="flex items-center gap-1 shrink-0">
+          {isSwapApproved && (
+            <span className="rounded-full border border-orange-300 bg-orange-100 px-1.5 py-0.5 text-[9px] font-bold text-orange-800">
+              ĐỔI CA
+            </span>
+          )}
           {assignment.is_overtime && (
             <span className="rounded-full border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[9px] font-bold text-amber-800">
               {String(dict?.common?.overtime || "TĂNG CA").toUpperCase()}
@@ -617,11 +624,10 @@ export function ShiftCard({ shift }: ShiftCardProps) {
           setShowTooltip(false);
           setIsDetailOpen(true);
         }}
-        className={`relative transition-all duration-300 cursor-pointer flex h-full w-full flex-col justify-between rounded-md border p-3 shadow-sm ${
-          hasOvertime
-            ? "border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100/80"
-            : `${getShiftStyle(shift.shift_name)} hover:bg-blue-200`
-        }`}
+        className={`relative transition-all duration-300 cursor-pointer flex h-full w-full flex-col justify-between rounded-md border p-3 shadow-sm ${hasOvertime
+          ? "border-amber-300 bg-amber-50 text-amber-950 hover:bg-amber-100/80"
+          : `${getShiftStyle(shift.shift_name)} hover:bg-blue-200`
+          }`}
       >
         <div className="mb-2 flex items-start justify-between gap-2">
           <div className="flex flex-wrap items-center gap-1.5">
@@ -647,18 +653,27 @@ export function ShiftCard({ shift }: ShiftCardProps) {
           </button>
         </div>
 
-        <div className="space-y-2">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <UserRound size={17} className="shrink-0 text-slate-600" />
-              <p className="line-clamp-1 font-semibold text-slate-900">
-                {getMainGuardName(firstAssignment, dict)}
-                {extraGuardCount > 0 ? (
-                  <span className="ml-1 font-bold text-blue-700">
-                    +{extraGuardCount}
-                  </span>
-                ) : null}
-              </p>
+        <div className="space-y-2 min-w-0">
+          <div className="space-y-1 min-w-0">
+            <div className="flex items-center gap-2 min-w-0">
+              {(() => {
+                const isFirstSwapApproved = Boolean(firstAssignment?.is_swap_approved);
+                return (
+                  <>
+                    <UserRound size={17} className={`shrink-0 ${isFirstSwapApproved ? "text-orange-600" : "text-slate-600"}`} />
+                    <p className="truncate min-w-0 flex-1 font-semibold text-slate-900" title={getMainGuardName(firstAssignment, dict)}>
+                      <span className={`truncate inline-block max-w-full align-bottom ${isFirstSwapApproved ? "font-extrabold text-orange-900 bg-orange-100 px-1.5 py-0.5 rounded border border-orange-300" : ""}`}>
+                        {getMainGuardName(firstAssignment, dict)}
+                      </span>
+                      {extraGuardCount > 0 ? (
+                        <span className="ml-1 shrink-0 font-bold text-blue-700">
+                          +{extraGuardCount}
+                        </span>
+                      ) : null}
+                    </p>
+                  </>
+                );
+              })()}
             </div>
 
             {shift.assignments.slice(1).map((sa, idx) => {
@@ -677,16 +692,16 @@ export function ShiftCard({ shift }: ShiftCardProps) {
             })}
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <SquarePen size={14} />
+          <div className="flex items-center gap-2 text-sm text-slate-600 min-w-0">
+            <SquarePen size={14} className="shrink-0" />
 
-            <p className="line-clamp-1">{shift.shift_name}</p>
+            <p className="truncate min-w-0 flex-1" title={shift.shift_name}>{shift.shift_name}</p>
           </div>
 
-          <div className="flex items-center gap-2 text-sm text-slate-600">
-            <MapPin size={14} />
+          <div className="flex items-center gap-2 text-sm text-slate-600 min-w-0">
+            <MapPin size={14} className="shrink-0" />
 
-            <p className="line-clamp-1">{shift.location}</p>
+            <p className="truncate min-w-0 flex-1" title={shift.location}>{shift.location}</p>
           </div>
         </div>
       </div>

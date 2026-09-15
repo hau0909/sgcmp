@@ -45,6 +45,7 @@ export const handleGetCustomerReports = async (
 export const handleCreateCustomerReport = async (payload: {
   contract_id: string;
   customer_id: string;
+  shift_id?: string | null;
   type: ReportType;
   description: string;
   image_url?: string | null;
