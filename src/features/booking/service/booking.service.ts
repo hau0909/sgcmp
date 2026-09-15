@@ -3,6 +3,7 @@ import { getBookings, getBookingDetail, getBookingById, createBooking, updateBoo
 import { formatAddressService } from "@/features/address/service/address.service";
 import { validateBookingUpdateStatusData } from "../validator/booking.validator";
 import { checkTimeOverlap, checkDateOverlap } from "@/utils/calcTime";
+import { findOverlappingBookings } from "../utils/booking-conflict.utils";
 import { getProfileByUserIdService } from "@/features/profile/service/profile.service";
 
 
@@ -189,28 +190,7 @@ export const createBookingService = async (
 
 
 
-  const overlappingBookings = [];
-
-  for (const existing of activeBookings) {
-    if (!checkDateOverlap(bookingData.start_date, bookingData.end_date, existing.start_date, existing.end_date)) {
-      continue;
-    }
-
-    const existingDays = existing.day_per_week as string[] || [];
-    const daysOverlap = bookingData.day_per_week.some(d => existingDays.includes(d));
-    if (!daysOverlap) {
-      continue;
-    }
-
-    const existingTimeSlots = existing.time_slots as string[] || [];
-    const timeOverlap = bookingData.time_slots.some(newSlot =>
-      existingTimeSlots.some(existSlot => checkTimeOverlap(newSlot, existSlot))
-    );
-
-    if (timeOverlap) {
-      overlappingBookings.push(existing);
-    }
-  }
+  const overlappingBookings = findOverlappingBookings(bookingData, activeBookings);
 
   if (overlappingBookings.length > 0 && !forceCreate) {
     const error: any = new Error("Địa chỉ này đã có lịch đặt dịch vụ trùng ngày và khung giờ");

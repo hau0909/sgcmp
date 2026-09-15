@@ -15,6 +15,7 @@ import {
   getGuardDetailByUserId,
 } from "../repository/guard.repository";
 import { getCurrentActivePlanService } from "@/features/subscription/service/subscription.service";
+import { evaluateGuardQuota } from "../utils/guard-quota.utils";
 import type {
   InsertGuardInformationRepositoryParams,
   UploadGuardAvatarRepositoryParams,
@@ -258,21 +259,7 @@ export const checkGuardQuotaService = async (
   }
 
   const { plan } = currentPlanResult;
-  const maxGuards = plan.max_guards;
-
-  if (maxGuards === null) {
-    return {
-      isExceeded: false,
-      maxGuards: null,
-      currentGuards,
-    };
-  }
-
-  return {
-    isExceeded: currentGuards >= maxGuards,
-    maxGuards,
-    currentGuards,
-  };
+  return evaluateGuardQuota(currentGuards, plan.max_guards);
 };
 
 export const getGuardsByContractService = async ({

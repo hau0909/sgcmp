@@ -1,4 +1,5 @@
 import { formatDateKey, formatTimes } from "./../utils/shift.utils";
+import { calculateContractWorkingAndScheduledDays } from "../utils/shift-schedule.utils";
 import { createClient } from "@/lib/supabase/server";
 import type {
   ContractOption,
@@ -132,39 +133,12 @@ export const getShiftContractsByCompanyId = async (
     const time_slots = toStringArray(booking?.time_slots) ?? [];
     const day_per_week = toStringArray(booking?.day_per_week) ?? [];
 
-    // Calculate totalContractWorkingDays
-    const targetDays = day_per_week
-      .map((d) => DAY_LABEL_MAP[d.toLowerCase().trim()])
-      .filter((n): n is number => n !== undefined);
-
-    let totalWorkingDays = 0;
-    if (contract.start_date && contract.end_date && targetDays.length > 0) {
-      const cStart = new Date(`${contract.start_date}T00:00:00`);
-      const cEnd = new Date(`${contract.end_date}T00:00:00`);
-      const cur = new Date(cStart);
-      while (cur <= cEnd) {
-        if (targetDays.includes(cur.getDay())) {
-          totalWorkingDays++;
-        }
-        cur.setDate(cur.getDate() + 1);
-      }
-    }
-
-    // Calculate scheduledCount within target days and contract bounds
-    const scheduledDatesSet = contractScheduledDatesMap[contract.contract_id] || new Set();
-    let scheduledDays = 0;
-    if (contract.start_date && contract.end_date && targetDays.length > 0) {
-      const cStart = new Date(`${contract.start_date}T00:00:00`);
-      const cEnd = new Date(`${contract.end_date}T00:00:00`);
-      for (const dStr of Array.from(scheduledDatesSet)) {
-        try {
-          const dObj = new Date(`${dStr}T00:00:00`);
-          if (dObj >= cStart && dObj <= cEnd && targetDays.includes(dObj.getDay())) {
-            scheduledDays++;
-          }
-        } catch {}
-      }
-    }
+    const scheduledDatesSet = contractScheduledDatesMap[contract.contract_id] || new Set<string>();
+    const { totalWorkingDays, scheduledDays } = calculateContractWorkingAndScheduledDays(
+      contract,
+      day_per_week,
+      scheduledDatesSet
+    );
 
     return {
       contract_id: contract.contract_id,
