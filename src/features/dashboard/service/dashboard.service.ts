@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { formatVNTime, formatVNDate, getEndOfDayInTimeZone } from "@/utils/dateTime";
 import {
   countActiveGuardsOnShift,
   countActiveGuardsOnShiftYesterday,
@@ -524,9 +525,7 @@ export const getTodayGuardsStatusListService = async (
   const now = new Date();
 
   const formatTime = (dateStr: string) => {
-    const d = new Date(dateStr);
-    const pad = (num: number) => num.toString().padStart(2, "0");
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return formatVNTime(dateStr);
   };
 
   for (const shift of shifts) {
@@ -679,27 +678,22 @@ export const getRecentActivitiesService = async (companyId: string): Promise<Rec
 
   const formatFriendlyTime = (dateStr: string) => {
     const date = new Date(dateStr);
+    if (Number.isNaN(date.getTime())) return "";
+
+    const timeStr = formatVNTime(date);
+    const fullDate = formatVNDate(date);
+
     const now = new Date();
-    const isToday = date.toDateString() === now.toDateString();
-    const yesterdayDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    const isYesterday = date.toDateString() === yesterdayDate.toDateString();
+    const todayVN = formatVNDate(now);
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayVN = formatVNDate(yesterday);
 
-    const pad = (num: number) => num.toString().padStart(2, "0");
-    const hours = pad(date.getHours());
-    const minutes = pad(date.getMinutes());
-    const time = `${hours}:${minutes}`;
-
-    const day = pad(date.getDate());
-    const month = pad(date.getMonth() + 1);
-    const year = date.getFullYear();
-    const fullDate = `${day}/${month}/${year}`;
-
-    if (isToday) {
-      return `Hôm nay, ${fullDate}, ${time}`;
-    } else if (isYesterday) {
-      return `Hôm qua, ${fullDate}, ${time}`;
+    if (fullDate === todayVN) {
+      return `Hôm nay, ${fullDate}, ${timeStr}`;
+    } else if (fullDate === yesterdayVN) {
+      return `Hôm qua, ${fullDate}, ${timeStr}`;
     } else {
-      return `${fullDate}, ${time}`;
+      return `${fullDate}, ${timeStr}`;
     }
   };
 
@@ -1390,17 +1384,22 @@ export const getAdminRecentActivitiesService = async (
 
   const formatDateTimeLabel = (dateStr: string) => {
     const d = new Date(dateStr);
-    const now = new Date();
-    const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-    const yesterday = new Date(today.getTime() - 24 * 60 * 60 * 1000);
-    const timeStr = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    if (Number.isNaN(d.getTime())) return "";
 
-    if (d.getTime() >= today.getTime()) {
+    const timeStr = formatVNTime(d);
+    const fullDate = formatVNDate(d);
+
+    const now = new Date();
+    const todayVN = formatVNDate(now);
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yesterdayVN = formatVNDate(yesterday);
+
+    if (fullDate === todayVN) {
       return isVi ? `Hôm nay, ${timeStr}` : `Today, ${timeStr}`;
-    } else if (d.getTime() >= yesterday.getTime()) {
+    } else if (fullDate === yesterdayVN) {
       return isVi ? `Hôm qua, ${timeStr}` : `Yesterday, ${timeStr}`;
     } else {
-      return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}, ${timeStr}`;
+      return `${fullDate}, ${timeStr}`;
     }
   };
 
@@ -1443,8 +1442,7 @@ export const getAdminRecentActivitiesService = async (
   const pad = (num: number) => String(num).padStart(2, "0");
 
   const formatTimeOnly = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return formatVNTime(dateStr);
   };
 
   // Process registrations
@@ -1605,7 +1603,7 @@ export const getCurrentUpcomingShiftsTodayService = async (
     return [];
   }
   const now = clientDate && !Number.isNaN(new Date(clientDate).getTime()) ? new Date(clientDate) : new Date();
-  const endOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999).toISOString();
+  const endOfToday = getEndOfDayInTimeZone(now, "Asia/Ho_Chi_Minh");
 
   // Always query shifts active right now or starting from current time 'now' until end of today
   const rawShifts = await getTodayGuardsStatusList(resolvedCompanyId, now.toISOString(), endOfToday);
@@ -1630,10 +1628,8 @@ export const getCurrentUpcomingShiftsTodayService = async (
     return profiles.find((p) => p.id === id || p.user_id === id || p.guard_id === id) || { full_name: "Bảo vệ", avatar_url: null, phone_number: "" };
   };
 
-  const pad = (num: number) => num.toString().padStart(2, "0");
   const formatHHMM = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    return formatVNTime(dateStr);
   };
 
   const list: CurrentUpcomingShiftItem[] = [];
@@ -1818,12 +1814,11 @@ export const getPastShiftsService = async (
   }
   const getProfile = (id: string) => profiles.find((p) => p.id === id || p.user_id === id || p.guard_id === id) || { full_name: "Bảo vệ", avatar_url: null, phone_number: "" };
 
-  const pad = (num: number) => num.toString().padStart(2, "0");
   const formatTimeRange = (start: string, end: string) => {
-    const s = new Date(start);
-    const e = new Date(end);
-    const dateStr = `${pad(s.getDate())}/${pad(s.getMonth() + 1)}/${s.getFullYear()}`;
-    return `${pad(s.getHours())}:${pad(s.getMinutes())} - ${pad(e.getHours())}:${pad(e.getMinutes())} · ${dateStr}`;
+    const tStart = formatVNTime(start);
+    const tEnd = formatVNTime(end);
+    const dateStr = formatVNDate(start);
+    return `${tStart} - ${tEnd} · ${dateStr}`;
   };
 
   const list: PastShiftItem[] = [];
