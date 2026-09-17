@@ -2,6 +2,7 @@
 
 import React from "react";
 import { calculateContractProgress } from "../utils/contractProgress";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface ContractProgressBarProps {
   startDate?: string | null;
@@ -18,7 +19,8 @@ export function ContractProgressBar({
   statusText,
   className = "",
 }: ContractProgressBarProps) {
-  const progress = calculateContractProgress(startDate, endDate);
+  const { dict, locale } = useTranslation();
+  const progress = calculateContractProgress(startDate, endDate, locale);
 
   // Dynamic gradient based on percentage
   const getGradient = (pct: number) => {
@@ -56,7 +58,7 @@ export function ContractProgressBar({
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className="text-xs font-bold text-blue-900 dark:text-blue-200 uppercase tracking-wider font-headline">
-            Tiến độ thực hiện hợp đồng
+            {dict.contract?.detail?.progress_title || "Tiến độ thực hiện hợp đồng"}
           </span>
           <span className="text-xs px-2 py-0.5 rounded-full font-bold bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300">
             {progress.statusLabel}

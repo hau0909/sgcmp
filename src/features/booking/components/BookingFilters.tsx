@@ -67,18 +67,18 @@ export function BookingFilters({
             className="w-full px-3 h-[38px] bg-surface-container-lowest border border-outline-variant rounded-lg text-xs text-on-surface focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all appearance-none cursor-pointer"
           >
             <option value="">{dict.company_requests?.status_all || "Tất cả trạng thái"}</option>
-            <option value="pending">Chờ báo giá</option>
-            <option value="quoted">Đã báo giá</option>
-            <option value="contract_created">Đã tạo hợp đồng</option>
-            <option value="rejected">Đã từ chối</option>
-            <option value="cancelled">Đã hủy</option>
+            <option value="pending">{dict.company_requests?.status_pending || "Chờ báo giá"}</option>
+            <option value="quoted">{dict.company_requests?.status_quoted || "Đã báo giá"}</option>
+            <option value="contract_created">{dict.company_requests?.status_contract_created || "Đã tạo hợp đồng"}</option>
+            <option value="rejected">{dict.company_requests?.status_rejected || "Đã từ chối"}</option>
+            <option value="cancelled">{dict.company_requests?.status_cancelled || "Đã hủy"}</option>
           </select>
         </div>
 
         {/* Start Date */}
         <div className="md:col-span-2 flex flex-col">
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-            Từ ngày
+            {dict.company_requests?.filter_start_date || "Từ ngày"}
           </label>
           <input
             type="date"
@@ -91,7 +91,7 @@ export function BookingFilters({
         {/* End Date */}
         <div className="md:col-span-2 flex flex-col">
           <label className="block text-[11px] font-bold text-on-surface-variant mb-1 uppercase tracking-wider">
-            Đến ngày
+            {dict.company_requests?.filter_end_date || "Đến ngày"}
           </label>
           <input
             type="date"
@@ -107,11 +107,11 @@ export function BookingFilters({
             <button
               type="button"
               onClick={handleReset}
-              title="Xóa bộ lọc"
+              title={dict.company_requests?.filter_reset_title || "Xóa bộ lọc"}
               className="h-[38px] w-full flex items-center justify-center gap-1 px-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface-variant text-xs font-medium rounded-lg border border-outline-variant transition-colors"
             >
               <X className="w-3.5 h-3.5" />
-              <span>Xóa</span>
+              <span>{dict.company_requests?.filter_reset || "Xóa"}</span>
             </button>
           </div>
         )}

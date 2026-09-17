@@ -1,8 +1,19 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { X, Loader2, Calendar, Clock, MapPin, Users, FileText, AlertCircle, Plus, Trash2 } from "lucide-react";
+import {
+  X,
+  Loader2,
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  FileText,
+  AlertCircle,
+  Plus,
+} from "lucide-react";
 import { requestUpdateBookingDetails } from "../api/booking.api";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 export interface EditBookingModalProps {
   isOpen: boolean;
@@ -21,20 +32,16 @@ export interface EditBookingModalProps {
 }
 
 const DAYS_OF_WEEK = [
-  { value: "Monday", label: "T2" },
-  { value: "Tuesday", label: "T3" },
-  { value: "Wednesday", label: "T4" },
-  { value: "Thursday", label: "T5" },
-  { value: "Friday", label: "T6" },
-  { value: "Saturday", label: "T7" },
-  { value: "Sunday", label: "CN" },
+  { value: "Monday", fallback: "T2" },
+  { value: "Tuesday", fallback: "T3" },
+  { value: "Wednesday", fallback: "T4" },
+  { value: "Thursday", fallback: "T5" },
+  { value: "Friday", fallback: "T6" },
+  { value: "Saturday", fallback: "T7" },
+  { value: "Sunday", fallback: "CN" },
 ];
 
-const PRESET_TIME_SLOTS = [
-  "06:00 - 14:00",
-  "14:00 - 22:00",
-  "22:00 - 06:00",
-];
+const PRESET_TIME_SLOTS = ["06:00 - 14:00", "14:00 - 22:00", "22:00 - 06:00"];
 
 export function EditBookingModal({
   isOpen,
@@ -43,6 +50,9 @@ export function EditBookingModal({
   initialData,
   onSuccess,
 }: EditBookingModalProps) {
+  const { dict } = useTranslation();
+  const eb = dict.edit_booking;
+
   const [address, setAddress] = useState("");
   const [guardsCount, setGuardsCount] = useState(1);
   const [startDate, setStartDate] = useState("");
@@ -81,13 +91,13 @@ export function EditBookingModal({
 
   const toggleDay = (day: string) => {
     setDaysPerWeek((prev) =>
-      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day]
+      prev.includes(day) ? prev.filter((d) => d !== day) : [...prev, day],
     );
   };
 
   const togglePresetTimeSlot = (slot: string) => {
     setTimeSlots((prev) =>
-      prev.includes(slot) ? prev.filter((s) => s !== slot) : [...prev, slot]
+      prev.includes(slot) ? prev.filter((s) => s !== slot) : [...prev, slot],
     );
   };
 
@@ -108,27 +118,36 @@ export function EditBookingModal({
     setError(null);
 
     if (!address.trim()) {
-      setError("Vui lòng nhập địa chỉ công tác.");
+      setError(eb?.err_address || "Vui lòng nhập địa chỉ công tác.");
       return;
     }
     if (guardsCount < 1) {
-      setError("Số lượng bảo vệ phải ít nhất là 1.");
+      setError(eb?.err_guards || "Số lượng bảo vệ phải ít nhất là 1.");
       return;
     }
     if (!startDate || !endDate) {
-      setError("Vui lòng chọn thời gian bắt đầu và kết thúc.");
+      setError(eb?.err_dates || "Vui lòng chọn thời gian bắt đầu và kết thúc.");
       return;
     }
     if (new Date(startDate) > new Date(endDate)) {
-      setError("Ngày bắt đầu không được lớn hơn ngày kết thúc.");
+      setError(
+        eb?.err_date_order ||
+          "Ngày bắt đầu không được lớn hơn ngày kết thúc.",
+      );
       return;
     }
     if (daysPerWeek.length === 0) {
-      setError("Vui lòng chọn ít nhất một ngày làm việc trong tuần.");
+      setError(
+        eb?.err_days ||
+          "Vui lòng chọn ít nhất một ngày làm việc trong tuần.",
+      );
       return;
     }
     if (timeSlots.length === 0) {
-      setError("Vui lòng chọn hoặc nhập ít nhất một ca làm việc.");
+      setError(
+        eb?.err_shifts ||
+          "Vui lòng chọn hoặc nhập ít nhất một ca làm việc.",
+      );
       return;
     }
 
@@ -147,7 +166,11 @@ export function EditBookingModal({
       onSuccess();
       onClose();
     } catch (err: any) {
-      setError(err?.message || "Cập nhật thất bại, vui lòng thử lại sau.");
+      setError(
+        err?.message ||
+          eb?.err_save ||
+          "Cập nhật thất bại, vui lòng thử lại sau.",
+      );
     } finally {
       setIsLoading(false);
     }
@@ -159,12 +182,12 @@ export function EditBookingModal({
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-outline-variant/40 bg-surface-container-low">
           <h2 className="text-lg font-bold text-on-surface flex items-center gap-2">
-            Chỉnh sửa yêu cầu dịch vụ
+            {eb?.title || "Chỉnh sửa yêu cầu dịch vụ"}
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors"
+            className="p-1.5 rounded-lg text-on-surface-variant hover:bg-surface-container-high transition-colors cursor-pointer"
           >
             <X className="w-5 h-5" />
           </button>
@@ -183,13 +206,13 @@ export function EditBookingModal({
           <div>
             <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
               <MapPin className="w-4 h-4 text-primary" />
-              Địa chỉ triển khai
+              {eb?.field_address || "ĐỊA CHỈ TRIỂN KHAI"}
             </label>
             <input
               type="text"
               value={address}
               onChange={(e) => setAddress(e.target.value)}
-              placeholder="Nhập địa chỉ..."
+              placeholder={eb?.field_address_placeholder || "Nhập địa chỉ..."}
               className="w-full px-3.5 py-2.5 bg-surface rounded-xl border border-outline-variant text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-sm"
               required
             />
@@ -200,7 +223,7 @@ export function EditBookingModal({
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                 <Users className="w-4 h-4 text-primary" />
-                Số lượng nhân sự / ca
+                {eb?.field_guards || "SỐ LƯỢNG NHÂN SỰ / CA"}
               </label>
               <input
                 type="number"
@@ -215,7 +238,7 @@ export function EditBookingModal({
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-primary" />
-                Ngày bắt đầu
+                {eb?.field_start_date || "NGÀY BẮT ĐẦU"}
               </label>
               <input
                 type="date"
@@ -229,7 +252,7 @@ export function EditBookingModal({
             <div>
               <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
                 <Calendar className="w-4 h-4 text-primary" />
-                Ngày kết thúc
+                {eb?.field_end_date || "NGÀY KẾT THÚC"}
               </label>
               <input
                 type="date"
@@ -245,7 +268,7 @@ export function EditBookingModal({
           <div>
             <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Calendar className="w-4 h-4 text-primary" />
-              Ngày làm việc trong tuần
+              {eb?.field_days || "NGÀY LÀM VIỆC TRONG TUẦN"}
             </label>
             <div className="flex flex-wrap gap-2">
               {DAYS_OF_WEEK.map((d) => {
@@ -261,7 +284,7 @@ export function EditBookingModal({
                         : "bg-surface text-on-surface-variant border-outline-variant hover:bg-surface-container"
                     }`}
                   >
-                    {d.label}
+                    {d.fallback}
                   </button>
                 );
               })}
@@ -272,7 +295,7 @@ export function EditBookingModal({
           <div>
             <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-2 flex items-center gap-1.5">
               <Clock className="w-4 h-4 text-primary" />
-              Ca làm việc
+              {eb?.field_shifts || "CA LÀM VIỆC"}
             </label>
             <div className="flex flex-wrap gap-2 mb-3">
               {PRESET_TIME_SLOTS.map((slot) => {
@@ -301,7 +324,10 @@ export function EditBookingModal({
                   type="text"
                   value={customSlot}
                   onChange={(e) => setCustomSlot(e.target.value)}
-                  placeholder="Khung giờ khác (vd: 08:00 - 17:00)..."
+                  placeholder={
+                    eb?.field_custom_slot_placeholder ||
+                    "Khung giờ khác (vd: 08:00 - 17:00)..."
+                  }
                   className="flex-1 px-3.5 py-2 bg-surface rounded-xl border border-outline-variant text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary text-xs"
                 />
                 <button
@@ -310,7 +336,7 @@ export function EditBookingModal({
                   className="px-3 py-2 bg-surface-container-high hover:bg-surface-container-highest text-on-surface text-xs font-medium rounded-xl border border-outline-variant flex items-center gap-1 transition-colors"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  Thêm
+                  {eb?.btn_add_slot?.replace("+ ", "") || "Thêm"}
                 </button>
               </div>
 
@@ -340,13 +366,16 @@ export function EditBookingModal({
           <div>
             <label className="block text-xs font-semibold text-on-surface-variant uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
               <FileText className="w-4 h-4 text-primary" />
-              Ghi chú / Yêu cầu đặc biệt
+              {eb?.field_notes || "GHI CHÚ / YÊU CẦU ĐẶC BIỆT"}
             </label>
             <textarea
               rows={3}
               value={specialInstructions}
               onChange={(e) => setSpecialInstructions(e.target.value)}
-              placeholder="Nhập các yêu cầu cụ thể khác nếu có..."
+              placeholder={
+                eb?.field_notes_placeholder ||
+                "Nhập các yêu cầu cụ thể khác nếu có..."
+              }
               className="w-full px-3.5 py-2.5 bg-surface rounded-xl border border-outline-variant text-on-surface focus:outline-none focus:ring-2 focus:ring-primary/40 focus:border-primary transition-all text-sm resize-none"
             />
           </div>
@@ -357,17 +386,19 @@ export function EditBookingModal({
               type="button"
               onClick={onClose}
               disabled={isLoading}
-              className="px-4 py-2.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-colors disabled:opacity-50"
+              className="px-4 py-2.5 text-sm font-medium text-on-surface-variant hover:bg-surface-container-high rounded-xl transition-colors disabled:opacity-50 cursor-pointer"
             >
-              Hủy
+              {eb?.btn_cancel || "Hủy"}
             </button>
             <button
               type="submit"
               disabled={isLoading}
-              className="px-5 py-2.5 text-sm font-semibold text-on-primary bg-primary hover:bg-primary/90 rounded-xl shadow-sm transition-all disabled:opacity-50 flex items-center gap-2"
+              className="px-5 py-2.5 text-sm font-semibold text-on-primary bg-primary hover:bg-primary/90 rounded-xl shadow-sm transition-all disabled:opacity-50 flex items-center gap-2 cursor-pointer"
             >
               {isLoading && <Loader2 className="w-4 h-4 animate-spin" />}
-              {isLoading ? "Đang lưu..." : "Lưu thay đổi"}
+              {isLoading
+                ? eb?.btn_saving || "Đang lưu..."
+                : eb?.btn_save || "Lưu thay đổi"}
             </button>
           </div>
         </form>

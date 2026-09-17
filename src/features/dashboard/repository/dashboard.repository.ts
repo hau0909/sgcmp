@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { getStartOfDayInTimeZone, getEndOfDayInTimeZone } from "@/utils/dateTime";
 
 // ─────────────────────────────────────────────────────────────
 // GUARDS ON SHIFT
@@ -994,15 +995,14 @@ export const getCoordinatorReportStats = async (
 
   switch (filter) {
     case "homnay": {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      startDate = new Date(getStartOfDayInTimeZone(now, "Asia/Ho_Chi_Minh"));
+      endDate = new Date(getEndOfDayInTimeZone(now, "Asia/Ho_Chi_Minh"));
       break;
     }
     case "homqua": {
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
-      startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
-      endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      startDate = new Date(getStartOfDayInTimeZone(yesterday, "Asia/Ho_Chi_Minh"));
+      endDate = new Date(getEndOfDayInTimeZone(yesterday, "Asia/Ho_Chi_Minh"));
       break;
     }
     case "tuantruoc": {
@@ -1022,7 +1022,7 @@ export const getCoordinatorReportStats = async (
     case "hientai":
     default: {
       startDate = now;
-      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      endDate = new Date(getEndOfDayInTimeZone(now, "Asia/Ho_Chi_Minh"));
       break;
     }
   }
@@ -1093,15 +1093,14 @@ export const getPastShiftsRepository = async (
 
   switch (filter) {
     case "homnay": {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      startDate = new Date(getStartOfDayInTimeZone(now, "Asia/Ho_Chi_Minh"));
+      endDate = new Date(getEndOfDayInTimeZone(now, "Asia/Ho_Chi_Minh"));
       break;
     }
     case "homqua": {
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
-      startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
-      endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      startDate = new Date(getStartOfDayInTimeZone(yesterday, "Asia/Ho_Chi_Minh"));
+      endDate = new Date(getEndOfDayInTimeZone(yesterday, "Asia/Ho_Chi_Minh"));
       break;
     }
     case "tuantruoc": {
@@ -1275,15 +1274,14 @@ export const getGuardPerformanceRadarRepository = async (
 
   switch (filter) {
     case "homnay": {
-      startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
-      endDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
+      startDate = new Date(getStartOfDayInTimeZone(now, "Asia/Ho_Chi_Minh"));
+      endDate = new Date(getEndOfDayInTimeZone(now, "Asia/Ho_Chi_Minh"));
       break;
     }
     case "homqua": {
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
-      startDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 0, 0, 0, 0);
-      endDate = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate(), 23, 59, 59, 999);
+      const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+      startDate = new Date(getStartOfDayInTimeZone(yesterday, "Asia/Ho_Chi_Minh"));
+      endDate = new Date(getEndOfDayInTimeZone(yesterday, "Asia/Ho_Chi_Minh"));
       break;
     }
     case "tuantruoc": {
