@@ -150,7 +150,7 @@ export function CustomerContractDetailHeader({
             </Button>
             {!contractFileUrl && (
               <div className="absolute top-full mt-2 right-0 pointer-events-none opacity-0 group-hover/tip:opacity-100 transition-opacity duration-200 bg-slate-900 text-white text-[11px] font-semibold px-2.5 py-1.5 rounded shadow-lg whitespace-nowrap z-50">
-                {"Công ty chưa tải lên tệp hợp đồng PDF"}
+                {dict.contract.detail.company_not_uploaded_pdf || "Công ty chưa tải lên tệp hợp đồng PDF"}
                 <div className="absolute bottom-full right-10 border-4 border-transparent border-b-slate-900" />
               </div>
             )}
@@ -168,7 +168,7 @@ export function CustomerContractDetailHeader({
             }`}
           >
             <Star className={`w-4 h-4 ${hasReviewed ? '' : 'fill-on-primary'}`} />
-            {hasReviewed ? "Xem đánh giá" : dict.contract.detail.review_btn}
+            {hasReviewed ? (dict.contract.detail.view_review || "Xem đánh giá") : dict.contract.detail.review_btn}
           </Button>
         )}
 

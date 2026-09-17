@@ -254,7 +254,7 @@ export function CustomerContractDetailContainer({
   const formatTime = (dateStr?: string | null) => {
     if (!dateStr) return "N/A";
     const d = new Date(dateStr);
-    return `${d.toLocaleDateString("vi-VN")} ${d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+    return `${d.toLocaleDateString(dateLocale)} ${d.toLocaleTimeString(dateLocale, { hour: "2-digit", minute: "2-digit" })}`;
   };
 
   // 4. Hợp đồng có hiệu lực / Hoàn thành
