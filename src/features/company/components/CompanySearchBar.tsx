@@ -376,9 +376,17 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
         const { latitude, longitude } = position.coords;
         try {
           const res = await fetch(
-            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&accept-language=vi`
+            `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${latitude}&longitude=${longitude}&localityLanguage=vi`,
+            { cache: "no-store" }
           );
-          const data = await res.json();
+          const bigData = await res.json();
+          // Chuyển đổi định dạng của BigDataCloud sang cấu trúc address của Nominatim để giữ nguyên logic cũ
+          const data: any = {
+            address: {
+              city: bigData.principalSubdivision || bigData.city || "",
+              suburb: bigData.locality || (bigData.city !== bigData.principalSubdivision ? bigData.city : "")
+            }
+          };
           if (data && data.address) {
             const addr = data.address;
             const rawCity = addr.city || addr.province || addr.state || addr.municipality || "";
@@ -414,23 +422,21 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
               }
               setIsLoadingWards(false);
             } else {
-              const fallbackVal = rawCity || "Đà Nẵng";
-              setCityInput(fallbackVal);
-              setSelectedCity(null);
-              setSelectedWard(null);
-              setWardInput("");
-              setWards([]);
-              handleSearchSubmit(fallbackVal, selectedServices, minPriceInput, maxPriceInput, true);
+              if (rawCity) {
+                setCityInput(rawCity);
+                setSelectedCity(null);
+                setSelectedWard(null);
+                setWardInput("");
+                setWards([]);
+                handleSearchSubmit(rawCity, selectedServices, minPriceInput, maxPriceInput, true);
+              } else {
+                alert(dict.customer.search.bar_alert_cannot_locate || "Không thể xác định vị trí của bạn.");
+              }
             }
           }
         } catch (error) {
           console.error("Lỗi định vị:", error);
-          setCityInput("Đà Nẵng");
-          setSelectedCity(null);
-          setSelectedWard(null);
-          setWardInput("");
-          setWards([]);
-          handleSearchSubmit("Đà Nẵng", selectedServices, minPriceInput, maxPriceInput, true);
+          alert(dict.customer.search.bar_alert_cannot_locate || "Không thể lấy thông tin địa điểm từ GPS.");
         } finally {
           setIsLocating(false);
         }
@@ -439,7 +445,8 @@ export default function CompanySearchBar({ variant = "large" }: CompanySearchBar
         console.error("Geolocation error:", error);
         setIsLocating(false);
         alert(dict.customer.search.bar_alert_cannot_locate);
-      }
+      },
+      { maximumAge: 0, enableHighAccuracy: true, timeout: 10000 }
     );
   };
 
