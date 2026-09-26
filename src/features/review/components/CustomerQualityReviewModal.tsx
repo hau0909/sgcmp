@@ -3,6 +3,7 @@
 import React, { useState } from "react";
 import { Star, Send, Calendar, AlertCircle, CheckCircle2, X } from "lucide-react";
 import { FEEDBACK_MAX_LENGTH } from "../validator/review.validator";
+import { useTranslation } from "@/components/providers/LanguageProvider";
 
 interface CustomerQualityReviewModalProps {
   contractCode: string;
@@ -27,9 +28,12 @@ export function CustomerQualityReviewModal({
   initialRating = 0,
   initialFeedback = "",
 }: CustomerQualityReviewModalProps) {
+  const { dict, locale } = useTranslation();
+  const dateLocale = locale === "en" ? "en-US" : "vi-VN";
+
   const formatDate = (dateStr?: string | null) => {
     if (!dateStr) return "N/A";
-    return new Date(dateStr).toLocaleDateString("vi-VN", {
+    return new Date(dateStr).toLocaleDateString(dateLocale, {
       day: "2-digit",
       month: "2-digit",
       year: "numeric",
@@ -46,7 +50,8 @@ export function CustomerQualityReviewModal({
   // ─── Derived validation ───────────────────────────────────────────────────
   const feedbackError =
     feedback.length > FEEDBACK_MAX_LENGTH
-      ? `Ý kiến đóng góp không được vượt quá ${FEEDBACK_MAX_LENGTH} ký tự.`
+      ? (dict.contract?.detail?.review_modal_max_length?.replace("{max}", String(FEEDBACK_MAX_LENGTH)) ||
+        `Ý kiến đóng góp không được vượt quá ${FEEDBACK_MAX_LENGTH} ký tự.`)
       : null;
 
   const canSubmit = rating > 0 && !feedbackError && !isSubmitting;
@@ -67,7 +72,11 @@ export function CustomerQualityReviewModal({
       window.dispatchEvent(new CustomEvent("reviewSubmitted"));
       setTimeout(() => setShowSuccess(false), 2000);
     } catch (err: any) {
-      setSubmitError(err?.message || "Gửi đánh giá thất bại. Vui lòng thử lại.");
+      setSubmitError(
+        err?.message ||
+        dict.contract?.detail?.review_modal_submit_error ||
+        "Gửi đánh giá thất bại. Vui lòng thử lại."
+      );
     } finally {
       setIsSubmitting(false);
     }
@@ -127,7 +136,7 @@ export function CustomerQualityReviewModal({
           {/* Header Section */}
           <div className="bg-surface-container-lowest border-b border-outline-variant p-6">
             <h2 className="font-headline text-[24px] font-semibold tracking-tight text-on-surface mb-2">
-              Đánh giá chất lượng dịch vụ
+              {dict.contract?.detail?.review_modal_title || "Đánh giá chất lượng dịch vụ"}
             </h2>
             <div className="bg-surface-container-low border border-surface-variant rounded p-3 mt-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div className="flex flex-col gap-0.5">
@@ -149,8 +158,8 @@ export function CustomerQualityReviewModal({
             {/* Rating Criteria */}
             <div className="flex flex-col gap-4">
               <StarRating
-                label="Mức độ hài lòng chung"
-                description="Vui lòng để lại đánh giá của bạn về tổng thể chất lượng dịch vụ."
+                label={dict.contract?.detail?.review_modal_satisfaction || "Mức độ hài lòng chung"}
+                description={dict.contract?.detail?.review_modal_satisfaction_desc || "Vui lòng để lại đánh giá của bạn về tổng thể chất lượng dịch vụ."}
                 value={rating}
                 hoverValue={hover}
                 onValueChange={setRating}
@@ -161,7 +170,7 @@ export function CustomerQualityReviewModal({
             {/* Feedback Section */}
             <div className="flex flex-col gap-6">
               <h3 className="font-label text-[12px] font-medium tracking-widest uppercase text-outline">
-                Ý kiến đóng góp
+                {dict.contract?.detail?.review_modal_feedback || "Ý KIẾN ĐÓNG GÓP"}
               </h3>
               <div className="flex flex-col gap-1">
                 <textarea
@@ -173,7 +182,11 @@ export function CustomerQualityReviewModal({
                       ? "border-error focus:border-error focus:ring-error/30"
                       : "border-outline-variant focus:border-secondary focus:ring-secondary"
                   }`}
-                  placeholder={isReadOnly ? "Không có đánh giá chi tiết." : "Chia sẻ thêm trải nghiệm của bạn về dịch vụ hoặc những điểm chúng tôi có thể cải thiện..."}
+                  placeholder={
+                    isReadOnly
+                      ? (dict.contract?.detail?.review_modal_no_feedback || "Không có đánh giá chi tiết.")
+                      : (dict.contract?.detail?.review_modal_placeholder || "Chia sẻ thêm trải nghiệm của bạn về dịch vụ hoặc những điểm chúng tôi có thể cải thiện...")
+                  }
                 ></textarea>
 
                 {/* Character counter + error */}
@@ -209,33 +222,33 @@ export function CustomerQualityReviewModal({
             {isReadOnly ? (
               <button
                 onClick={onClose}
-                className="px-6 py-2 rounded font-body text-[14px] font-medium text-on-primary bg-primary hover:bg-primary-container transition-colors shadow-sm"
+                className="px-6 py-2 rounded font-body text-[14px] font-medium text-on-primary bg-primary hover:bg-primary-container transition-colors shadow-sm cursor-pointer"
               >
-                Đóng
+                {dict.contract?.detail?.review_modal_close || "Đóng"}
               </button>
             ) : (
               <>
                 <button
                   onClick={onClose}
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded font-body text-[14px] font-medium text-secondary border border-secondary hover:bg-surface-dim transition-colors"
+                  className="px-4 py-2 rounded font-body text-[14px] font-medium text-secondary border border-secondary hover:bg-surface-dim transition-colors cursor-pointer"
                 >
-                  Đóng
+                  {dict.contract?.detail?.review_modal_close || "Đóng"}
                 </button>
                 <button
                   onClick={handleSubmit}
                   disabled={!canSubmit}
-                  className="px-6 py-2 rounded font-body text-[14px] font-medium text-on-primary bg-primary hover:bg-primary-container disabled:opacity-70 transition-colors shadow-sm flex items-center gap-2"
+                  className="px-6 py-2 rounded font-body text-[14px] font-medium text-on-primary bg-primary hover:bg-primary-container disabled:opacity-70 transition-colors shadow-sm flex items-center gap-2 cursor-pointer"
                 >
                   {isSubmitting ? (
                     <>
                       <div className="w-4 h-4 border-2 border-on-primary/30 border-t-on-primary rounded-full animate-spin"></div>
-                      Đang gửi...
+                      {dict.contract?.detail?.review_modal_submitting || "Đang gửi..."}
                     </>
                   ) : (
                     <>
                       <Send className="w-[18px] h-[18px]" />
-                      Gửi đánh giá
+                      {dict.contract?.detail?.review_modal_submit || "Gửi đánh giá"}
                     </>
                   )}
                 </button>
@@ -251,7 +264,7 @@ export function CustomerQualityReviewModal({
         <div className="fixed bottom-5 right-5 bg-slate-900 text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 z-[60] animate-in fade-in slide-in-from-bottom-5 duration-300">
           <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" />
           <span className="text-xs font-semibold leading-normal">
-            Gửi đánh giá thành công!
+            {dict.contract?.detail?.review_modal_success || "Gửi đánh giá thành công!"}
           </span>
           <button
             type="button"

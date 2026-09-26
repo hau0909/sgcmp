@@ -132,6 +132,22 @@ export const localTimeToUtc = (dateKey: string, timeStr: string, timeZone?: stri
   }
 };
 
+export const getStartOfDayInTimeZone = (date: Date, timeZone?: string): string => {
+  const activeTimeZone = timeZone || getUserTimeZone();
+  const formatter = new Intl.DateTimeFormat("en-US", {
+    timeZone: activeTimeZone === "UTC" ? undefined : activeTimeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  });
+  const parts = formatter.formatToParts(date);
+  const year = parts.find((p) => p.type === "year")?.value;
+  const month = parts.find((p) => p.type === "month")?.value;
+  const day = parts.find((p) => p.type === "day")?.value;
+
+  return localTimeToUtc(`${year}-${month}-${day}`, "00:00:00", activeTimeZone);
+};
+
 export const getEndOfDayInTimeZone = (date: Date, timeZone?: string): string => {
   const activeTimeZone = timeZone || getUserTimeZone();
   const formatter = new Intl.DateTimeFormat("en-US", {
@@ -147,3 +163,26 @@ export const getEndOfDayInTimeZone = (date: Date, timeZone?: string): string => 
 
   return localTimeToUtc(`${year}-${month}-${day}`, "23:59:59", activeTimeZone);
 };
+
+export const formatVNTime = (dateVal: Date | string | number): string => {
+  const d = new Date(dateVal);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(d);
+};
+
+export const formatVNDate = (dateVal: Date | string | number): string => {
+  const d = new Date(dateVal);
+  if (Number.isNaN(d.getTime())) return "";
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Asia/Ho_Chi_Minh",
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  }).format(d);
+};
+
