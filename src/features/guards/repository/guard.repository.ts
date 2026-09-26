@@ -1440,15 +1440,28 @@ export const getGuardPerformanceSummary = async ({
 
   let targetGuardIds: string[] = [];
   if (guard_id) {
-    const { data: gData } = await supabase
+    // guard_id param is always user_id (from getGuardPerformanceList which returns id: g.user_id)
+    // We need to resolve the actual guards.guard_id (FK used in shift_assignments.guard_id)
+    const { data: gData, error: gError } = await supabase
       .from("guards")
       .select("guard_id, user_id")
-      .or(`guard_id.eq.${guard_id},user_id.eq.${guard_id}`)
+      .eq("user_id", guard_id)
       .maybeSingle();
-    if (gData) {
+    if (!gError && gData) {
+      // Include both guard_id and user_id in case shift_assignments uses either
       targetGuardIds = [gData.guard_id, gData.user_id].filter(Boolean);
     } else {
-      targetGuardIds = [guard_id];
+      // Fallback: also try by guard_id column directly
+      const { data: gData2 } = await supabase
+        .from("guards")
+        .select("guard_id, user_id")
+        .eq("guard_id", guard_id)
+        .maybeSingle();
+      if (gData2) {
+        targetGuardIds = [gData2.guard_id, gData2.user_id].filter(Boolean);
+      } else {
+        targetGuardIds = [guard_id];
+      }
     }
   }
 

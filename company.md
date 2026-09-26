@@ -1,0 +1,7 @@
+| company_id                           | company_name                              | email                          | phone       | status    | created_at                    |
+| ------------------------------------ | ----------------------------------------- | ------------------------------ | ----------- | --------- | ----------------------------- |
+| b492c5bf-99c0-44d1-8292-2632e6ec7d60 | CÔNG TY TNHH DỊCH VỤ BẢO VỆ MEKONG SHIELD | contact@mekongshield.vn        | 02923768899 | published | 2026-09-17 08:37:51.833724+00 |
+| 147d3f82-0a20-4a53-8d4f-138bf21bda75 | TAN LOC                                   | locptce171503@fpt.edu.vn       | 0987654357  | rejected  | 2026-09-16 10:09:52.212034+00 |
+| c523602a-90ef-462f-93cc-93b21288e84e | CÔNG TY BẢO VỆ LONG HOÀNG GIA             | baovehoanggiacantho@gmail.com  | 0969203887  | active    | 2026-08-16 04:53:27.937139+00 |
+| 2a7d2ec2-c3c9-4270-8872-c2e3cf34e505 | CÔNG TY BẢO VỆ THANH BÌNH PHÚ MỸ          | ct.baovechatluongcao@gmail.com | 0932629599  | published | 2026-08-08 04:21:37.866575+00 |
+| 6870991d-e78d-426c-a74b-3feba1e8ac9f | CÔNG TY TNHH BẢO VỆ - VỆ SĨ ĐẠI LONG SƠN  | ctybaovedailongson@gmail.com   | 0963962747  | published | 2026-08-07 14:54:57.335087+00 |
