@@ -26,7 +26,8 @@ export default function ForgotPasswordPage() {
     const trimmedEmail = email.trim();
     if (!trimmedEmail) {
       setEmailError(
-        dict.pages.auth?.login?.errors?.email_required || "Vui lòng nhập địa chỉ email.",
+        dict.pages.auth?.login?.errors?.email_required ||
+          "Vui lòng nhập địa chỉ email.",
       );
       return;
     }
@@ -34,7 +35,8 @@ export default function ForgotPasswordPage() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(trimmedEmail)) {
       setEmailError(
-        dict.pages.auth?.login?.errors?.email_invalid || "Địa chỉ email không hợp lệ.",
+        dict.pages.auth?.login?.errors?.email_invalid ||
+          "Địa chỉ email không hợp lệ.",
       );
       return;
     }
@@ -48,7 +50,8 @@ export default function ForgotPasswordPage() {
         setIsSentSuccess(true);
       } else {
         setGeneralError(
-          res?.message || "Gửi yêu cầu đặt lại mật khẩu thất bại. Vui lòng thử lại.",
+          res?.message ||
+            "Gửi yêu cầu đặt lại mật khẩu thất bại. Vui lòng thử lại.",
         );
       }
     } catch (err: any) {
@@ -61,6 +64,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col justify-between relative">
       {/* Back button */}
+
       <div className="absolute left-6 top-6">
         <button
           type="button"
@@ -68,7 +72,10 @@ export default function ForgotPasswordPage() {
           className="inline-flex cursor-pointer items-center gap-2 text-sm font-semibold text-slate-600 hover:text-blue-800 transition-all duration-200 group bg-white border border-slate-300 rounded-lg px-3 py-1.5 shadow-xs"
         >
           <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
-          <span>{dict.pages.auth?.forgot_password_page?.back_to_login || "Quay lại đăng nhập"}</span>
+          <span>
+            {dict.pages.auth?.forgot_password_page?.back_to_login ||
+              "Quay lại đăng nhập"}
+          </span>
         </button>
       </div>
 
@@ -78,7 +85,8 @@ export default function ForgotPasswordPage() {
             <>
               <div className="text-center">
                 <h1 className="text-2xl font-bold text-slate-900 tracking-tight mb-2">
-                  {dict.pages.auth?.forgot_password_page?.title || "Quên mật khẩu?"}
+                  {dict.pages.auth?.forgot_password_page?.title ||
+                    "Quên mật khẩu?"}
                 </h1>
                 <p className="text-slate-500 text-sm leading-relaxed">
                   {dict.pages.auth?.forgot_password_page?.subtitle ||
@@ -86,7 +94,11 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
-              <form onSubmit={handleSubmit} className="mt-7 space-y-4" noValidate>
+              <form
+                onSubmit={handleSubmit}
+                className="mt-7 space-y-4"
+                noValidate
+              >
                 {generalError && (
                   <div className="p-3 rounded-xl bg-red-50 border border-red-200 flex items-center gap-2 text-sm text-red-600">
                     <AlertCircle className="w-4 h-4 shrink-0" />
@@ -99,14 +111,15 @@ export default function ForgotPasswordPage() {
                     htmlFor="email"
                     className="block text-sm font-semibold text-slate-700"
                   >
-                    {dict.pages.auth?.forgot_password_page?.email_label || "Địa chỉ Email"}
+                    {dict.pages.auth?.forgot_password_page?.email_label ||
+                      "Địa chỉ Email"}
                   </label>
                   <input
                     id="email"
                     type="email"
                     placeholder={
-                      dict.pages.auth?.forgot_password_page?.email_placeholder ||
-                      "name@company.com"
+                      dict.pages.auth?.forgot_password_page
+                        ?.email_placeholder || "name@company.com"
                     }
                     value={email}
                     disabled={loading}
@@ -136,8 +149,10 @@ export default function ForgotPasswordPage() {
                   {loading && <Loader2 className="w-4 h-4 animate-spin" />}
                   <span>
                     {loading
-                      ? dict.pages.auth?.forgot_password_page?.sending || "Đang gửi..."
-                      : dict.pages.auth?.forgot_password_page?.submit_btn || "Gửi yêu cầu"}
+                      ? dict.pages.auth?.forgot_password_page?.sending ||
+                        "Đang gửi..."
+                      : dict.pages.auth?.forgot_password_page?.submit_btn ||
+                        "Gửi yêu cầu"}
                   </span>
                 </button>
               </form>
@@ -147,7 +162,8 @@ export default function ForgotPasswordPage() {
                   href="/login"
                   className="text-sm font-semibold text-primary hover:underline"
                 >
-                  {dict.pages.auth?.forgot_password_page?.back_to_login || "Quay lại đăng nhập"}
+                  {dict.pages.auth?.forgot_password_page?.back_to_login ||
+                    "Quay lại đăng nhập"}
                 </Link>
               </div>
             </>
@@ -157,7 +173,8 @@ export default function ForgotPasswordPage() {
                 <MailCheck className="w-8 h-8" />
               </div>
               <h2 className="text-xl font-bold text-slate-900 mb-2">
-                {dict.pages.auth?.forgot_password_page?.success_title || "Đã gửi email!"}
+                {dict.pages.auth?.forgot_password_page?.success_title ||
+                  "Đã gửi email!"}
               </h2>
               <p className="text-sm text-slate-600 mb-6 leading-relaxed">
                 {dict.pages.auth?.forgot_password_page?.success_desc ||
@@ -167,7 +184,8 @@ export default function ForgotPasswordPage() {
                 href="/login"
                 className="w-full h-11 bg-primary hover:bg-primary/90 text-on-primary font-semibold rounded-xl text-sm transition-all shadow-sm flex items-center justify-center"
               >
-                {dict.pages.auth?.forgot_password_page?.back_to_login || "Quay lại đăng nhập"}
+                {dict.pages.auth?.forgot_password_page?.back_to_login ||
+                  "Quay lại đăng nhập"}
               </Link>
             </div>
           )}
