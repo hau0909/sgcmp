@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { calculatePaymentSummary } from "../utils/payment-calculator.utils";
 import { Payment } from "@/types/Payment";
 import { BankAccount } from "@/types/BankAccount";
 import { PaymentStatus } from "@/types/Enum";
@@ -222,28 +223,7 @@ export const getPaymentSummaryAdmin = async (
 
   const payments = data || [];
 
-  let totalRevenue = 0;
-  let successCount = 0;
-  let pendingCount = 0;
-  let failedCount = 0;
-
-  for (const p of payments) {
-    if (p.payment_status === "completed") {
-      totalRevenue += p.amount || 0;
-      successCount++;
-    } else if (p.payment_status === "pending") {
-      pendingCount++;
-    } else if (p.payment_status === "failed") {
-      failedCount++;
-    }
-  }
-
-  return {
-    totalRevenue,
-    successCount,
-    pendingCount,
-    failedCount,
-  };
+  return calculatePaymentSummary(payments);
 };
 
 // ─── Bank Account ────────────────────────────────────────────────────────────

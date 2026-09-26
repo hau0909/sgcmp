@@ -20,6 +20,7 @@ import {
   getWardsService as getWards,
   formatAddressService,
 } from "@/features/address";
+import { extractCompanyInitialsAndPriceRange } from "../utils/company-display.utils";
 import {
   MarketplaceCompany,
   City,
@@ -88,35 +89,11 @@ export const mapDbCompanyToMarketplace = async (
         .filter((n): n is string => !!n)
     : [];
 
-  // Find minimum and maximum price among services, default to 0 if none
-  let pricePerHour = 0;
-  let maxPrice = 0;
-  const serviceCount = dbCompany.company_services ? dbCompany.company_services.length : 0;
-  if (dbCompany.company_services && dbCompany.company_services.length > 0) {
-    const prices = dbCompany.company_services
-      .map((cs) => cs.price)
-      .filter((p) => typeof p === "number");
-    if (prices.length > 0) {
-      pricePerHour = Math.min(...prices);
-      maxPrice = Math.max(...prices);
-    }
-  }
-
-  // Calculate initials from name
-  const cleanName = name
-    .replace(
-      /^(Công ty|TNHH|Cổ phần|Dịch vụ|Bảo vệ|TNHH Dịch vụ Bảo vệ)\s+/gi,
-      "",
-    )
-    .replace(/\s+(Cổ phần|TNHH)\s*/gi, "")
-    .trim();
-  const words = cleanName.split(/\s+/).filter(Boolean);
-  let initials = "CO";
-  if (words.length >= 2) {
-    initials = (words[0][0] + words[1][0]).toUpperCase();
-  } else if (words.length === 1) {
-    initials = words[0].substring(0, 2).toUpperCase();
-  }
+  // Extract initials, min/max price range, and serviceCount using pure utility
+  const { initials, pricePerHour, maxPrice, serviceCount } = extractCompanyInitialsAndPriceRange(
+    name,
+    dbCompany.company_services
+  );
 
   const location = await formatAddressService(dbCompany.address);
 
