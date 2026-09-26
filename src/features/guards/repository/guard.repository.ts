@@ -1447,8 +1447,6 @@ export const getGuardPerformanceSummary = async ({
       .select("guard_id, user_id")
       .eq("user_id", guard_id)
       .maybeSingle();
-    console.log("[DEBUG getGuardPerformanceSummary] guard_id param:", guard_id);
-    console.log("[DEBUG getGuardPerformanceSummary] gData:", gData, "gError:", gError);
     if (!gError && gData) {
       // Include both guard_id and user_id in case shift_assignments uses either
       targetGuardIds = [gData.guard_id, gData.user_id].filter(Boolean);
@@ -1465,7 +1463,6 @@ export const getGuardPerformanceSummary = async ({
         targetGuardIds = [guard_id];
       }
     }
-    console.log("[DEBUG getGuardPerformanceSummary] targetGuardIds:", targetGuardIds);
   }
 
   let query = supabase.from("shifts").select(`
@@ -1558,10 +1555,6 @@ export const getGuardPerformanceSummary = async ({
     const assignments = shift.shift_assignments || [];
     assignments.forEach((assignment: any) => {
       if (guard_id && !targetGuardIds.includes(assignment.guard_id)) {
-        // Debug: log first mismatch only to avoid spamming
-        if (totalAssignedShifts === 0) {
-          console.log("[DEBUG] assignment.guard_id:", assignment.guard_id, "| targetGuardIds:", targetGuardIds, "| match:", targetGuardIds.includes(assignment.guard_id));
-        }
         return;
       }
       guardShiftsSet.add(shift.shift_id);
