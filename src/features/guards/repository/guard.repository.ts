@@ -1501,7 +1501,14 @@ export const getGuardPerformanceSummary = async ({
     return calculateGuardPerformanceMetrics([], guard_id);
   }
 
-  return calculateGuardPerformanceMetrics(shifts, guard_id);
+  // Use the resolved guard DB id (not user_id) so the filter inside
+  // calculateGuardPerformanceMetrics matches shift_assignments.guard_id correctly.
+  // targetGuardIds contains [guard_id, user_id] — prefer the actual guard_id (index 0).
+  const resolvedGuardId = guard_id
+    ? (targetGuardIds.length > 0 ? targetGuardIds[0] : guard_id)
+    : undefined;
+
+  return calculateGuardPerformanceMetrics(shifts, resolvedGuardId);
 };
 
 export const getGuardPerformanceList = async ({
